@@ -18,15 +18,18 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.threads.StackSampler;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Results 27/10/2015 running on a MBP
@@ -49,9 +52,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * Results 03/02/2017 running on i7-6700HQ Win 10  100k/s * 5M * 40B
  * 50/90 99/99.9 99.99/99.999 - worst was 0.59 / 0.94  17 / 135  12,850 / 15,470 - 15,990
+ * <p>
+ * Results 05/02/2017 running i7-4790, Centos 7 100k/s * 5 M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 - worst was 0.18 / 0.20  0.26 / 0.59  10 / 14 - 117
+ * </p>
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
-    static final int warmup = 100_000;
+    static final boolean SAMPLING = Boolean.getBoolean("sampling");
+    static final int warmup = 500_000;
+    final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         assert false : "test runs slower with assertions on";
@@ -59,7 +68,6 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     }
 
     public void run() throws IOException, InterruptedException {
-
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(getTmpDir())
                 .blockSize(128 << 20)
@@ -70,22 +78,76 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     }
 
     protected void runTest(ChronicleQueue queue, int throughput) throws InterruptedException {
-        Histogram histogram = new Histogram();
+/*
+        Jvm.setExceptionHandlers(PrintExceptionHandler.ERR,
+                PrintExceptionHandler.OUT,
+                PrintExceptionHandler.OUT);
+*/
 
-        ExcerptAppender appender = queue.acquireAppender();
+        Histogram histogramCo = new Histogram();
+        Histogram histogramIn = new Histogram();
+        Histogram histogramWr = new Histogram();
+        Thread pretoucher = new Thread(() -> {
+            ExcerptAppender appender = queue.acquireAppender();
+            while (!Thread.currentThread().isInterrupted()) {
+                appender.pretouch();
+                Jvm.pause(500);
+            }
+        });
+        pretoucher.setDaemon(true);
+        pretoucher.start();
+
+        ExcerptAppender appender = queue.acquireAppender().lazyIndexing(true);
         ExcerptTailer tailer = queue.createTailer();
 
+        String name = getClass().getName();
         Thread tailerThread = new Thread(() -> {
-            MyReadMarshallable myReadMarshallable = new MyReadMarshallable(histogram);
+//            MyReadMarshallable myReadMarshallable = new MyReadMarshallable(histogram);
             AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableTailerAffinity")) {
+                if (Boolean.getBoolean("enableTailerAffinity") || Boolean.getBoolean("enableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
-
+                int counter = 0;
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
-                        tailer.readDocument(myReadMarshallable);
+//                        if (SAMPLING)
+//                            sampler.thread(Thread.currentThread());
+//                        boolean found = tailer.readDocument(myReadMarshallable);
+                        boolean found;
+                        try (DocumentContext dc = tailer.readingDocument()) {
+                            found = dc.isPresent();
+                            if (found) {
+                                int count = counter++;
+                                if (count == warmup) {
+                                    histogramCo.reset();
+                                    histogramIn.reset();
+                                    histogramWr.reset();
+                                }
+                                Bytes<?> bytes = dc.wire().bytes();
+                                long startCo = bytes.readLong();
+                                long startIn = bytes.readLong();
+                                long now = System.nanoTime();
+                                histogramCo.sample(now - startCo);
+                                histogramIn.sample(now - startIn);
+                            }
+                        }
+/*
+                        if (SAMPLING) {
+                            StackTraceElement[] stack = sampler.getAndReset();
+                            if (stack != null) {
+                                if (!stack[0].getClassName().equals(name) &&
+                                        !stack[0].getClassName().equals("java.lang.Thread")) {
+                                    StringBuilder sb = new StringBuilder();
+                                    Jvm.trimStackTrace(sb, stack);
+                                    System.out.println(sb);
+                                }
+                            } else if (!found) {
+                                Thread.yield();
+                            }
+                        }
+                        */
+
                     } catch (Exception e) {
                         break;
                     }
@@ -100,23 +162,50 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Thread appenderThread = new Thread(() -> {
             AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableAppenderAffinity")) {
+                if (Boolean.getBoolean("enableAppenderAffinity") || Boolean.getBoolean("enableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
 
-                TestTrade bt = new TestTrade();
-                bt.setId("0123456789001234");
-                bt.setPrice(Math.PI);
-                MyWriteMarshallable myWriteMarshallable = new MyWriteMarshallable(bt);
                 long next = System.nanoTime();
                 long interval = 1_000_000_000 / throughput;
+                Map<String, Integer> stackCount = new LinkedHashMap<>();
+                NativeBytesStore bytes24 = NativeBytesStore.from(new byte[24]);
                 for (int i = -warmup; i < 5_000_000; i++) {
-                    while (System.nanoTime() < next) ;
-                    // time from when the next should have been sent to avoid co-ordinated omission.
-                    bt.setTime(next);
-                    appender.writeDocument(myWriteMarshallable);
+                    long s0 = System.nanoTime();
+                    if (s0 < next) {
+                        busyLoop:
+                        do ; while (System.nanoTime() < next);
+                        next = System.nanoTime(); // if we failed to come out of the spin loop on time, reset next.
+                    }
+
+                    if (SAMPLING) {
+                        sampler.thread(Thread.currentThread());
+                    }
+                    long start = System.nanoTime();
+                    try (@NotNull DocumentContext dc = appender.writingDocument(false)) {
+                        Bytes<?> bytes2 = dc.wire().bytes();
+                        bytes2.writeLong(next); // when it should have started
+                        bytes2.writeLong(start); // when it actually started.
+                        bytes2.write(bytes24);
+                    }
+                    long time = System.nanoTime() - start;
+                    histogramWr.sample(start - next);
+                    if (SAMPLING && time > 1e3 && i > 0) {
+                        StackTraceElement[] stack = sampler.getAndReset();
+                        if (stack != null) {
+                            if (!stack[0].getClassName().equals(name) &&
+                                    !stack[0].getClassName().equals("java.lang.Thread")) {
+                                StringBuilder sb = new StringBuilder();
+                                Jvm.trimStackTrace(sb, stack);
+                                stackCount.compute(sb.toString(), (k, v) -> v == null ? 1 : v + 1);
+                            }
+                        }
+                    }
                     next += interval;
                 }
+                stackCount.entrySet().stream()
+                        .filter(e -> e.getValue() > 1)
+                        .forEach(System.out::println);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -136,101 +225,8 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         tailerThread.interrupt();
         tailerThread.join();
 
-        System.out.println(histogram.toMicrosFormat());
-    }
-
-    static class MyWriteMarshallable implements WriteMarshallable {
-        private final TestTrade bt;
-
-        MyWriteMarshallable(TestTrade bt) {
-
-            this.bt = bt;
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull WireOut w) {
-//            long start = w.bytes().writePosition();
-            w.write(() -> "TestTrade")
-                    .marshallable(bt);
-//            System.out.println(w.bytes().writePosition() - start);
-        }
-    }
-
-    static class MyReadMarshallable implements ReadMarshallable {
-        final StringBuilder messageType = new StringBuilder();
-        final AtomicInteger counter = new AtomicInteger(0);
-        final TestTrade testTrade = new TestTrade();
-        private final Histogram histogram;
-
-        MyReadMarshallable(Histogram histogram) {
-            this.histogram = histogram;
-        }
-
-        @Override
-        public void readMarshallable(@NotNull WireIn wireIn) throws IORuntimeException {
-            ValueIn vi = wireIn.readEventName(messageType);
-            vi.marshallable(testTrade);
-
-            long time = testTrade.getTime();
-            if (counter.get() > warmup) {
-                histogram.sample(System.nanoTime() - time);
-            }
-            if (counter.incrementAndGet() % 100_000 == 0) {
-                System.out.println(counter.get());
-            }
-        }
-    }
-
-    static class TestTrade implements Marshallable {
-        private double price;
-        private String id;
-        private long time;
-
-        public long getTime() {
-            return time;
-        }
-
-        public void setTime(long time) {
-            this.time = time;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public double getPrice() {
-            return price;
-        }
-
-        public void setPrice(double price) {
-            this.price = price;
-        }
-
-        @Override
-        public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-            wire.read(() -> "price").float64(this, (o, b) -> o.price = b)
-                    .read(() -> "id").text(this, (o, b) -> o.id = b)
-                    .read(() -> "time").int64(this, (o, b) -> o.time = b);
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(() -> "price").fixedFloat64(price)
-                    .write(() -> "id").text(id)
-                    .write(() -> "time").fixedInt64(time);
-        }
-
-        @Override
-        public String toString() {
-            return "TestTrade{" +
-                    "price=" + price +
-                    ", id='" + id + '\'' +
-                    ", time=" + time +
-                    '}';
-        }
+        System.out.println("wr: " + histogramWr.toMicrosFormat());
+        System.out.println("in: " + histogramIn.toMicrosFormat());
+        System.out.println("co: " + histogramCo.toMicrosFormat());
     }
 }

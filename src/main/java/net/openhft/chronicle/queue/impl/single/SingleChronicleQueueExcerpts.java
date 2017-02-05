@@ -270,50 +270,52 @@ public class SingleChronicleQueueExcerpts {
                 if (this.cycle != cycle || wire == null)
                     rollCycleTo(cycle);
 
-                for (int i = 0; i <= 100; i++) {
+                int safeLength = (int) queue.overlapSize();
+                for (int i = 0; i < 128; i++) {
                     try {
                         assert wire != null;
-                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, (int) (queue.blockSize() / 4), timeoutMS());
+                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
                         position(pos);
                         context.isClosed = false;
-                        context.metaData = false;
                         context.wire = wire;
                         context.padToCacheAlign = padToCacheAlign() != Padding.NEVER;
-                        break;
+                        context.metaData(metaData);
+                        ok = true;
+                        return context;
 
                     } catch (EOFException theySeeMeRolling) {
-
-                        assert !((AbstractWire) wire).isInsideHeader();
-                        int qCycle = queue.cycle();
-                        if (cycle < queue.cycle()) {
-                            setCycle2(cycle = qCycle, true);
-                        } else if (cycle == qCycle) {
-                            // for the rare case where the qCycle has just changed in the last
-                            // few milliseconds since
-                            setCycle2(++cycle, true);
-                        } else
-                            throw new IllegalStateException("Found an EOF on the next cycle file," +
-                                    " this next file, should not have an EOF as its cycle " +
-                                    "number is greater than the current cycle (based on the " +
-                                    "current time), this should only happen " +
-                                    "if it " +
-                                    "was written by a different appender set with a different " +
-                                    "EPOC or different roll cycle." +
-                                    "All your appenders ( that write to a given directory ) " +
-                                    "should have the same EPOCH and roll cycle" +
-                                    " qCycle=" + qCycle + ", cycle=" + cycle);
+                        cycle = handleRoll(cycle);
                     }
-                    if (i == 100)
-                        throw new IllegalStateException("Unable to roll to the current cycle");
                 }
-                ok = true;
+                throw new IllegalStateException("Unable to roll to the current cycle");
 
             } finally {
                 if (!ok)
                     assert resetAppendingThread();
             }
-            context.metaData(metaData);
-            return context;
+        }
+
+        private int handleRoll(int cycle) {
+            assert !((AbstractWire) wire).isInsideHeader();
+            int qCycle = queue.cycle();
+            if (cycle < queue.cycle()) {
+                setCycle2(cycle = qCycle, true);
+            } else if (cycle == qCycle) {
+                // for the rare case where the qCycle has just changed in the last
+                // few milliseconds since
+                setCycle2(++cycle, true);
+            } else
+                throw new IllegalStateException("Found an EOF on the next cycle file," +
+                        " this next file, should not have an EOF as its cycle " +
+                        "number is greater than the current cycle (based on the " +
+                        "current time), this should only happen " +
+                        "if it " +
+                        "was written by a different appender set with a different " +
+                        "EPOC or different roll cycle." +
+                        "All your appenders ( that write to a given directory ) " +
+                        "should have the same EPOCH and roll cycle" +
+                        " qCycle=" + qCycle + ", cycle=" + cycle);
+            return cycle;
         }
 
         boolean checkWritePositionHeaderNumber() {
@@ -794,6 +796,20 @@ public class SingleChronicleQueueExcerpts {
                     !((MappedBytes) bytes).mappedFile().file().canWrite();
         }
 
+        public boolean readDocument(@NotNull ReadMarshallable reader) {
+            try (@NotNull DocumentContext dc = readingDocument(false)) {
+                if (!dc.isPresent())
+                    return false;
+                reader.readMarshallable(dc.wire());
+            }
+            return true;
+        }
+
+        @NotNull
+        public DocumentContext readingDocument() {
+            return readingDocument(false);
+        }
+
         private void close() {
             context.wire(null);
             Wire w0 = wireForIndex;
@@ -835,7 +851,19 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
             try {
-                if (context.present(next(includeMetaData))) {
+                boolean next = false, tryAgain = true;
+                if (state == FOUND_CYCLE) {
+                    try {
+                        next = inACycle(includeMetaData);
+                        tryAgain = false;
+                    } catch (EOFException eof) {
+                        state = TailerState.END_OF_CYCLE;
+                    }
+                }
+                if (tryAgain)
+                    next = next0(includeMetaData);
+
+                if (context.present(next)) {
                     assert wire().startUse();
                     return context;
                 }
@@ -852,17 +880,6 @@ public class SingleChronicleQueueExcerpts {
                 // so treat as empty.
             }
             return NoDocumentContext.INSTANCE;
-        }
-
-        private boolean next(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
-            if (state == FOUND_CYCLE) {
-                try {
-                    return inACycle(includeMetaData);
-                } catch (EOFException eof) {
-                    state = TailerState.END_OF_CYCLE;
-                }
-            }
-            return next0(includeMetaData);
         }
 
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
