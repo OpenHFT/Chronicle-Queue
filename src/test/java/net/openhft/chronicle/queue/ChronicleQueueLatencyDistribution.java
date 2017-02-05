@@ -55,9 +55,27 @@ import java.util.Map;
  * <p>
  * Results 05/02/2017 running i7-4790, Centos 7 100k/s * 5 M * 40B enableAffinity=true
  * 50/90 99/99.9 99.99/99.999 - worst was 0.18 / 0.20  0.26 / 0.59  10 / 14 - 117
- * </p>
+ * <p>
  * Results 05/02/2017 running i7-4790, Centos 7 100k/s * 20M * 40B enableAffinity=true
  * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.23  0.31 / 0.72  10 / 15  88 / 176
+ * <p>
+ * Results 05/02/2017 running i7-4790, Centos 7 500k/s * 20M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.20  0.24 / 8.4  12 / 60  160 / 176
+ * <p>
+ * Results 05/02/2017 running i7-4790, Centos 7 500k/s * 20M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.21  0.25 / 9.0  11 / 76  125 / 135
+ * <p>
+ * Results 05/02/2017 running i7-4790, Centos 7 1M/s * 20M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.20  0.33 / 9.0  15 / 143  176 / 176
+ * <p>
+ * Results 05/02/2017 running i7-4790, Centos 7 1.4M/s * 20M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.18 / 0.20  3.6 / 9.5  96 / 303  336 / 336
+ * <p>
+ * Results 05/02/2017 running i7-4790, Centos 7 2.0M/s * 20M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.20  5.5 / 12  639 / 901  934 / 934
+ * <p>
+ * Results 05/02/2017 running i7-4790, Centos 7 2.3M/s * 20M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.21  9.5 / 6,160  9,700 / 9,700  9,700 / 9,700
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static final boolean SAMPLING = Boolean.getBoolean("sampling");
@@ -75,7 +93,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 .blockSize(128 << 20)
                 .build()) {
 
-            runTest(queue, 100_000);
+            runTest(queue, 2_300_000);
         }
     }
 
