@@ -14,6 +14,18 @@ It supports:
 - the header stores key information so there is no longer the requirement that the writers and reads be configured the same.
 - you don't need to know how big the message is.
 
+
+=== What is the performance like?
+
+While Single Chronicle (single file per cycle) supports sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+
+=== With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
+
+Two approaches for reducing CPU usage are;
+
+ - combine tasks into the same thread. EventGroup in chronicle-threads helps to this dynamically.
+ - use a Pauser such as a LongPauser to control how a thread backs off if there is nothing to do.  Note: There is a PauseMonitor to allow you to print how busy each thread is periodically.
+
 === What is Chronicle designed for?
 
 Chronicle is design to be a record everything of interest logger and persisted IPC.
@@ -22,9 +34,6 @@ that a monitoring system can recreate the state of the system monitored.  This a
 they need and perform queries without needed to touch the critical system as they can record anything they might need later.
 
 Chronicle works best in SEDA style event driven systems, where latency is critical and you need a record of exactly what was performed when. (Without expensive network sniffing/recording systems)
-
-=== What is the performance like?
-While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
 
 === With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
@@ -77,6 +86,29 @@ Note: the Consumer can stop, restart and continue with minimal impact to the pro
 Having a faster disk sub-system helps in extreme conditions like these.
 Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s and an over-clocked hex core i7 PCI-SSD card which sustained write speed of 900 MB/s.
 
+=== Can Chronicle Queue be used like RMI?
+
+It's possible to use Chronicle Queue to invoke a method on the other JVM and wait for the return value. 
+
+However, this could be an overkill, especially if you don't have to keep the history of the request/responses. 
+
+Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `SingleChronicleQueue`s:
+
+- `Q1` for sending requests from `C` to `S`
+- `Q2` for sending responses from `S` to `C`
+
+Server has a thread that is polling (busy spin with back-off) on `Q1`. When it receives a request (with `id=x` it does whatever is needed and writes out response to `Q2` (with `id=x`. `C` polls `Q2` with some policy and reads out responses as they appear. It uses the `id` to tie responses to requests.
+
+Main task would be in devising a wire-level protocol for serialising your commands (equivalent of the method calls) from the client. This is application specific and can be done efficiently with the Chronicle tools.
+
+Another issues to consider:
+
+what should the client do with the historical responses on startup?
+some heartbeat system so that client knows the server is alive
+archiving of the old queues (`VanillaChronicle` makes it easier at some cost).
+
+For more details on how to do this https://vanilla-java.github.io/2016/03/23/Microservices-in-the-Chronicle-world-Part-1.html[Read This series of posts]
+
 === What types of Excerpt are there?
 
 Chronicle has three types of excerpt optimised for different purposes.
@@ -103,6 +135,11 @@ You can write using a lambda which describes the message
 appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve")
                                    .write(() -> "Surname").text("Jobs"));
 ----
+Say you want to write different types of messages to a chronicle-queue, and process messages in consumers depending on their types. Chronicle-Queue provides low level building blocks you can use to write any kind of message, so it is up to you to choose the right data structure.
+
+For example, you can prefix the data you write to a chronicle. With a small header and some meta-data, you can then use it as a discriminator for data processing.
+
+You can also write/read a generic object. This will be slightly slower than using your own scheme, but is it a simple way to always read the type you wrote.
 
 Say you want to write different types of messages to a chronicle-queue, and process messages in consumers depending on their types.
 Chronicle-Queue provides low level building blocks you can use to write any kind of message, so it is up to you to choose the right data structure.
