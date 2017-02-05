@@ -56,6 +56,8 @@ import java.util.Map;
  * Results 05/02/2017 running i7-4790, Centos 7 100k/s * 5 M * 40B enableAffinity=true
  * 50/90 99/99.9 99.99/99.999 - worst was 0.18 / 0.20  0.26 / 0.59  10 / 14 - 117
  * </p>
+ * Results 05/02/2017 running i7-4790, Centos 7 100k/s * 20M * 40B enableAffinity=true
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.23  0.31 / 0.72  10 / 15  88 / 176
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static final boolean SAMPLING = Boolean.getBoolean("sampling");
@@ -102,7 +104,6 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
 
         String name = getClass().getName();
         Thread tailerThread = new Thread(() -> {
-//            MyReadMarshallable myReadMarshallable = new MyReadMarshallable(histogram);
             AffinityLock lock = null;
             try {
                 if (Boolean.getBoolean("enableTailerAffinity") || Boolean.getBoolean("enableAffinity")) {
@@ -170,7 +171,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
                 NativeBytesStore bytes24 = NativeBytesStore.from(new byte[24]);
-                for (int i = -warmup; i < 5_000_000; i++) {
+                for (int i = -warmup; i < 20_000_000; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
                         busyLoop:
