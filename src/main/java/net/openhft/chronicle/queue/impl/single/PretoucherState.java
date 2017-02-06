@@ -13,7 +13,7 @@ import java.util.function.LongSupplier;
  * Created by peter on 25/11/2016.
  */
 class PretoucherState {
-    private static final int HEAD_ROOM = 1 << 20;
+    private static final int HEAD_ROOM = 256 << 10;
     private final LongSupplier posSupplier;
     private int minHeadRoom;
     private long lastTouchedPage = 0,
@@ -47,11 +47,14 @@ class PretoucherState {
             lastTouchedPage = pos - pos % pageSize;
             lastTouchedPos = pos;
             lastBytesHashcode = System.identityHashCode(bytes);
+            averageMove = OS.pageSize();
+            lastPos = pos;
             String message = getFile(bytes) + " - Reset pretoucher to pos " + pos + " as the underlying MappedBytes changed.";
             debug(message);
 
         } else {
-            averageMove = (pos - lastPos) / 4 + averageMove * 3 / 4;
+            long moved = pos - lastPos;
+            averageMove = moved / 4 + averageMove * 3 / 4;
             long neededHeadRoom = Math.max(minHeadRoom, averageMove * 4); // for the next 4 ticks.
             final long neededEnd = pos + neededHeadRoom;
             if (lastTouchedPage < neededEnd) {
@@ -64,8 +67,9 @@ class PretoucherState {
                         pretouch++;
                     count++;
                 }
+                onTouched(count);
                 if (pretouch < count) {
-                    minHeadRoom += 1 << 20;
+                    minHeadRoom += 256 << 10;
                     debug("pretouch for only " + pretouch + " of " + count + " min: " + (minHeadRoom >> 20) + " MB.");
                 }
 
@@ -89,5 +93,8 @@ class PretoucherState {
 
     protected boolean touchPage(MappedBytes bytes, long offset) {
         return bytes.compareAndSwapLong(offset, 0L, 0L);
+    }
+
+    protected void onTouched(int count) {
     }
 }
