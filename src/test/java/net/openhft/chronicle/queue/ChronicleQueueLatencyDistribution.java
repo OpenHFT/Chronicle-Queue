@@ -51,7 +51,13 @@ import java.util.Map;
  * 50/90 99/99.9 99.99/99.999 - worst was 0.59 / 0.94  17 / 135  12,850 / 15,470 - 15,990
  * <p>
  * Results 03/02/2017 running on i7-6700HQ Win 10  100k/s * 5M * 40B
- * 50/90 99/99.9 99.99/99.999 - worst was 0.59 / 0.94  17 / 135  12,850 / 15,470 - 15,990
+ * 50/90 99/99.9 99.99/99.999 - worst was 0.39 / 0.39  0.39 / 28  541 / 967  1,280 / 3,340
+ * <p>
+ * Results 06/02/2017 running on i7-6700HQ Win 10  1M/s * 5M * 40B
+ * 50/90 99/99.9 99.99/99.999 - worst was 0.39 / 0.39  6.3 / 76  516 / 868  999 / 1,030
+ * <p>
+ * Results 06/02/2017 running on i7-6700HQ Win 10  1.2M/s * 5M * 40B
+ * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.39 / 0.39  12 / 336  2,820 / 3,470  3,600 / 3,600
  * <p>
  * Results 05/02/2017 running i7-4790, Centos 7 100k/s * 5 M * 40B enableAffinity=true
  * 50/90 99/99.9 99.99/99.999 - worst was 0.18 / 0.20  0.26 / 0.59  10 / 14 - 117
@@ -93,7 +99,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 .blockSize(128 << 20)
                 .build()) {
 
-            runTest(queue, 2_300_000);
+            runTest(queue, 1_200_000);
         }
     }
 
