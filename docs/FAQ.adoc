@@ -268,3 +268,11 @@ A couple of prime examples are
 === In Chronicle v4, will an error such as `IllegalStateException` appear when there is a high number of messages to write?
 
 Chronicle Queue v4+ doesn't have the limitation of using jusy one thread. It supports any number of threads with a single file per cycle.
+
+=== What is recommended pattern to implement such event listener?
+
+The recommended pattern for implementing a listener pattern is to use the methodReader/methodWriter which can also take care of timestamps when where you read was up.
+
+Say you want a built-in chronicle queue mechanism for asynchronous 'appender -> tailer' notifications, such that upon receipt of a notification event, a given tailer is guaranteed to have at least one entry posted by appender, ready for read. For the tailer, the only way it know there is a message is by reading/polling the end of the queue. If the appender and tailer are in the same process you can use a different mechanism of your choice.
+
+We suggest you read these https://vanilla-java.github.io/tag/Microservices/ from the bottom up starting with Part 1.
