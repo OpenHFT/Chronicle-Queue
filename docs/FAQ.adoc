@@ -276,3 +276,7 @@ The recommended pattern for implementing a listener pattern is to use the method
 Say you want a built-in chronicle queue mechanism for asynchronous 'appender -> tailer' notifications, such that upon receipt of a notification event, a given tailer is guaranteed to have at least one entry posted by appender, ready for read. For the tailer, the only way it know there is a message is by reading/polling the end of the queue. If the appender and tailer are in the same process you can use a different mechanism of your choice.
 
 We suggest you read these https://vanilla-java.github.io/tag/Microservices/ from the bottom up starting with Part 1.
+
+=== What would cause Chronicle Queue to segfault?
+
+I could be a race condition. When a memory mapping is truly freed it cannot be accessed or it will trigger a segmentation fault. The reason to suspect this is that it should be free on a roll from one cycle to the next.
