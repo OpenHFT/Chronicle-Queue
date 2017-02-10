@@ -78,7 +78,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final boolean isBuffered;
     @NotNull
     private final WireType wireType;
-    private final long blockSize;
+    private final long blockSize, overlapSize;
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     private final EventLoop eventLoop;
@@ -107,6 +107,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         path = builder.path();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
+        overlapSize = builder.blockSize() / 4;
         eventLoop = builder.eventLoop();
         bufferCapacity = builder.bufferCapacity();
         onRingBufferStats = builder.onRingBufferStats();
@@ -522,6 +523,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public long blockSize() {
         return this.blockSize;
+    }
+
+    public long overlapSize() {
+        return this.overlapSize;
     }
 
     @NotNull

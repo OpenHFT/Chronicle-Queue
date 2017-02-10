@@ -17,7 +17,7 @@ It supports:
 
 === What is the performance like?
 
-While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+While Single Chronicle (single file per cycle) supports sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
 
 === With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
@@ -107,10 +107,11 @@ It's possible to use Chronicle Queue to invoke a method on the other JVM and wai
 
 However, this could be an overkill, especially if you don't have to keep the history of the request/responses. 
 
-Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `IndexedChronicles`:
+Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `SingleChronicleQueue`s:
 
-`Q1` for sending requests from `C` to `S`
-`Q2` for sending responses from `S` to `C`
+- `Q1` for sending requests from `C` to `S`
+- `Q2` for sending responses from `S` to `C`
+
 Server has a thread that is polling (busy spin with back-off) on `Q1`. When it receives a request (with `id=x` it does whatever is needed and writes out response to `Q2` (with `id=x`. `C` polls `Q2` with some policy and reads out responses as they appear. It uses the `id` to tie responses to requests.
 
 Main task would be in devising a wire-level protocol for serialising your commands (equivalent of the method calls) from the client. This is application specific and can be done efficiently with the Chronicle tools.
@@ -120,6 +121,8 @@ Another issues to consider:
 what should the client do with the historical responses on startup?
 some heartbeat system so that client knows the server is alive
 archiving of the old queues (`VanillaChronicle` makes it easier at some cost).
+
+For more details on how to do this https://vanilla-java.github.io/2016/03/23/Microservices-in-the-Chronicle-world-Part-1.html[Read This series of posts]
 
 === What types of Excerpt are there?
 
@@ -288,3 +291,7 @@ The recommended pattern for implementing a listener pattern is to use the method
 Say you want a built-in chronicle queue mechanism for asynchronous 'appender -> tailer' notifications, such that upon receipt of a notification event, a given tailer is guaranteed to have at least one entry posted by appender, ready for read. For the tailer, the only way it know there is a message is by reading/polling the end of the queue. If the appender and tailer are in the same process you can use a different mechanism of your choice.
 
 We suggest you read these https://vanilla-java.github.io/tag/Microservices/ from the bottom up starting with Part 1.
+
+=== What would cause Chronicle Queue to segfault?
+
+I could be a race condition. When a memory mapping is truly freed it cannot be accessed or it will trigger a segmentation fault. The reason to suspect this is that it should be free on a roll from one cycle to the next.
