@@ -35,6 +35,21 @@ they need and perform queries without needed to touch the critical system as the
 
 Chronicle works best in SEDA style event driven systems, where latency is critical and you need a record of exactly what was performed when. (Without expensive network sniffing/recording systems)
 
+=== What is the performance like?
+
+While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+
+=== How does Chronicle Queue use memory? 
+
+Chronicle Queue is designed to use virtual memory which can be much larger than main memory (or the heap) without a significant impact on your system. This allows you to access the data at random quickly.
+
+Here is a link to an article with an example of a process writing 1 TB in 3 hours: https://vanilla-java.github.io/2017/01/27/Chronicle-Queue-storing-1-TB-in-virtual-memory-on-a-128-GB-machine.html
+
+This shows how much slower it gets as the queue grows.
+Even after it is 1 TB in size on a machine with 128 GB, it write 1 GB under 2 seconds pretty consistently.
+
+While this doesn't cause a technical problem, we are aware this does concern people who also find this "weird", and we plan to have a mode which reduces virtual memory use (even if a little slower for some use cases).
+
 === With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
 Two approaches for reducing CPU usage are;
