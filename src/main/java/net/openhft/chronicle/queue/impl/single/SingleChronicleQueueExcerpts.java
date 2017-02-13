@@ -152,7 +152,7 @@ public class SingleChronicleQueueExcerpts {
                 pretoucher = new PretoucherState(() -> this.store.writePosition());
             Wire wire = this.wire;
             if (wire != null)
-            pretoucher.pretouch((MappedBytes) wire.bytes());
+                pretoucher.pretouch((MappedBytes) wire.bytes());
         }
 
         @Override
