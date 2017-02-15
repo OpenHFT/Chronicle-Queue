@@ -866,7 +866,7 @@ public class SingleChronicleQueueExcerpts {
                     next = next0(includeMetaData);
 
                 if (context.present(next)) {
-                    assert wire().startUse();
+                    context.start();
                     return context;
                 }
                 RollCycle rollCycle = queue.rollCycle();
@@ -1574,6 +1574,11 @@ public class SingleChronicleQueueExcerpts {
                 return this.present = present;
             }
 
+            public void start() {
+                this.start = wire().bytes().readPosition();
+                assert wire().startUse();
+            }
+
             public void wire(@Nullable AbstractWire wire) {
 
                 AbstractWire oldWire = this.wire;
@@ -1583,6 +1588,7 @@ public class SingleChronicleQueueExcerpts {
                     oldWire.bytes().release();
             }
         }
+
     }
 }
 
