@@ -94,7 +94,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @After
     public void after() {
         threadDump.assertNoNewThreads();
-
         Jvm.dumpException(exceptionKeyIntegerMap);
         Assert.assertTrue(exceptionKeyIntegerMap.isEmpty());
         Jvm.resetExceptionHandlers();
@@ -2266,7 +2265,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .build()) {
 
                 final ExcerptAppender appender2 = q2.acquireAppender();
-
                 final ExcerptTailer tailer1 = q1.createTailer();
                 final ExcerptTailer tailer2 = q2.createTailer();
 
