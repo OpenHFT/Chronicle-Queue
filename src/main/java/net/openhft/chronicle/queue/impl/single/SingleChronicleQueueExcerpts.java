@@ -867,6 +867,7 @@ public class SingleChronicleQueueExcerpts {
 
                 if (context.present(next)) {
                     assert wire().startUse();
+                //    context.start();
                     return context;
                 }
                 RollCycle rollCycle = queue.rollCycle();
