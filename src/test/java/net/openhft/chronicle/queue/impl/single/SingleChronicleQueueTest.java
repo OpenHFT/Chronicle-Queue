@@ -3137,11 +3137,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 dc.wire().write("some").text("data");
             }
 
-
+            DocumentContext dc0;
             try (DocumentContext dc = queue.createTailer().readingDocument()) {
                 String s = Wires.fromSizePrefixedBlobs(dc);
                 Assert.assertTrue(s.contains("some: data"));
+                dc0 = dc;
             }
+
+            String out = Wires.fromSizePrefixedBlobs(dc0);
+            System.out.println("" + out);
         }
 
     }

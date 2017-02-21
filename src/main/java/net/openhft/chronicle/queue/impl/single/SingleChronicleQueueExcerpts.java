@@ -866,7 +866,7 @@ public class SingleChronicleQueueExcerpts {
                     next = next0(includeMetaData);
 
                 if (context.present(next)) {
-                    context.start();
+                    context.setStart(context.wire().bytes().readPosition()-4);
                     return context;
                 }
                 RollCycle rollCycle = queue.rollCycle();
