@@ -27,7 +27,7 @@
         <relativePath />
     </parent>
     <artifactId>chronicle-queue</artifactId>
-    <version>4.5.27-SNAPSHOT</version>
+    <version>4.5.28-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
 
