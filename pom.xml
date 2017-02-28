@@ -22,13 +22,13 @@
     </properties>
     
     <parent>
-        <groupId>software.chronicle</groupId>
+        <groupId>net.openhft</groupId>
         <artifactId>chronicle-enterprise-root-pom</artifactId>
-        <version>1.0.5</version>
+        <version>1.0.0</version>
         <relativePath />
     </parent>
 
-    <groupId>net.openhft</groupId>
+
     <artifactId>chronicle-queue</artifactId>
     <version>4.6.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
