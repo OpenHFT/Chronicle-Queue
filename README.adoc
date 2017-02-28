@@ -4,7 +4,7 @@ As a software company we are maturing and as such want to offer a more commercia
 
 -  Our libraries will continue to be open source and available on git-hub, you get access to all the source code and release tags for free and anonymously, you are able to create the builds yourself off the latest tags.
 
--  but in order to engage with our users, we are no-longer going to release to maven central, future releases are going to be moved onto our own chronicle nexus server, if you want access to this nexus server, to download the latest release artifacts, please contact sales@chronicle.software
+-  but in order to engage with our users, we are no-longer going to release to maven central, future releases are going to be moved onto our own chronicle nexus server, if you want access to this nexus server, to download the latest release artifacts, please contact sales@chronicle.software[mailto:sales@chronicle.software]
  
  
 = Readme
