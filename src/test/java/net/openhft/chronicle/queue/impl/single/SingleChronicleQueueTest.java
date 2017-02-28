@@ -2209,15 +2209,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "FirstName: Quartilla\n" +
                         "# position: 728, header: 0\n" +
                         "--- !!data #binary\n" +
-                        "000002d0                                      3F 5B 8C C9              ?[··\n" +
-                        "000002e0 EA 85 5A 0A FA 73 47 D2  3E 8D 66 4E 68 21 89 90 ··Z··sG· >·fNh!··\n" +
-                        "000002f0 92 80 71 34 5C CC 42 D7  BC 8F C5 C7 01 43 DB 63 ··q4\\·B· ·····C·c\n" +
-                        "00000300 EE 66 B0 CD FF 9F 69 91  76 80 15 1E             ·f····i· v···    \n" +
-                        "# position: 780, header: 0\n" +
+                        "FirstName: Helen\n" +
+                        "# position: 748, header: 0\n" +
                         "--- !!meta-data #binary\n" +
                         "FirstName: Steve\n" +
                         "...\n" +
-                        "# 326876 bytes remaining\n";
+                        "# 326908 bytes remaining\n";
             else
                 return "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
