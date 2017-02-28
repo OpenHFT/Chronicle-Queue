@@ -2265,8 +2265,55 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "FirstName: Steve\n" +
                         "...\n" +
                         "# 326908 bytes remaining\n";
+
+        } else if(wireType == WireType.DEFAULT_ZERO_BINARY){
+            return "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType DEFAULT_ZERO_BINARY,\n" +
+                    "  writePosition: 704,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 16,\n" +
+                    "    indexSpacing: 2,\n" +
+                    "    index2Index: 352,\n" +
+                    "    lastIndex: 2\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 352, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 16, used: 1\n" +
+                    "  520,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 520, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 16, used: 1\n" +
+                    "  704,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 680, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "FirstName: Quartilla\n" +
+                    "# position: 704, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "FirstName: Helen\n" +
+                    "# position: 724, header: 0\n" +
+                    "--- !!meta-data #binary\n" +
+                    "FirstName: Steve\n" +
+                    "...\n" +
+                    "# 326932 bytes remaining\n";
+
         }
-        throw new IllegalStateException("unknown type");
+        throw new IllegalStateException("unknown type wireType="+wireType+"\n");
     }
 
     @Test(expected = IllegalArgumentException.class)
