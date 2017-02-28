@@ -1,4 +1,3 @@
-= Readme
 Peter Lawrey, Rob Austin
 :toc: manual
 :css-signature: demo
@@ -11,7 +10,7 @@ As a software company we are maturing and as such want to offer a more commercia
 
 -  but in order to engage with our users, we are no-longer going to release to maven central, future releases are going to be moved onto our own chronicle nexus server, if you want access to this nexus server, to download the latest release artifacts, please contact mailto:sales@chronicle.software[sales@chronicle.software]
 
-= Read me
+= Chronicle Queue
 
 ==== About Chronicle Software
 
