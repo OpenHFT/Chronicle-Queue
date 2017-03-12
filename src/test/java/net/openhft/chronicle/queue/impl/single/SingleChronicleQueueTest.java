@@ -2317,7 +2317,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# 326932 bytes remaining\n";
 
         }
-        throw new IllegalStateException("unknown type wireType="+wireType+"\n");
+        throw new IllegalStateException("unknown type " + wireType);
     }
 
     @Test(expected = IllegalArgumentException.class)
