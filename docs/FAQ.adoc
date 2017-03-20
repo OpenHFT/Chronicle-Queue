@@ -209,7 +209,7 @@ You can have any number of writers.  You may get higher throughput if you have o
 
 === Does Chronicle Queue support replication?
 
-Replication have been moved to Chronicle Queue Enterprise.  This supports
+Replication features have been moved to Chronicle Queue Enterprise.  This supports
 
 - replication of a single master to multiple slave nodes.
 - writers can wait for replication to be acknowledged.
@@ -243,7 +243,7 @@ The message will be lost and it is truncated.
 
 === I get an Exception attempting to read an Excerpt. What does this mean?
 
-Most likely your read code doesn't match your write code. Using Wire measn it can handle changed to fields and data types transparently.
+Most likely your read code doesn't match your write code. Using Wire means it can handle changed to fields and data types transparently.
 
 === How does the byte order work with replication?
 
@@ -261,19 +261,19 @@ Where XML is needed down stream, I suggest writing in binary format and have the
 
 === Does Chronicle support a synchronous mode?
 
-Chronicle Queue v4.x doesn't at the moment.  The best approach is to wait for a replicationed message to be acknowledged.
+Chronicle Queue v4.x doesn't at the moment.  The best approach is to wait for a replicated message to be acknowledged.
 
 === Does CQ can compete with Spark in this domain ?
 
 To my knowledge, Spark Streaming is designed for real time but is looking to support a much lower message rate and doesn't attempt to be ultra low GC. e.g. minor GC less than once a day.  I haven't heard of any one using Spark in the core of a Trading system. It tends to be used for downstream monitoring and reporting.
 
-=== It seems that you have some clients that use CQ for Big Data problem.
+=== It seems that you have some clients that use CQ for Big Data style problems.
 
 Our largest CQ client pulls in up to 100 TB into a single JVM using an earlier version.
 
 === Could you please us more about the way they use CQ ?
 
-Where CQ is compelling is it's no-flow control model.  CS is designed to not slow the producer if you have a slow consumer.  Instead you need to give it plenty of disk space as your buffer.  Disk space is cheaper than main memory and is cheaper than heap space. You can buy a system with multiple 16 TB SSD drives today. No one would consider having a JVM heap with 100 TB.
+Where CQ is compelling is it's no-flow control model.  CQ is designed to not slow the producer if you have a slow consumer.  Instead you need to give it plenty of disk space as your buffer.  Disk space is cheaper than main memory and is cheaper than heap space. You can buy a system with multiple 16 TB SSD drives today. No one would consider having a JVM heap with 100 TB.
 
 A couple of prime examples are
 
@@ -282,9 +282,9 @@ A couple of prime examples are
 
 === In Chronicle v4, will an error such as `IllegalStateException` appear when there is a high number of messages to write?
 
-Chronicle Queue v4+ doesn't have the limitation of using jusy one thread. It supports any number of threads with a single file per cycle.
+Chronicle Queue v4+ doesn't have the limitation of using just one thread. It supports any number of threads with a single file per cycle.
 
-=== What is recommended pattern to implement such event listener?
+=== What is recommended pattern to implement such an event listener?
 
 The recommended pattern for implementing a listener pattern is to use the methodReader/methodWriter which can also take care of timestamps when where you read was up.
 
@@ -294,4 +294,4 @@ We suggest you read these https://vanilla-java.github.io/tag/Microservices/ from
 
 === What would cause Chronicle Queue to segfault?
 
-I could be a race condition. When a memory mapping is truly freed it cannot be accessed or it will trigger a segmentation fault. The reason to suspect this is that it should be free on a roll from one cycle to the next.
+It could be a race condition. When a memory mapping is truly freed it cannot be accessed or it will trigger a segmentation fault. The reason to suspect this is that it should be free on a roll from one cycle to the next.
