@@ -27,6 +27,13 @@ import java.util.Random;
 @Ignore
 public class FsFullWriteTest {
 
+
+    /*
+      as root:
+       mount -o size=100M -t tmpfs none /mnt/tmpfs
+       mkdir /mnt/tmpfs/cq && chown <user>:<group> /mnt/tmpfs/cq
+       dd if=/dev/zero of=/mnt/tmpfs/fillspace bs=1M count=90
+      */
     private static  String basePath = "/mnt/tmpfs/cq/testqueue";
 
     //@Before
@@ -52,7 +59,7 @@ public class FsFullWriteTest {
         Random r = new Random();
         r.nextBytes(payload);
         final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
-        for (int i = 0; i < 1024*1024; i++) {
+        for (int i = 0; i < 1024*200; i++) {
             DocumentContext dc = appender.writingDocument();
             try {
 
