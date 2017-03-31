@@ -306,7 +306,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return pool.nextCycle(cycle, direction);
     }
 
-    long exceptsPerCycle(int cycle) {
+    public long exceptsPerCycle(int cycle) {
         StoreTailer tailer = acquireTailer();
         try {
             long index = rollCycle.toIndex(cycle, 0);

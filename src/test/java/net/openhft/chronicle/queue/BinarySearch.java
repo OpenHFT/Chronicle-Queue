@@ -6,8 +6,8 @@ import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.NavigableSet;
 
 /**
@@ -31,18 +31,20 @@ public enum BinarySearch {
             return findWithinCycle(key, c, start, end, tailer, q.rollCycle());
         }
 
-        final NavigableSet<Long> longs = q.listCyclesBetween(startCycle, endCycle);
+        final NavigableSet<Long> cycles = q.listCyclesBetween(startCycle, endCycle);
 
-        final int cycle = findCycle(q.rollCycle(), longs, key, c, tailer);
+        final int cycle = (int) findCycle(q.rollCycle(), cycles, key, c, tailer);
         if (cycle == -1)
             return -1;
 
+        final long count = q.exceptsPerCycle(cycle);
+
         final long startIndex = q.rollCycle().toIndex(cycle, 0);
-        final long cycleEnd = q.rollCycle().toIndex(cycle + 1, 0);
-        tailer.direction(TailerDirection.BACKWARD);
-        tailer.moveToIndex(cycleEnd);
-        tailer.readingDocument().close();
-        final long endIndex = tailer.index();
+        final long endIndex = q.rollCycle().toIndex(cycle, count - 1);
+
+
+        System.out.print(q.rollCycle().toCycle(endIndex));
+
         tailer.direction(TailerDirection.FORWARD);
 
         return findWithinCycle(key, c, startIndex, endIndex, tailer, q.rollCycle());
@@ -50,26 +52,29 @@ public enum BinarySearch {
     }
 
 
-    private int findCycle(RollCycle rollCycle, NavigableSet l, Wire key, Comparator<Wire> c, ExcerptTailer tailer) {
+    private long findCycle(RollCycle rollCycle, NavigableSet cycles, Wire key, Comparator<Wire> c, ExcerptTailer tailer) {
         int low = 0;
-        int high = l.size() - 1;
-        Iterator i = l.iterator();
+        int high = cycles.size() - 1;
+        final ArrayList<Long> arrayList = new ArrayList<>(cycles);
         final long readPosition = key.bytes().readPosition();
         while (low <= high) {
             int mid = (low + high) >>> 1;
-
-            final long index = rollCycle.toIndex(mid, 0);
+            final Long midCycle = arrayList.get(mid);
+            final int midCycle1 = (int) (long) midCycle;
+            final long index = rollCycle.toIndex(midCycle1, 0);
             try (DocumentContext midVal = get(index, tailer)) {
 
                 int cmp = c.compare(midVal.wire(), key);
-                if (cmp == 0)
-                    return low;
+                if (cmp == 0 && mid == high)
+                    return arrayList.get(high);
+
                 if (cmp < 0)
                     low = mid + 1;
                 else if (cmp > 0)
                     high = mid - 1;
-                if (low == high)
-                    return low;
+                else if (low == high - 1)
+                    return arrayList.get(low);
+
             } finally {
                 key.bytes().readPosition(readPosition);
             }
@@ -83,7 +88,7 @@ public enum BinarySearch {
         final long readPosition = key.bytes().readPosition();
         while (low <= high) {
             long mid = (low + high) >>> 1L;
-
+            System.out.println("low" + rollCycle.toSequenceNumber(low) + ",high" + rollCycle.toSequenceNumber(high) + ",mid" + rollCycle.toSequenceNumber(mid));
             try (DocumentContext dc = get(mid, tailer)) {
                 if (!dc.isPresent())
                     return -1;
@@ -101,7 +106,7 @@ public enum BinarySearch {
             }
 
         }
-        return -(low + 1);  // key not found
+        return -1;  // key not found
     }
 
 

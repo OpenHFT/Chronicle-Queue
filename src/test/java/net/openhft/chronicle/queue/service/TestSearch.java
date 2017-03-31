@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.service;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.BinarySearch;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -15,6 +16,8 @@ import org.junit.Test;
 import java.text.ParseException;
 import java.util.Comparator;
 
+import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
+
 /**
  * @author Rob Austin.
  */
@@ -26,9 +29,15 @@ public class TestSearch extends ChronicleQueueTestBase {
 
     @Test
     public void test() throws ParseException {
+
+        SetTimeProvider stp = new SetTimeProvider();
+        long time = System.currentTimeMillis();
+        stp.currentTimeMillis(time);
+
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
-                .fieldlessBinary(getTmpDir())
-                .blockSize(128 << 20)
+                .binary(getTmpDir())
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(stp)
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -39,6 +48,8 @@ public class TestSearch extends ChronicleQueueTestBase {
                 myData.value = "some value where the key=" + String.valueOf(i);
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().getValueOut().marshallable(myData);
+                    time += 300;
+                    stp.currentTimeMillis(time);
                 }
 
             }
