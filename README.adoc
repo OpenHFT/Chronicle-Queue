@@ -22,6 +22,8 @@ video::201989439[vimeo,width=640,height=360]
 
 https://player.vimeo.com/video/201989439
 
+http://jrvis.com/red-dwarf/?user=openhft&repo=chronicle-queue[Chronicle Queue usage heatmap]
+
 === What is Chronicle Queue 
 Chronicle Queue is a distributed unbounded persisted queue.
 
