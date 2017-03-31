@@ -26,7 +26,7 @@ public interface WireStoreSupplier {
     WireStore acquire(int cycle, boolean createIfAbsent);
 
     /**
-     * the next available cycle, not cycle will be created by this method, typically used by a
+     * the next available cycle, no cycle will be created by this method, typically used by a
      * tailer.
      *
      * @param currentCycle the current cycle

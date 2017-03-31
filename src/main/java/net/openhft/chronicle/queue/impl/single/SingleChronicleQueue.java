@@ -378,7 +378,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         NavigableSet<Long> cycles;
         try {
-            cycles = pool.listCyclesBetween(lowerCycle, upperCycle);
+            cycles = listCyclesBetween(lowerCycle, upperCycle);
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -406,6 +406,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         return result;
+    }
+
+    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+        return pool.listCyclesBetween(lowerCycle, upperCycle);
     }
 
     public <T> void addCloseListener(T key, Consumer<T> closer) {
