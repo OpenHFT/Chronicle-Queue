@@ -37,7 +37,6 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                 .timeProvider(stp)
                 .build()) {
 
-
             final ExcerptAppender appender = queue.acquireAppender();
 
             for (int i = 0; i < MAX_NUMBER_OF_TESTED_MESSAGES; i++) {
@@ -145,8 +144,8 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                     return findWithinCycle(key, c, startCycle, tailer, q, rollCycle);
 
                 final NavigableSet<Long> cycles = q.listCyclesBetween(startCycle, endCycle);
-
                 final int cycle = (int) findCycleLinearSearch(cycles, key, c, tailer, q);
+
                 if (cycle == -1)
                     return -1;
                 return findWithinCycle(key, c, cycle, tailer, q, rollCycle);
