@@ -15,8 +15,11 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.WireKey;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
@@ -59,11 +62,41 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
+    static void deleteDir(@NotNull String... dirs) {
+        for (String dir : dirs) {
+            try {
+                deleteDir(new File(dir));
+            } catch (Exception e) {
+                Jvm.warn().on(ChronicleQueueTestBase.class, e);
+            }
+        }
+
+    }
+
+    public static void deleteDir(@NotNull File dir) {
+        if (dir.isDirectory()) {
+            @Nullable File[] files = dir.listFiles();
+            if (files != null) {
+                for (@NotNull File file : files) {
+                    if (file.isDirectory()) {
+                        deleteDir(file);
+                    } else
+                        //noinspection ResultOfMethodCallIgnored
+                        file.delete();
+                }
+            }
+        }
+
+        dir.delete();
+    }
+
     protected File getTmpDir() {
         return Utils.tempDir(testName.getMethodName());
     }
 
+
     public enum TestKey implements WireKey {
         test, test2
     }
+
 }
