@@ -55,7 +55,7 @@ public class TestSearch extends ChronicleQueueTestBase {
                 }
 
             }
-            System.out.println(queue.dump());
+            //     System.out.println(queue.dump());
 
             for (int j = 0; j < MAX_SIZE; j++) {
                 //      System.out.println("j=" + j);
@@ -86,22 +86,21 @@ public class TestSearch extends ChronicleQueueTestBase {
 
                         final int compare = Integer.compare(myDataO1.key, myDataO2.key);
                         //   System.out.println("compare =" + compare);
-
-
                         return compare;
+
                     } finally {
                         o1.bytes().readPosition(readPositionO1);
                         o2.bytes().readPosition(readPositionO2);
                     }
                 };
 
-                if (j == 3)
-                    System.out.println("");
+
                 long index = BinarySearch.INSTANCE.search(queue, key, comparator);
                 if (index == -1) {
-                    System.out.println("fault=" + j);
+                    ///   System.out.println("fault=" + j);
                     index = BinarySearch.INSTANCE.search(queue, key, comparator);
                 }
+
                 assert index != -1 : "i=" + j;
 
                 final ExcerptTailer tailer = queue.createTailer();
