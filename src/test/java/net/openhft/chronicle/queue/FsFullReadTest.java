@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireDumper;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -30,6 +31,7 @@ public class FsFullReadTest {
 
     private static  String basePath = "src/test/resources/tr2";
 
+    @Ignore("broken test")
     @Test
     public void testFullReadFs() throws Exception {
 
