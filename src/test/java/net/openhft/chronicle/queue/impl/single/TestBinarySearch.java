@@ -228,8 +228,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         }
 
         /**
-         * Gets the ith element from the given list by repositioning the specified
-         * list listIterator.
+         * moves to index
          */
         private static DocumentContext moveTo(long index, final ExcerptTailer tailer) {
             final boolean b = tailer.moveToIndex(index);
