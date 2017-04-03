@@ -22,7 +22,7 @@ import java.util.Objects;
 public class TestSearch extends ChronicleQueueTestBase {
 
 
-    public static final int MAX_SIZE = 20;
+    public static final int MAX_SIZE = 50;
 
 
     @Test
@@ -58,9 +58,8 @@ public class TestSearch extends ChronicleQueueTestBase {
             System.out.println(queue.dump());
 
             for (int j = 0; j < MAX_SIZE; j++) {
-                System.out.println("j=" + j);
-                int i = j;
-                Wire key = toWire(i);
+                //      System.out.println("j=" + j);
+                Wire key = toWire(j);
 
                 final Comparator<Wire> comparator = (o1, o2) -> {
 
@@ -74,19 +73,19 @@ public class TestSearch extends ChronicleQueueTestBase {
 
                             myDataO1 = dc.wire().getValueIn().typedMarshallable();
                             assert myDataO1.value != null;
-                            System.out.println("Comparator - low=" + myDataO1);
+                            //     System.out.println("Comparator - low=" + myDataO1);
                         }
 
 
                         try (final DocumentContext dc = o2.readingDocument()) {
                             myDataO2 = dc.wire().getValueIn().typedMarshallable();
-                            System.out.println("Comparator - high=" + myDataO2);
+                            //           System.out.println("Comparator - high=" + myDataO2);
                             assert myDataO2.value != null;
                         }
 
 
                         final int compare = Integer.compare(myDataO1.key, myDataO2.key);
-                        System.out.println("compare =" + compare);
+                        //   System.out.println("compare =" + compare);
 
 
                         return compare;
@@ -96,19 +95,19 @@ public class TestSearch extends ChronicleQueueTestBase {
                     }
                 };
 
-                if (i == 3)
+                if (j == 3)
                     System.out.println("");
                 long index = BinarySearch.INSTANCE.search(queue, key, comparator);
                 if (index == -1) {
-                    System.out.println("fault=" + i);
+                    System.out.println("fault=" + j);
                     index = BinarySearch.INSTANCE.search(queue, key, comparator);
                 }
-                assert index != -1 : "i=" + i;
+                assert index != -1 : "i=" + j;
 
                 final ExcerptTailer tailer = queue.createTailer();
                 tailer.moveToIndex(index);
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
-                    Assert.assertTrue(documentContext.toString().contains("some value where the key=" + i));
+                    Assert.assertTrue(documentContext.toString().contains("some value where the key=" + j));
                 }
             }
         } finally
