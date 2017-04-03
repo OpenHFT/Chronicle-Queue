@@ -7,10 +7,7 @@ import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.NavigableSet;
+import java.util.*;
 
 /**
  * @author Rob Austin.
@@ -36,9 +33,17 @@ public enum BinarySearch {
             final NavigableSet<Long> cycles = q.listCyclesBetween(startCycle, endCycle);
 
 
-            final int cycle = (int) findCycle(q.rollCycle(), cycles, key, c, tailer);
+            final int cycle = (int) findCycleLinearSearch(cycles, key, c, tailer);
             if (cycle == -1)
                 return -1;
+
+            long highSeqNum = q.exceptsPerCycle(cycle) - 1;
+            tailer.moveToIndex(q.rollCycle().toIndex(cycle, 0));
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                final TestSearch.MyData myData = new TestSearch.MyData();
+                dc.wire().getValueIn().marshallable(myData);
+                System.out.println("findCycle - low=" + myData.toString() + "high+=" + highSeqNum);
+            }
 
 
             tailer.direction(TailerDirection.FORWARD);
@@ -47,8 +52,43 @@ public enum BinarySearch {
         } finally {
             key.bytes().readPosition(readPosition);
         }
+
+
     }
 
+
+    private long findCycleLinearSearch(NavigableSet<Long> cycles, Wire key, Comparator<Wire> c, ExcerptTailer tailer) {
+
+        final Iterator<Long> iterator = cycles.iterator();
+        if (!iterator.hasNext())
+            return -1;
+        final RollCycle rollCycle = ((SingleChronicleQueue) (tailer.queue())).rollCycle();
+        long prevIndex = iterator.next();
+
+        while (iterator.hasNext()) {
+
+            final Long current = iterator.next();
+
+            final boolean b = tailer.moveToIndex(rollCycle.toIndex((int) (long) current, 0));
+            if (!b)
+                return prevIndex;
+
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                dc.wire().bytes().readSkip(-4);
+                final int compare = c.compare(dc.wire(), key);
+                if (compare == 0)
+                    return current;
+                else if (compare == 1)
+                    return prevIndex;
+
+                prevIndex = current;
+            }
+        }
+
+        return prevIndex;
+
+    }
 
     /**
      * @param rollCycle
@@ -58,24 +98,25 @@ public enum BinarySearch {
      * @param tailer
      * @return -1 value if not found, otherwise the cycle number
      */
-    private long findCycle(RollCycle rollCycle, NavigableSet cycles, Wire key, Comparator<Wire> c, ExcerptTailer tailer) {
+
+    private long findCycle(RollCycle rollCycle, NavigableSet<Long> cycles, Wire key, Comparator<Wire> c, ExcerptTailer tailer) {
 
         final long readPosition = key.bytes().readPosition();
         try {
             final SingleChronicleQueue q = ((SingleChronicleQueue) tailer.queue());
             int low = 0;
             int high = cycles.size() - 1;
-            final List<Long> arrayList = new ArrayList<>(cycles);
+            final List<Long> list = new ArrayList<>(cycles);
 
             int mid = -1;
             Long midCycle = 1L;
             while (low <= high) {
                 mid = (low + high) >>> 1;
-                midCycle = arrayList.get(mid);
+                midCycle = list.get(mid);
                 final long index = rollCycle.toIndex((int) (long) midCycle, 0);
 
 
-                tailer.moveToIndex(rollCycle.toIndex((int) (long) arrayList.get(low), 0));
+                tailer.moveToIndex(rollCycle.toIndex((int) (long) list.get(low), 0));
                 try (final DocumentContext dc = tailer.readingDocument()) {
                     final TestSearch.MyData myData = new TestSearch.MyData();
                     dc.wire().getValueIn().marshallable(myData);
@@ -83,7 +124,7 @@ public enum BinarySearch {
                 }
 
 
-                tailer.moveToIndex(rollCycle.toIndex((int) (long) arrayList.get(high), 0));
+                tailer.moveToIndex(rollCycle.toIndex((int) (long) list.get(high), 0));
                 try (final DocumentContext dc = tailer.readingDocument()) {
                     if (!dc.isPresent())
                         System.out.println("");
@@ -109,17 +150,18 @@ public enum BinarySearch {
                 }
 
                 if (low == high) {
-                    return arrayList.get(high);
+                    return list.get(high);
                 }
 
-                if (low + 1 == high) {
 
-                    try (DocumentContext dc = moveTo(rollCycle.toIndex((int) (long) arrayList.get(high), 0), tailer)) {
+                if (low + 1 == high) {
+                    key.bytes().readPosition(readPosition);
+                    try (DocumentContext dc = moveTo(rollCycle.toIndex((int) (long) list.get(mid), 0), tailer)) {
                         int cmp = c.compare(dc.wire(), key);
                         if (cmp == 0 || cmp == -1)
-                            return arrayList.get(high);
+                            return list.get(high);
 
-                        return arrayList.get(low);
+                        return list.get(low);
                     }
                 }
 
@@ -129,15 +171,20 @@ public enum BinarySearch {
                     int cmp = c.compare(dc.wire(), key);
 
                     if (cmp < 0) {
+
+                        if (mid - 1 == low) {
+                            low = mid;
+                            continue;
+                        }
                         low = mid + 1;
-                    } else if (cmp > 0)
+                    } else if (cmp > 0) {
+                        if (mid + 1 == high) {
+                            high = mid;
+                            continue;
+                        }
                         high = mid - 1;
-                    else
+                    } else
                         return midCycle;
-
-                    if (low == high)
-                        return arrayList.get(low);  // key not found
-
                 }
             }
             if (mid == -1 || low > high)

@@ -14,6 +14,7 @@ import org.junit.Test;
 import java.io.File;
 import java.text.ParseException;
 import java.util.Comparator;
+import java.util.Objects;
 
 /**
  * @author Rob Austin.
@@ -21,7 +22,7 @@ import java.util.Comparator;
 public class TestSearch extends ChronicleQueueTestBase {
 
 
-    public static final int MAX_SIZE = 6;
+    public static final int MAX_SIZE = 20;
 
 
     @Test
@@ -63,27 +64,36 @@ public class TestSearch extends ChronicleQueueTestBase {
 
                 final Comparator<Wire> comparator = (o1, o2) -> {
 
-                    MyData myDataO1 = new MyData();
-                    MyData myDataO2 = new MyData();
+                    final long readPositionO1 = o1.bytes().readPosition();
+                    final long readPositionO2 = o2.bytes().readPosition();
+                    try {
+                        MyData myDataO1 = null;
+                        MyData myDataO2 = null;
 
-                    try (final DocumentContext dc = o1.readingDocument()) {
-                        myDataO1 = dc.wire().getValueIn().typedMarshallable();
-                        assert myDataO1.value != null;
-                        System.out.println("Comparator - low=" + myDataO1);
+                        try (final DocumentContext dc = o1.readingDocument()) {
+
+                            myDataO1 = dc.wire().getValueIn().typedMarshallable();
+                            assert myDataO1.value != null;
+                            System.out.println("Comparator - low=" + myDataO1);
+                        }
+
+
+                        try (final DocumentContext dc = o2.readingDocument()) {
+                            myDataO2 = dc.wire().getValueIn().typedMarshallable();
+                            System.out.println("Comparator - high=" + myDataO2);
+                            assert myDataO2.value != null;
+                        }
+
+
+                        final int compare = Integer.compare(myDataO1.key, myDataO2.key);
+                        System.out.println("compare =" + compare);
+
+
+                        return compare;
+                    } finally {
+                        o1.bytes().readPosition(readPositionO1);
+                        o2.bytes().readPosition(readPositionO2);
                     }
-
-
-                    try (final DocumentContext dc = o2.readingDocument()) {
-                        myDataO2 = dc.wire().getValueIn().typedMarshallable();
-                        if (myDataO2.value == null)
-                            System.out.println("");
-                        assert myDataO2.value != null;
-                        System.out.println("Comparator - high=" + myDataO2);
-                    }
-
-
-                    final int compare = Integer.compare(myDataO1.key, myDataO2.key);
-                    return compare;
                 };
 
                 if (i == 3)
@@ -113,7 +123,7 @@ public class TestSearch extends ChronicleQueueTestBase {
     private Wire toWire(int key) {
         final MyData myData = new MyData();
         myData.key = key;
-        myData.value = "unknown";
+        myData.value = Integer.toString(key);
 
         Wire result = WireType.BINARY.apply(Bytes.elasticByteBuffer());
 
@@ -144,6 +154,20 @@ public class TestSearch extends ChronicleQueueTestBase {
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write("key").int32(key);
             wire.write("value").text(value);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof MyData)) return false;
+            if (!super.equals(o)) return false;
+            MyData myData = (MyData) o;
+            return key == myData.key;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), key);
         }
     }
 }
