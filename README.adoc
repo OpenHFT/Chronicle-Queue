@@ -1138,8 +1138,8 @@ This depends on the roll cycle, the roll cycle determines how often you create a
 * cycle number - ( when using daily rolling the first file from epoch has cycle number 1 and the next day it will have a cycle number of 2 )
 * message sequence number - with in a cycle,  when using daily rolling the frist message of each day will have a message sequence number of 1 and the next message within that day have a message sequence number of 2.
 
-Different roll cycles have a difference balance between how many bits we give to the message sequence number and how many of the remaining bits gets allocated to the cycle number, So another words different roll cycle trade off the max number of cycles for the next number of messages within the cycle.
-With 32-bit  (4 bn) per day, you can have 31-bit cycles up to the year 5,881,421 though with hourly it runs out in the year 246,947. If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle though reduce the number of cycles.
+Different roll cycles have a difference balance between how many bits we give to the message sequence number and how many of the remaining bits gets allocated to the cycle number, So another words different roll cycles allow us to trade off the max number of cycles for the max number of messages within the cycle.
+With a 32-bit message sequenece number that (4 bn) mesaegs per day, you can have 31-bit cycles up to the year 5,881,421 though with hourly it runs out in the year 246,947. If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle though reduce the number of cycles.
 
 Say you have up to 1 trillion messages per day, you need 23-bit cycles allows for up to the year 24,936. If we had rolled every second with 32-bit 4 bn messages per second we would be running out in about a decade. With hourly and daily rolling it's pretty limitless.
 
