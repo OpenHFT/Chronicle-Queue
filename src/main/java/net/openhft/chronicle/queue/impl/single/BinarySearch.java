@@ -25,7 +25,7 @@ public enum BinarySearch {
      * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
      * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the the
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
-     * bit on it not being set ( in other words set to zero ).
+     * bit not being set ( in other words set to zero ).
      */
     public static long search(@NotNull SingleChronicleQueue q,
                               @NotNull Wire key,
@@ -96,7 +96,7 @@ public enum BinarySearch {
      * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
      * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the the
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
-     * bit on it not being set ( in other words set to zero ).
+     * bit not being set ( in other words set to zero ).
      */
     public static long findWithinCycle(Wire key,
                                        Comparator<Wire> c,
