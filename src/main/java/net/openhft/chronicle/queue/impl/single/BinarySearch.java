@@ -21,7 +21,7 @@ public enum BinarySearch {
      * returns the index or -1 if not found or the index if an exact match is found, an approximation in the form of -approximateIndex
      * or -1 if there was no searching to be done.
      * <p>
-     * Warning : This implementation is un-reliable as index are an encoded 64bits, where we could use all the bits including the
+     * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
      * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
      * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the the
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
@@ -92,7 +92,7 @@ public enum BinarySearch {
      * @return The index if an exact match is found, an approximation in the form of -approximateIndex
      * or -1 if there was no searching to be done.
      * <p>
-     * Warning : This implementation is un-reliable as index are an encoded 64bits, where we could use all the bits including the
+     * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
      * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
      * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the the
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
