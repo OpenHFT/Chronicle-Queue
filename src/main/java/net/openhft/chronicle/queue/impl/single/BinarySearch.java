@@ -123,7 +123,9 @@ public enum BinarySearch {
 
                 midIndex = rollCycle.toIndex(cycle, midSeqNumber);
 
-                try (DocumentContext dc = moveTo(midIndex, tailer)) {
+                final boolean b = tailer.moveToIndex(midIndex);
+                assert b;
+                try (DocumentContext dc = tailer.readingDocument()) {
                     if (!dc.isPresent())
                         return -1;
                     key.bytes().readPosition(readPosition);
@@ -142,15 +144,6 @@ public enum BinarySearch {
         } finally {
             key.bytes().readPosition(readPosition);
         }
-    }
-
-    /**
-     * moves to index
-     */
-    private static DocumentContext moveTo(long index, final ExcerptTailer tailer) {
-        final boolean b = tailer.moveToIndex(index);
-        assert b;
-        return tailer.readingDocument();
     }
 
 }
