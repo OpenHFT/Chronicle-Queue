@@ -1135,7 +1135,7 @@ In the test above, the typical latency varied between 14 and 40 micro-seconds, t
 ==== How many messages can you store in a Chronicle Queue
 This depends on the roll cycle, the roll cycle determines how often you create a new chronicle queue data file, most people use a new file each day,  we call this daily rolling. The chronicle index is a unique index that is given to each message, you can use the index to retrieve any message that you have stored, when using daily rolling each message stored to the chronicle queue will increase the index by 1. The high bytes in the 64 bit index are used to store the cycle number and the low bits for the sequence number, so the index is broken down into 2 numbers:  
 
-* cycle number - ( when using daily rolling the first file from epoch has cycle number 1 and the next day it will have a cycle number of 2 )
+* cycle number - when using daily rolling the first file from epoch has cycle number 1 and the next day it will have a cycle number of 2
 * message sequence number - with in a cycle,  when using daily rolling the frist message of each day will have a message sequence number of 1 and the next message within that day have a message sequence number of 2.
 
 Different roll cycles have a difference balance between how many bits we give to the message sequence number and how many of the remaining bits gets allocated to the cycle number, So another words different roll cycles allow us to trade off the max number of cycles for the max number of messages within the cycle.
