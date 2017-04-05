@@ -1132,15 +1132,19 @@ In the test above, the typical latency varied between 14 and 40 micro-seconds, t
 === FAQ
 
 
-==== h
+==== How many messages can you store in a Chronicle Queue
+This depends on the roll cycle, the roll cycle determines how often you create a new chronicle queue data file, most people use a new file each day,  we call this daily rolling. The chronicle index is a unique index that is given to each message, you can use the index to retrieve any message that you have stored, when using daily rolling each message stored to the chronicle queue will increase the index by 1. The high bytes in the 64 bit index are used to store the cycle number and the low bits for the sequence number, so the index is broken down into 2 numbers:  
+
+* cycle number - ( when using daily rolling the first file from epoch has cycle number 1 and the next day it will have a cycle number of 2 )
+* message sequence number - with in a cycle,  when using daily rolling the frist message of each day will have a message sequence number of 1 and the next message within that day have a message sequence number of 2.
+
+Different roll cycles have a difference balance between how many bits we give to the message sequence number and how many of the remaining bits gets allocated to the cycle number, So another words different roll cycle trade off the max number of cycles for the next number of messages within the cycle.
 With 32-bit  (4 bn) per day, you can have 31-bit cycles up to the year 5,881,421 though with hourly it runs out in the year 246,947. If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle though reduce the number of cycles.
- 
-Say you have up to 1 trillion messages per day, you need 23-bit cycles allows for up to the year 24,936.
 
-Note: by playing with the epoch, you can extend the dates further shifting the limit between the first and last cycle to 31-bits or 23-bits.
+Say you have up to 1 trillion messages per day, you need 23-bit cycles allows for up to the year 24,936. If we had rolled every second with 32-bit 4 bn messages per second we would be running out in about a decade. With hourly and daily rolling it's pretty limitless.
+
+Also, by playing with the epoch, you can extend the dates further shifting the limit between the first and last cycle to 31-bits or 23-bits.
                                                
-
-
 ==== Is there an Appender to Tailer notification?
 
 Not implicitly. We didn't want to assume whether the appenders or tailers
