@@ -1140,7 +1140,7 @@ This depends on the roll cycle, the roll cycle determines how often you create a
 
 Different roll cycles have a difference balance between how many bits we give to the message sequence number and how many of the remaining bits gets allocated to the cycle number, So another words different roll cycles allow us to trade off the max number of cycles for the max number of messages within the cycle. 
 
-With *dailly rolling* we used a 32-bit message sequenece number which gives us 4 billon messsages per day, and the 31-bit cycle number ( reserving the high bit for the sign ) allows us to store messages up to the year 5,881,421, with hourly rolling we can store messages up to the year 246,947. 
+With *dailly rolling* we used a 32-bit message sequenece number which gives us *4 billon messsages per day*, and the 31-bit cycle number ( reserving the high bit for the sign ) allows us to store messages up to the year *5,881,421*, with hourly rolling we can store messages up to the year 246,947. 
 
 If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle though reduce the number of cycles.
 
