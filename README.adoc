@@ -1131,6 +1131,16 @@ In the test above, the typical latency varied between 14 and 40 micro-seconds, t
 
 === FAQ
 
+
+==== h
+With 32-bit  (4 bn) per day, you can have 31-bit cycles up to the year 5,881,421 though with hourly it runs out in the year 246,947. If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle though reduce the number of cycles.
+ 
+Say you have up to 1 trillion messages per day, you need 23-bit cycles allows for up to the year 24,936.
+
+Note: by playing with the epoch, you can extend the dates further shifting the limit between the first and last cycle to 31-bits or 23-bits.
+                                               
+
+
 ==== Is there an Appender to Tailer notification?
 
 Not implicitly. We didn't want to assume whether the appenders or tailers
