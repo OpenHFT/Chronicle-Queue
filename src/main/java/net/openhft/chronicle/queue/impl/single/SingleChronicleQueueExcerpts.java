@@ -856,7 +856,7 @@ public class SingleChronicleQueueExcerpts {
                 boolean next = false, tryAgain = true;
                 if (state == FOUND_CYCLE) {
                     try {
-                        next = inACycle(includeMetaData);
+                        next = inACycle(includeMetaData, true);
                         tryAgain = false;
                     } catch (EOFException eof) {
                         state = TailerState.END_OF_CYCLE;
@@ -897,7 +897,7 @@ public class SingleChronicleQueueExcerpts {
 
                     case FOUND_CYCLE: {
                         try {
-                            return inACycle(includeMetaData);
+                            return inACycle(includeMetaData, true);
                         } catch (EOFException eof) {
                             state = TailerState.END_OF_CYCLE;
                         }
@@ -978,7 +978,7 @@ public class SingleChronicleQueueExcerpts {
             throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
         }
 
-        private boolean inACycle(boolean includeMetaData) throws EOFException,
+        private boolean inACycle(boolean includeMetaData, boolean first) throws EOFException,
                 StreamCorruptedException {
             Bytes<?> bytes = wire().bytes();
             bytes.readLimit(bytes.capacity());
@@ -999,11 +999,8 @@ public class SingleChronicleQueueExcerpts {
                     // another message, however the EOF marker will always be at the end.
                     long now = queue.time().currentTimeMillis();
                     boolean cycleChange2 = now >= timeForNextCycle;
-/*                    int qcycle = queue.cycle();
-                    boolean cycleChange = this.cycle != qcycle;
-                    if (cycleChange != cycleChange2)
-                        System.out.println("error");*/
-                    if (cycleChange2 && !isReadOnly(bytes))
+
+                    if (first && cycleChange2 && !isReadOnly(bytes))
                         return checkMoveToNextCycle(includeMetaData, bytes);
 
                     return false;
@@ -1052,7 +1049,7 @@ public class SingleChronicleQueueExcerpts {
                 bytes.readPosition(pos);
             }
 
-            return inACycle(includeMetaData);
+            return inACycle(includeMetaData, false);
         }
 
         private long nextIndexWithNextAvailableCycle(int cycle) {
