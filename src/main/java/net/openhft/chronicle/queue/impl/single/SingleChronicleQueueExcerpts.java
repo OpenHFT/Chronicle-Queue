@@ -131,6 +131,11 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+        }
+
         void close() {
             Wire w0 = wireForIndex;
             wireForIndex = null;
@@ -810,6 +815,11 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public DocumentContext readingDocument() {
             return readingDocument(false);
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
         }
 
         private void close() {
