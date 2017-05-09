@@ -39,7 +39,7 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.5.7</version>
+                <version>3.5.9</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
@@ -50,7 +50,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-wire</artifactId>
-                <version>1.7.18</version>
+                <version>1.7.32</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
