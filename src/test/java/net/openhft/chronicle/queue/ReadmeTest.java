@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import org.junit.After;
@@ -63,5 +64,10 @@ public class ReadmeTest {
 
             assertEquals("TestMessage", tailer.readText());
         }
+    }
+
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
     }
 }

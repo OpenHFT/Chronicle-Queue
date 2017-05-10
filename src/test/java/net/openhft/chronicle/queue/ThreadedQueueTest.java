@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.Utils;
@@ -72,6 +73,8 @@ public class ThreadedQueueTest {
                     if (tailer.readBytes(bytes))
                         counter.incrementAndGet();
                 }
+
+                bytes.release();
             } catch (Throwable t) {
                 t.printStackTrace();
             }
@@ -92,6 +95,7 @@ public class ThreadedQueueTest {
                     message.append(i);
                     appender.writeBytes(message);
                 }
+                message.release();
             } catch (Throwable t) {
                 t.printStackTrace();
             }
@@ -134,5 +138,11 @@ public class ThreadedQueueTest {
         assertTrue(tailer.readBytes(bytes));
         assertEquals("Hello World", bytes.toString());
 
+        bytes.release();
+    }
+
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
     }
 }

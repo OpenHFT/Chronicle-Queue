@@ -1,8 +1,10 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.Utils;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -318,4 +320,8 @@ public class RollingChronicleQueueTest {
         assertEquals(5, q.countExcerpts(start, end));
     }
 
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
+    }
 }

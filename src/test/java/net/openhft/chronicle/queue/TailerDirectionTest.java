@@ -16,11 +16,13 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
@@ -179,5 +181,10 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
             assertEquals("[Backward] Wrong message " + i, msg, readNextEntry(tailer));
         }
         queue.close();
+    }
+
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
     }
 }

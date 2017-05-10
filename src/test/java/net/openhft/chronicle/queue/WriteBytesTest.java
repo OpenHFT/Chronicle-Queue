@@ -18,10 +18,12 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
@@ -1133,5 +1135,11 @@ public class WriteBytesTest {
         try (DocumentContext dc = tailer.readingDocument()) {
             return !dc.isPresent() ? -1 : dc.wire().bytes().read(using);
         }
+    }
+
+    @After
+    public void checkRegisteredBytes() {
+        outgoingBytes.release();
+        BytesUtil.checkRegisteredBytes();
     }
 } 
