@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
@@ -88,7 +89,6 @@ public class ToEndTest {
 
         appender.writeDocument(wire -> wire.write(() -> "msg").int32(2));
         appender.writeDocument(wire -> wire.write(() -> "msg").int32(3));
-
 
         final ExcerptTailer tailer = queue.createTailer().toEnd();
         try (DocumentContext dc = tailer.readingDocument()) {
@@ -170,8 +170,8 @@ public class ToEndTest {
         storeF2.setAccessible(true);
         SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
-        // the reference count here is 2, one of the reference is the appender, one the tailer.
-        assertEquals(2, store2.refCount());
+        // the reference count here is 2, one of the reference is the appender, one the tailer, once in the queue itself
+        assertEquals(3, store2.refCount());
     }
 
     @Test
@@ -179,39 +179,40 @@ public class ToEndTest {
         File baseDir = Utils.tempDir("toEndTest");
 
         List<Integer> results = new ArrayList<>();
-        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
+        try (RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
                 .indexCount(8)
                 .indexSpacing(1)
-                .build();
+                .build()) {
 
-        checkOneFile(baseDir);
-        ExcerptAppender appender = queue.acquireAppender();
-        checkOneFile(baseDir);
+            checkOneFile(baseDir);
+            ExcerptAppender appender = queue.acquireAppender();
+            checkOneFile(baseDir);
 
-        for (int i = 0; i < 10; i++) {
-            final int j = i;
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
+            for (int i = 0; i < 10; i++) {
+                final int j = i;
+                appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
+            }
+
+            checkOneFile(baseDir);
+
+            ExcerptTailer tailer = queue.createTailer();
+            checkOneFile(baseDir);
+
+            ExcerptTailer atEnd = tailer.toEnd();
+            assertEquals(10, queue.rollCycle().toSequenceNumber(atEnd.index()));
+            checkOneFile(baseDir);
+            fillResults(atEnd, results);
+            checkOneFile(baseDir);
+            assertEquals(0, results.size());
+
+            tailer.toStart();
+            checkOneFile(baseDir);
+            fillResults(tailer, results);
+            assertEquals(10, results.size());
+            checkOneFile(baseDir);
         }
-
-        checkOneFile(baseDir);
-
-        ExcerptTailer tailer = queue.createTailer();
-        checkOneFile(baseDir);
-
-        ExcerptTailer atEnd = tailer.toEnd();
-        assertEquals(10, queue.rollCycle().toSequenceNumber(atEnd.index()));
-        checkOneFile(baseDir);
-        fillResults(atEnd, results);
-        checkOneFile(baseDir);
-        assertEquals(0, results.size());
-
-        tailer.toStart();
-        checkOneFile(baseDir);
-        fillResults(tailer, results);
-        assertEquals(10, results.size());
-        checkOneFile(baseDir);
-
+        System.gc();
         try {
             IOTools.shallowDeleteDirWithFiles(baseDir);
         } catch (Exception e) {
@@ -224,26 +225,28 @@ public class ToEndTest {
         File baseDir = Utils.tempDir("toEndBeforeWriteTest");
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
-        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
-                .build();
-        checkOneFile(baseDir);
+                .build()) {
+            checkOneFile(baseDir);
 
-        // if this appender isn't created, the tailer toEnd doesn't cause a roll.
-        ExcerptAppender appender = queue.acquireAppender();
-        checkOneFile(baseDir);
+            // if this appender isn't created, the tailer toEnd doesn't cause a roll.
+            ExcerptAppender appender = queue.acquireAppender();
+            checkOneFile(baseDir);
 
-        ExcerptTailer tailer = queue.createTailer();
-        checkOneFile(baseDir);
+            ExcerptTailer tailer = queue.createTailer();
+            checkOneFile(baseDir);
 
-        ExcerptTailer tailer2 = queue.createTailer();
-        checkOneFile(baseDir);
+            ExcerptTailer tailer2 = queue.createTailer();
+            checkOneFile(baseDir);
 
-        tailer.toEnd();
-        checkOneFile(baseDir);
+            tailer.toEnd();
+            checkOneFile(baseDir);
 
-        tailer2.toEnd();
-        checkOneFile(baseDir);
+            tailer2.toEnd();
+            checkOneFile(baseDir);
+        }
+        System.gc();
 
         /*for (int i = 0; i < 10; i++) {
             final int j = i;
@@ -260,43 +263,45 @@ public class ToEndTest {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(1470757797000L);
 
-        RollingChronicleQueue wqueue = SingleChronicleQueueBuilder
+        try (RollingChronicleQueue wqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
-                .build();
-        ExcerptAppender appender = wqueue.acquireAppender();
+                .build()) {
+            ExcerptAppender appender = wqueue.acquireAppender();
 
-        for (int i = 0; i < 10; i++) {
-            try(DocumentContext dc = appender.writingDocument()){
-                dc.wire().write().text("hi-"+i);
-                lastCycle = wqueue.rollCycle().toCycle(dc.index());
+            for (int i = 0; i < 10; i++) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write().text("hi-" + i);
+                    lastCycle = wqueue.rollCycle().toCycle(dc.index());
+                }
+
+                stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
             }
-
-            stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
         }
 
-        ChronicleQueue rqueue = SingleChronicleQueueBuilder
+        try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
-                .build();
+                .build()) {
 
-        ExcerptTailer tailer = rqueue.createTailer();
-        stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+            ExcerptTailer tailer = rqueue.createTailer();
+            stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
-        //noinspection StatementWithEmptyBody
-        while (tailer.readText() != null) ;
+            //noinspection StatementWithEmptyBody
+            while (tailer.readText() != null) ;
 
-        assertNull(tailer.readText());
-        stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+            assertNull(tailer.readText());
+            stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
-        ExcerptTailer tailer1 = rqueue.createTailer();
-        ExcerptTailer excerptTailer = tailer1.toEnd();
-        assertNull(excerptTailer.readText());
-
+            ExcerptTailer tailer1 = rqueue.createTailer();
+            ExcerptTailer excerptTailer = tailer1.toEnd();
+            assertNull(excerptTailer.readText());
+        }
+        System.gc();
         IOTools.shallowDeleteDirWithFiles(file);
     }
 
@@ -324,5 +329,13 @@ public class ToEndTest {
 
         }
         return results;
+    }
+
+    @After
+    public void checkMappedFiles() {
+        System.gc();
+        Jvm.pause(50);
+
+        MappedFile.checkMappedFiles();
     }
 }

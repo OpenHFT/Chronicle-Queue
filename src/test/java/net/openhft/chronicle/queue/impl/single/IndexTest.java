@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -68,24 +69,30 @@ public class IndexTest extends ChronicleQueueTestBase {
         threadDump.assertNoNewThreads();
     }
 
+    @After
+    public void checkMappedFiles() {
+        MappedFile.checkMappedFiles();
+    }
+
     @Test
     public void test() throws IOException {
 
-        final RollingChronicleQueue queue = SingleChronicleQueueBuilder
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
                 .wireType(this.wireType)
-                .build();
+                .build()) {
 
-        final ExcerptAppender appender = queue.acquireAppender();
-        for (int i = 0; i < 5; i++) {
-            final int n = i;
-            appender.writeDocument(
-                    w -> w.write(TestKey.test).int32(n));
-            final int cycle = queue.lastCycle();
-            long index0 = queue.rollCycle().toIndex(cycle, n);
-            long indexA = appender.lastIndexAppended();
-            accessHexEquals(index0, indexA);
+            final ExcerptAppender appender = queue.acquireAppender();
+            for (int i = 0; i < 5; i++) {
+                final int n = i;
+                appender.writeDocument(
+                        w -> w.write(TestKey.test).int32(n));
+                final int cycle = queue.lastCycle();
+                long index0 = queue.rollCycle().toIndex(cycle, n);
+                long indexA = appender.lastIndexAppended();
+                accessHexEquals(index0, indexA);
+            }
         }
     }
 

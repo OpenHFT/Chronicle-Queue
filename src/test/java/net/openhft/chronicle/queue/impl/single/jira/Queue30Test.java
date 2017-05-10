@@ -37,62 +37,63 @@ public class Queue30Test extends ChronicleQueueTestBase {
     @Ignore("Stress test - doesn't finish")
     @Test
     public void testMT() throws IOException, InterruptedException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir())
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir())
                 .blockSize(640_000)
-                .build();
+                .build()) {
 
-        ExecutorService exec = Executors.newCachedThreadPool(new NamedThreadFactory("stress"));
-        Throwable[] tref = {null};
-        Runnable r = () -> {
-            try {
-                final String name = Thread.currentThread().getName();
-                final ExcerptAppender appender = queue.acquireAppender();
-                for (int count = 0; !Thread.currentThread().isInterrupted(); count++) {
-                    final int c = count;
-                    appender.writeDocument(w ->
-                            w.write(() -> "thread").text(name)
-                                    .write(() -> "count").int32(c)
-                    );
+            ExecutorService exec = Executors.newCachedThreadPool(new NamedThreadFactory("stress"));
+            Throwable[] tref = {null};
+            Runnable r = () -> {
+                try {
+                    final String name = Thread.currentThread().getName();
+                    final ExcerptAppender appender = queue.acquireAppender();
+                    for (int count = 0; !Thread.currentThread().isInterrupted(); count++) {
+                        final int c = count;
+                        appender.writeDocument(w ->
+                                w.write(() -> "thread").text(name)
+                                        .write(() -> "count").int32(c)
+                        );
 
-                    if (count % 10_000 == 0) {
-                        LOGGER.info(name + "> " + count);
+                        if (count % 10_000 == 0) {
+                            LOGGER.info(name + "> " + count);
+                        }
                     }
+                } catch (Throwable t) {
+                    tref[0] = t;
+                    exec.shutdown();
                 }
-            } catch (Throwable t) {
-                tref[0] = t;
-                exec.shutdown();
-            }
-        };
-        for (int i = 0; i < 100; i++)
-            exec.submit(r);
-        exec.awaitTermination(10, TimeUnit.MINUTES);
-        exec.shutdownNow();
+            };
+            for (int i = 0; i < 100; i++)
+                exec.submit(r);
+            exec.awaitTermination(10, TimeUnit.MINUTES);
+            exec.shutdownNow();
 
-        if (tref[0] != null)
-            throw new AssertionError(tref[0]);
-
+            if (tref[0] != null)
+                throw new AssertionError(tref[0]);
+        }
     }
 
     @SuppressWarnings("InfiniteLoopStatement")
     @Ignore("Stress test - doesn't finish")
     @Test
     public void testST() throws IOException {
-        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(WireType.TEXT)
                 .blockSize(640_000)
-                .build();
+                .build()) {
 
-        final String name = Thread.currentThread().getName();
-        final ExcerptAppender appender = queue.acquireAppender();
-        for (int count = 0; ; count++) {
-            final int c = count;
-            appender.writeDocument(w ->
-                    w.write(() -> "thread").text(name)
-                            .write(() -> "count").int32(c)
-            );
+            final String name = Thread.currentThread().getName();
+            final ExcerptAppender appender = queue.acquireAppender();
+            for (int count = 0; ; count++) {
+                final int c = count;
+                appender.writeDocument(w ->
+                        w.write(() -> "thread").text(name)
+                                .write(() -> "count").int32(c)
+                );
 
-            if (count % 50_000 == 0) {
-                LOGGER.info(name + "> " + count);
+                if (count % 50_000 == 0) {
+                    LOGGER.info(name + "> " + count);
+                }
             }
         }
     }

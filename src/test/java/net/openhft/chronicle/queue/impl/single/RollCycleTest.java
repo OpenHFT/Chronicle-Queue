@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -8,6 +9,7 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
@@ -49,6 +51,7 @@ public class RollCycleTest {
         }
 
         assertEquals(1, observer.documentsRead);
+        observer.queue.close();
     }
 
     @Test
@@ -84,6 +87,7 @@ public class RollCycleTest {
         }
 
         assertEquals(2, observer.documentsRead);
+        observer.queue.close();
     }
 
     @Test
@@ -119,6 +123,11 @@ public class RollCycleTest {
                 dc.wire().write().text("hello world 3");
             }
         }
+    }
+
+    @After
+    public void checkMappedFiles() {
+        MappedFile.checkMappedFiles();
     }
 
     class TestTimeProvider implements TimeProvider {

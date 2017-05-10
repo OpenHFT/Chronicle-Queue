@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -119,11 +120,11 @@ public class SingleCQFormat2Test {
             @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();
 
-            @NotNull SingleChronicleQueue queue = binary(dir)
+            try (@NotNull SingleChronicleQueue queue = binary(dir)
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .indexCount(8)
                     .indexSpacing(1)
-                    .build();
+                    .build()) {
 
             long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             appendMessage(queue, start, "Hello World");
@@ -393,6 +394,7 @@ public class SingleCQFormat2Test {
                     "...\n" +
                     "# 327036 bytes remaining\n";
             checkFileContents(dir.listFiles()[0], lazyIndexing ? expectedLazy3 : expectedEager3);
+            }
         }
     }
 
@@ -409,12 +411,12 @@ public class SingleCQFormat2Test {
             @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();
 
-            @NotNull SingleChronicleQueue queue = binary(dir)
+            try (@NotNull SingleChronicleQueue queue = binary(dir)
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     // only do this for testing
                     .indexCount(8)
                     .indexSpacing(spacing)
-                    .build();
+                    .build()) {
 
             long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             @NotNull ExcerptTailer tailer = queue.createTailer();
@@ -1158,6 +1160,7 @@ public class SingleCQFormat2Test {
                                     spacing == 2 ? expected2 : expected3);
 
             checkFileContents(dir.listFiles()[0], expected);
+            }
         }
     }
 
@@ -1706,6 +1709,11 @@ public class SingleCQFormat2Test {
         }
     }
 
+    @After
+    public void checkMappedFiles() {
+        MappedFile.checkMappedFiles();
+    }
+
     private static class MyData extends AbstractMarshallable {
         final String name;
         final long num;
@@ -1719,5 +1727,4 @@ public class SingleCQFormat2Test {
             this.counter = counter;
         }
     }
-
 }

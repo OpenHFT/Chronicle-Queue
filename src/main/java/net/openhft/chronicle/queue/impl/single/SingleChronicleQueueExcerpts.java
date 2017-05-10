@@ -1421,6 +1421,7 @@ public class SingleChronicleQueueExcerpts {
                 return true;
 
             context.wire(null);
+            nextStore.reserve();
             this.store = nextStore;
             this.state = FOUND_CYCLE;
             this.setCycle(cycle);

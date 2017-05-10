@@ -34,20 +34,21 @@ public class Queue36Test extends ChronicleQueueTestBase {
     @Test
     public void testTail() throws IOException {
         File basePath = getTmpDir();
-        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
                 .testBlockSize()
-                .build();
+                .build()) {
 
-        checkNoFiles(basePath);
-        ExcerptTailer tailer = queue.createTailer();
-        checkNoFiles(basePath);
-        tailer.toStart();
-        checkNoFiles(basePath);
+            checkNoFiles(basePath);
+            ExcerptTailer tailer = queue.createTailer();
+            checkNoFiles(basePath);
+            tailer.toStart();
+            checkNoFiles(basePath);
 
-        assertFalse(tailer.readDocument(d -> {
-        }));
+            assertFalse(tailer.readDocument(d -> {
+            }));
 
-        checkNoFiles(basePath);
+            checkNoFiles(basePath);
+        }
     }
 
     public void checkNoFiles(File basePath) {

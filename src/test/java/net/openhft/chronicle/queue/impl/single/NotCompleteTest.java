@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -23,6 +24,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -273,5 +275,10 @@ public class NotCompleteTest {
                     "...\n" +
                     "# 83885486 bytes remaining\n", queue.dump());
         }
+    }
+
+    @After
+    public void checkMappedFiles() {
+        MappedFile.checkMappedFiles();
     }
 }

@@ -88,13 +88,13 @@ public class DetectNotReadyEntriesTest {
 
         bytes.release();
 
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .blockSize(TEST_CHUNK_SIZE)
-                .build();
+                .build()) {
 
-        queue.acquireAppender().writeText("Bye for now");
+            queue.acquireAppender().writeText("Bye for now");
+        }
 
-        queue.close();
         try {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         } catch (Exception e) {

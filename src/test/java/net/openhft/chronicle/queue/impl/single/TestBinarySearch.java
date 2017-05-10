@@ -1,13 +1,18 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -96,7 +101,9 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                     Assert.assertTrue(documentContext.toString().contains("some value where the key=" + j));
                 }
             }
+
         } finally {
+            System.gc();
             deleteDir(tmpDir);
         }
 
@@ -114,6 +121,11 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         }
 
         return result;
+    }
+
+    @After
+    public void checkMappedFiles() {
+        MappedFile.checkMappedFiles();
     }
 
     public static class MyData extends AbstractMarshallable {

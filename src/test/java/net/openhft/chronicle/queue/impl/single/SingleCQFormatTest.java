@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
@@ -74,23 +75,26 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
-        bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
+        try (@NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE)) {
+            bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
-        @NotNull SingleChronicleQueue queue = binary(dir)
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
-                .build();
-        assertEquals(1, queue.firstCycle());
-        assertEquals(1, queue.lastCycle());
-        try {
-            @NotNull ExcerptTailer tailer = queue.createTailer();
-            tailer.toEnd();
-            fail();
-        } catch (Exception e) {
-            assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
-                    e.toString());
+            try (@NotNull SingleChronicleQueue queue = binary(dir)
+                    .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                    .build()) {
+                assertEquals(1, queue.firstCycle());
+                assertEquals(1, queue.lastCycle());
+                try {
+                    @NotNull ExcerptTailer tailer = queue.createTailer();
+                    tailer.toEnd();
+                    fail();
+                } catch (Exception e) {
+                    assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
+                            e.toString());
+                }
+
+            }
         }
-        queue.close();
+        System.gc();
         try {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         } catch (Exception e) {
@@ -272,6 +276,7 @@ public class SingleCQFormatTest {
             assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required",
                     e.toString());
         }
+        System.gc();
         try {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         } catch (Exception e) {
@@ -392,5 +397,10 @@ public class SingleCQFormatTest {
             assertFalse(dc.isPresent());
         }
         assertEquals(start + 2, tailer.index());
+    }
+
+    @After
+    public void checkMappedFiles() {
+        MappedFile.checkMappedFiles();
     }
 }

@@ -17,6 +17,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -54,45 +55,50 @@ public class MultiThreadedRollTest {
         timeProvider.currentTimeMillis(1000);
         final File path = Utils.tempDir("MultiThreadedRollTest");
 
-        final RollingChronicleQueue wqueue = binary(path)
+        try (final RollingChronicleQueue wqueue = binary(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY)
-                .build();
+                .build()) {
 
-        wqueue.acquireAppender().writeText("hello world");
+            wqueue.acquireAppender().writeText("hello world");
 
-        final RollingChronicleQueue rqueue = binary(path)
-                .testBlockSize()
-                .timeProvider(timeProvider)
-                .rollCycle(TEST_SECONDLY)
-                .build();
+            try (final RollingChronicleQueue rqueue = binary(path)
+                    .testBlockSize()
+                    .timeProvider(timeProvider)
+                    .rollCycle(TEST_SECONDLY)
+                    .build()) {
 
-        ExcerptTailer tailer = rqueue.createTailer();
-        Future f = reader.submit(() -> {
-            long index;
-            do {
-                try (DocumentContext documentContext = tailer.readingDocument()) {
-                    System.out.println("tailer.state: " + tailer.state());
-                    // index is only meaningful if present.
-                    index = documentContext.index();
-                    //    if (documentContext.isPresent())
-                    final boolean present = documentContext.isPresent();
-                    System.out.println("documentContext.isPresent=" + present
-                            + (present ? ",index=" + Long.toHexString(index) : ", no index"));
-                    Jvm.pause(50);
-                }
-            } while (index != 0x200000000L && !reader.isShutdown());
+                ExcerptTailer tailer = rqueue.createTailer();
+                Future f = reader.submit(() -> {
+                    long index;
+                    do {
+                        try (DocumentContext documentContext = tailer.readingDocument()) {
+                            System.out.println("tailer.state: " + tailer.state());
+                            // index is only meaningful if present.
+                            index = documentContext.index();
+                            //    if (documentContext.isPresent())
+                            final boolean present = documentContext.isPresent();
+                            System.out.println("documentContext.isPresent=" + present
+                                    + (present ? ",index=" + Long.toHexString(index) : ", no index"));
+                            Jvm.pause(50);
+                        }
+                    } while (index != 0x200000000L && !reader.isShutdown());
 
-        });
+                });
 
-        timeProvider.currentTimeMillis(2000);
-        ((SingleChronicleQueueExcerpts.StoreAppender)  wqueue.acquireAppender())
-        .writeEndOfCycleIfRequired();
-        Jvm.pause(200);
-        wqueue.acquireAppender().writeText("hello world");
-        f.get();
+                timeProvider.currentTimeMillis(2000);
+                ((SingleChronicleQueueExcerpts.StoreAppender) wqueue.acquireAppender())
+                        .writeEndOfCycleIfRequired();
+                Jvm.pause(200);
+                wqueue.acquireAppender().writeText("hello world");
+                f.get();
+            }
+        }
     }
 
-
+    @After
+    public void checkMappedFiles() {
+        MappedFile.checkMappedFiles();
+    }
 }
