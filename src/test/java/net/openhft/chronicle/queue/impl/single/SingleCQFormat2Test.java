@@ -1190,6 +1190,7 @@ public class SingleCQFormat2Test {
                 Bytes bytes = Bytes.elasticByteBuffer();
                 new BinaryWire(bytes).write(() -> "msg").text(msg);
                 appender.writeBytes(bytes);
+                bytes.release();
 
                 break;
 
