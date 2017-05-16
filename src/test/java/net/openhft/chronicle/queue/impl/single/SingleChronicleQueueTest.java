@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -96,6 +97,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         Jvm.dumpException(exceptionKeyIntegerMap);
         Assert.assertTrue(exceptionKeyIntegerMap.isEmpty());
         Jvm.resetExceptionHandlers();
+        BytesUtil.checkRegisteredBytes();
     }
 
     @Test
@@ -134,7 +136,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ScheduledExecutorService service2 = Executors.newSingleThreadScheduledExecutor();
             service2.scheduleAtFixedRate(() -> {
-                Bytes b = Bytes.allocateDirect(128);
+                Bytes b = Bytes.elasticHeapByteBuffer(128);
                 final ExcerptTailer tailer = queue.createTailer();
                 tailer.readBytes(b);
                 if (b.readRemaining() == 0)
@@ -177,6 +179,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 tailer.readBytes(b);
 
                 Assert.assertEquals(expected.readInt(0), b.readInt(0));
+
+                b.release();
             }
         }
     }
@@ -1220,6 +1224,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertEquals("Steve", bytes.toString());
             tailer.readBytes(bytes);
             Assert.assertEquals("Jobs", bytes.toString());
+
+            steve.release();
+            jobs.release();
+            bytes.release();
         }
     }
 
@@ -1627,7 +1635,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build();
 
              ChronicleQueue chronicle2 = builder(dir, this.wireType)
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                     .rollCycle(RollCycles.TEST_SECONDLY)
                      .build()) {
             ExcerptTailer tailer = chronicle.createTailer();
 

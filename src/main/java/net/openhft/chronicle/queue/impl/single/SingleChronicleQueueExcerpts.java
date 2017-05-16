@@ -142,6 +142,10 @@ public class SingleChronicleQueueExcerpts {
                 w.bytes().release();
             if (store != null)
                 queue.release(store);
+            if (bufferWire != null) {
+                bufferWire.bytes().release();
+                bufferWire = null;
+            }
             store = null;
         }
 
