@@ -51,7 +51,7 @@ public class SingleCQFormatTest {
     private static void expected(@NotNull ExcerptTailer tailer, String expected) {
         try (DocumentContext dc = tailer.readingDocument()) {
             assertTrue(dc.isPresent());
-            Bytes bytes2 = Bytes.allocateDirect(128);
+            Bytes bytes2 = Bytes.elasticHeapByteBuffer(128);
             dc.wire().copyTo(new TextWire(bytes2));
             assertEquals(expected, bytes2.toString());
         }
