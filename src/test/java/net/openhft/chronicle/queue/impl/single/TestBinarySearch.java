@@ -88,6 +88,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                     } finally {
                         o1.bytes().readPosition(readPositionO1);
                         o2.bytes().readPosition(readPositionO2);
+
                     }
                 };
 
@@ -100,6 +101,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
                     Assert.assertTrue(documentContext.toString().contains("some value where the key=" + j));
                 }
+                key.bytes().release();
             }
 
         } finally {

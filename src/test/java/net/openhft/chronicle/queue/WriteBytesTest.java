@@ -245,14 +245,14 @@ public class WriteBytesTest {
                     "# # EndOfFile\n" +
                     "# position: 1176, header: 18\n" +
                     "--- !!data #binary\n" +
-                    "-7.5355505576082E11\n" +
+                    "-753555055760.82\n" +
                     "# position: 1188, header: 19\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_2\n" +
                     "-48698841.79\n" +
                     "# position: 1200, header: 20\n" +
                     "--- !!data #binary\n" +
-                    "-8.4220859173268E9\n" +
+                    "-8422085917.3268\n" +
                     "# position: 1212, header: 21\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_4\n" +
