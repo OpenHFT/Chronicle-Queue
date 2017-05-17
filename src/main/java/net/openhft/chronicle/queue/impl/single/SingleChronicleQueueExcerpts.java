@@ -93,7 +93,7 @@ public class SingleChronicleQueueExcerpts {
             context = new StoreAppenderContext();
         }
 
-        public Padding padToCacheAlign() {
+        public Padding padToCacheAlignMode() {
             return padToCacheLines;
         }
 
@@ -116,7 +116,7 @@ public class SingleChronicleQueueExcerpts {
         public void writeBytes(@NotNull WriteBytesMarshallable marshallable) throws UnrecoverableTimeoutException {
             try (DocumentContext dc = writingDocument()) {
                 marshallable.writeMarshallable(dc.wire().bytes());
-                if (padToCacheAlign() != Padding.ALWAYS)
+                if (padToCacheAlignMode() != Padding.ALWAYS)
                     ((StoreAppenderContext) dc).padToCacheAlign = false;
             }
         }
@@ -126,7 +126,7 @@ public class SingleChronicleQueueExcerpts {
             try (DocumentContext dc = writingDocument()) {
                 dc.wire().bytes()
                         .append8bit(text);
-                if (padToCacheAlign() != Padding.ALWAYS)
+                if (padToCacheAlignMode() != Padding.ALWAYS)
                     ((StoreAppenderContext) dc).padToCacheAlign = false;
             }
         }
@@ -284,7 +284,7 @@ public class SingleChronicleQueueExcerpts {
                         position(pos);
                         context.isClosed = false;
                         context.wire = wire;
-                        context.padToCacheAlign = padToCacheAlign() != Padding.NEVER;
+                        context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
                         context.metaData(metaData);
                         ok = true;
                         return context;

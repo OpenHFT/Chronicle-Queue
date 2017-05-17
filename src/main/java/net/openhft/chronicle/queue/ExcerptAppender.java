@@ -89,7 +89,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     void padToCacheAlign(Padding padToCacheAlign);
 
-    Padding padToCacheAlign();
+    Padding padToCacheAlignMode();
 
     /**
      * Set whether to trigger indexing.
