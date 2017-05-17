@@ -1548,7 +1548,7 @@ public class SingleChronicleQueueExcerpts {
 
         }
 
-        class StoreTailerContext extends ReadDocumentContext {
+        class StoreTailerContext extends BinaryReadDocumentContext {
             StoreTailerContext() {
                 super(null);
             }
