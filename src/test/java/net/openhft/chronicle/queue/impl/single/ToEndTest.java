@@ -59,8 +59,10 @@ public class ToEndTest {
     public void after() {
         threadDump.assertNoNewThreads();
 
-        Jvm.dumpException(exceptionKeyIntegerMap);
-        assertTrue(exceptionKeyIntegerMap.isEmpty());
+        if (Jvm.hasException(exceptionKeyIntegerMap)) {
+            Jvm.dumpException(exceptionKeyIntegerMap);
+            fail();
+        }
         Jvm.resetExceptionHandlers();
     }
 
