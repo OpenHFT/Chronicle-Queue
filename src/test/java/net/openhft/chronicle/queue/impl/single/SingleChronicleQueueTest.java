@@ -94,8 +94,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @After
     public void after() {
         threadDump.assertNoNewThreads();
-        Jvm.dumpException(exceptionKeyIntegerMap);
-        Assert.assertTrue(exceptionKeyIntegerMap.isEmpty());
+        if (Jvm.hasException(exceptionKeyIntegerMap)) {
+            Jvm.dumpException(exceptionKeyIntegerMap);
+            Assert.fail();
+        }
         Jvm.resetExceptionHandlers();
         BytesUtil.checkRegisteredBytes();
     }
