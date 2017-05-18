@@ -15,11 +15,13 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
@@ -94,9 +96,12 @@ public class ChronicleQueueTestBase {
         return Utils.tempDir(testName.getMethodName());
     }
 
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
+    }
 
     public enum TestKey implements WireKey {
         test, test2
     }
-
 }
