@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.AbstractMarshallable;
+import org.jetbrains.annotations.Nullable;
 
 public class RollDetails extends AbstractMarshallable {
     final int cycle;
@@ -32,7 +33,7 @@ public class RollDetails extends AbstractMarshallable {
 
     // generated for performance
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;

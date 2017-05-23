@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.wire.AbstractMarshallable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
 
@@ -47,7 +48,7 @@ public class TopOfBookPrice extends AbstractMarshallable {
         buyQuantity = sellQuantity = 0;
     }
 
-    public boolean combine(SidedPrice price) {
+    public boolean combine(@NotNull SidedPrice price) {
         boolean changed = false;
         switch (price.side) {
             case Buy:

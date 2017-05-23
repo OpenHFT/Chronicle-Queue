@@ -47,10 +47,11 @@ public class ChronicleQueueTestBase {
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
 
+    @NotNull
     @Rule
     public TestRule watcher = new TestWatcher() {
         @Override
-        protected void starting(Description description) {
+        protected void starting(@NotNull Description description) {
             if (TRACE_TEST_EXECUTION) {
                 LOGGER.info("Starting test: {}.{}",
                         description.getClassName(),
@@ -92,6 +93,7 @@ public class ChronicleQueueTestBase {
         dir.delete();
     }
 
+    @NotNull
     protected File getTmpDir() {
         return Utils.tempDir(testName.getMethodName());
     }

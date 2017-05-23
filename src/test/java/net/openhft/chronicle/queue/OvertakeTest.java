@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,7 +27,7 @@ public class OvertakeTest {
 
     private int messages = 500;
 
-    private static long doReadBad(ExcerptTailer tailer, int expected, boolean additionalClose) {
+    private static long doReadBad(@NotNull ExcerptTailer tailer, int expected, boolean additionalClose) {
         int[] i = {0};
         long t_index = 0;
         while (true) {

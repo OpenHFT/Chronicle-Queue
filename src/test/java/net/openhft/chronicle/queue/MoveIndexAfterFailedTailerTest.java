@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.wire.ReadMarshallable;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -52,7 +53,7 @@ public class MoveIndexAfterFailedTailerTest {
         }
     }
 
-    private void read(ChronicleQueue aChronicle, int expected) {
+    private void read(@NotNull ChronicleQueue aChronicle, int expected) {
         final ExcerptTailer myTailer = aChronicle.createTailer();
         final int myLast = HOURLY.toCycle(myTailer.toEnd().index());
         final int myFirst = HOURLY.toCycle(myTailer.toStart().index());
@@ -80,7 +81,7 @@ public class MoveIndexAfterFailedTailerTest {
         };
     }
 
-    private void write(ChronicleQueue aChronicle, int messages) {
+    private void write(@NotNull ChronicleQueue aChronicle, int messages) {
         final ExcerptAppender myAppender = aChronicle.acquireAppender();
         for (int myCount = 0; myCount < messages; myCount++) {
             myAppender.writeDocument(aMarshallable -> aMarshallable.write().bytes(Long.toString(currentTimeMillis()).getBytes(StandardCharsets.UTF_8)));

@@ -41,6 +41,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class IndexTest extends ChronicleQueueTestBase {
 
+    @NotNull
     private final WireType wireType;
     private ThreadDump threadDump;
 

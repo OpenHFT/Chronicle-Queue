@@ -18,13 +18,16 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.wire.Wire;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Created by peter on 07/07/16.
  */
 public interface ExcerptContext {
+    @Nullable
     Wire wire();
 
+    @Nullable
     Wire wireForIndex();
 
     long timeoutMS();

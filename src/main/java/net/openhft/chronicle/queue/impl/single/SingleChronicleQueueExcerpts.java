@@ -72,18 +72,25 @@ public class SingleChronicleQueueExcerpts {
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
         @NotNull
         private final SingleChronicleQueue queue;
+        @NotNull
         private final StoreAppenderContext context;
+        @Nullable
         WireStore store;
         private int cycle = Integer.MIN_VALUE;
+        @Nullable
         private Wire wire;
+        @Nullable
         private Wire bufferWire; // if you have a buffered write.
+        @Nullable
         private Wire wireForIndex;
         private long position = 0;
+        @Nullable
         private volatile Thread appendingThread = null;
         private long lastIndex = Long.MIN_VALUE;
         private boolean lazyIndexing = false;
         private long lastPosition;
         private int lastCycle;
+        @Nullable
         private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
@@ -93,6 +100,7 @@ public class SingleChronicleQueueExcerpts {
             context = new StoreAppenderContext();
         }
 
+        @NotNull
         public Padding padToCacheAlignMode() {
             return padToCacheLines;
         }
@@ -159,11 +167,13 @@ public class SingleChronicleQueueExcerpts {
                 pretoucher.pretouch((MappedBytes) wire.bytes());
         }
 
+        @Nullable
         @Override
         public Wire wire() {
             return wire;
         }
 
+        @Nullable
         @Override
         public Wire wireForIndex() {
             return wireForIndex;
@@ -178,6 +188,7 @@ public class SingleChronicleQueueExcerpts {
             this.lastIndex = index;
         }
 
+        @NotNull
         @Override
         public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
             this.lazyIndexing = lazyIndexing;
@@ -222,7 +233,7 @@ public class SingleChronicleQueueExcerpts {
             queue.onRoll(cycle);
         }
 
-        private void resetWires(SingleChronicleQueue queue) {
+        private void resetWires(@NotNull SingleChronicleQueue queue) {
             WireType wireType = queue.wireType();
             {
                 Wire oldw = this.wire;
@@ -259,12 +270,13 @@ public class SingleChronicleQueueExcerpts {
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
                 assert lazyIndexing || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
-            } catch (BufferOverflowException | StreamCorruptedException e) {
+            } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
             assert checkWritePositionHeaderNumber();
         }
 
+        @NotNull
         @Override
         public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             assert checkAppendingThread();
@@ -360,6 +372,7 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
+        @NotNull
         @Override
         public DocumentContext writingDocument(long index) {
             context.isClosed = false;
@@ -381,6 +394,7 @@ public class SingleChronicleQueueExcerpts {
             append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
         }
 
+        @Nullable
         Wire acquireBufferWire() {
             if (bufferWire == null) {
                 bufferWire = queue.wireType().apply(Bytes.elasticByteBuffer());
@@ -391,7 +405,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeBytes(long index, BytesStore bytes) {
+        public void writeBytes(long index, @NotNull BytesStore bytes) {
             if (index < 0)
                 throw new IllegalArgumentException("index: " + index);
             if (bytes.isEmpty())
@@ -431,7 +445,7 @@ public class SingleChronicleQueueExcerpts {
                     throw ise;
                 }
 
-            } catch (StreamCorruptedException | EOFException e) {
+            } catch (@NotNull StreamCorruptedException | EOFException e) {
                 throw Jvm.rethrow(e);
 
             } finally {
@@ -523,6 +537,7 @@ public class SingleChronicleQueueExcerpts {
             return cycle;
         }
 
+        @NotNull
         public SingleChronicleQueue queue() {
             return queue;
         }
@@ -536,7 +551,7 @@ public class SingleChronicleQueueExcerpts {
         void beforeAppend(Wire wire, long index) {
         }
 
-        private <T> void append(int length, WireWriter<T> wireWriter, T writer) throws
+        private <T> void append(int length, @NotNull WireWriter<T> wireWriter, T writer) throws
                 UnrecoverableTimeoutException {
 
             assert checkAppendingThread();
@@ -597,7 +612,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws
+        <T> void append2(int length, @NotNull WireWriter<T> wireWriter, T writer) throws
                 UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
             setCycle(Math.max(queue.cycle(), cycle + 1), true);
             position(store.writeHeader(wire, length, length, timeoutMS()));
@@ -659,7 +674,7 @@ public class SingleChronicleQueueExcerpts {
                             " seq1: " + seq1);*/
                 }
 
-            } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
+            } catch (@NotNull EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
             return true;
@@ -670,6 +685,7 @@ public class SingleChronicleQueueExcerpts {
             boolean isClosed;
             boolean padToCacheAlign = true;
             private boolean metaData = false;
+            @Nullable
             private Wire wire;
 
             @Override
@@ -682,6 +698,7 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             }
 
+            @Nullable
             @Override
             public Wire wire() {
                 return wire;
@@ -735,7 +752,7 @@ public class SingleChronicleQueueExcerpts {
                         writeBytes(wire.headerNumber(), wire.bytes());
                         wire = StoreAppender.this.wire;
                     }
-                } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
+                } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
                     assert isClosed || resetAppendingThread();
@@ -780,6 +797,7 @@ public class SingleChronicleQueueExcerpts {
         private final StoreTailerContext context = new StoreTailerContext();
         private final int indexSpacingMask;
         long index; // index of the next read.
+        @Nullable
         WireStore store;
         private int cycle;
         private long timeForNextCycle = Long.MAX_VALUE;
@@ -787,6 +805,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean lazyIndexing = false;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
+        @NotNull
         private TailerState state = UNINITIALISED;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
@@ -846,6 +865,7 @@ public class SingleChronicleQueueExcerpts {
             return queue.sourceId;
         }
 
+        @NotNull
         @Override
         public String toString() {
             return "StoreTailer{" +
@@ -854,6 +874,7 @@ public class SingleChronicleQueueExcerpts {
                     ", store=" + store + ", queue=" + queue + '}';
         }
 
+        @NotNull
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
             try {
@@ -1027,7 +1048,7 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-        private void indexEntry(Bytes<?> bytes) throws StreamCorruptedException {
+        private void indexEntry(@NotNull Bytes<?> bytes) throws StreamCorruptedException {
             if (store.indexable(index)
                     && !lazyIndexing
                     && direction == TailerDirection.FORWARD
@@ -1037,7 +1058,7 @@ public class SingleChronicleQueueExcerpts {
                                 .readPosition());
         }
 
-        private boolean checkMoveToNextCycle(boolean includeMetaData, Bytes<?> bytes)
+        private boolean checkMoveToNextCycle(boolean includeMetaData, @NotNull Bytes<?> bytes)
                 throws EOFException, StreamCorruptedException {
             long pos = bytes.readPosition();
             long lim = bytes.readLimit();
@@ -1241,12 +1262,12 @@ public class SingleChronicleQueueExcerpts {
                 long sequenceNumber = store.lastSequenceNumber(this);
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
-            } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
+            } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             }
         }
 
-        private boolean headerNumberCheck(AbstractWire wire) {
+        private boolean headerNumberCheck(@NotNull AbstractWire wire) {
 
             wire.headNumberCheck((actual, position) -> {
                 try {
@@ -1283,7 +1304,8 @@ public class SingleChronicleQueueExcerpts {
 
         }
 
-        private Wire readAnywhere(Wire wire) {
+        @NotNull
+        private Wire readAnywhere(@NotNull Wire wire) {
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
             return wire;
@@ -1333,6 +1355,7 @@ public class SingleChronicleQueueExcerpts {
             return direction;
         }
 
+        @NotNull
         @Override
         public ExcerptTailer direction(TailerDirection direction) {
             final TailerDirection oldDirection = this.direction();
@@ -1344,6 +1367,7 @@ public class SingleChronicleQueueExcerpts {
             return this;
         }
 
+        @NotNull
         public RollingChronicleQueue queue() {
             return queue;
         }
@@ -1454,13 +1478,15 @@ public class SingleChronicleQueueExcerpts {
             return readAfterReplicaAcknowledged;
         }
 
+        @NotNull
         @Override
         public TailerState state() {
             return state;
         }
 
+        @NotNull
         @Override
-        public ExcerptTailer afterLastWritten(ChronicleQueue queue) {
+        public ExcerptTailer afterLastWritten(@NotNull ChronicleQueue queue) {
             if (queue == this.queue)
                 throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
             ExcerptTailer tailer = queue.createTailer()

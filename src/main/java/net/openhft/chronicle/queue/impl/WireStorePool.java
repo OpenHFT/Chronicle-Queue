@@ -58,6 +58,7 @@ public class WireStorePool {
                 .forEach(this::release);
     }
 
+    @org.jetbrains.annotations.Nullable
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
         RollDetails rollDetails = new RollDetails(cycle, epoch);

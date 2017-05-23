@@ -307,7 +307,7 @@ public class ToEndTest {
         IOTools.shallowDeleteDirWithFiles(file);
     }
 
-    private void checkOneFile(File baseDir) {
+    private void checkOneFile(@NotNull File baseDir) {
         String[] files = baseDir.list();
 
         if (files == null || files.length == 0)
@@ -320,7 +320,7 @@ public class ToEndTest {
     }
 
     @NotNull
-    private List<Integer> fillResults(ExcerptTailer tailer, List<Integer> results) {
+    private List<Integer> fillResults(@NotNull ExcerptTailer tailer, @NotNull List<Integer> results) {
         for (int i = 0; i < 10; i++) {
 
             try (DocumentContext documentContext = tailer.readingDocument()) {

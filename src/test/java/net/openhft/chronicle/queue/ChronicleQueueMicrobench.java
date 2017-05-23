@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import org.jetbrains.annotations.NotNull;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
@@ -85,6 +86,7 @@ public class ChronicleQueueMicrobench {
         return runnerOptions;
     }
 
+    @NotNull
     private String[] jvmArgs() {
         return EMPTY_JVM_ARGS;
     }

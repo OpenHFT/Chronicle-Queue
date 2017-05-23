@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.MethodReader;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -120,13 +121,13 @@ public class MessageReaderWriterTest {
         }
 
         @Override
-        public void method1(Message1 message) {
+        public void method1(@NotNull Message1 message) {
             message.text += "-processed";
             writer2.method1(message);
         }
 
         @Override
-        public void method2(Message2 message) {
+        public void method2(@NotNull Message2 message) {
             message.number += 1000;
             writer2.method2(message);
         }

@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.util.ThrowingSupplier;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.MethodReader;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,12 +36,13 @@ import java.util.concurrent.Executors;
  */
 public class JDBCService implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
+    @NotNull
     private final ChronicleQueue in;
     private final ChronicleQueue out;
     private final ThrowingSupplier<Connection, SQLException> connectionSupplier;
     private volatile boolean closed = false;
 
-    public JDBCService(ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
+    public JDBCService(@NotNull ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
         this.in = in;
         this.out = out;
         this.connectionSupplier = connectionSupplier;
@@ -76,6 +78,7 @@ public class JDBCService implements Closeable {
         closed = true;
     }
 
+    @NotNull
     public JDBCStatement createWriter() {
         return in.acquireAppender()
                 .methodWriterBuilder(JDBCStatement.class)
@@ -83,6 +86,7 @@ public class JDBCService implements Closeable {
                 .get();
     }
 
+    @NotNull
     public MethodReader createReader(JDBCResult result) {
         return out.createTailer().methodReader(result);
     }

@@ -78,6 +78,7 @@ public interface ChronicleQueue extends Closeable {
     /**
      * @deprecated to be remove in version 4.6 or later use {@link ChronicleQueue#acquireAppender()}
      */
+    @NotNull
     @Deprecated
     default ExcerptAppender createAppender() {
         return acquireAppender();
@@ -110,6 +111,7 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return the contents of the Queue as YAML.
      */
+    @NotNull
     String dump();
 
     /**
@@ -121,7 +123,7 @@ public interface ChronicleQueue extends Closeable {
      */
     void dump(Writer writer, long fromIndex, long toIndex);
 
-    default void dump(OutputStream stream, long fromIndex, long toIndex) {
+    default void dump(@NotNull OutputStream stream, long fromIndex, long toIndex) {
         dump(new OutputStreamWriter(stream, StandardCharsets.UTF_8), fromIndex, toIndex);
     }
 

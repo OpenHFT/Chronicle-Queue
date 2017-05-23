@@ -6,6 +6,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +22,7 @@ public class Utils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
 
+    @NotNull
     public static File tempDir(String name) {
         final File tmpDir = new File(OS.TARGET, name + "-" + System.nanoTime());
 
@@ -34,7 +36,7 @@ public class Utils {
         return tmpDir;
     }
 
-    static void deleteDir(File dir) {
+    static void deleteDir(@NotNull File dir) {
         if (dir.isDirectory()) {
             File[] files = dir.listFiles();
             if (files != null) {

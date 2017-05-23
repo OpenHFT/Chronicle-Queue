@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -33,6 +34,7 @@ public class FsFullWriteTest {
        mkdir /mnt/tmpfs/cq && chown <user>:<group> /mnt/tmpfs/cq
        dd if=/dev/zero of=/mnt/tmpfs/fillspace bs=1M count=90
       */
+    @NotNull
     private static  String basePath = "/mnt/tmpfs/cq/testqueue";
 
     //@Before

@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -35,7 +36,7 @@ class CountingJDBCResult implements JDBCResult {
     }
 
     @Override
-    public void queryResult(List<String> columns, List<List<Object>> rows, String query, Object... args) {
+    public void queryResult(List<String> columns, @NotNull List<List<Object>> rows, String query, Object... args) {
         System.out.println("query " + query + " returned " + columns);
         for (List<Object> row : rows) {
             System.out.println("\t" + row);

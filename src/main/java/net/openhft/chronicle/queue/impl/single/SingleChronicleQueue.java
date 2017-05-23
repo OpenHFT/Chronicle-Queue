@@ -81,6 +81,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final long blockSize, overlapSize;
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
+    @Nullable
     private final EventLoop eventLoop;
     private final long bufferCapacity;
     private final int indexSpacing;
@@ -134,6 +135,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         readOnly = builder.readOnly();
     }
 
+    @Nullable
     StoreTailer acquireTailer() {
         return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
@@ -166,6 +168,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return path;
     }
 
+    @NotNull
     @Override
     public String dump() {
         StringBuilder sb = new StringBuilder();
@@ -184,7 +187,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public void dump(Writer writer, long fromIndex, long toIndex) {
+    public void dump(@NotNull Writer writer, long fromIndex, long toIndex) {
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
@@ -276,6 +279,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return this.eventLoop;
     }
 
+    @NotNull
     protected ExcerptAppender newAppender() {
         return new StoreAppender(this);
     }
@@ -435,7 +439,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public final void release(WireStore store) {
+    public final void release(@Nullable WireStore store) {
         if (store != null)
             this.pool.release(store);
     }
@@ -457,6 +461,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return rollCycle().toIndex(cycle, 0);
     }
 
+    @Nullable
     String[] getList() {
         return path.list();
     }
@@ -521,6 +526,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return lastCycle;
     }
 
+    @NotNull
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
     }
@@ -547,18 +553,20 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     //
     // *************************************************************************
 
-    MappedBytes mappedBytes(File cycleFile) throws FileNotFoundException {
+    @NotNull
+    MappedBytes mappedBytes(@NotNull File cycleFile) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize, readOnly);
     }
 
-    private int toCycle(Map.Entry<Long, File> entry) throws ParseException {
+    private int toCycle(@Nullable Map.Entry<Long, File> entry) throws ParseException {
         if (entry == null || entry.getValue() == null)
             return -1;
         return dateCache.parseCount(fileToText().apply(entry.getValue()));
     }
 
+    @NotNull
     @Override
     public String toString() {
         return "SingleChronicleQueue{" +
@@ -567,6 +575,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 '}';
     }
 
+    @NotNull
     public TimeProvider time() {
         return time;
     }
@@ -620,12 +629,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
                 return wireStore;
 
-            } catch (TimeoutException | IOException e) {
+            } catch (@NotNull TimeoutException | IOException e) {
                 throw Jvm.rethrow(e);
             }
         }
 
-        private void checkDiskSpace(final File path) throws IOException {
+        private void checkDiskSpace(@NotNull final File path) throws IOException {
             final Path root = path.getParentFile().toPath().getRoot();
             if (root != null && root.getFileSystem() != null) {
                 // The returned number of unallocated bytes is a hint, but not a guarantee
@@ -644,6 +653,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
          * @return cycleTree for the current directory / parentFile
          * @throws ParseException
          */
+        @NotNull
         private NavigableMap<Long, File> cycleTree() {
 
             final File parentFile = path;
@@ -665,7 +675,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         @Override
-        public int nextCycle(int currentCycle, TailerDirection direction) throws ParseException {
+        public int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException {
 
             if (direction == NONE)
                 throw new AssertionError("direction is NONE");

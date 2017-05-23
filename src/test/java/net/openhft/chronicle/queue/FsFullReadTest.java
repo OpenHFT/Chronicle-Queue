@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireDumper;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -29,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 public class FsFullReadTest {
 
 
+    @NotNull
     private static  String basePath = "src/test/resources/tr2";
 
     @Ignore("broken test")

@@ -32,16 +32,16 @@ import java.util.function.Consumer;
  */
 public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends Cloneable {
 
-    static SingleChronicleQueueBuilder single(String basePath) {
+    static SingleChronicleQueueBuilder single(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
-    static SingleChronicleQueueBuilder single(File basePath) {
+    static SingleChronicleQueueBuilder single(@NotNull File basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
     @Deprecated
-    static SingleChronicleQueueBuilder singleText(String basePath) {
+    static SingleChronicleQueueBuilder singleText(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.text(new File(basePath));
     }
 
@@ -51,6 +51,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     B onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats);
 
+    @NotNull
     Consumer<BytesRingBufferStats> onRingBufferStats();
 
     @NotNull
@@ -121,6 +122,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
      */
     B writeBufferMode(BufferMode writeBufferMode);
 
+    @NotNull
     BufferMode writeBufferMode();
 
     /**

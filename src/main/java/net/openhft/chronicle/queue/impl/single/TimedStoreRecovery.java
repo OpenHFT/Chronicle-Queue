@@ -40,16 +40,16 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     private final LongValue timeStamp;
 
     @UsedViaReflection
-    public TimedStoreRecovery(WireIn in) {
+    public TimedStoreRecovery(@NotNull WireIn in) {
         timeStamp = in.read("timeStamp").int64ForBinding(in.newLongReference());
     }
 
-    public TimedStoreRecovery(WireType wireType) {
+    public TimedStoreRecovery(@NotNull WireType wireType) {
         timeStamp = wireType.newLongReference().get();
     }
 
     @Override
-    public long writeHeader(Wire wire,
+    public long writeHeader(@NotNull Wire wire,
                             int length,
                             int safeLength,
                             long timeoutMS,
@@ -88,7 +88,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
+    public long recoverIndex2Index(@NotNull LongValue index2Index, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         long tsEnd = acquireLock(timeoutMS);
         if (index2Index.getValue() == BinaryLongReference.LONG_NOT_COMPLETE) {
             Jvm.warn().on(getClass(), "Rebuilding the index2index, resetting to 0");
@@ -106,7 +106,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
+    public long recoverSecondaryAddress(@NotNull LongArrayValues index2indexArr, int index2, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         long tsEnd = acquireLock(timeoutMS);
         if (index2indexArr.getValueAt(index2) == BinaryLongReference.LONG_NOT_COMPLETE) {
             Jvm.warn().on(getClass(), "Rebuilding the index2index[" + index2 + "], resetting to 0");
@@ -125,7 +125,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverAndWriteHeader(@NotNull Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
         while (true) {
             long offset = bytes.writePosition();

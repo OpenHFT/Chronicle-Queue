@@ -134,6 +134,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         private int key;
         private String value;
 
+        @NotNull
         @Override
         public String toString() {
             return "MyData{" +

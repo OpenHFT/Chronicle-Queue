@@ -37,10 +37,12 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *
      * @return the document context
      */
+    @NotNull
     default DocumentContext readingDocument() {
         return readingDocument(false);
     }
 
+    @NotNull
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
@@ -101,6 +103,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @param direction NONE, FORWARD, BACKWARD
      * @return this
      */
+    @NotNull
     ExcerptTailer direction(TailerDirection direction);
 
     /**
@@ -110,6 +113,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return this ExcerptTailer
      * @throws IORuntimeException if the queue couldn't be wound to the last index.
      */
+    @NotNull
     ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
 
     default void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
@@ -120,5 +124,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
         return false;
     }
 
+    @NotNull
     TailerState state();
 }

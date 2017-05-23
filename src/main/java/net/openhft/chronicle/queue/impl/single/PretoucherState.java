@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.Optional;
@@ -38,7 +39,7 @@ class PretoucherState {
                 .orElse(new File("none"));
     }
 
-    public void pretouch(MappedBytes bytes) {
+    public void pretouch(@NotNull MappedBytes bytes) {
         long pos = posSupplier.getAsLong();
         // don't retain the bytes object when it is head so keep the hashCode instead.
         // small risk of a duplicate hashCode.
@@ -91,7 +92,7 @@ class PretoucherState {
         Jvm.debug().on(getClass(), message);
     }
 
-    protected boolean touchPage(MappedBytes bytes, long offset) {
+    protected boolean touchPage(@NotNull MappedBytes bytes, long offset) {
         return bytes.compareAndSwapLong(offset, 0L, 0L);
     }
 

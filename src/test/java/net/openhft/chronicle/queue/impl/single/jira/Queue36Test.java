@@ -19,6 +19,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.File;
@@ -51,7 +52,7 @@ public class Queue36Test extends ChronicleQueueTestBase {
         }
     }
 
-    public void checkNoFiles(File basePath) {
+    public void checkNoFiles(@NotNull File basePath) {
         String[] fileNames = basePath.list();
         assertTrue(fileNames == null || fileNames.length == 0);
     }

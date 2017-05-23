@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -131,10 +132,11 @@ public class RollCycleMultiThreadTest {
 
     private class ParallelQueueObserver implements Callable, StoreFileListener {
 
+        @NotNull
         private final ExcerptTailer tailer;
         volatile int documentsRead;
 
-        ParallelQueueObserver(ChronicleQueue queue) {
+        ParallelQueueObserver(@NotNull ChronicleQueue queue) {
             documentsRead = 0;
             tailer = queue.createTailer();
         }

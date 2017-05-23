@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Test;
 
@@ -1126,12 +1127,12 @@ public class WriteBytesTest {
         }
     }
 
-    public boolean postOneMessage(ExcerptAppender appender) {
+    public boolean postOneMessage(@NotNull ExcerptAppender appender) {
         appender.writeBytes(outgoingBytes);
         return true;
     }
 
-    public int fetchOneMessage(ExcerptTailer tailer, byte[] using) {
+    public int fetchOneMessage(@NotNull ExcerptTailer tailer, @NotNull byte[] using) {
         try (DocumentContext dc = tailer.readingDocument()) {
             return !dc.isPresent() ? -1 : dc.wire().bytes().read(using);
         }

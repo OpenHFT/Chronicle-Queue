@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.wire.AbstractMarshallable;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Created by peter on 22/03/16.
@@ -32,6 +33,7 @@ public class SidedPrice extends AbstractMarshallable {
         init(symbol, timestamp, side, price, quantity);
     }
 
+    @NotNull
     public SidedPrice init(String symbol, long timestamp, Side side, double price, double quantity) {
         this.symbol = symbol;
         this.timestamp = timestamp;

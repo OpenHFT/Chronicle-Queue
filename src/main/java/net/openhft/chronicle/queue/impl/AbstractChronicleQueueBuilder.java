@@ -67,6 +67,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     /**
      * by default logs the performance stats of the ring buffer
      */
+    @NotNull
     private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
     private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(500_000);
@@ -107,6 +108,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
+    @NotNull
     @Override
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
@@ -228,6 +230,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     /**
      * @return BufferMode to use for writes. Only None is available is the OSS
      */
+    @NotNull
     public BufferMode writeBufferMode() {
         return wireType() == WireType.DELTA_BINARY ? BufferMode.None : writeBufferMode;
     }
@@ -362,10 +365,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
+    @NotNull
     public AbstractChronicleQueueBuilder encryptSupplier(Supplier<Cipher> encryptSupplier) {
         throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
     }
 
+    @NotNull
     public AbstractChronicleQueueBuilder decryptSupplier(Supplier<Cipher> decryptSupplier) {
         throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
     }

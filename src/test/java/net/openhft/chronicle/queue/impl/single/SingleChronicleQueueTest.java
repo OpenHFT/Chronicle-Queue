@@ -54,6 +54,7 @@ import static org.junit.Assume.assumeFalse;
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private static final long TIMES = (4L << 20L);
+    @NotNull
     protected final WireType wireType;
     protected final boolean encryption;
 
@@ -327,7 +328,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         );
     }
 
-    void doTestCheckIndex(BiConsumer<ExcerptAppender, Integer> writeTo) {
+    void doTestCheckIndex(@NotNull BiConsumer<ExcerptAppender, Integer> writeTo) {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
@@ -2399,7 +2400,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    void readForward(ChronicleQueue chronicle, int entries) {
+    void readForward(@NotNull ChronicleQueue chronicle, int entries) {
         ExcerptTailer forwardTailer = chronicle.createTailer()
                 .direction(TailerDirection.FORWARD)
                 .toStart();
@@ -2420,7 +2421,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    void readBackward(ChronicleQueue chronicle, int entries) {
+    void readBackward(@NotNull ChronicleQueue chronicle, int entries) {
         ExcerptTailer backwardTailer = chronicle.createTailer()
                 .direction(TailerDirection.BACKWARD)
                 .toEnd();
@@ -2764,14 +2765,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    private void doSomething(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt, String text) {
+    private void doSomething(@NotNull ThreadLocal<ExcerptAppender> tla, @NotNull ThreadLocal<ExcerptTailer> tlt, String text) {
         if (Math.random() > 0.5)
             writeTestDocument(tla, text);
         else
             readDocument(tlt, text);
     }
 
-    private void readDocument(ThreadLocal<ExcerptTailer> tlt, String text) {
+    private void readDocument(@NotNull ThreadLocal<ExcerptTailer> tlt, String text) {
         try (DocumentContext dc = tlt.get().readingDocument()) {
             if (!dc.isPresent())
                 return;
@@ -2780,7 +2781,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    private void writeTestDocument(ThreadLocal<ExcerptAppender> tl, String text) {
+    private void writeTestDocument(@NotNull ThreadLocal<ExcerptAppender> tl, String text) {
         try (DocumentContext dc = tl.get().writingDocument()) {
             long index = dc.index();
             dc.wire().write("key").int64(index);
@@ -3363,7 +3364,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         Assert.assertEquals(1, action(tailer, queue.rollCycle()));
     }
 
-    private long action(final ExcerptTailer tailer1, final RollCycle rollCycle) {
+    private long action(@NotNull final ExcerptTailer tailer1, @NotNull final RollCycle rollCycle) {
 
         //  tailer1.direction(direction);
         long readvalue = 0;
@@ -3461,15 +3462,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    protected SingleChronicleQueueBuilder builder(File file, WireType wireType) {
+    @NotNull
+    protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).testBlockSize();
     }
 
-    protected SingleChronicleQueueBuilder binary(File file) {
+    @NotNull
+    protected SingleChronicleQueueBuilder binary(@NotNull File file) {
         return SingleChronicleQueueBuilder.binary(file).testBlockSize();
     }
 
-    private MappedFile toMappedFile(DocumentContext documentContext) {
+    private MappedFile toMappedFile(@NotNull DocumentContext documentContext) {
         MappedFile mappedFile;
         MappedBytes bytes = (MappedBytes) documentContext.wire().bytes();
         mappedFile = bytes.mappedFile();

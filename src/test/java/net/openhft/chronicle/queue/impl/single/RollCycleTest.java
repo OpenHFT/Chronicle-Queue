@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Test;
 
@@ -150,7 +151,7 @@ public class RollCycleTest {
         CountDownLatch progressLatch;
         int documentsRead;
 
-        public ParallelQueueObserver(TimeProvider timeProvider, Path path) {
+        public ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
             queue = SingleChronicleQueueBuilder.fieldlessBinary(path.toFile())
                     .testBlockSize()
                     .rollCycle(RollCycles.DAILY)

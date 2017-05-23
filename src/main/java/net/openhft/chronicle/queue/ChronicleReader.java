@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.TextWire;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +39,7 @@ import static java.lang.System.*;
 public enum ChronicleReader {
     ;
 
-    public static void main(String... args) throws IOException {
+    public static void main(@NotNull String... args) throws IOException {
         if (args.length < 1) {
             err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} {regex} [from-index]");
             exit(-1);
@@ -50,7 +51,7 @@ public enum ChronicleReader {
         tailFileFrom(basePath, regex, index, false);
     }
 
-    public static void tailFileFrom(String basePath, String regex, long index, boolean stopAtEnd) {
+    public static void tailFileFrom(@NotNull String basePath, @NotNull String regex, long index, boolean stopAtEnd) {
         ChronicleQueue ic = SingleChronicleQueueBuilder.binary(new File(basePath)).build();
         ExcerptTailer tailer = ic.createTailer();
         if (index > 0) {

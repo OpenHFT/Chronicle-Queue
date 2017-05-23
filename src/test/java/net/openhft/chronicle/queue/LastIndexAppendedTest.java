@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.File;
@@ -118,7 +119,7 @@ public class LastIndexAppendedTest {
         }
     }
 
-    private long doRead(ExcerptTailer tailer, int expected) {
+    private long doRead(@NotNull ExcerptTailer tailer, int expected) {
         int[] i = {0};
         long t_index = 0;
         while (true) {

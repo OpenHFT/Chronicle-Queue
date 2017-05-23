@@ -67,12 +67,12 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     @NotNull
-    public static <S extends SingleChronicleQueueBuilder<S>> SingleChronicleQueueBuilder<S> builder(@NotNull Path path, WireType wireType) {
+    public static <S extends SingleChronicleQueueBuilder<S>> SingleChronicleQueueBuilder<S> builder(@NotNull Path path, @NotNull WireType wireType) {
         return builder(path.toFile(), wireType);
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder builder(@NotNull File file, WireType wireType) {
+    public static SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return new SingleChronicleQueueBuilder<>(file)
                 .wireType(wireType);
     }
@@ -113,7 +113,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     // *************************************************************************
 
     @NotNull
-    static SingleChronicleQueueStore createStore(RollingChronicleQueue queue, Wire wire) {
+    static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue, @NotNull Wire wire) {
         final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
                 queue.rollCycle(),
                 queue.wireType(),
@@ -157,14 +157,17 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         }
     }
 
+    @Nullable
     public Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier() {
         return null;
     }
 
+    @Nullable
     public Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier() {
         return null;
     }
 
+    @NotNull
     public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
         if (keyBytes == null) {
             codingSuppliers(null, null);
@@ -174,6 +177,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return this;
     }
 
+    @NotNull
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
                                                        @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
         if (encodingSupplier != null || decodingSupplier != null)
@@ -181,6 +185,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return this;
     }
 
+    @NotNull
     @Override
     public SingleChronicleQueueBuilder<S> testBlockSize() {
         super.testBlockSize();

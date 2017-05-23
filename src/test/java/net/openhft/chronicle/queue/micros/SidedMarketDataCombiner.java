@@ -17,6 +17,8 @@
 
 package net.openhft.chronicle.queue.micros;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -31,7 +33,7 @@ public class SidedMarketDataCombiner implements SidedMarketDataListener {
         this.mdListener = mdListener;
     }
 
-    public void onSidedPrice(SidedPrice sidedPrice) {
+    public void onSidedPrice(@NotNull SidedPrice sidedPrice) {
         TopOfBookPrice price = priceMap.computeIfAbsent(sidedPrice.symbol, TopOfBookPrice::new);
         if (price.combine(sidedPrice))
             mdListener.onTopOfBookPrice(price);

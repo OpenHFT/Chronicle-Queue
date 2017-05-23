@@ -61,6 +61,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws StreamCorruptedException the write failed is was unable to write the data at the
      *                                  given index.
      */
+    @NotNull
     default DocumentContext writingDocument(long index) {
         throw new UnsupportedOperationException();
     }
@@ -89,6 +90,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     void padToCacheAlign(Padding padToCacheAlign);
 
+    @NotNull
     Padding padToCacheAlignMode();
 
     /**
@@ -97,6 +99,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @param lazyIndexing if true, don't do any indexing on the append.
      * @return this
      */
+    @NotNull
     ExcerptAppender lazyIndexing(boolean lazyIndexing);
 
     /**

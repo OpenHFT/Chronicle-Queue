@@ -55,10 +55,10 @@ public enum BinarySearch {
 
     }
 
-    private static long findCycleLinearSearch(NavigableSet<Long> cycles, Wire key,
-                                              Comparator<Wire> c,
-                                              ExcerptTailer tailer,
-                                              final SingleChronicleQueue queue) {
+    private static long findCycleLinearSearch(@NotNull NavigableSet<Long> cycles, Wire key,
+                                              @NotNull Comparator<Wire> c,
+                                              @NotNull ExcerptTailer tailer,
+                                              @NotNull final SingleChronicleQueue queue) {
 
         final Iterator<Long> iterator = cycles.iterator();
         if (!iterator.hasNext())
@@ -98,12 +98,12 @@ public enum BinarySearch {
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
      * bit not being set ( in other words set to zero ).
      */
-    public static long findWithinCycle(Wire key,
-                                       Comparator<Wire> c,
+    public static long findWithinCycle(@NotNull Wire key,
+                                       @NotNull Comparator<Wire> c,
                                        int cycle,
-                                       ExcerptTailer tailer,
-                                       SingleChronicleQueue q,
-                                       final RollCycle rollCycle) {
+                                       @NotNull ExcerptTailer tailer,
+                                       @NotNull SingleChronicleQueue q,
+                                       @NotNull final RollCycle rollCycle) {
         final long readPosition = key.bytes().readPosition();
         try {
             long lowSeqNum = 0;

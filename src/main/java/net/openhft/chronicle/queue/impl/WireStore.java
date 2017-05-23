@@ -21,6 +21,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.impl.single.ScanResult;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.File;
@@ -33,12 +34,14 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * @return the file associated with this store.
      */
+    @Nullable
     File file();
 
     /**
      * @param position the start of the last written excerpt to this cycle/store
      * @return this store
      */
+    @NotNull
     WireStore writePosition(long position);
 
     /**
@@ -52,6 +55,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      */
     long writePosition();
 
+    @Nullable
     ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index);
 
     @NotNull
@@ -69,6 +73,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException;
 
+    @NotNull
     String dump();
 
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
@@ -86,6 +91,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * @return the type of wire used
      */
+    @NotNull
     WireType wireType();
 
     boolean indexable(long index);

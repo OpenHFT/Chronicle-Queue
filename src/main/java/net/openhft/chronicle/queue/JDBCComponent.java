@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.util.ThrowingSupplier;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -27,16 +28,17 @@ import java.util.List;
  * Created by peter on 12/04/16.
  */
 public class JDBCComponent implements JDBCStatement {
+    @NotNull
     private final Connection connection;
     private final JDBCResult result;
 
-    public JDBCComponent(ThrowingSupplier<Connection, SQLException> connectionSupplier, JDBCResult result) throws SQLException {
+    public JDBCComponent(@NotNull ThrowingSupplier<Connection, SQLException> connectionSupplier, JDBCResult result) throws SQLException {
         connection = connectionSupplier.get();
         this.result = result;
     }
 
     @Override
-    public void executeUpdate(String query, Object... args) {
+    public void executeUpdate(String query, @NotNull Object... args) {
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             for (int i = 0; i < args.length; i++)
                 ps.setObject(i + 1, args[i]);
@@ -49,7 +51,7 @@ public class JDBCComponent implements JDBCStatement {
     }
 
     @Override
-    public void executeQuery(String query, Object... args) {
+    public void executeQuery(String query, @NotNull Object... args) {
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             for (int i = 0; i < args.length; i++)
                 ps.setObject(i + 1, args[i]);

@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Test;
 
@@ -56,7 +57,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
      * @param msg      test message
      * @return index position of the entry
      */
-    private long appendEntry(final ExcerptAppender appender, String msg) {
+    private long appendEntry(@NotNull final ExcerptAppender appender, String msg) {
         DocumentContext dc = appender.writingDocument();
         try {
             dc.wire().write().text(msg);
@@ -72,7 +73,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
      * @param tailer ExcerptTailer
      * @return entry or null, if no entry available
      */
-    private String readNextEntry(final ExcerptTailer tailer) {
+    private String readNextEntry(@NotNull final ExcerptTailer tailer) {
         DocumentContext dc = tailer.readingDocument();
         try {
             if (dc.isPresent()) {

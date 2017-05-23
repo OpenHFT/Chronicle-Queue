@@ -15,6 +15,8 @@
  */
 package net.openhft.chronicle.queue;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * @author peter.lawrey
  */
@@ -25,5 +27,6 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> {
      */
     int sourceId();
 
+    @NotNull
     ChronicleQueue queue();
 }

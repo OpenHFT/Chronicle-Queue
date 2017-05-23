@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.time.TimeProvider;
+import org.jetbrains.annotations.NotNull;
 
 public enum RollCycles implements RollCycle {
     TEST_SECONDLY("yyyyMMdd-HHmmss", 1000, 1 << 15, 4), // only good for testing
@@ -68,7 +69,7 @@ public enum RollCycles implements RollCycle {
     }
 
     @Override
-    public int current(TimeProvider time, long epoch) {
+    public int current(@NotNull TimeProvider time, long epoch) {
         return (int) ((time.currentTimeMillis() - epoch) / length());
     }
 

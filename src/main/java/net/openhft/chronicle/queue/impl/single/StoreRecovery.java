@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
@@ -37,7 +38,7 @@ public interface StoreRecovery extends WriteMarshallable {
 
     long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
 
-    default long writeHeader(Wire wire,
+    default long writeHeader(@NotNull Wire wire,
                              int length,
                              int safeLength,
                              long timeoutMS,

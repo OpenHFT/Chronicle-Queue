@@ -25,6 +25,8 @@ import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MethodReader;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -32,17 +34,22 @@ import java.util.List;
  * Created by peter on 01/04/16.
  */
 public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler {
+    @NotNull
     protected final MethodReader[] serviceIn;
     private final HandlerPriority priority;
+    @NotNull
     private final ChronicleQueue[] inputQueues;
+    @NotNull
     private final ChronicleQueue outputQueue;
+    @NotNull
     private final O serviceOut;
     private final boolean createdEventLoop;
     private final Object[] serviceImpl;
     private volatile boolean closed = false;
+    @Nullable
     private EventLoop eventLoop;
 
-    public EventLoopServiceWrapper(ServiceWrapperBuilder<O> builder) {
+    public EventLoopServiceWrapper(@NotNull ServiceWrapperBuilder<O> builder) {
         this.priority = builder.priority();
         outputQueue = SingleChronicleQueueBuilder.binary(builder.outputPath()).testBlockSize().sourceId(builder.outputSourceId()).build();
         serviceOut = outputQueue.acquireAppender().methodWriterBuilder(builder.outClass()).recordHistory(builder.outputSourceId() != 0).get();
@@ -62,11 +69,13 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
             eventLoop.start();
     }
 
+    @NotNull
     @Override
     public ChronicleQueue[] inputQueues() {
         return inputQueues;
     }
 
+    @NotNull
     @Override
     public ChronicleQueue outputQueue() {
         return outputQueue;
@@ -89,6 +98,7 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
         return busy;
     }
 
+    @NotNull
     @Override
     public HandlerPriority priority() {
         return priority;

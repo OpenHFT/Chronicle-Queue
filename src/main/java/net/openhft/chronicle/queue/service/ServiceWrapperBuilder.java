@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.wire.MethodReader;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     ServiceWrapperBuilder() {
     }
 
+    @NotNull
     public static <O> ServiceWrapperBuilder<O> serviceBuilder(String inputPath, String outputPath, Class<O> outClass, Function<O, Object> serviceFunction) {
         ServiceWrapperBuilder<O> swb = new ServiceWrapperBuilder<>();
         swb.addInputPath(inputPath);
@@ -55,10 +57,12 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return swb;
     }
 
+    @NotNull
     public List<String> inputPath() {
         return inputPaths;
     }
 
+    @NotNull
     public ServiceWrapperBuilder<O> addInputPath(String inputPath) {
         this.inputPaths.add(inputPath);
         return this;
@@ -68,6 +72,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return outClass;
     }
 
+    @NotNull
     public ServiceWrapperBuilder<O> outClass(Class<O> outClass) {
         this.outClass = outClass;
         return this;
@@ -77,15 +82,18 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return outputPath;
     }
 
+    @NotNull
     public ServiceWrapperBuilder<O> outputPath(String outputPath) {
         this.outputPath = outputPath;
         return this;
     }
 
+    @NotNull
     public List<Function<O, Object>> getServiceFunctions() {
         return serviceFunctions;
     }
 
+    @NotNull
     public ServiceWrapperBuilder<O> addServiceFunction(Function<O, Object> serviceFunctions) {
         this.serviceFunctions.add(serviceFunctions);
         return this;
@@ -107,6 +115,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return priority;
     }
 
+    @NotNull
     public ServiceWrapperBuilder<O> priority(HandlerPriority priority) {
         this.priority = priority;
         return this;
@@ -116,6 +125,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return inputSourceId;
     }
 
+    @NotNull
     public ServiceWrapperBuilder<O> inputSourceId(int inputSourceId) {
         this.inputSourceId = inputSourceId;
         return this;
@@ -125,11 +135,13 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return outputSourceId;
     }
 
+    @NotNull
     public ServiceWrapperBuilder<O> outputSourceId(int outputSourceId) {
         this.outputSourceId = outputSourceId;
         return this;
     }
 
+    @NotNull
     @Override
     public ServiceWrapper get() {
         if (eventLoop == null) {
@@ -139,14 +151,17 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return new EventLoopServiceWrapper<>(this);
     }
 
+    @NotNull
     public SingleChronicleQueue inputQueue() {
         return SingleChronicleQueueBuilder.binary(inputPaths.get(0)).testBlockSize().sourceId(inputSourceId()).build();
     }
 
+    @NotNull
     public SingleChronicleQueue outputQueue() {
         return SingleChronicleQueueBuilder.binary(outputPath).testBlockSize().sourceId(outputSourceId()).build();
     }
 
+    @NotNull
     public MethodReader outputReader(Object... impls) {
         SingleChronicleQueue queue = outputQueue();
         MethodReader reader = queue.createTailer().methodReader(impls);
@@ -154,6 +169,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return reader;
     }
 
+    @NotNull
     public <T> T inputWriter(Class<T> tClass) {
         SingleChronicleQueue queue = inputQueue();
         return queue.acquireAppender().methodWriterBuilder(tClass).recordHistory(true).onClose(queue).get();

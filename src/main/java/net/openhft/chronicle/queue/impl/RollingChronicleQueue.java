@@ -38,6 +38,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent
      * is false and absent
      */
+    @org.jetbrains.annotations.Nullable
     @Nullable
     WireStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent);
 
@@ -101,6 +102,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      */
     int indexSpacing();
 
+    @NotNull
     RollCycle rollCycle();
 
     Function<WireType, StoreRecovery> recoverySupplier();

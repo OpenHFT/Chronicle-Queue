@@ -39,7 +39,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     private static final Logger LOG = LoggerFactory.getLogger(SimpleStoreRecovery.class);
 
     @Override
-    public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
+    public long recoverIndex2Index(@NotNull LongValue index2Index, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Rebuilding the index2index");
         index2Index.setValue(0);
         try {
@@ -50,7 +50,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     }
 
     @Override
-    public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
+    public long recoverSecondaryAddress(@NotNull LongArrayValues index2indexArr, int index2, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Timed out trying to get index2index[" + index2 + "]");
         index2indexArr.setValueAt(index2, 0L);
         try {
@@ -65,7 +65,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     }
 
     @Override
-    public long recoverAndWriteHeader(Wire wire,
+    public long recoverAndWriteHeader(@NotNull Wire wire,
                                       int length,
                                       long timeoutMS,
                                       @NotNull final LongValue lastPosition) throws UnrecoverableTimeoutException {
@@ -74,7 +74,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
         wire.pauser().reset();
         try {
             return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
-        } catch (TimeoutException | EOFException e) {
+        } catch (@NotNull TimeoutException | EOFException e) {
             throw new UnrecoverableTimeoutException(e);
         }
     }

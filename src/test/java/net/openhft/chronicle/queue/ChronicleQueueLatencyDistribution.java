@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -86,6 +87,7 @@ import java.util.Map;
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static final boolean SAMPLING = Boolean.getBoolean("sampling");
     static final int warmup = 500_000;
+    @Nullable
     final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -103,7 +105,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         }
     }
 
-    protected void runTest(ChronicleQueue queue, int throughput) throws InterruptedException {
+    protected void runTest(@NotNull ChronicleQueue queue, int throughput) throws InterruptedException {
 /*
         Jvm.setExceptionHandlers(PrintExceptionHandler.ERR,
                 PrintExceptionHandler.OUT,

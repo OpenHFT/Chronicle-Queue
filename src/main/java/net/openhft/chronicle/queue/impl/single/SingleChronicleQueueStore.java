@@ -52,10 +52,13 @@ public class SingleChronicleQueueStore implements WireStore {
     private final SCQRoll roll;
     @NotNull
     private final LongValue writePosition;
+    @NotNull
     private final MappedBytes mappedBytes;
+    @NotNull
     private final MappedFile mappedFile;
     @NotNull
     private final ReferenceCounter refCount;
+    @Nullable
     private final StoreRecovery recovery;
 
     private int deltaCheckpointInterval;
@@ -68,7 +71,7 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param wire a wire
      */
     @UsedViaReflection
-    private SingleChronicleQueueStore(WireIn wire) {
+    private SingleChronicleQueueStore(@NotNull WireIn wire) {
         assert wire.startUse();
         try {
             this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
@@ -144,13 +147,14 @@ public class SingleChronicleQueueStore implements WireStore {
         this.deltaCheckpointInterval = deltaCheckpointInterval;
     }
 
-    public static void dumpStore(Wire wire) {
+    public static void dumpStore(@NotNull Wire wire) {
         Bytes<?> bytes = wire.bytes();
         bytes.readPositionUnlimited(0);
         Jvm.debug().on(SingleChronicleQueueStore.class, Wires.fromSizePrefixedBlobs(wire));
     }
 
-    public static String dump(String directoryFilePath) {
+    @NotNull
+    public static String dump(@NotNull String directoryFilePath) {
         SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directoryFilePath).build();
         return q.dump();
     }
@@ -158,11 +162,13 @@ public class SingleChronicleQueueStore implements WireStore {
     /**
      * @return the type of wire used
      */
+    @NotNull
     @Override
     public WireType wireType() {
         return wireType;
     }
 
+    @Nullable
     @Override
     public File file() {
         return mappedFile == null ? null : mappedFile.file();
@@ -181,6 +187,7 @@ public class SingleChronicleQueueStore implements WireStore {
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
 
+    @NotNull
     @Override
     public String dump() {
 
@@ -198,6 +205,7 @@ public class SingleChronicleQueueStore implements WireStore {
         return this.writePosition.getVolatileValue();
     }
 
+    @NotNull
     @Override
     public WireStore writePosition(long position) {
 
@@ -226,11 +234,12 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param index the index we wish to move to
      * @return whether the index was found for reading.
      */
+    @Nullable
     @Override
     public ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index) {
         try {
             return indexing.moveToIndex(recovery, ec, index);
-        } catch (UnrecoverableTimeoutException | StreamCorruptedException e) {
+        } catch (@NotNull UnrecoverableTimeoutException | StreamCorruptedException e) {
             return ScanResult.NOT_REACHED;
         }
     }
@@ -267,16 +276,17 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long sequenceForPosition(final ExcerptContext ec, final long position, boolean inclusive) throws
+    public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws
             UnrecoverableTimeoutException, StreamCorruptedException {
         return indexing.sequenceForPosition(recovery, ec, position, inclusive);
     }
 
     @Override
-    public long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException {
+    public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
         return indexing.lastSequenceNumber(recovery, ec);
     }
 
+    @NotNull
     @Override
     public String toString() {
         return "SingleChronicleQueueStore{" +
@@ -321,7 +331,7 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber,
+    public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec, long sequenceNumber,
                                              long position)
             throws UnrecoverableTimeoutException, StreamCorruptedException {
         long nextSequence = indexing.nextEntryToBeIndexed();
@@ -338,12 +348,12 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long writeHeader(Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
+    public long writeHeader(@NotNull Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
         return recovery.writeHeader(wire, length, safeLength, timeoutMS, writePosition);
     }
 
     @Override
-    public void writeEOF(Wire wire, long timeoutMS) throws TimeoutException {
+    public void writeEOF(@NotNull Wire wire, long timeoutMS) throws TimeoutException {
         // just in case we are about to release this
         if (wire.bytes().tryReserve()) {
             wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());

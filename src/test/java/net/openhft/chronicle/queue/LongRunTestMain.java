@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.jetbrains.annotations.NotNull;
 
 public class LongRunTestMain {
     public static void main(String[] args) {
@@ -118,7 +119,7 @@ public class LongRunTestMain {
 
         @Override
         @SuppressWarnings({"rawtypes", "No way to provide generic type and override WriteBytesMarshallable."})
-        public void writeMarshallable(final BytesOut bytes) {
+        public void writeMarshallable(@NotNull final BytesOut bytes) {
             bytes.writeLong(this.logEntry.getSessionId());
             bytes.writeInt(this.logEntry.getLogLevel());
             bytes.writeInt(this.logEntry.getSecurityLevel());

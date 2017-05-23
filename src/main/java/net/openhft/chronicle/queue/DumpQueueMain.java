@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.WireDumper;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -41,14 +42,14 @@ public class DumpQueueMain {
         dump(args[0]);
     }
 
-    public static void dump(String path) throws FileNotFoundException {
+    public static void dump(@NotNull String path) throws FileNotFoundException {
         File path2 = new File(path);
         PrintStream out = FILE == null ? System.out : new PrintStream(new File(FILE));
         long upperLimit = Long.MAX_VALUE;
         dump(path2, out, upperLimit);
     }
 
-    public static void dump(File path, PrintStream out, long upperLimit) {
+    public static void dump(@NotNull File path, @NotNull PrintStream out, long upperLimit) {
         if (path.isDirectory()) {
             File[] files = path.listFiles();
             if (files == null)
@@ -63,7 +64,7 @@ public class DumpQueueMain {
         }
     }
 
-    public static void dumpFile(File file, PrintStream out, long upperLimit) {
+    public static void dumpFile(@NotNull File file, @NotNull PrintStream out, long upperLimit) {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
             try {
                 MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20);
@@ -99,7 +100,7 @@ public class DumpQueueMain {
         }
     }
 
-    static int indexOfLastZero(CharSequence str) {
+    static int indexOfLastZero(@NotNull CharSequence str) {
         int i = str.length() - 3;
         do {
             i -= LENGTH;

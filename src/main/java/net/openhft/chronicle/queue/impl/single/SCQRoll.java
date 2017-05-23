@@ -38,7 +38,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
      * @param wire a wire
      */
     @UsedViaReflection
-    private SCQRoll(WireIn wire) {
+    private SCQRoll(@NotNull WireIn wire) {
         length = wire.read(RollFields.length).int32();
         format = wire.read(RollFields.format).text();
         epoch = wire.read(RollFields.epoch).int64();
