@@ -39,6 +39,8 @@ import static java.lang.System.*;
 public enum ChronicleReader {
     ;
 
+    static final String excludes = System.getProperty("excludes");
+
     public static void main(@NotNull String... args) throws IOException {
         if (args.length < 1) {
             err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} {regex} [from-index]");
@@ -47,7 +49,7 @@ public enum ChronicleReader {
 
         String basePath = args[0];
         String regex = args.length > 1 ? args[1] : "";
-        long index = args.length > 2 ? Long.decode(args[2]) : 0;
+        long index = args.length > 2 ? Long.decode(args[2]) : -1;
         tailFileFrom(basePath, regex, index, false);
     }
 
@@ -61,6 +63,9 @@ public enum ChronicleReader {
                     break;
                 Jvm.pause(100);
             }
+        } else if (index < 0) {
+            out.println("Skipping to the end");
+            tailer.toEnd();
         }
 
         Bytes bytes2 = Bytes.elasticByteBuffer();
@@ -84,8 +89,10 @@ public enum ChronicleReader {
                     text = bytes.toString();
                 }
                 if (regex.isEmpty() || text.matches(regex)) {
-                    out.print("0x" + Long.toHexString(tailer.index()) + ": ");
-                    out.println(text);
+                    if (excludes != null && !text.matches(excludes)) {
+                        out.print("0x" + Long.toHexString(tailer.index()) + ": ");
+                        out.println(text);
+                    }
                 }
             }
         }
