@@ -41,6 +41,7 @@ import java.io.StreamCorruptedException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
@@ -3460,6 +3461,54 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertTrue(mappedFile2.file().delete());
 
         }
+    }
+
+
+    @Test
+    public void testWritingDocumentIsAtomic() {
+
+        ExecutorService executorService = Executors.newFixedThreadPool(8);
+        int maxCount = Short.MAX_VALUE;
+
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).build();
+        AtomicInteger counter = new AtomicInteger();
+        for (int i = 0; i < maxCount; i++) {
+            executorService.submit(() -> {
+                ExcerptAppender excerptAppender = queue.acquireAppender();
+
+                try (DocumentContext dc = excerptAppender.writingDocument()) {
+                    int value = counter.getAndIncrement();
+                    dc.wire().write("some key").int64(value);
+                }
+            });
+        }
+
+        ExcerptTailer tailer = queue.createTailer();
+        for (int expected = 0; expected < maxCount; expected++) {
+
+
+            for (; ; ) {
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    if (!dc.isPresent()) {
+                        Thread.yield();
+                        continue;
+                    }
+
+                    long justRead = dc.wire().read("some key").int64();
+                    Assert.assertEquals(expected, justRead);
+                    break;
+                }
+            }
+        }
+
+        executorService.shutdownNow();
+
+        try {
+            executorService.awaitTermination(1,TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+        }
+
     }
 
     @NotNull
