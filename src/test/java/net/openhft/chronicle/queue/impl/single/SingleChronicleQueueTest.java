@@ -3463,30 +3463,31 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testWritingDocumentIsAtomic() {
 
-        ExecutorService executorService = Executors.newFixedThreadPool(8);
-        int maxCount = Short.MAX_VALUE;
+        final int threadCount = 8;
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).build();
-        AtomicInteger counter = new AtomicInteger();
-        for (int i = 0; i < maxCount; i++) {
+        final int iterationsPerThread = Short.MAX_VALUE / 8;
+        final int totalIterations = iterationsPerThread * threadCount;
+        final int[] nonAtomicCounter = new int[] {0};
+        for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
-                ExcerptAppender excerptAppender = queue.acquireAppender();
+                for (int j = 0; j < iterationsPerThread; j++) {
+                    ExcerptAppender excerptAppender = queue.acquireAppender();
 
-                try (DocumentContext dc = excerptAppender.writingDocument()) {
-                    int value = counter.getAndIncrement();
-                    dc.wire().write("some key").int64(value);
+                    try (DocumentContext dc = excerptAppender.writingDocument()) {
+                        int value = nonAtomicCounter[0]++;
+                        dc.wire().write("some key").int64(value);
+                    }
                 }
             });
         }
 
         ExcerptTailer tailer = queue.createTailer();
-        for (int expected = 0; expected < maxCount; expected++) {
-
-
+        for (int expected = 0; expected < totalIterations; expected++) {
             for (; ; ) {
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (!dc.isPresent()) {
