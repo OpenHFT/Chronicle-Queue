@@ -1513,8 +1513,9 @@ public class SingleChronicleQueueExcerpts {
                         wire.parent(parent);
                     }
                     int i = veh.sources() - 1;
-                    // skip the one we just added.
                     if (i < 0)
+                        continue;
+                    if (veh.sourceId(i) != this.sourceId())
                         continue;
 
                     long sourceIndex = veh.sourceIndex(i);
