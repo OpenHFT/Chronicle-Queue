@@ -22,6 +22,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.jetbrains.annotations.NotNull;
@@ -44,9 +45,10 @@ public enum ChronicleReaderMain {
         final CommandLine commandLine = parseCommandLine(args, options);
 
         final ChronicleReader chronicleReader = new ChronicleReader().
+                withMessageSink(System.out::println).
                 withBasePath(Paths.get(commandLine.getOptionValue('d')));
 
-        configureReader(options, chronicleReader);
+        configureReader(chronicleReader, commandLine);
 
         chronicleReader.execute();
     }
@@ -57,40 +59,51 @@ public enum ChronicleReaderMain {
         try {
             commandLine = parser.parse(options, args);
         } catch (ParseException e) {
-            new HelpFormatter().printUsage(new PrintWriter(System.out), 120,
+            final PrintWriter writer = new PrintWriter(System.out);
+            new HelpFormatter().printUsage(writer, 180,
                     ChronicleReaderMain.class.getSimpleName(), options);
+            writer.flush();
             System.exit(1);
         }
         return commandLine;
     }
 
-    private static void configureReader(final Options options, final ChronicleReader chronicleReader) {
-        if (options.hasOption("i")) {
-            chronicleReader.withInclusionRegex(options.getOption("i").getValue());
+    private static void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
+        if (commandLine.hasOption('i')) {
+            chronicleReader.withInclusionRegex(commandLine.getOptionValue('i'));
         }
-        if (options.hasOption("e")) {
-            chronicleReader.withExclusionRegex(options.getOption("e").getValue());
+        if (commandLine.hasOption('e')) {
+            chronicleReader.withExclusionRegex(commandLine.getOptionValue('e'));
         }
-        if (options.hasOption("f")) {
+        if (commandLine.hasOption('f')) {
             chronicleReader.tail();
         }
-        if (options.hasOption("m")) {
-            chronicleReader.historyRecords(Long.parseLong(options.getOption("m").getValue()));
+        if (commandLine.hasOption('m')) {
+            chronicleReader.historyRecords(Long.parseLong(commandLine.getOptionValue('m')));
         }
-        if (options.hasOption("n")) {
-            chronicleReader.withStartIndex(Long.decode(options.getOption("n").getValue()));
+        if (commandLine.hasOption('n')) {
+            chronicleReader.withStartIndex(Long.decode(commandLine.getOptionValue('n')));
         }
     }
 
     @NotNull
     private static Options options() {
         final Options options = new Options();
-        options.addRequiredOption("d", "directory", true, "Directory containing chronicle queue files");
-        options.addOption("i", "include-regex", true, "Display records containing this regular expression");
-        options.addOption("e", "exclude-regex", true, "Do not display records containing this regular expression");
-        options.addOption("f", "follow", false, "Tail behaviour - wait for new records to arrive");
-        options.addOption("m", "max-history", true, "Show this many records from the end of the data set");
-        options.addOption("n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)");
+
+        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
+        addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
+        addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
+        addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
+        addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
+        addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
         return options;
+    }
+
+    private static void addOption(final Options options, final String opt, final String argName, final boolean hasArg,
+                                  final String description, final boolean isRequired) {
+        final Option option = new Option(opt, hasArg, description);
+        option.setArgName(argName);
+        option.setRequired(isRequired);
+        options.addOption(option);
     }
 }

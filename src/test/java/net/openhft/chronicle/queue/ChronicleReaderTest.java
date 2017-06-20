@@ -1,13 +1,14 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Function;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -69,10 +70,49 @@ public class ChronicleReaderTest {
         basicReader().withStartIndex(1L).execute();
     }
 
-    @Ignore
-    @Test(expected = IllegalArgumentException.class)
-    public void shouldFailIfSpecifiedIndexIsAfterLastIndex() throws Exception {
-        basicReader().withStartIndex(Long.MAX_VALUE).execute();
+    @Test
+    public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() throws Exception {
+        basicReader().historyRecords(Long.MAX_VALUE).execute();
+
+        assertThat(capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count(), is(12L));
+    }
+
+    @Test
+    public void shouldContinueToPollQueueWhenTailModeIsEnabled() throws Exception {
+        final int expectedPollCountWhenDocumentIsEmpty = 3;
+        final FiniteDocumentPollMethod pollMethod = new FiniteDocumentPollMethod(expectedPollCountWhenDocumentIsEmpty);
+        try {
+            basicReader().withDocumentPollMethod(pollMethod).tail().execute();
+        } catch (ArithmeticException e) {
+            // expected
+        }
+
+        assertThat(pollMethod.invocationCount, is(expectedPollCountWhenDocumentIsEmpty));
+    }
+
+    private static final class FiniteDocumentPollMethod implements Function<ExcerptTailer, DocumentContext> {
+
+        private final int maxPollsReturningEmptyDocument;
+        private int invocationCount;
+
+        private FiniteDocumentPollMethod(final int maxPollsReturningEmptyDocument) {
+            this.maxPollsReturningEmptyDocument = maxPollsReturningEmptyDocument;
+        }
+
+        @Override
+        public DocumentContext apply(final ExcerptTailer excerptTailer) {
+            final DocumentContext documentContext = excerptTailer.readingDocument();
+
+            if (!documentContext.isPresent()) {
+                invocationCount++;
+                if (invocationCount >= maxPollsReturningEmptyDocument) {
+                    throw new ArithmeticException("For testing purposes");
+                }
+            }
+
+            return documentContext;
+        }
     }
 
     private ChronicleReader basicReader() {

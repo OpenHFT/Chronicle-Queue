@@ -27,6 +27,7 @@ import net.openhft.chronicle.wire.TextWire;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 final class ChronicleReader {
@@ -39,6 +40,7 @@ final class ChronicleReader {
     private boolean tailInputSource = false;
     private long maxHistoryRecords = UNSET_VALUE;
     private Consumer<String> messageSink;
+    private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
 
     void execute() {
         final ChronicleQueue inputQueue = SingleChronicleQueueBuilder.binary(basePath.toFile()).build();
@@ -50,7 +52,7 @@ final class ChronicleReader {
 
             //noinspection InfiniteLoopStatement
             while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
+                try (DocumentContext dc = pollMethod.apply(tailer)) {
                     if (!dc.isPresent()) {
                         if (!tailInputSource)
                             break;
@@ -111,8 +113,6 @@ final class ChronicleReader {
         }
     }
 
-
-
     ChronicleReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
         return this;
@@ -145,6 +145,12 @@ final class ChronicleReader {
 
     ChronicleReader historyRecords(final long maxHistoryRecords) {
         this.maxHistoryRecords = maxHistoryRecords;
+        return this;
+    }
+
+    // visible for testing
+    ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
+        this.pollMethod = pollMethod;
         return this;
     }
 
