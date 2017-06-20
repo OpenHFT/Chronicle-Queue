@@ -1519,11 +1519,17 @@ public class SingleChronicleQueueExcerpts {
                         continue;
 
                     long sourceIndex = veh.sourceIndex(i);
-                    if (!moveToIndex(sourceIndex))
-                        throw new IORuntimeException("Unable to wind to index: " + sourceIndex);
+                    if (!moveToIndex(sourceIndex)) {
+                        final String errorMessage = String.format("Unable to move to sourceIndex %d, " +
+                                "which was determined to be the last entry written to queue %s", sourceIndex, queue);
+                        throw new IORuntimeException(errorMessage);
+                    }
                     try (DocumentContext content = readingDocument()) {
-                        if (!content.isPresent())
-                            throw new IORuntimeException("Unable to wind to index: " + (sourceIndex + 1));
+                        if (!content.isPresent()) {
+                            final String errorMessage =
+                                    String.format("No readable document found at sourceIndex %d", (sourceIndex + 1));
+                            throw new IORuntimeException(errorMessage);
+                        }
                         // skip this message and go to the next.
                     }
                     return this;
