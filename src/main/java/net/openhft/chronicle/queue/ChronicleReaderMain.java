@@ -58,14 +58,29 @@ public enum ChronicleReaderMain {
         CommandLine commandLine = null;
         try {
             commandLine = parser.parse(options, args);
+
+            if (commandLine.hasOption('h')) {
+                new HelpFormatter().printHelp(ChronicleReaderMain.class.getSimpleName(), options);
+                System.exit(0);
+            }
         } catch (ParseException e) {
-            final PrintWriter writer = new PrintWriter(System.out);
-            new HelpFormatter().printUsage(writer, 180,
-                    ChronicleReaderMain.class.getSimpleName(), options);
-            writer.flush();
-            System.exit(1);
+            printUsageAndExit(options);
         }
+
+        if (!commandLine.hasOption('d')) {
+            System.out.println("Please specify the directory with -d\n");
+            printUsageAndExit(options);
+        }
+
         return commandLine;
+    }
+
+    private static void printUsageAndExit(final Options options) {
+        final PrintWriter writer = new PrintWriter(System.out);
+        new HelpFormatter().printUsage(writer, 180,
+                ChronicleReaderMain.class.getSimpleName(), options);
+        writer.flush();
+        System.exit(1);
     }
 
     private static void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
@@ -90,12 +105,13 @@ public enum ChronicleReaderMain {
     private static Options options() {
         final Options options = new Options();
 
-        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
+        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
         addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
         addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
         addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
         addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
+        addOption(options, "h", "help-message", false, "Print this help and exit", false);
         return options;
     }
 
