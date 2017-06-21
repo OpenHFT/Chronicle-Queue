@@ -6,6 +6,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -30,6 +31,16 @@ public class ChronicleReaderTest {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
+    }
+
+    @Test
+    public void shouldBeAbleToReadFromReadOnlyFile() throws Exception {
+        final Path queueFile = Files.list(dataDir).findFirst().orElseThrow(() ->
+                new AssertionError("Could not find queue file in directory " + dataDir));
+
+        assertThat(queueFile.toFile().setWritable(false), is(true));
+
+        basicReader().execute();
     }
 
     @Test
