@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -64,7 +63,7 @@ public class LastIndexAppendedTest {
 
     @Test
     public void testTwoAppenders() throws Exception {
-        File path = Utils.tempDir("testTwoAppenders");
+        File path = DirectoryUtils.tempDir("testTwoAppenders");
         long a_index;
 
         try (

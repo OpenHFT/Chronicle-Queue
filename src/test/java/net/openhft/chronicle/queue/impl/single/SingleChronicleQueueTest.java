@@ -41,7 +41,6 @@ import java.io.StreamCorruptedException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
@@ -2525,7 +2524,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
 
             InternalAppender sync = (InternalAppender) syncQ.acquireAppender();
-            File name2 = Utils.tempDir(testName.getMethodName());
+            File name2 = DirectoryUtils.tempDir(testName.getMethodName());
             try (ChronicleQueue chronicle = builder(name2, this.wireType)
                     .build()) {
 
@@ -2552,7 +2551,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .build()) {
 
-            File name2 = Utils.tempDir(testName.getMethodName());
+            File name2 = DirectoryUtils.tempDir(testName.getMethodName());
             try (ChronicleQueue chronicle = builder(name2, this.wireType)
                     .build()) {
 
@@ -3011,7 +3010,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingWhenNextCycleIsInSequence() throws Exception {
 
-        final File dir = Utils.tempDir(testName.getMethodName());
+        final File dir = DirectoryUtils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
@@ -3040,7 +3039,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingWhenCycleIsSkipped() throws Exception {
 
-        final File dir = Utils.tempDir(testName.getMethodName());
+        final File dir = DirectoryUtils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
@@ -3071,7 +3070,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingWhenCycleIsSkippedBackwards() throws Exception {
 
-        final File dir = Utils.tempDir(testName.getMethodName());
+        final File dir = DirectoryUtils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
@@ -3103,7 +3102,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadWritingWithTimeProvider() throws Exception {
-        final File dir = Utils.tempDir(testName.getMethodName());
+        final File dir = DirectoryUtils.tempDir(testName.getMethodName());
 
         long time = System.currentTimeMillis();
 
@@ -3144,7 +3143,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testTailerSnappingRollWithNewAppender() throws Exception {
 
-        final File dir = Utils.tempDir(testName.getMethodName());
+        final File dir = DirectoryUtils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
@@ -3195,7 +3194,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testLongLivingTailerAppenderReAcquiredEachSecond() throws Exception {
 
-        final File dir = Utils.tempDir(testName.getMethodName());
+        final File dir = DirectoryUtils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         try (ChronicleQueue queuet = binary(dir)
@@ -3268,8 +3267,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     //    @Ignore("fails - Nested blocks of writingDocument() not supported")
     @Test
     public void testCopyQueue() throws Exception {
-        final File source = Utils.tempDir("testCopyQueue-source");
-        final File target = Utils.tempDir("testCopyQueue-target");
+        final File source = DirectoryUtils.tempDir("testCopyQueue-source");
+        final File target = DirectoryUtils.tempDir("testCopyQueue-target");
         {
 
             try (final RollingChronicleQueue q =

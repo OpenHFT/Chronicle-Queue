@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
@@ -23,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 public class RollCycleTest {
     @Test
     public void newRollCycleIgnored() throws Exception {
-        File path = Utils.tempDir("newRollCycleIgnored");
+        File path = DirectoryUtils.tempDir("newRollCycleIgnored");
         TestTimeProvider timeProvider = new TestTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
@@ -57,7 +58,7 @@ public class RollCycleTest {
 
     @Test
     public void newRollCycleIgnored2() throws Exception {
-        File path = Utils.tempDir("newRollCycleIgnored2");
+        File path = DirectoryUtils.tempDir("newRollCycleIgnored2");
 
         TestTimeProvider timeProvider = new TestTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
@@ -94,7 +95,7 @@ public class RollCycleTest {
     @Test
     public void testWriteToCorruptedFile() throws Exception {
 
-        File dir = Utils.tempDir("testWriteToCorruptedFile");
+        File dir = DirectoryUtils.tempDir("testWriteToCorruptedFile");
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(dir)
                 .testBlockSize()

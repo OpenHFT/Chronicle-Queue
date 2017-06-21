@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.TailerDirection;
@@ -127,7 +128,7 @@ public class SingleCQFormatTest {
     @Test(expected = TimeoutException.class)
     @Ignore("Long running")
     public void testDeadHeader() throws FileNotFoundException {
-        @NotNull File dir = Utils.tempDir("testDeadHeader");
+        @NotNull File dir = DirectoryUtils.tempDir("testDeadHeader");
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
@@ -155,7 +156,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
-        @NotNull File dir = Utils.tempDir("testCompleteHeader");
+        @NotNull File dir = DirectoryUtils.tempDir("testCompleteHeader");
         dir.mkdirs();
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);

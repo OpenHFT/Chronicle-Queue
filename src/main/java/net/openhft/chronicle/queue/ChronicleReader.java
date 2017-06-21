@@ -43,7 +43,10 @@ final class ChronicleReader {
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
 
     void execute() {
-        final ChronicleQueue inputQueue = SingleChronicleQueueBuilder.binary(basePath.toFile()).build();
+        final ChronicleQueue inputQueue = SingleChronicleQueueBuilder.
+                binary(basePath.toFile()).
+                readOnly(true).
+                build();
         final ExcerptTailer tailer = inputQueue.createTailer();
         final Bytes textConversionTarget = Bytes.elasticByteBuffer();
 

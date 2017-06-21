@@ -3,7 +3,7 @@
  *
  */
 
-package net.openhft.chronicle.queue.impl.single;
+package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import org.jetbrains.annotations.NotNull;
@@ -15,12 +15,9 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * Created by Rob Austin
- */
-public class Utils {
+public class DirectoryUtils {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryUtils.class);
 
     @NotNull
     public static File tempDir(String name) {
@@ -59,7 +56,7 @@ public class Utils {
 
         {
             Runtime.getRuntime().addShutdownHook(new Thread(
-                    () -> toDeleteList.forEach(Utils::deleteDir)
+                    () -> toDeleteList.forEach(DirectoryUtils::deleteDir)
             ));
         }
 

@@ -17,7 +17,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -95,7 +94,7 @@ public class ChronicleQueueTestBase {
 
     @NotNull
     protected File getTmpDir() {
-        return Utils.tempDir(testName.getMethodName());
+        return DirectoryUtils.tempDir(testName.getMethodName());
     }
 
     @After

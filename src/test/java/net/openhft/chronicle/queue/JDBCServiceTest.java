@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.MethodReader;
 import org.junit.After;
 import org.junit.Ignore;
@@ -52,8 +51,8 @@ public class JDBCServiceTest {
     public void doCreateTable(int repeats, int noUpdates) throws SQLException {
         for (int t = 0; t < repeats; t++) {
             long start = System.nanoTime(), written;
-            File path1 = Utils.tempDir("createTable1");
-            File path2 = Utils.tempDir("createTable2");
+            File path1 = DirectoryUtils.tempDir("createTable1");
+            File path2 = DirectoryUtils.tempDir("createTable2");
             File file = new File(OS.TARGET, "hsqldb-" + System.nanoTime());
             file.deleteOnExit();
 

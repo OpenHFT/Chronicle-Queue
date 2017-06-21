@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.service.HelloWorld;
 import net.openhft.chronicle.wire.MethodReader;
@@ -16,16 +15,13 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class StoreTailerTest {
-    private static final Path BASE_PATH = Paths.get(OS.TARGET, StoreTailerTest.class.getSimpleName());
-
-    private Path dataDirectory;
     private SingleChronicleQueue firstInputQueue;
     private SingleChronicleQueue secondInputQueue;
     private SingleChronicleQueue outputQueue;
 
     @Before
     public void before() throws Exception {
-        dataDirectory = BASE_PATH.resolve(Paths.get(Long.toString(System.nanoTime())));
+        final Path dataDirectory = DirectoryUtils.tempDir(StoreTailerTest.class.getSimpleName()).toPath();
         firstInputQueue = SingleChronicleQueueBuilder.binary(dataDirectory.resolve(Paths.get("firstInputQueue")))
                 .sourceId(1)
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -75,7 +71,6 @@ public class StoreTailerTest {
     @After
     public void after() throws Exception {
         closeQueues(firstInputQueue, secondInputQueue, outputQueue);
-        IOTools.deleteDirWithFiles(dataDirectory.toFile(), 10);
     }
 
     public interface StringEvents {

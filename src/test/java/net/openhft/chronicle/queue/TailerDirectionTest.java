@@ -20,7 +20,6 @@ import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -145,7 +144,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTailerBackwardsReadBeyondCycle() throws Exception {
-        File basePath = Utils.tempDir("tailerForwardBackwardBeyondCycle");
+        File basePath = DirectoryUtils.tempDir("tailerForwardBackwardBeyondCycle");
         SetTimeProvider timeProvider = new SetTimeProvider();
         ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
                 .testBlockSize()

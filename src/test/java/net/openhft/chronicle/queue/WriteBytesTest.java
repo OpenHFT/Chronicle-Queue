@@ -21,7 +21,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -43,7 +42,7 @@ public class WriteBytesTest {
 
     @Test
     public void testWriteBytes() {
-        File dir = Utils.tempDir("WriteBytesTest");
+        File dir = DirectoryUtils.tempDir("WriteBytesTest");
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .build()) {
@@ -78,7 +77,7 @@ public class WriteBytesTest {
 
     @Test
     public void testWriteBytesAndDump() {
-        File dir = Utils.tempDir("WriteBytesTestAndDump");
+        File dir = DirectoryUtils.tempDir("WriteBytesTestAndDump");
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .rollCycle(TEST4_DAILY)
