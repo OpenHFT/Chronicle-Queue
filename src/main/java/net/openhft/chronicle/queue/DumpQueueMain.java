@@ -36,7 +36,7 @@ import static java.lang.System.err;
  * Created by Peter on 07/03/2016.
  */
 public class DumpQueueMain {
-    static final String FILE = System.getProperty("file");
+    private static final String FILE = System.getProperty("file");
     private static final int LENGTH = ", 0".length();
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -71,7 +71,7 @@ public class DumpQueueMain {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
             Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
             try {
-                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), true);
+                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows());
                 bytes.readLimit(bytes.realCapacity());
                 StringBuilder sb = new StringBuilder();
                 WireDumper dumper = WireDumper.of(bytes);

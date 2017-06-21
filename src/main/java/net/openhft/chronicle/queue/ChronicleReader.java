@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -45,7 +46,7 @@ final class ChronicleReader {
     void execute() {
         final ChronicleQueue inputQueue = SingleChronicleQueueBuilder.
                 binary(basePath.toFile()).
-                readOnly(true).
+                readOnly(!OS.isWindows()).
                 build();
         final ExcerptTailer tailer = inputQueue.createTailer();
         final Bytes textConversionTarget = Bytes.elasticByteBuffer();
