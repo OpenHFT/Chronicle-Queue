@@ -4,14 +4,16 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -78,12 +80,11 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    @Ignore("TODO: has started failing")
     public void shouldForwardToSpecifiedIndex() throws Exception {
-        final long knownIndex = Long.decode("0x43ba0000000a");
+        final long knownIndex = Long.decode(findAnExistingIndex());
         basicReader().withStartIndex(knownIndex).execute();
 
-        assertThat(capturedOutput.size(), is(29));
+        assertThat(capturedOutput.size(), is(25));
         // discard first message
         capturedOutput.poll();
         assertThat(capturedOutput.poll().contains(Long.toHexString(knownIndex)), is(true));
@@ -137,6 +138,15 @@ public class ChronicleReaderTest {
 
             return documentContext;
         }
+    }
+
+    private String findAnExistingIndex() {
+        basicReader().execute();
+        final List<String> indicies = capturedOutput.stream().
+                filter(s -> s.startsWith("0x")).
+                collect(Collectors.toList());
+        capturedOutput.clear();
+        return indicies.get(indicies.size() / 2).trim().replaceAll(":", "");
     }
 
     private ChronicleReader basicReader() {
