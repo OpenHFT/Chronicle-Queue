@@ -1462,7 +1462,6 @@ public class SingleChronicleQueueExcerpts {
         void release() {
             if (store != null) {
                 queue.release(store);
-                //store.release();
                 store = null;
             }
             state = UNINITIALISED;
