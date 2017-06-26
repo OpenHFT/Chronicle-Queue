@@ -420,6 +420,32 @@ Hello World
 000402e0 6C 6F 20 57 6F 72 6C 64                          lo World
 ----
 
+
+=== Finding the index at the end of a Chronicle Queue
+
+Chronicle Queue appenders are thread local, in fact when you ask for
+
+```
+final ExcerptAppender appender = queue.acquireAppender();
+```
+
+the acquireAppender() uses a thread local pool to give you an appender which will be reused to reduce object creation.
+
+As such the method call to:
+
+```
+long index =  appender.lastIndexAppended();
+```
+
+will only give you the last index appended by this appender ( not the last index appended by any appender ).
+
+If you wish to find the index of the last record written then you have to call
+
+```
+long index =  queue.createTailer().toEnd().index()
+```
+
+
 === Dumping a Chronicle Queue, cq4 file as text to the Command Line
 
 Chronicle Queue stores its data in binary format, with a file extension of 'cq4' :
