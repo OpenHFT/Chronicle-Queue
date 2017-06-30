@@ -174,7 +174,7 @@ public class ToEndTest {
         SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
         // the reference count here is 2, one of the reference is the appender, one the tailer, once in the queue itself
-        assertEquals(3, store2.refCount());
+        assertEquals(2, store2.refCount());
     }
 
     @Test
