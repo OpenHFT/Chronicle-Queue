@@ -22,7 +22,7 @@ final class GcControls {
         }
     }
 
-    static long getGcCount() {
+    private static long getGcCount() {
         return ManagementFactory.getGarbageCollectorMXBeans().stream().
                 reduce(0L,
                         (count, gcBean) -> count + gcBean.getCollectionCount(),

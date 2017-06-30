@@ -25,11 +25,27 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.TailerState;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.BinaryReadDocumentContext;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.SourceContext;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -44,7 +60,11 @@ import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
-import static net.openhft.chronicle.queue.TailerState.*;
+import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
+import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
@@ -94,10 +114,14 @@ public class SingleChronicleQueueExcerpts {
         private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
+        private final ClosableResources closableResources;
+
         StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
             queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
+
+            closableResources = new ClosableResources(queue);
         }
 
         @NotNull
@@ -222,6 +246,7 @@ public class SingleChronicleQueueExcerpts {
                 queue.release(this.store);
 
             this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            closableResources.storeReference = store;
             resetWires(queue);
 
             // only set the cycle after the wire is set.
@@ -238,12 +263,16 @@ public class SingleChronicleQueueExcerpts {
             {
                 Wire oldw = this.wire;
                 this.wire = wireType.apply(store.bytes());
+                closableResources.wireReference = this.wire.bytes();
+
                 if (oldw != null)
                     oldw.bytes().release();
             }
             {
                 Wire old = this.wireForIndex;
                 this.wireForIndex = wireType.apply(store.bytes());
+                closableResources.wireForIndexReference = wireForIndex.bytes();
+
                 if (old != null)
                     old.bytes().release();
             }
@@ -398,6 +427,8 @@ public class SingleChronicleQueueExcerpts {
         Wire acquireBufferWire() {
             if (bufferWire == null) {
                 bufferWire = queue.wireType().apply(Bytes.elasticByteBuffer());
+                closableResources.bufferWireReference = bufferWire.bytes();
+
             } else {
                 bufferWire.clear();
             }
@@ -540,6 +571,11 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public SingleChronicleQueue queue() {
             return queue;
+        }
+
+        @Override
+        public Runnable getCloserJob() {
+            return closableResources::releaseResources;
         }
 
         /**
@@ -778,6 +814,33 @@ public class SingleChronicleQueueExcerpts {
             @Override
             public boolean isNotComplete() {
                 throw new UnsupportedOperationException();
+            }
+        }
+
+        private static final class ClosableResources {
+            private final SingleChronicleQueue queue;
+            private volatile Bytes wireReference = null;
+            private volatile Bytes bufferWireReference = null;
+            private volatile Bytes wireForIndexReference = null;
+            private volatile WireStore storeReference = null;
+
+            ClosableResources(final SingleChronicleQueue queue) {
+                this.queue = queue;
+            }
+
+            private void releaseResources() {
+                releaseIfNotNull(wireForIndexReference);
+                releaseIfNotNull(wireReference);
+                releaseIfNotNull(bufferWireReference);
+                if(storeReference != null) {
+                    queue.release(storeReference);
+                }
+            }
+
+            private static void releaseIfNotNull(final Bytes ref) {
+                if (ref != null) {
+                    ref.release();
+                }
             }
         }
     }

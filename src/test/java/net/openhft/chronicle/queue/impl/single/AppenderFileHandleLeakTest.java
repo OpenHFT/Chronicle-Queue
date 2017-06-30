@@ -5,7 +5,6 @@ import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -29,13 +28,10 @@ public final class AppenderFileHandleLeakTest {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() / 2;
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT);
 
-    @Ignore("#357 WIP")
     @Test
     public void shouldNotLeakFileHandles() throws Exception {
         assumeThat(OS.isLinux(), is(true));
         try (SingleChronicleQueue queue = createQueue()) {
-
-
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
             System.out.printf("start count: %d%n", openFileHandleCount);
             final List<Future<Boolean>> futures = new LinkedList<>();

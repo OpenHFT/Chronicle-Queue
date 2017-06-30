@@ -108,4 +108,12 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @return if false, index as you write, otherwise only index as needed.
      */
     boolean lazyIndexing();
+
+    /**
+     * A task that will be run if a WeakReference referring this appender is registered with a clean-up task.
+     * @return Task to release any associated resources
+     */
+    default Runnable getCloserJob() {
+        return () -> {};
+    }
 }
