@@ -89,6 +89,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Before
     public void before() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 

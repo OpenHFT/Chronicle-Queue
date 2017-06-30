@@ -156,7 +156,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Nullable
     StoreTailer acquireTailer() {
-        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
+        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
+                StoreComponentReferenceHandler.tailerQueue(),
+                (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
     }
 
     @NotNull
@@ -311,9 +313,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
-                StoreAppenderReferenceHandler.appenderQueue(), (ref) -> {
-                    StoreAppenderReferenceHandler.register(ref, ref.get().getCloserJob());
-                });
+                StoreComponentReferenceHandler.appenderQueue(),
+                (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
     }
 
     @NotNull

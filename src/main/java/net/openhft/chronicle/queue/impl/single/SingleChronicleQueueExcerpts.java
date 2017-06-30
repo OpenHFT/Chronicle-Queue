@@ -816,31 +816,34 @@ public class SingleChronicleQueueExcerpts {
                 throw new UnsupportedOperationException();
             }
         }
+    }
 
-        private static final class ClosableResources {
-            private final SingleChronicleQueue queue;
-            private volatile Bytes wireReference = null;
-            private volatile Bytes bufferWireReference = null;
-            private volatile Bytes wireForIndexReference = null;
-            private volatile WireStore storeReference = null;
+    private static final class ClosableResources {
+        private final SingleChronicleQueue queue;
+        private volatile Bytes wireReference = null;
+        private volatile Bytes bufferWireReference = null;
+        private volatile Bytes wireForIndexReference = null;
+        private volatile WireStore storeReference = null;
 
-            ClosableResources(final SingleChronicleQueue queue) {
-                this.queue = queue;
+        ClosableResources(final SingleChronicleQueue queue) {
+            this.queue = queue;
+        }
+
+        private void releaseResources() {
+            releaseIfNotNull(wireForIndexReference);
+            releaseIfNotNull(wireReference);
+            releaseIfNotNull(bufferWireReference);
+
+            // Object is no longer reachable, check that it has not already been released
+            if(storeReference != null && storeReference.refCount() > 0) {
+                queue.release(storeReference);
             }
+        }
 
-            private void releaseResources() {
-                releaseIfNotNull(wireForIndexReference);
-                releaseIfNotNull(wireReference);
-                releaseIfNotNull(bufferWireReference);
-                if(storeReference != null) {
-                    queue.release(storeReference);
-                }
-            }
-
-            private static void releaseIfNotNull(final Bytes ref) {
-                if (ref != null) {
-                    ref.release();
-                }
+        private static void releaseIfNotNull(final Bytes bytesReference) {
+            // Object is no longer reachable, check that it has not already been released
+            if (bytesReference != null && bytesReference.refCount() > 0) {
+                bytesReference.release();
             }
         }
     }
@@ -859,6 +862,7 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
         private final int indexSpacingMask;
+        private final ClosableResources closableResources;
         long index; // index of the next read.
         @Nullable
         WireStore store;
@@ -877,6 +881,7 @@ public class SingleChronicleQueueExcerpts {
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
+            closableResources = new ClosableResources(queue);
         }
 
         private static boolean isReadOnly(Bytes bytes) {
@@ -1049,6 +1054,7 @@ public class SingleChronicleQueueExcerpts {
                             if (this.store != null)
                                 queue.release(this.store);
                             this.store = null;
+                            closableResources.storeReference = null;
                             return false;
                         }
 
@@ -1317,6 +1323,7 @@ public class SingleChronicleQueueExcerpts {
 
                 if (this.store != wireStore) {
                     this.store = wireStore;
+                    closableResources.storeReference = wireStore;
                     resetWires();
                 }
                 // give the position of the last entry and
@@ -1360,6 +1367,8 @@ public class SingleChronicleQueueExcerpts {
 
             Wire wireForIndexOld = wireForIndex;
             wireForIndex = readAnywhere(wireType.apply(store.bytes()));
+            closableResources.wireForIndexReference = wireForIndex.bytes();
+            closableResources.wireReference = wire.bytes();
             assert headerNumberCheck((AbstractWire) wireForIndex);
 
             if (wireForIndexOld != null)
@@ -1433,6 +1442,11 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public RollingChronicleQueue queue() {
             return queue;
+        }
+
+        @Override
+        public Runnable getCloserJob() {
+            return closableResources::releaseResources;
         }
 
         private void incrementIndex() {
@@ -1513,6 +1527,7 @@ public class SingleChronicleQueueExcerpts {
 
             context.wire(null);
             this.store = nextStore;
+            closableResources.storeReference = nextStore;
             this.state = FOUND_CYCLE;
             this.setCycle(cycle);
             resetWires();
@@ -1526,6 +1541,7 @@ public class SingleChronicleQueueExcerpts {
             if (store != null) {
                 queue.release(store);
                 store = null;
+                closableResources.storeReference = null;
             }
             state = UNINITIALISED;
         }

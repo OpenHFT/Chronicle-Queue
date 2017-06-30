@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -8,6 +9,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,6 +43,7 @@ public final class AppenderFileHandleLeakTest {
                     for (int j = 0; j < 50; j++) {
                         writeMessage(j, queue);
                         GcControls.requestGcCycle();
+                        readMessage(queue);
                     }
                     return Boolean.TRUE;
                 }));
@@ -55,6 +58,12 @@ public final class AppenderFileHandleLeakTest {
             System.out.printf("end count: %d%n", countFileHandlesOfCurrentProcess());
             assertThat(abs(openFileHandleCount - countFileHandlesOfCurrentProcess()) < 5, is(true));
         }
+    }
+
+    private void readMessage(final SingleChronicleQueue queue) {
+        final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
+        queue.acquireTailer().toStart().readBytes(bytes);
+        assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
     }
 
     private static void writeMessage(final int j, final SingleChronicleQueue queue) {

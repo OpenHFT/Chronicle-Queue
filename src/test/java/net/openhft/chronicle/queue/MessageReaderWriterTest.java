@@ -21,6 +21,7 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.MethodReader;
 import org.jetbrains.annotations.NotNull;
@@ -42,6 +43,7 @@ public class MessageReaderWriterTest {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
     }
 
     @After
