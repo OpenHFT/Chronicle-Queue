@@ -39,7 +39,8 @@ class PretoucherState {
                 .orElse(new File("none"));
     }
 
-    public void pretouch(@NotNull MappedBytes bytes) {
+    // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null
+    public void pretouch(MappedBytes bytes) {
         long pos = posSupplier.getAsLong();
         // don't retain the bytes object when it is head so keep the hashCode instead.
         // small risk of a duplicate hashCode.

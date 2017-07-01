@@ -1,11 +1,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -30,8 +32,33 @@ public final class AppenderFileHandleLeakTest {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() / 2;
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT);
 
+    private static void writeMessage(final int j, final SingleChronicleQueue queue) {
+        final ExcerptAppender appender = queue.acquireAppender();
+        appender.writeBytes(b -> {
+            b.writeInt(j);
+        });
+    }
+
+    private static long countFileHandlesOfCurrentProcess() throws IOException {
+        try (final Stream<Path> fileHandles = Files.list(Paths.get("/proc/self/fd"))) {
+            return fileHandles.count();
+        }
+    }
+
+    private static SingleChronicleQueue createQueue() {
+        return SingleChronicleQueueBuilder.
+                binary(DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName())).
+                rollCycle(RollCycles.TEST_SECONDLY).
+                wireType(WireType.BINARY_LIGHT).
+                build();
+    }
+
     @Test
     public void shouldNotLeakFileHandles() throws Exception {
+        // this might help the test be more stable when there is multiple tests.
+        System.gc();
+        Thread.sleep(100);
+
         assumeThat(OS.isLinux(), is(true));
         try (SingleChronicleQueue queue = createQueue()) {
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
@@ -64,26 +91,11 @@ public final class AppenderFileHandleLeakTest {
         final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
         queue.acquireTailer().toStart().readBytes(bytes);
         assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
+        bytes.release();
     }
 
-    private static void writeMessage(final int j, final SingleChronicleQueue queue) {
-        final ExcerptAppender appender = queue.acquireAppender();
-        appender.writeBytes(b -> {
-            b.writeInt(j);
-        });
-    }
-
-    private static long countFileHandlesOfCurrentProcess() throws IOException {
-        try (final Stream<Path> fileHandles = Files.list(Paths.get("/proc/self/fd"))) {
-            return fileHandles.count();
-        }
-    }
-
-    private static SingleChronicleQueue createQueue() {
-        return SingleChronicleQueueBuilder.
-                binary(DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName())).
-                rollCycle(RollCycles.TEST_SECONDLY).
-                wireType(WireType.BINARY_LIGHT).
-                build();
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
     }
 }
