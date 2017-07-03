@@ -678,7 +678,7 @@ public abstract class SourceTcp {
             if (size > writeBuffer.limit() / 2) {
                 while (size > 0) {
                     int minSize = Math.min(size, writeBuffer.remaining());
-                    bytes.read(writeBuffer, size);
+                    bytes.read(writeBuffer, minSize);
                     writeBuffer.flip();
                     connection.writeAll(writeBuffer);
                     writeBuffer.clear();
