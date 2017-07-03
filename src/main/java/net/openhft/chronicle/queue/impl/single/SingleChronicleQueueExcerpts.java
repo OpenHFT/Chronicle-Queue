@@ -57,7 +57,6 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
@@ -95,8 +94,6 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         @NotNull
         private final StoreAppenderContext context;
-        @NotNull
-        private final AtomicBoolean closed = new AtomicBoolean(false);
         @Nullable
         WireStore store;
         private int cycle = Integer.MIN_VALUE;
@@ -166,11 +163,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        @Override
-        public void close() {
-            if (!closed.compareAndSet(false , true)) {
-                return;
-            }
+        void close() {
             Wire w0 = wireForIndex;
             wireForIndex = null;
             if (w0 != null)
@@ -849,9 +842,6 @@ public class SingleChronicleQueueExcerpts {
 
         private static void releaseIfNotNull(final Bytes bytesReference) {
             // Object is no longer reachable, check that it has not already been released
-            if (bytesReference != null && bytesReference.refCount() == 0) {
-                System.out.println("double release :)");
-            }
             if (bytesReference != null && bytesReference.refCount() > 0) {
                 bytesReference.release();
             }
@@ -867,13 +857,12 @@ public class SingleChronicleQueueExcerpts {
     /**
      * Tailer
      */
-    static class StoreTailer implements ExcerptTailer, SourceContext, ExcerptContext {
+    public static class StoreTailer implements ExcerptTailer, SourceContext, ExcerptContext {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
         private final int indexSpacingMask;
         private final ClosableResources closableResources;
-        private final AtomicBoolean closed = new AtomicBoolean(false);
         long index; // index of the next read.
         @Nullable
         WireStore store;
@@ -886,7 +875,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private TailerState state = UNINITIALISED;
 
-        StoreTailer(@NotNull final SingleChronicleQueue queue) {
+        public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
@@ -914,11 +903,7 @@ public class SingleChronicleQueueExcerpts {
             return readingDocument(false);
         }
 
-        @Override
-        public void close() {
-            if (!closed.compareAndSet(false, true)) {
-                return;
-            }
+        private void close() {
             context.wire(null);
             Wire w0 = wireForIndex;
             if (w0 != null)

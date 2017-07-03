@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.ThreadDump;
+import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +35,7 @@ public class ReadmeTest {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
     }
 
     @After

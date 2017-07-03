@@ -15,7 +15,6 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableIn;
@@ -28,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * @author peter.lawrey
  */
-public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext, Closeable {
+public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
      * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a

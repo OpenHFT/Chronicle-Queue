@@ -277,9 +277,8 @@ To write data to a Chronicle-Queue, you must first create an Appender
 
 [source, Java]
 ----
-try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build();
-     final ExcerptAppender appender = queue.acquireAppender()) {
-   // use appender
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
+   final ExcerptAppender appender = queue.acquireAppender();
 }   
 ----
 
@@ -534,9 +533,8 @@ Reading the queue follows the same pattern as writing, except there is a possibi
 .Start Reading
 [source, Java]
 ----
-try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build();
-     final ExcerptTailer tailer = queue.createTailer()) {
-
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
+   final ExcerptTailer tailer = queue.createTailer();
 ----
 
 You can turn each message into a method call based on the content of the message.
@@ -823,26 +821,24 @@ ${java.io.tmpdir}/getting-started/{today}.cq4
 [source, Java]
 ----
 // Obtain an ExcerptAppender
-try(ExcerptAppender appender = queue.acquireAppender()) {
+ExcerptAppender appender = queue.acquireAppender();
 
-    // write - {msg: TestMessage}
-    appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
+// write - {msg: TestMessage}
+appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
 
-    // write - TestMessage
-    appender.writeText("TestMessage");
-}
+// write - TestMessage
+appender.writeText("TestMessage");
 ----
 
 ==== Reading
 
 [source, Java]
 ----
-try(ExcerptTailer tailer = queue.createTailer()) {
+ExcerptTailer tailer = queue.createTailer();
 
-    tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
+tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
 
-    assertEquals("TestMessage", tailer.readText());
-}
+assertEquals("TestMessage", tailer.readText());
 ----
 
 ==== Cleanup
@@ -862,21 +858,19 @@ queue.close();
 ----
 try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
     // Obtain an ExcerptAppender
-    try(ExcerptAppender appender = queue.acquireAppender()) {
+    ExcerptAppender appender = queue.acquireAppender();
 
-        // write - {msg: TestMessage}
-        appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
+    // write - {msg: TestMessage}
+    appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
 
-        // write - TestMessage
-        appender.writeText("TestMessage");
+    // write - TestMessage
+    appender.writeText("TestMessage");
 
-        try(ExcerptTailer tailer = queue.createTailer()) {
+    ExcerptTailer tailer = queue.createTailer();
 
-            tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
+    tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
 
-            assertEquals("TestMessage", tailer.readText());
-        }
-    }
+    assertEquals("TestMessage", tailer.readText());
 }
 ----
 

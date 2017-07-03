@@ -43,10 +43,7 @@ import java.util.List;
 import java.util.Map;
 
 import static junit.framework.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class ToEndTest {
     long lastCycle;
@@ -56,6 +53,7 @@ public class ToEndTest {
     @Before
     public void before() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 
