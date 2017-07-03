@@ -1,11 +1,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,6 +34,9 @@ public final class AppenderFileHandleLeakTest {
 
     @Test
     public void shouldNotLeakFileHandles() throws Exception {
+        // this might help the test be more stable when there is multiple tests.
+        System.gc();
+        Thread.sleep(100);
         assumeThat(OS.isLinux(), is(true));
         try (SingleChronicleQueue queue = createQueue()) {
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
@@ -60,11 +65,18 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
+    }
+
     private static void readMessage(final SingleChronicleQueue queue) {
         final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
         try(final SingleChronicleQueueExcerpts.StoreTailer storeTailer = queue.acquireTailer()) {
             storeTailer.toStart().readBytes(bytes);
             assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
+        } finally {
+            bytes.release();
         }
     }
 
