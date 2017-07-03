@@ -1,7 +1,5 @@
 package net.openhft.chronicle.queue;
 
-
-
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -27,7 +25,6 @@ import java.util.Random;
 @Ignore
 public class FsFullWriteTest {
 
-
     /*
       as root:
        mount -o size=100M -t tmpfs none /mnt/tmpfs
@@ -50,7 +47,6 @@ public class FsFullWriteTest {
     @Ignore("flaky test")
     @Test
     public void testAppenderFullFs() throws Exception {
-
 
         ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
                 .blockSize(256 << 1000)

@@ -50,7 +50,6 @@ public class RareAppenderLatencyTest {
     private final static int HEAVY_MSGS = 1_000_000;
     private final static int RARE_MSGS = 50;
 
-
     boolean isAssertionsOn;
     private ExecutorService appenderES;
 
@@ -64,7 +63,6 @@ public class RareAppenderLatencyTest {
     public void after() {
         appenderES.shutdownNow();
     }
-
 
     @Test
     public void testRareAppenderLatency() throws IOException, InterruptedException, ExecutionException {
@@ -129,7 +127,6 @@ public class RareAppenderLatencyTest {
                     .write(() -> "msg").text(text);
         }
         long l = System.currentTimeMillis() - now;
-
 
         // Write another message from the Main thread (this will be fast since we are caught up)
         now = System.currentTimeMillis();

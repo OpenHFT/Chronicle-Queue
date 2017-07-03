@@ -82,12 +82,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                     Assert.assertFalse(dc.isPresent());
                 }
 
-
             } finally {
                 System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
             }
         };
-
 
         List<Future> tailers = new ArrayList<>();
         for (int i = 0; i < NUMBER_OF_TAILERS; i++) {
@@ -118,7 +116,6 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
             }
             wqueue.close();
         }).get();
-
 
         System.out.println("appender is done.");
 

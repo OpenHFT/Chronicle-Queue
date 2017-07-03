@@ -56,7 +56,6 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 IMPORTANT: This performance is not achieved using a *large cluster of machines*. This is using one thread to publish, and one thread to consume.
 
 
-
 ==== More benchmarks
 
 https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]

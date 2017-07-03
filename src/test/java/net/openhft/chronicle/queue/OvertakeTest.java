@@ -12,9 +12,7 @@ import org.junit.Test;
 
 import java.util.concurrent.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Index runs away on double close - AM
@@ -95,7 +93,6 @@ public class OvertakeTest {
         } catch (Exception ignored) {
         }
     }
-
 
     @Test
     public void threadingTest() throws Exception  {

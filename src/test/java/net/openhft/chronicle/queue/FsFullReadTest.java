@@ -29,7 +29,6 @@ import static org.junit.Assert.assertTrue;
  */
 public class FsFullReadTest {
 
-
     @NotNull
     private static  String basePath = "src/test/resources/tr2";
 
@@ -88,6 +87,5 @@ public class FsFullReadTest {
 
         assertEquals(dumpEntries,entries);
     }
-
 
 }
