@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -29,7 +30,7 @@ import java.io.StreamCorruptedException;
  *
  * @author peter.lawrey
  */
-public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
+public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut, Closeable {
 
     /**
      * @param bytes to write to excerpt.

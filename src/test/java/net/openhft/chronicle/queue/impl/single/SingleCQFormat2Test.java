@@ -22,10 +22,19 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.TextWire;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -42,7 +51,11 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by Peter on 05/03/2016.
@@ -1167,7 +1180,6 @@ public class SingleCQFormat2Test {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
-        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
     }
 
     @After

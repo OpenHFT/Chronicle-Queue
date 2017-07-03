@@ -60,17 +60,20 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
-    private void readMessage(final SingleChronicleQueue queue) {
+    private static void readMessage(final SingleChronicleQueue queue) {
         final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
-        queue.acquireTailer().toStart().readBytes(bytes);
-        assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
+        try(final SingleChronicleQueueExcerpts.StoreTailer storeTailer = queue.acquireTailer()) {
+            storeTailer.toStart().readBytes(bytes);
+            assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
+        }
     }
 
     private static void writeMessage(final int j, final SingleChronicleQueue queue) {
-        final ExcerptAppender appender = queue.acquireAppender();
-        appender.writeBytes(b -> {
-            b.writeInt(j);
-        });
+        try(final ExcerptAppender appender = queue.acquireAppender()) {
+            appender.writeBytes(b -> {
+                b.writeInt(j);
+            });
+        }
     }
 
     private static long countFileHandlesOfCurrentProcess() throws IOException {

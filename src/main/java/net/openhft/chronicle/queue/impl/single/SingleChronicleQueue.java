@@ -156,9 +156,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Nullable
     StoreTailer acquireTailer() {
-        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
-                StoreComponentReferenceHandler.tailerQueue(),
-                (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
 
     @NotNull
@@ -312,9 +310,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             throw new IllegalStateException("Can't append to a read-only chronicle");
         }
 
-        return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
-                StoreComponentReferenceHandler.appenderQueue(),
-                (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
     }
 
     @NotNull
