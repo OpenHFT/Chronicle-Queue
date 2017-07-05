@@ -160,4 +160,6 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     boolean readOnly();
 
     B readOnly(boolean readOnly);
+
+    CycleCalculator cycleCalculator();
 }

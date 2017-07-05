@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.queue.CycleCalculator;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
@@ -112,6 +113,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final StoreRecoveryFactory recoverySupplier;
     private final Map<Object, Consumer> closers = new WeakHashMap<>();
     private final boolean readOnly;
+    @NotNull
+    private final CycleCalculator cycleCalculator;
     long firstAndLastCycleTime = 0;
     int firstAndLastRetry = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
@@ -119,6 +122,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
+        cycleCalculator = builder.cycleCalculator();
         epoch = builder.epoch();
         dateCache = new RollingResourcesCache(this.rollCycle, epoch, textToFile(builder),
                 fileToText());
@@ -470,7 +474,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public final int cycle() {
-        return this.rollCycle.current(time, epoch);
+        return cycleCalculator.currentCycle(rollCycle, time, epoch);
     }
 
     @Override
