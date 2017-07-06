@@ -519,7 +519,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             file = file.substring(0, file.length() - SUFFIX.length());
 
-            int fileCycle = dateCache.parseCycle(file);
+            int fileCycle = dateCache.parseCount(file);
             if (firstCycle > fileCycle)
                 firstCycle = fileCycle;
             if (lastCycle < fileCycle)
@@ -591,7 +591,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private int toCycle(@Nullable Map.Entry<Long, File> entry) throws ParseException {
         if (entry == null || entry.getValue() == null)
             return -1;
-        return dateCache.parseCycle(fileToText().apply(entry.getValue()));
+        return dateCache.parseCount(fileToText().apply(entry.getValue()));
     }
 
     @NotNull
