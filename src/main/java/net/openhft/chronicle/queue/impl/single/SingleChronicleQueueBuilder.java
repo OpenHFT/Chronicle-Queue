@@ -33,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.ZoneId;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -136,12 +137,12 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @NotNull
     public SingleChronicleQueue build() {
         if (buffered())
-            onlyAvailableInEnterprise();
+            onlyAvailableInEnterprise("Buffering");
         return new SingleChronicleQueue(this);
     }
 
-    private void onlyAvailableInEnterprise() {
-        getLogger().warn("Buffering is only supported in Chronicle Queue Enterprise");
+    private void onlyAvailableInEnterprise(final String feature) {
+        getLogger().warn(feature + " is only supported in Chronicle Queue Enterprise");
     }
 
     @NotNull
@@ -173,7 +174,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
             codingSuppliers(null, null);
             return this;
         }
-        onlyAvailableInEnterprise();
+        onlyAvailableInEnterprise("AES encryption");
         return this;
     }
 
@@ -181,7 +182,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
                                                        @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
         if (encodingSupplier != null || decodingSupplier != null)
-            onlyAvailableInEnterprise();
+            onlyAvailableInEnterprise("Custom encoding");
         return this;
     }
 
@@ -287,5 +288,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @Override
     public SingleChronicleQueueBuilder<S> recoverySupplier(StoreRecoveryFactory recoverySupplier) {
         return super.recoverySupplier(recoverySupplier);
+    }
+
+    @Override
+    public SingleChronicleQueueBuilder<S> rollCycleTimeZone(final ZoneId zoneId) {
+        onlyAvailableInEnterprise("Roll-cycle time-zone");
+        return super.rollCycleTimeZone(zoneId);
     }
 }

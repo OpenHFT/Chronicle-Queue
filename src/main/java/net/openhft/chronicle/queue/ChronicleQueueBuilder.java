@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.time.ZoneId;
 import java.util.function.Consumer;
 
 /**
@@ -162,4 +163,6 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     B readOnly(boolean readOnly);
 
     CycleCalculator cycleCalculator();
+
+    B rollCycleTimeZone(ZoneId zoneIf);
 }
