@@ -25,8 +25,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.function.Consumer;
 
 /**
@@ -106,13 +106,12 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     long epoch();
 
     /**
-     * Resets the concept of 'epoch' from 1970-01-01T00:00:00 UTC to a new value.
+     * Resets the rollTime for the queue cycle to a new time.
      *
-     * @param epochStart the new value for the concept of 'epoch'
-     * @param zoneId Time zone of the new epoch value
+     * @param time the new value for the concept of 'epoch'
      * @return the builder
      */
-    B withEpochStart(@NotNull LocalDateTime epochStart, @NotNull ZoneId zoneId);
+    B rollTime(@NotNull ZonedDateTime time);
 
     @NotNull
     RollCycle rollCycle();

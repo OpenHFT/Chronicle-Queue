@@ -33,9 +33,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -300,11 +300,10 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> withEpochStart(@NotNull final LocalDateTime epochStart,
-                                                         @NotNull final ZoneId zoneId) {
-        if (!zoneId.equals(ZoneOffset.UTC)) {
+    public SingleChronicleQueueBuilder<S> rollTime(@NotNull final ZonedDateTime time) {
+        if (!time.getOffset().equals(ZoneOffset.UTC)) {
             onlyAvailableInEnterprise("Non-UTC time-zone");
         }
-        return super.withEpochStart(epochStart, ZoneOffset.UTC);
+        return super.rollTime(time);
     }
 }
