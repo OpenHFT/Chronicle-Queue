@@ -78,6 +78,9 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerp
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
+    private static final boolean SHOULD_RELEASE_RESOURCES =
+            Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
+                    Boolean.TRUE.toString()));
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 8);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
@@ -160,9 +163,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Nullable
     StoreTailer acquireTailer() {
-        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
-                StoreComponentReferenceHandler.tailerQueue(),
-                (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        if (SHOULD_RELEASE_RESOURCES) {
+            return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
+                    StoreComponentReferenceHandler.tailerQueue(),
+                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        }
+        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
 
     @NotNull
@@ -316,9 +322,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             throw new IllegalStateException("Can't append to a read-only chronicle");
         }
 
-        return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
-                StoreComponentReferenceHandler.appenderQueue(),
-                (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        if (SHOULD_RELEASE_RESOURCES) {
+            return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
+                    StoreComponentReferenceHandler.appenderQueue(),
+                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        }
+
+        return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
     }
 
     @NotNull

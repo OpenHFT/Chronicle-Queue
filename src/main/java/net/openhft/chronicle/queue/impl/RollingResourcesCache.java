@@ -31,8 +31,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public class RollingResourcesCache {
+    private static final int CACHE_SIZE = 32;
+    private static final int ONE_DAY_IN_MILLIS = 86400000;
+    private static final int HALF_DAY_IN_MILLIS = ONE_DAY_IN_MILLIS / 2;
+
     public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
-    private static final int SIZE = 32;
+
     @NotNull
     private final Function<String, File> fileFactory;
     @NotNull
@@ -59,10 +63,13 @@ public class RollingResourcesCache {
         this.length = length;
         this.epoch = epoch;
         this.fileToName = fileToName;
-        this.values = new Resource[SIZE];
-        long millis = epoch > TimeUnit.DAYS.toMillis(1) ? ((epoch + 43200000) % 86400000) - 43200000 : epoch;
-        ZoneOffset zoneOffset = ZoneOffset.ofTotalSeconds((int) (millis / 1000));
-        ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffset);
+        this.values = new Resource[CACHE_SIZE];
+        long millis = epoch > TimeUnit.DAYS.toMillis(1) ?
+                ((epoch + HALF_DAY_IN_MILLIS) % ONE_DAY_IN_MILLIS) - HALF_DAY_IN_MILLIS :
+                epoch;
+
+        ZoneOffset zoneOffsetFromUtc = ZoneOffset.ofTotalSeconds((int) (millis / 1000));
+        ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffsetFromUtc);
         this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
         this.fileFactory = nameToFile;
     }
@@ -76,7 +83,7 @@ public class RollingResourcesCache {
     @NotNull
     public Resource resourceFor(long cycle) {
         long millis = cycle * length - epoch;
-        int hash = Maths.hash32(millis) & (SIZE - 1);
+        int hash = Maths.hash32(millis) & (CACHE_SIZE - 1);
         Resource dv = values[hash];
         if (dv == null || dv.millis != millis) {
             @NotNull String text = formatter.format(Instant.ofEpochMilli(millis));
@@ -96,15 +103,19 @@ public class RollingResourcesCache {
 
     private int parseCount0(@NotNull String name) {
         TemporalAccessor parse = formatter.parse(name);
+
         long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
         if (parse.isSupported(ChronoField.SECOND_OF_DAY))
             epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
+        if (epoch > 0) {
+            epochDay += epoch / 1000;
+        }
         return Maths.toInt32(epochDay / (length / 1000));
     }
 
     public Long toLong(File file) {
         TemporalAccessor parse = formatter.parse(fileToName.apply(file));
-        if (length == 86400_000L) {
+        if (length == ONE_DAY_IN_MILLIS) {
             return parse.getLong(ChronoField.EPOCH_DAY);
         } else
             return Instant.from(parse).toEpochMilli() / length;

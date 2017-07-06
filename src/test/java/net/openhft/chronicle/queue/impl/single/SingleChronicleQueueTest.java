@@ -38,10 +38,13 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -1381,12 +1384,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore
     @Test
     public void shouldBeAbleToReadFromQueueWithNonZeroEpoch() throws Exception {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
-                .rollCycle(RollCycles.HOURLY)
+                .rollCycle(RollCycles.DAILY)
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -1407,7 +1409,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 final ExcerptAppender appender = chronicle.acquireAppender();
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
-
                 chronicle.createTailer()
                         .readDocument(wire -> {
                             assertEquals("value=v", wire.read("key").text());
