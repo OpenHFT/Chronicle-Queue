@@ -31,8 +31,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public class RollingResourcesCache {
+    public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
     private static final int SIZE = 32;
-
     @NotNull
     private final Function<String, File> fileFactory;
     @NotNull
@@ -44,6 +44,7 @@ public class RollingResourcesCache {
     private final long epoch;
     @NotNull
     private final Function<File, String> fileToName;
+    private ParseCount lastParseCount = NO_PARSE_COUNT;
 
     public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
                                  @NotNull Function<String, File> nameToFile,
@@ -85,6 +86,15 @@ public class RollingResourcesCache {
     }
 
     public int parseCount(@NotNull String name) {
+        ParseCount last = this.lastParseCount;
+        if (name.equals(last.name))
+            return last.count;
+        int count = parseCount0(name);
+        lastParseCount = new ParseCount(name, count);
+        return count;
+    }
+
+    private int parseCount0(@NotNull String name) {
         TemporalAccessor parse = formatter.parse(name);
         long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
         if (parse.isSupported(ChronoField.SECOND_OF_DAY))
@@ -98,6 +108,16 @@ public class RollingResourcesCache {
             return parse.getLong(ChronoField.EPOCH_DAY);
         } else
             return Instant.from(parse).toEpochMilli() / length;
+    }
+
+    static class ParseCount {
+        final String name;
+        final int count;
+
+        public ParseCount(String name, int count) {
+            this.name = name;
+            this.count = count;
+        }
     }
 
     public static class Resource {
