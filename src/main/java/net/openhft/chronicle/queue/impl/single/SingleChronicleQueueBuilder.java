@@ -41,6 +41,7 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
+import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S>> {
@@ -103,6 +104,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @NotNull
     public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
         return builder(basePathFile, DEFAULT_ZERO_BINARY);
+    }
+
+    @NotNull
+    public static SingleChronicleQueueBuilder deltaBinary(@NotNull File basePathFile) {
+        return builder(basePathFile, DELTA_BINARY);
     }
 
     @Deprecated
