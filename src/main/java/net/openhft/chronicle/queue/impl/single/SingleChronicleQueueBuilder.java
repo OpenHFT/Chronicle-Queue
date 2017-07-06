@@ -33,7 +33,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -142,7 +144,8 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     private void onlyAvailableInEnterprise(final String feature) {
-        getLogger().warn(feature + " is only supported in Chronicle Queue Enterprise");
+        getLogger().warn(feature + " is only supported in Chronicle Queue Enterprise. " +
+                "If you would like to use this feature, please contact sales@chronicle.software for more information.");
     }
 
     @NotNull
@@ -294,5 +297,14 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     public SingleChronicleQueueBuilder<S> rollCycleTimeZone(final ZoneId zoneId) {
         onlyAvailableInEnterprise("Roll-cycle time-zone");
         return super.rollCycleTimeZone(zoneId);
+    }
+
+    @Override
+    public SingleChronicleQueueBuilder<S> withEpochStart(@NotNull final LocalDateTime epochStart,
+                                                         @NotNull final ZoneId zoneId) {
+        if (!zoneId.equals(ZoneOffset.UTC)) {
+            onlyAvailableInEnterprise("Non-UTC time-zone");
+        }
+        return super.withEpochStart(epochStart, ZoneOffset.UTC);
     }
 }

@@ -41,7 +41,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import java.io.File;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -108,6 +110,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public B rollCycleTimeZone(ZoneId zoneId) {
+        return (B) this;
+    }
+
+    @Override
+    public B withEpochStart(@NotNull final LocalDateTime epochStart, @NotNull final ZoneId zoneId) {
+        this.epoch = epochStart.toInstant(ZoneOffset.UTC).toEpochMilli();
         return (B) this;
     }
 

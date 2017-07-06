@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.function.Consumer;
 
@@ -87,10 +88,31 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     B rollCycle(@NotNull RollCycle rollCycle);
 
+    /**
+     * Resets the concept of 'epoch' from 1970-01-01T00:00:00 UTC to a new value (in UTC millis).
+     *
+     * This method is deprecated and will be removed in a future release.
+     *
+     * Please use the <code>withEpochStart</code> method, specifying the new epoch as a
+     * <code>LocalDateTime</code> that will be resolved against UTC.
+     *
+     * @param epoch a value in UTC millis that will be used when resolving roll cycle times.
+     * @return the builder
+     */
     @NotNull
+    @Deprecated
     B epoch(long epoch);
 
     long epoch();
+
+    /**
+     * Resets the concept of 'epoch' from 1970-01-01T00:00:00 UTC to a new value.
+     *
+     * @param epochStart the new value for the concept of 'epoch'
+     * @param zoneId Time zone of the new epoch value
+     * @return the builder
+     */
+    B withEpochStart(@NotNull LocalDateTime epochStart, @NotNull ZoneId zoneId);
 
     @NotNull
     RollCycle rollCycle();
@@ -164,5 +186,5 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
 
     CycleCalculator cycleCalculator();
 
-    B rollCycleTimeZone(ZoneId zoneIf);
+    B rollCycleTimeZone(ZoneId zoneId);
 }
