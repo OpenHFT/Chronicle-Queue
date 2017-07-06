@@ -184,6 +184,4 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     B readOnly(boolean readOnly);
 
     CycleCalculator cycleCalculator();
-
-    B rollCycleTimeZone(ZoneId zoneId);
 }

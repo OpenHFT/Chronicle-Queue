@@ -109,11 +109,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     @Override
-    public B rollCycleTimeZone(ZoneId zoneId) {
-        return (B) this;
-    }
-
-    @Override
     public B rollTime(@NotNull final ZonedDateTime time) {
         this.epoch = TimeUnit.SECONDS.toMillis(time.toEpochSecond());
         return (B) this;

@@ -294,16 +294,10 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> rollCycleTimeZone(final ZoneId zoneId) {
-        onlyAvailableInEnterprise("Roll-cycle time-zone");
-        return super.rollCycleTimeZone(zoneId);
-    }
-
-    @Override
     public SingleChronicleQueueBuilder<S> rollTime(@NotNull final ZonedDateTime time) {
         if (!time.getOffset().equals(ZoneOffset.UTC)) {
             onlyAvailableInEnterprise("Non-UTC time-zone");
         }
-        return super.rollTime(time);
+        return super.rollTime(time.withZoneSameLocal(ZoneId.of("UTC")));
     }
 }
