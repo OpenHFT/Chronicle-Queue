@@ -47,6 +47,7 @@ import java.util.stream.IntStream;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
@@ -1377,6 +1378,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
             Assert.assertTrue(appender.cycle() == 0);
+        }
+    }
+
+    @Ignore
+    @Test
+    public void shouldBeAbleToReadFromQueueWithNonZeroEpoch() throws Exception {
+        try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
+                .epoch(System.currentTimeMillis())
+                .rollCycle(RollCycles.HOURLY)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.acquireAppender();
+            appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
+            Assert.assertTrue(appender.cycle() == 0);
+
+            final ExcerptTailer excerptTailer = chronicle.createTailer().toStart();
+            assertThat(excerptTailer.readingDocument().isPresent(), is(true));
         }
     }
 
