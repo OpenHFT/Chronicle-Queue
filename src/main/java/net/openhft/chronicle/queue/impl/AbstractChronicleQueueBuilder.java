@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import java.io.File;
+import java.time.ZoneId;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -103,6 +104,11 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public CycleCalculator cycleCalculator() {
         return cycleCalculator;
+    }
+
+    @Override
+    public B rollCycleTimeZone(ZoneId zoneId) {
+        return (B) this;
     }
 
     /**
@@ -374,6 +380,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.readOnly = readOnly;
         return (B) this;
     }
+
+
 
     @NotNull
     public AbstractChronicleQueueBuilder encryptSupplier(Supplier<Cipher> encryptSupplier) {
