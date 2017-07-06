@@ -26,7 +26,10 @@ public enum StoreComponentReferenceHandler {
                 thread.setName(THREAD_NAME);
                 return thread;
             });
-    private static ConcurrentMap<Reference<?>, Runnable> CLOSE_ACTIONS = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Reference<?>, Runnable> CLOSE_ACTIONS = new ConcurrentHashMap<>();
+    private static final boolean SHOULD_RELEASE_RESOURCES =
+            Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
+                    Boolean.TRUE.toString()));
 
     static {
         THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.submit(() -> {
@@ -55,7 +58,7 @@ public enum StoreComponentReferenceHandler {
 
             if (reference != null && reference.get() == null) {
                 final Runnable closeAction = CLOSE_ACTIONS.remove(reference);
-                if (closeAction != null) {
+                if (closeAction != null && SHOULD_RELEASE_RESOURCES) {
                     closeAction.run();
                 }
             }
