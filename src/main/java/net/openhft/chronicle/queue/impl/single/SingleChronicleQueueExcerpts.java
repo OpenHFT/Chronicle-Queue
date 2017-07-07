@@ -25,27 +25,11 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.queue.TailerState;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.AbstractWire;
-import net.openhft.chronicle.wire.BinaryReadDocumentContext;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.SourceContext;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -60,11 +44,7 @@ import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
-import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
-import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
+import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
@@ -94,6 +74,7 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         @NotNull
         private final StoreAppenderContext context;
+        private final ClosableResources closableResources;
         @Nullable
         WireStore store;
         private int cycle = Integer.MIN_VALUE;
@@ -113,8 +94,6 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
-
-        private final ClosableResources closableResources;
 
         StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
@@ -829,21 +808,21 @@ public class SingleChronicleQueueExcerpts {
             this.queue = queue;
         }
 
+        private static void releaseIfNotNull(final Bytes bytesReference) {
+            // Object is no longer reachable, check that it has not already been released
+            if (bytesReference != null && bytesReference.refCount() > 0) {
+                bytesReference.release();
+            }
+        }
+
         private void releaseResources() {
             releaseIfNotNull(wireForIndexReference);
             releaseIfNotNull(wireReference);
             releaseIfNotNull(bufferWireReference);
 
             // Object is no longer reachable, check that it has not already been released
-            if(storeReference != null && storeReference.refCount() > 0) {
+            if (storeReference != null && storeReference.refCount() > 0) {
                 queue.release(storeReference);
-            }
-        }
-
-        private static void releaseIfNotNull(final Bytes bytesReference) {
-            // Object is no longer reachable, check that it has not already been released
-            if (bytesReference != null && bytesReference.refCount() > 0) {
-                bytesReference.release();
             }
         }
     }
@@ -959,7 +938,7 @@ public class SingleChronicleQueueExcerpts {
                     next = next0(includeMetaData);
 
                 if (context.present(next)) {
-                    context.setStart(context.wire().bytes().readPosition()-4);
+                    context.setStart(context.wire().bytes().readPosition() - 4);
                     return context;
                 }
                 RollCycle rollCycle = queue.rollCycle();
@@ -1129,20 +1108,23 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean checkMoveToNextCycle(boolean includeMetaData, @NotNull Bytes<?> bytes)
                 throws EOFException, StreamCorruptedException {
-            long pos = bytes.readPosition();
-            long lim = bytes.readLimit();
-            long wlim = bytes.writeLimit();
-            try {
-                bytes.writePosition(pos);
-                store.writeEOF(wire(), timeoutMS());
-            } catch (TimeoutException e) {
-                Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
-            } finally {
-                bytes.writeLimit(wlim);
-                bytes.readLimit(lim);
-                bytes.readPosition(pos);
+            if (bytes.readWrite()) {
+                long pos = bytes.readPosition();
+                long lim = bytes.readLimit();
+                long wlim = bytes.writeLimit();
+                try {
+                    bytes.writePosition(pos);
+                    store.writeEOF(wire(), timeoutMS());
+                } catch (TimeoutException e) {
+                    Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
+                } finally {
+                    bytes.writeLimit(wlim);
+                    bytes.readLimit(lim);
+                    bytes.readPosition(pos);
+                }
+            } else {
+                Jvm.debug().on(getClass(), "Unable to append EOF tp ReadOnly store, skipping");
             }
-
             return inACycle(includeMetaData, false);
         }
 
