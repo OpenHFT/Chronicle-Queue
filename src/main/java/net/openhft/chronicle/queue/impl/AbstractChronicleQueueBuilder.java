@@ -41,8 +41,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import java.io.File;
+import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -109,8 +109,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     @Override
-    public B rollTime(@NotNull final ZonedDateTime time) {
-        this.epoch = TimeUnit.SECONDS.toMillis(time.toEpochSecond());
+    public B rollTime(@NotNull final LocalTime time, final ZoneId zoneId) {
+        this.epoch = TimeUnit.SECONDS.toMillis(time.toSecondOfDay());
         return (B) this;
     }
 
