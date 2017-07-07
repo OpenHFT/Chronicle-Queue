@@ -1401,6 +1401,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void shouldHandleLargeEpoch() throws Exception {
+        try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
+                .epoch(System.currentTimeMillis())
+                .epoch(1284739200000L)
+                .rollCycle(DAILY)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.acquireAppender();
+            appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
+
+            final ExcerptTailer excerptTailer = chronicle.createTailer().toStart();
+            assertThat(excerptTailer.readingDocument().isPresent(), is(true));
+        }
+    }
+
+    @Test
     public void testNegativeEPOC() {
         for (int h = -14; h <= 14; h++) {
             try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)

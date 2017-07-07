@@ -21,6 +21,7 @@ import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -49,6 +50,7 @@ public class RollingResourcesCache {
     @NotNull
     private final Function<File, String> fileToName;
     private ParseCount lastParseCount = NO_PARSE_COUNT;
+    private int offsetTotalSeconds;
 
     public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
                                  @NotNull Function<String, File> nameToFile,
@@ -64,14 +66,28 @@ public class RollingResourcesCache {
         this.epoch = epoch;
         this.fileToName = fileToName;
         this.values = new Resource[CACHE_SIZE];
-        long millis = epoch > TimeUnit.DAYS.toMillis(1) ?
-                ((epoch + HALF_DAY_IN_MILLIS) % ONE_DAY_IN_MILLIS) - HALF_DAY_IN_MILLIS :
-                epoch;
+        final long millisInDay = epoch % ONE_DAY_IN_MILLIS;
 
-        ZoneOffset zoneOffsetFromUtc = ZoneOffset.ofTotalSeconds((int) (millis / 1000));
-        ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffsetFromUtc);
-        this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
-        this.fileFactory = nameToFile;
+        long millis = millisInDay;
+
+        if (Math.abs(millisInDay) > HALF_DAY_IN_MILLIS) {
+            if (millisInDay > 0) {
+                millis = - (ONE_DAY_IN_MILLIS - millisInDay);
+            } else {
+                millis = ONE_DAY_IN_MILLIS - Math.abs(millisInDay);
+            }
+        }
+
+        offsetTotalSeconds = (int) (millis / 1000);
+        try {
+            ZoneOffset zoneOffsetFromUtc = ZoneOffset.ofTotalSeconds(offsetTotalSeconds);
+            ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffsetFromUtc);
+            this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
+            this.fileFactory = nameToFile;
+        } catch (DateTimeException e) {
+            throw e;
+        }
+
     }
 
     /**
@@ -82,12 +98,13 @@ public class RollingResourcesCache {
      */
     @NotNull
     public Resource resourceFor(long cycle) {
-        long millis = cycle * length - epoch;
-        int hash = Maths.hash32(millis) & (CACHE_SIZE - 1);
+        long millisSinceBeginningOfEpoch = (cycle * length);
+        int hash = Maths.hash32(millisSinceBeginningOfEpoch) & (CACHE_SIZE - 1);
         Resource dv = values[hash];
-        if (dv == null || dv.millis != millis) {
-            @NotNull String text = formatter.format(Instant.ofEpochMilli(millis));
-            values[hash] = dv = new Resource(millis, text, fileFactory.apply(text));
+        if (dv == null || dv.millis != millisSinceBeginningOfEpoch) {
+            final Instant instant = Instant.ofEpochMilli(millisSinceBeginningOfEpoch);
+            @NotNull String text = formatter.format(instant);
+            values[hash] = dv = new Resource(millisSinceBeginningOfEpoch, text, fileFactory.apply(text));
         }
         return dv;
     }
@@ -107,10 +124,8 @@ public class RollingResourcesCache {
         long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
         if (parse.isSupported(ChronoField.SECOND_OF_DAY))
             epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
-        if (epoch > 0) {
-            epochDay += epoch / 1000;
-        }
-        return Maths.toInt32(epochDay / (length / 1000));
+
+        return Maths.toInt32(epochDay / (length / 1000)) + (offsetTotalSeconds < 0 ? 1 : 0);
     }
 
     public Long toLong(File file) {
