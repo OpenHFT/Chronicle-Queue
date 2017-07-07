@@ -905,9 +905,9 @@ Path path = Files.createTempDirectory("rollCycleTest");
 SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).epoch(0).build();
 ----
 
- We do not recommend that you change the `epoch()` on an existing system, which already has `.cq4` files creates, using a different `epoch()` setting.
+We do not recommend that you change the `epoch()` on an existing system, which already has `.cq4` files creates, using a different `epoch()` setting.
 
- If you were to set :
+If you were to set :
 
  [source, Java]
  ----
