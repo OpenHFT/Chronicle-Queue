@@ -112,7 +112,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
      * will cause the queue to roll cycles at 21:00 UTC,
      * rather than the default roll-time of midnight UTC.
      *
-     * @param time the new value for the concept of 'epoch'
+     * @param time the new value for the time of day when the cycle should roll
      * @param zoneId the time-zone against which to base the roll-time
      * @return the builder
      */
