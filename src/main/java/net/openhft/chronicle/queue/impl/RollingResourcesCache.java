@@ -28,7 +28,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public class RollingResourcesCache {
@@ -46,11 +45,11 @@ public class RollingResourcesCache {
     private final Resource[] values;
     private final int length;
 
-    private final long epoch;
     @NotNull
     private final Function<File, String> fileToName;
     private ParseCount lastParseCount = NO_PARSE_COUNT;
-    private int offsetTotalSeconds;
+    private final int offsetTotalSeconds;
+    private int dayAdjustmentDueToNegativeOffset;
 
     public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
                                  @NotNull Function<String, File> nameToFile,
@@ -63,7 +62,6 @@ public class RollingResourcesCache {
                                   @NotNull Function<String, File> nameToFile,
                                   @NotNull Function<File, String> fileToName) {
         this.length = length;
-        this.epoch = epoch;
         this.fileToName = fileToName;
         this.values = new Resource[CACHE_SIZE];
         final long millisInDay = epoch % ONE_DAY_IN_MILLIS;
@@ -73,6 +71,7 @@ public class RollingResourcesCache {
         if (Math.abs(millisInDay) > HALF_DAY_IN_MILLIS) {
             if (millisInDay > 0) {
                 millis = - (ONE_DAY_IN_MILLIS - millisInDay);
+                dayAdjustmentDueToNegativeOffset = 1;
             } else {
                 millis = ONE_DAY_IN_MILLIS - Math.abs(millisInDay);
             }
@@ -98,7 +97,7 @@ public class RollingResourcesCache {
      */
     @NotNull
     public Resource resourceFor(long cycle) {
-        long millisSinceBeginningOfEpoch = (cycle * length);
+        long millisSinceBeginningOfEpoch = ((cycle + dayAdjustmentDueToNegativeOffset) * length);
         int hash = Maths.hash32(millisSinceBeginningOfEpoch) & (CACHE_SIZE - 1);
         Resource dv = values[hash];
         if (dv == null || dv.millis != millisSinceBeginningOfEpoch) {
@@ -125,7 +124,9 @@ public class RollingResourcesCache {
         if (parse.isSupported(ChronoField.SECOND_OF_DAY))
             epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
 
-        return Maths.toInt32(epochDay / (length / 1000)) + (offsetTotalSeconds < 0 ? 1 : 0);
+        return Maths.toInt32(epochDay / (length / 1000)) +
+                (offsetTotalSeconds < 0 ? 1 : 0) -
+                dayAdjustmentDueToNegativeOffset;
     }
 
     public Long toLong(File file) {

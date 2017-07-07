@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.RollCycles;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -24,7 +23,9 @@ public class RollingResourcesCacheTest {
     private static final int CYCLE_NUMBER = 2484;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final RollCycles ROLL_CYCLE = RollCycles.DAILY;
-
+    private static final long ONE_DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1L);
+    private static final boolean LOG_TEST_DEBUG =
+                Boolean.valueOf(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
 
     @Test
     public void shouldConvertCyclesToResourceNamesWithNoEpoch() throws Exception {
@@ -37,7 +38,10 @@ public class RollingResourcesCacheTest {
                 DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.systemDefault()));
     }
 
-    @Ignore
+    /*
+        Epoch is after midday, which means that the ZoneOffset calculated is negative.
+        This generates file names that are off-by-one for a cycle if not corrected.
+     */
     @Test
     public void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() throws Exception {
         final RollingResourcesCache cache =
@@ -50,7 +54,6 @@ public class RollingResourcesCacheTest {
         assertThat(cache.parseCount(FILE_NAME), is(CYCLE_NUMBER));
     }
 
-    @Ignore
     @Test
     public void fuzzyConversionTest() throws Exception {
         final int maxAddition = (int) ChronoUnit.DECADES.getDuration().toMillis();
@@ -58,7 +61,6 @@ public class RollingResourcesCacheTest {
 
         for (int i = 0; i < 1_000; i++) {
             final long epoch = random.nextInt(maxAddition);
-            System.out.printf("Epoch: %d%n", epoch);
             final RollingResourcesCache cache =
                     new RollingResourcesCache(ROLL_CYCLE, epoch, File::new, File::getName);
 
@@ -69,51 +71,53 @@ public class RollingResourcesCacheTest {
                                 TimeUnit.MINUTES.toMillis(random.nextInt(50));
 
                 final long instantAfterEpoch = epoch + offsetMillisFromEpoch;
-                final long moduloMillis = epoch % TimeUnit.DAYS.toMillis(1L);
+                final long moduloMillis = epoch % ONE_DAY_IN_MILLIS;
+                final boolean adjustForNegativeOffset = Math.abs(moduloMillis) > ONE_DAY_IN_MILLIS / 2;
                 final long offsetMillis;
-                if (moduloMillis < TimeUnit.DAYS.toMillis(1L) / 2) {
+                if (moduloMillis < ONE_DAY_IN_MILLIS / 2) {
                     offsetMillis = moduloMillis;
                 } else {
-                    offsetMillis = -(TimeUnit.DAYS.toMillis(1L) - moduloMillis);
+                    offsetMillis = -(ONE_DAY_IN_MILLIS - moduloMillis);
                 }
                 final int offsetSeconds = (int) (offsetMillis / 1000);
                 final ZoneOffset offset = ZoneOffset.ofTotalSeconds(offsetSeconds);
                 final ZoneId zoneId = ZoneId.ofOffset("GMT", offset);
-                System.out.printf("Offset seconds: %d, zone: %s%n", offsetSeconds, zoneId);
 
                 final int cycle = ROLL_CYCLE.current(() -> instantAfterEpoch, epoch);
 
-                final long daysBetweenEpochAndInstant = (instantAfterEpoch - epoch) / TimeUnit.DAYS.toMillis(1L);
+                final long daysBetweenEpochAndInstant = (instantAfterEpoch - epoch) / ONE_DAY_IN_MILLIS;
 
                 assertThat((long) cycle, is(daysBetweenEpochAndInstant));
 
-                assertThat(((long) cycle) * TimeUnit.DAYS.toMillis(1L),
+                assertThat(((long) cycle) * ONE_DAY_IN_MILLIS,
                         is((long) cycle * ROLL_CYCLE.length()));
 
-                System.out.printf("Epoch millis: %d(UTC+%dd), current millis: %d(UTC+%dd)%n",
-                        epoch, (epoch / TimeUnit.DAYS.toMillis(1L)), instantAfterEpoch,
-                        (instantAfterEpoch / TimeUnit.DAYS.toMillis(1L)));
-                System.out.printf("Epoch date: %s, Current date: %s, " +
-                                "Delta days: %d, Delta millis: %d, Delta days in millis: %d%n",
-                        FORMATTER.format(Instant.ofEpochMilli(epoch).atOffset(offset)),
-                        FORMATTER.format(Instant.ofEpochMilli(instantAfterEpoch).atOffset(offset)),
-                        daysBetweenEpochAndInstant,
+                if (LOG_TEST_DEBUG) {
+                    System.out.printf("Epoch: %d%n", epoch);
+                    System.out.printf("Offset seconds: %d, zone: %s%n", offsetSeconds, zoneId);
+                    System.out.printf("Epoch millis: %d(UTC+%dd), current millis: %d(UTC+%dd)%n",
+                            epoch, (epoch / ONE_DAY_IN_MILLIS), instantAfterEpoch,
+                            (instantAfterEpoch / ONE_DAY_IN_MILLIS));
+                    System.out.printf("Epoch date: %s, Current date: %s, " +
+                                    "Delta days: %d, Delta millis: %d, Delta days in millis: %d%n",
+                            FORMATTER.format(Instant.ofEpochMilli(epoch).atOffset(offset)),
+                            FORMATTER.format(Instant.ofEpochMilli(instantAfterEpoch).atOffset(offset)),
+                            daysBetweenEpochAndInstant,
+                            instantAfterEpoch - epoch,
+                            daysBetweenEpochAndInstant * ONE_DAY_IN_MILLIS);
+                    System.out.printf("Effective date relative to epoch: %s, millisSinceEpoch: %d%n",
+                            FORMATTER.format(Instant.ofEpochMilli(instantAfterEpoch - epoch).atOffset(offset)),
+                            offsetMillisFromEpoch);
+                    System.out.printf("Resource calc of millisSinceEpoch: %d%n",
+                            daysBetweenEpochAndInstant * ONE_DAY_IN_MILLIS);
+                }
 
-                        instantAfterEpoch - epoch,
+                long effectiveCycleStartTime = (instantAfterEpoch - epoch) -
+                        ((instantAfterEpoch - epoch) % ONE_DAY_IN_MILLIS);
+                if (adjustForNegativeOffset) {
+                    effectiveCycleStartTime += ONE_DAY_IN_MILLIS;
+                }
 
-                        daysBetweenEpochAndInstant * TimeUnit.DAYS.toMillis(1L));
-                System.out.printf("Effective date relative to epoch: %s, millisSinceEpoch: %d%n",
-                        FORMATTER.format(Instant.ofEpochMilli(instantAfterEpoch - epoch).atOffset(offset)),
-                        offsetMillisFromEpoch);
-
-
-
-
-                System.out.printf("Resource calc of millisSinceEpoch: %d%n",
-                        daysBetweenEpochAndInstant * TimeUnit.DAYS.toMillis(1L));
-
-                final long effectiveCycleStartTime = (instantAfterEpoch - epoch) -
-                        ((instantAfterEpoch - epoch) % TimeUnit.DAYS.toMillis(1L));
                 assertCorrectConversion(cache, cycle,
                         Instant.ofEpochMilli(effectiveCycleStartTime),
                         DateTimeFormatter.ofPattern("yyyyMMdd").withZone(zoneId));
