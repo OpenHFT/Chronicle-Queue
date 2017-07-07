@@ -93,8 +93,8 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
      *
      * This method is deprecated and will be removed in a future release.
      *
-     * Please use the <code>withEpochStart</code> method, specifying the new epoch as a
-     * <code>LocalDateTime</code> that will be resolved against UTC.
+     * Please use the <code>rollTime</code> method, specifying the new epoch as a
+     * <code>LocalTime</code> that will be resolved against UTC.
      *
      * @param epoch a value in UTC millis that will be used when resolving roll cycle times.
      * @return the builder
@@ -108,8 +108,12 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     /**
      * Resets the rollTime for the queue cycle to a new time.
      *
+     * E.g. builder.rollTime(LocalTime.of(21, 0), ZoneId.of("UTC"))
+     * will cause the queue to roll cycles at 21:00 UTC,
+     * rather than the default roll-time of midnight UTC.
+     *
      * @param time the new value for the concept of 'epoch'
-     * @param zoneId
+     * @param zoneId the time-zone against which to base the roll-time
      * @return the builder
      */
     B rollTime(@NotNull LocalTime time, final ZoneId zoneId);
