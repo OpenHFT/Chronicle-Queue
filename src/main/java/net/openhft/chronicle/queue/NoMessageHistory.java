@@ -50,7 +50,19 @@ public enum NoMessageHistory implements MessageHistory {
     }
 
     @Override
-    public void reset() {
-
+    public void reset(int sourceId, long sourceIndex) {
+        // ignored
     }
+
+    @Override
+    public int lastSourceId() {
+        return -1;
+    }
+
+    @Override
+    public long lastSourceIndex() {
+        return -1;
+    }
+
+
 }
