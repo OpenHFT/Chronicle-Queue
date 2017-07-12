@@ -1235,7 +1235,7 @@ public class SingleChronicleQueueExcerpts {
         ScanResult moveToIndexResult(long index) {
             final int cycle = queue.rollCycle().toCycle(index);
             final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-            if (LOG.isDebugEnabled()) {
+            if (LOG.isTraceEnabled()) {
                 Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
 
