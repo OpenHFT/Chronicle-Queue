@@ -598,6 +598,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize, readOnly);
     }
 
+    boolean isReadOnly() {
+        return readOnly;
+    }
+
     private int toCycle(@Nullable Map.Entry<Long, File> entry) throws ParseException {
         if (entry == null || entry.getValue() == null)
             return -1;

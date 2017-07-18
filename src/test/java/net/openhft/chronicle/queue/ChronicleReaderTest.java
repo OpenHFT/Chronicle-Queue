@@ -8,9 +8,11 @@ import org.junit.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -20,6 +22,10 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
 public class ChronicleReaderTest {
+    private static final byte[] ONE_KILOBYTE = new byte[1024];
+    static {
+        Arrays.fill(ONE_KILOBYTE, (byte) 7);
+    }
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
 
@@ -31,6 +37,29 @@ public class ChronicleReaderTest {
 
             for (int i = 0; i < 24; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
+            }
+        }
+    }
+
+    @Test
+    public void shouldHandleQueueDataRollingPastEndOfTailerCapacity() throws Exception {
+        try(final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build();
+            final SingleChronicleQueue inputQueue = SingleChronicleQueueBuilder.binary(dataDir).readOnly(true).build()) {
+
+            final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
+
+            final ExcerptTailer tailer = inputQueue.createTailer();
+            final AtomicLong readerCapacity = new AtomicLong();
+            try (final DocumentContext ctx = tailer.readingDocument()) {
+                readerCapacity.set(ctx.wire().bytes().capacity());
+            }
+
+            for (int i = 0; i < (readerCapacity.get() / ONE_KILOBYTE.length) + 1; i++) {
+                events.say(new String(ONE_KILOBYTE));
+            }
+
+            while (tailer.readingDocument().isPresent()) {
+                // spin
             }
         }
     }

@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -39,6 +40,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeoutException;
 
@@ -952,6 +954,15 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException(e);
             } catch (UnrecoverableTimeoutException notComplete) {
                 // so treat as empty.
+            } catch (DecoratedBufferUnderflowException e) {
+                // read-only tailer view is fixed, a writer could continue past the end of the view
+                // at the point this tailer was created. Log a warning and return no document.
+                if (queue.isReadOnly()) {
+                    Jvm.warn().on(StoreTailer.class, "Tried to read past the end of a read-only view. " +
+                            "Underlying data store may have grown since this tailer was created.", e);
+                } else {
+                    throw e;
+                }
             }
             return NoDocumentContext.INSTANCE;
         }
@@ -1123,7 +1134,7 @@ public class SingleChronicleQueueExcerpts {
                     bytes.readPosition(pos);
                 }
             } else {
-                Jvm.debug().on(getClass(), "Unable to append EOF tp ReadOnly store, skipping");
+                Jvm.debug().on(getClass(), "Unable to append EOF to ReadOnly store, skipping");
             }
             return inACycle(includeMetaData, false);
         }
