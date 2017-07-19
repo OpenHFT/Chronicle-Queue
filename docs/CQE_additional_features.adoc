@@ -1,0 +1,13 @@
+== Chronicle Queue (Enterprise Edition)
+Chronicle Queue (Enterprise Edition) is a commercially supported version of our successful open source Chronicle Queue.
+
+The open source documentation is extended by this document to describe the additional features that are available when you are licenced for Enterprise Edition. These are:
+
+- Encryption of message queues and messages. For more information see <<encryption.adoc#, Encryption>>.
+- Replication to ensure real-time backup of all your queue data. For more information see <<replication.adoc#, Replication>>.
+- Timezone support for daily queue rollover scheduling. For more information see <<timezone_rollover.adoc#, Timezone support>>.
+
+In addition, you will be fully supported by our technical experts.
+
+For more information on Chronicle Queue (Enterprise Edition), please contact mailto:sales@chronicle.software[sales@chronicle.software].
+
