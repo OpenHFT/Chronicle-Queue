@@ -103,6 +103,23 @@ This memory mapped file is also used for exceptionally fast interprocess communi
 
 image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png[]
 
+
+== Chronicle Queue (Enterprise Edition)
+
+Chronicle Queue (Enterprise Edition) is a commercially supported version of our successful open source Chronicle Queue.
+
+The open source documentation is extended by this document to describe the additional features that are available when you are licenced for Enterprise Edition. These are:
+
+- Encryption of message queues and messages. For more information see <<encryption.adoc#, Encryption>>.
+- Replication to ensure real-time backup of all your queue data. For more information see <<replication.adoc#, Replication>>.
+- Timezone support for daily queue rollover scheduling. For more information see <<timezone_rollover.adoc#, Timezone support>>.
+
+In addition, you will be fully supported by our technical experts.
+
+For more information on Chronicle Queue (Enterprise Edition), please contact mailto:sales@chronicle.software[sales@chronicle.software].
+
+
+
 == How does Chronicle Queue v4 work
 
 === Terminology
@@ -290,7 +307,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
     System.out.println("your data was store to index="+ dc.index());
 }   
 ----
-The high level methods below such as “writeText()” are convenience methods on calling  appender.writingDocument(), but both approaches essentially do the same thing. The actual code of writeText(CharSequence text) looks like this.
+The high level methods below such as `writeText()` are convenience methods on calling  `appender.writingDocument()`, but both approaches essentially do the same thing. The actual code of `writeText(CharSequence text)` looks like this.
 
 [source, Java]
 ----

@@ -1,0 +1,5 @@
+== IMPORTANT
+
+The documents in this folder are work-in-progress. They should not be considered finished, or approved.
+
+Please contact mailto:neil.clifford@chronicle.software[neil.clifford@chronicle.software] for further information.
