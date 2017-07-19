@@ -4,7 +4,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.RandomAccessFile;
@@ -181,7 +180,6 @@ public class ChronicleReaderTest {
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
-    @Ignore
     @Test
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() throws Exception {
         basicReader().historyRecords(5).execute();
@@ -190,7 +188,6 @@ public class ChronicleReaderTest {
                 filter(msg -> !msg.startsWith("0x")).count(), is(5L));
     }
 
-    @Ignore
     @Test
     public void shouldForwardToSpecifiedIndex() throws Exception {
         final long knownIndex = Long.decode(findAnExistingIndex());
@@ -207,7 +204,6 @@ public class ChronicleReaderTest {
         basicReader().withStartIndex(1L).execute();
     }
 
-    @Ignore
     @Test
     public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() throws Exception {
         basicReader().historyRecords(Long.MAX_VALUE).execute();

@@ -142,7 +142,7 @@ final class ChronicleReader {
     }
 
     private void moveToSpecifiedPosition(final ChronicleQueue ic, final ExcerptTailer tailer, final boolean isFirstIteration) {
-        if (isSet(startIndex)) {
+        if (isSet(startIndex) && isFirstIteration) {
             if (startIndex < ic.firstIndex()) {
                 throw new IllegalArgumentException(String.format("startIndex %d is less than first index %d",
                         startIndex, ic.firstIndex()));
@@ -156,7 +156,7 @@ final class ChronicleReader {
             }
         }
 
-        if (isSet(maxHistoryRecords)) {
+        if (isSet(maxHistoryRecords) && isFirstIteration) {
             tailer.toEnd();
             tailer.moveToIndex(Math.max(ic.firstIndex(), tailer.index() - maxHistoryRecords));
         } else if (tailInputSource && isFirstIteration) {
