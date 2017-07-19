@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.WireDumper;
 import org.jetbrains.annotations.NotNull;
@@ -35,7 +36,7 @@ import static java.lang.System.err;
  * Created by Peter on 07/03/2016.
  */
 public class DumpQueueMain {
-    static final String FILE = System.getProperty("file");
+    private static final String FILE = System.getProperty("file");
     private static final int LENGTH = ", 0".length();
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -52,8 +53,10 @@ public class DumpQueueMain {
     public static void dump(@NotNull File path, @NotNull PrintStream out, long upperLimit) {
         if (path.isDirectory()) {
             File[] files = path.listFiles();
-            if (files == null)
+            if (files == null) {
                 err.println("Directory not found " + path);
+                System.exit(1);
+            }
 
             Arrays.sort(files);
             for (File file : files)
@@ -64,14 +67,14 @@ public class DumpQueueMain {
         }
     }
 
-    public static void dumpFile(@NotNull File file, @NotNull PrintStream out, long upperLimit) {
+    private static void dumpFile(@NotNull File file, @NotNull PrintStream out, long upperLimit) {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
+            Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
             try {
-                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20);
+                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows());
                 bytes.readLimit(bytes.realCapacity());
                 StringBuilder sb = new StringBuilder();
                 WireDumper dumper = WireDumper.of(bytes);
-                Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
                 while (bytes.readRemaining() >= 4) {
                     sb.setLength(0);
                     boolean last = dumper.dumpOne(sb, buffer);
@@ -96,11 +99,13 @@ public class DumpQueueMain {
                 }
             } catch (IOException ioe) {
                 err.println("Failed to read " + file + " " + ioe);
+            } finally {
+                buffer.release();
             }
         }
     }
 
-    static int indexOfLastZero(@NotNull CharSequence str) {
+    private static int indexOfLastZero(@NotNull CharSequence str) {
         int i = str.length() - 3;
         do {
             i -= LENGTH;

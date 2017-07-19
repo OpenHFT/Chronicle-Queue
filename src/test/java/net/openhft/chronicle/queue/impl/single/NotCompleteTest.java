@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
@@ -65,7 +66,7 @@ public class NotCompleteTest {
 
         BinaryLongReference.startCollecting();
 
-        File tmpDir = Utils.tempDir("testUsingANotCompleteQueue");
+        File tmpDir = DirectoryUtils.tempDir("testUsingANotCompleteQueue");
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -105,7 +106,7 @@ public class NotCompleteTest {
 
         BinaryLongArrayReference.startCollecting();
 
-        File tmpDir = Utils.tempDir("testUsingANotCompleteArrayQueue");
+        File tmpDir = DirectoryUtils.tempDir("testUsingANotCompleteArrayQueue");
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -143,7 +144,7 @@ public class NotCompleteTest {
     public void testMessageLeftNotComplete()
             throws TimeoutException, ExecutionException, InterruptedException {
 
-        File tmpDir = Utils.tempDir("testMessageLeftNotComplete");
+        File tmpDir = DirectoryUtils.tempDir("testMessageLeftNotComplete");
         try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).build()) {
             ExcerptAppender appender = queue.acquireAppender()
                     .lazyIndexing(lazyIndexing);

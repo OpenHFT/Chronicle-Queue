@@ -25,6 +25,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.function.Consumer;
 
 /**
@@ -86,10 +88,35 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     B rollCycle(@NotNull RollCycle rollCycle);
 
+    /**
+     * Resets the concept of 'epoch' from 1970-01-01T00:00:00 UTC to a new value (in UTC millis).
+     *
+     * This method is deprecated and will be removed in a future release.
+     *
+     * Please use the <code>rollTime</code> method, specifying the new epoch as a
+     * <code>LocalTime</code> that will be resolved against UTC.
+     *
+     * @param epoch a value in UTC millis that will be used when resolving roll cycle times.
+     * @return the builder
+     */
     @NotNull
+    @Deprecated
     B epoch(long epoch);
 
     long epoch();
+
+    /**
+     * Resets the rollTime for the queue cycle to a new time.
+     *
+     * E.g. builder.rollTime(LocalTime.of(21, 0), ZoneId.of("UTC"))
+     * will cause the queue to roll cycles at 21:00 UTC,
+     * rather than the default roll-time of midnight UTC.
+     *
+     * @param time the new value for the time of day when the cycle should roll
+     * @param zoneId the time-zone against which to base the roll-time
+     * @return the builder
+     */
+    B rollTime(@NotNull LocalTime time, final ZoneId zoneId);
 
     @NotNull
     RollCycle rollCycle();
@@ -160,4 +187,6 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     boolean readOnly();
 
     B readOnly(boolean readOnly);
+
+    CycleCalculator cycleCalculator();
 }

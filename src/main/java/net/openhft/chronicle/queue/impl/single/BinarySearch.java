@@ -87,7 +87,6 @@ public enum BinarySearch {
         return prevIndex;
     }
 
-
     /**
      * @return The index if an exact match is found, an approximation in the form of -approximateIndex
      * or -1 if there was no searching to be done.

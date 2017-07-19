@@ -21,7 +21,7 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.Utils;
+import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.MethodReader;
 import org.jetbrains.annotations.NotNull;
@@ -43,6 +43,7 @@ public class MessageReaderWriterTest {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
     }
 
     @After
@@ -55,8 +56,8 @@ public class MessageReaderWriterTest {
         ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class);
 
-        File path1 = Utils.tempDir("testWriteWhileReading1");
-        File path2 = Utils.tempDir("testWriteWhileReading2");
+        File path1 = DirectoryUtils.tempDir("testWriteWhileReading1");
+        File path2 = DirectoryUtils.tempDir("testWriteWhileReading2");
 
         try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder
                 .binary(path1)

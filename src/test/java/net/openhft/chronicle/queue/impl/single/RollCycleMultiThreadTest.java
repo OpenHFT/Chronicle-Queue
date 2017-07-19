@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.StopCharTesters;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
@@ -27,7 +28,7 @@ public class RollCycleMultiThreadTest {
 
     @Test
     public void testRead1() throws Exception {
-        File path = Utils.tempDir(getClass().getSimpleName());
+        File path = DirectoryUtils.tempDir(getClass().getSimpleName());
         TestTimeProvider timeProvider = new TestTimeProvider();
 
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder
@@ -65,7 +66,7 @@ public class RollCycleMultiThreadTest {
 
     @Test
     public void testRead2() throws Exception {
-        File path = Utils.tempDir("testRead2");
+        File path = DirectoryUtils.tempDir("testRead2");
         TestTimeProvider timeProvider = new TestTimeProvider();
 
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder

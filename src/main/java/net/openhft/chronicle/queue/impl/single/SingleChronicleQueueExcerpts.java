@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -39,6 +40,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeoutException;
 
@@ -74,6 +76,7 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         @NotNull
         private final StoreAppenderContext context;
+        private final ClosableResources closableResources;
         @Nullable
         WireStore store;
         private int cycle = Integer.MIN_VALUE;
@@ -98,6 +101,8 @@ public class SingleChronicleQueueExcerpts {
             this.queue = queue;
             queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
+
+            closableResources = new ClosableResources(queue);
         }
 
         @NotNull
@@ -222,6 +227,7 @@ public class SingleChronicleQueueExcerpts {
                 queue.release(this.store);
 
             this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            closableResources.storeReference = store;
             resetWires(queue);
 
             // only set the cycle after the wire is set.
@@ -238,12 +244,16 @@ public class SingleChronicleQueueExcerpts {
             {
                 Wire oldw = this.wire;
                 this.wire = wireType.apply(store.bytes());
+                closableResources.wireReference = this.wire.bytes();
+
                 if (oldw != null)
                     oldw.bytes().release();
             }
             {
                 Wire old = this.wireForIndex;
                 this.wireForIndex = wireType.apply(store.bytes());
+                closableResources.wireForIndexReference = wireForIndex.bytes();
+
                 if (old != null)
                     old.bytes().release();
             }
@@ -398,6 +408,8 @@ public class SingleChronicleQueueExcerpts {
         Wire acquireBufferWire() {
             if (bufferWire == null) {
                 bufferWire = queue.wireType().apply(Bytes.elasticByteBuffer());
+                closableResources.bufferWireReference = bufferWire.bytes();
+
             } else {
                 bufferWire.clear();
             }
@@ -540,6 +552,11 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public SingleChronicleQueue queue() {
             return queue;
+        }
+
+        @Override
+        public Runnable getCloserJob() {
+            return closableResources::releaseResources;
         }
 
         /**
@@ -782,6 +799,36 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
+    private static final class ClosableResources {
+        private final SingleChronicleQueue queue;
+        private volatile Bytes wireReference = null;
+        private volatile Bytes bufferWireReference = null;
+        private volatile Bytes wireForIndexReference = null;
+        private volatile WireStore storeReference = null;
+
+        ClosableResources(final SingleChronicleQueue queue) {
+            this.queue = queue;
+        }
+
+        private static void releaseIfNotNull(final Bytes bytesReference) {
+            // Object is no longer reachable, check that it has not already been released
+            if (bytesReference != null && bytesReference.refCount() > 0) {
+                bytesReference.release();
+            }
+        }
+
+        private void releaseResources() {
+            releaseIfNotNull(wireForIndexReference);
+            releaseIfNotNull(wireReference);
+            releaseIfNotNull(bufferWireReference);
+
+            // Object is no longer reachable, check that it has not already been released
+            if (storeReference != null && storeReference.refCount() > 0) {
+                queue.release(storeReference);
+            }
+        }
+    }
+
 // *************************************************************************
 //
 // TAILERS
@@ -796,6 +843,7 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
         private final int indexSpacingMask;
+        private final ClosableResources closableResources;
         long index; // index of the next read.
         @Nullable
         WireStore store;
@@ -814,6 +862,7 @@ public class SingleChronicleQueueExcerpts {
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
+            closableResources = new ClosableResources(queue);
         }
 
         private static boolean isReadOnly(Bytes bytes) {
@@ -891,7 +940,7 @@ public class SingleChronicleQueueExcerpts {
                     next = next0(includeMetaData);
 
                 if (context.present(next)) {
-                    context.setStart(context.wire().bytes().readPosition()-4);
+                    context.setStart(context.wire().bytes().readPosition() - 4);
                     return context;
                 }
                 RollCycle rollCycle = queue.rollCycle();
@@ -905,6 +954,15 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException(e);
             } catch (UnrecoverableTimeoutException notComplete) {
                 // so treat as empty.
+            } catch (DecoratedBufferUnderflowException e) {
+                // read-only tailer view is fixed, a writer could continue past the end of the view
+                // at the point this tailer was created. Log a warning and return no document.
+                if (queue.isReadOnly()) {
+                    Jvm.warn().on(StoreTailer.class, "Tried to read past the end of a read-only view. " +
+                            "Underlying data store may have grown since this tailer was created.", e);
+                } else {
+                    throw e;
+                }
             }
             return NoDocumentContext.INSTANCE;
         }
@@ -986,6 +1044,7 @@ public class SingleChronicleQueueExcerpts {
                             if (this.store != null)
                                 queue.release(this.store);
                             this.store = null;
+                            closableResources.storeReference = null;
                             return false;
                         }
 
@@ -1060,20 +1119,23 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean checkMoveToNextCycle(boolean includeMetaData, @NotNull Bytes<?> bytes)
                 throws EOFException, StreamCorruptedException {
-            long pos = bytes.readPosition();
-            long lim = bytes.readLimit();
-            long wlim = bytes.writeLimit();
-            try {
-                bytes.writePosition(pos);
-                store.writeEOF(wire(), timeoutMS());
-            } catch (TimeoutException e) {
-                Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
-            } finally {
-                bytes.writeLimit(wlim);
-                bytes.readLimit(lim);
-                bytes.readPosition(pos);
+            if (bytes.readWrite()) {
+                long pos = bytes.readPosition();
+                long lim = bytes.readLimit();
+                long wlim = bytes.writeLimit();
+                try {
+                    bytes.writePosition(pos);
+                    store.writeEOF(wire(), timeoutMS());
+                } catch (TimeoutException e) {
+                    Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
+                } finally {
+                    bytes.writeLimit(wlim);
+                    bytes.readLimit(lim);
+                    bytes.readPosition(pos);
+                }
+            } else {
+                Jvm.debug().on(getClass(), "Unable to append EOF to ReadOnly store, skipping");
             }
-
             return inACycle(includeMetaData, false);
         }
 
@@ -1184,7 +1246,7 @@ public class SingleChronicleQueueExcerpts {
         ScanResult moveToIndexResult(long index) {
             final int cycle = queue.rollCycle().toCycle(index);
             final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-            if (LOG.isDebugEnabled()) {
+            if (LOG.isTraceEnabled()) {
                 Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
 
@@ -1254,6 +1316,7 @@ public class SingleChronicleQueueExcerpts {
 
                 if (this.store != wireStore) {
                     this.store = wireStore;
+                    closableResources.storeReference = wireStore;
                     resetWires();
                 }
                 // give the position of the last entry and
@@ -1297,6 +1360,8 @@ public class SingleChronicleQueueExcerpts {
 
             Wire wireForIndexOld = wireForIndex;
             wireForIndex = readAnywhere(wireType.apply(store.bytes()));
+            closableResources.wireForIndexReference = wireForIndex.bytes();
+            closableResources.wireReference = wire.bytes();
             assert headerNumberCheck((AbstractWire) wireForIndex);
 
             if (wireForIndexOld != null)
@@ -1370,6 +1435,11 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public RollingChronicleQueue queue() {
             return queue;
+        }
+
+        @Override
+        public Runnable getCloserJob() {
+            return closableResources::releaseResources;
         }
 
         private void incrementIndex() {
@@ -1449,8 +1519,8 @@ public class SingleChronicleQueueExcerpts {
                 return true;
 
             context.wire(null);
-            nextStore.reserve();
             this.store = nextStore;
+            closableResources.storeReference = nextStore;
             this.state = FOUND_CYCLE;
             this.setCycle(cycle);
             resetWires();
@@ -1462,8 +1532,9 @@ public class SingleChronicleQueueExcerpts {
 
         void release() {
             if (store != null) {
-                store.release();
+                queue.release(store);
                 store = null;
+                closableResources.storeReference = null;
             }
             state = UNINITIALISED;
         }
@@ -1513,16 +1584,23 @@ public class SingleChronicleQueueExcerpts {
                         wire.parent(parent);
                     }
                     int i = veh.sources() - 1;
-                    // skip the one we just added.
                     if (i < 0)
+                        continue;
+                    if (veh.sourceId(i) != this.sourceId())
                         continue;
 
                     long sourceIndex = veh.sourceIndex(i);
-                    if (!moveToIndex(sourceIndex))
-                        throw new IORuntimeException("Unable to wind to index: " + sourceIndex);
+                    if (!moveToIndex(sourceIndex)) {
+                        final String errorMessage = String.format("Unable to move to sourceIndex %d, " +
+                                "which was determined to be the last entry written to queue %s", sourceIndex, queue);
+                        throw new IORuntimeException(errorMessage);
+                    }
                     try (DocumentContext content = readingDocument()) {
-                        if (!content.isPresent())
-                            throw new IORuntimeException("Unable to wind to index: " + (sourceIndex + 1));
+                        if (!content.isPresent()) {
+                            final String errorMessage =
+                                    String.format("No readable document found at sourceIndex %d", (sourceIndex + 1));
+                            throw new IORuntimeException(errorMessage);
+                        }
                         // skip this message and go to the next.
                     }
                     return this;

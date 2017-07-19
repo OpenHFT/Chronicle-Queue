@@ -24,25 +24,45 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.queue.CycleCalculator;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.RollingResourcesCache;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.TextWire;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StreamCorruptedException;
+import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.TreeMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -58,6 +78,9 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerp
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
+    private static final boolean SHOULD_RELEASE_RESOURCES =
+            Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
+                    Boolean.TRUE.toString()));
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 8);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
@@ -93,6 +116,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final StoreRecoveryFactory recoverySupplier;
     private final Map<Object, Consumer> closers = new WeakHashMap<>();
     private final boolean readOnly;
+    @NotNull
+    private final CycleCalculator cycleCalculator;
     long firstAndLastCycleTime = 0;
     int firstAndLastRetry = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
@@ -100,6 +125,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
+        cycleCalculator = builder.cycleCalculator();
         epoch = builder.epoch();
         dateCache = new RollingResourcesCache(this.rollCycle, epoch, textToFile(builder),
                 fileToText());
@@ -137,6 +163,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Nullable
     StoreTailer acquireTailer() {
+        if (SHOULD_RELEASE_RESOURCES) {
+            return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
+                    StoreComponentReferenceHandler.tailerQueue(),
+                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        }
         return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
 
@@ -290,6 +321,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (readOnly) {
             throw new IllegalStateException("Can't append to a read-only chronicle");
         }
+
+        if (SHOULD_RELEASE_RESOURCES) {
+            return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
+                    StoreComponentReferenceHandler.appenderQueue(),
+                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        }
+
         return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
     }
 
@@ -315,7 +353,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         try {
             long index = rollCycle.toIndex(cycle, 0);
             if (tailer.moveToIndex(index)) {
-                assert tailer.store.refCount() > 1;
+                assert tailer.store.refCount() > 0;
                 return tailer.store.lastSequenceNumber(tailer) + 1;
             } else {
                 return -1;
@@ -446,7 +484,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public final int cycle() {
-        return this.rollCycle.current(time, epoch);
+        return cycleCalculator.currentCycle(rollCycle, time, epoch);
     }
 
     @Override
@@ -558,6 +596,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize, readOnly);
+    }
+
+    boolean isReadOnly() {
+        return readOnly;
     }
 
     private int toCycle(@Nullable Map.Entry<Long, File> entry) throws ParseException {

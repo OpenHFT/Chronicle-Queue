@@ -33,11 +33,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
+import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S>> {
@@ -102,6 +106,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return builder(basePathFile, DEFAULT_ZERO_BINARY);
     }
 
+    @NotNull
+    public static SingleChronicleQueueBuilder deltaBinary(@NotNull File basePathFile) {
+        return builder(basePathFile, DELTA_BINARY);
+    }
+
     @Deprecated
     @NotNull
     public static SingleChronicleQueueBuilder text(@NotNull File name) {
@@ -136,12 +145,13 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @NotNull
     public SingleChronicleQueue build() {
         if (buffered())
-            onlyAvailableInEnterprise();
+            onlyAvailableInEnterprise("Buffering");
         return new SingleChronicleQueue(this);
     }
 
-    private void onlyAvailableInEnterprise() {
-        getLogger().warn("Buffering is only supported in Chronicle Queue Enterprise");
+    private void onlyAvailableInEnterprise(final String feature) {
+        getLogger().warn(feature + " is only supported in Chronicle Queue Enterprise. " +
+                "If you would like to use this feature, please contact sales@chronicle.software for more information.");
     }
 
     @NotNull
@@ -173,7 +183,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
             codingSuppliers(null, null);
             return this;
         }
-        onlyAvailableInEnterprise();
+        onlyAvailableInEnterprise("AES encryption");
         return this;
     }
 
@@ -181,7 +191,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
                                                        @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
         if (encodingSupplier != null || decodingSupplier != null)
-            onlyAvailableInEnterprise();
+            onlyAvailableInEnterprise("Custom encoding");
         return this;
     }
 
@@ -287,5 +297,13 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @Override
     public SingleChronicleQueueBuilder<S> recoverySupplier(StoreRecoveryFactory recoverySupplier) {
         return super.recoverySupplier(recoverySupplier);
+    }
+
+    @Override
+    public SingleChronicleQueueBuilder<S> rollTime(@NotNull final LocalTime time, final ZoneId zoneId) {
+        if (!zoneId.equals(ZoneOffset.UTC)) {
+            onlyAvailableInEnterprise("Non-UTC time-zone");
+        }
+        return super.rollTime(time, ZoneId.of("UTC"));
     }
 }

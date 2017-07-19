@@ -25,6 +25,8 @@ import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.CycleCalculator;
+import net.openhft.chronicle.queue.DefaultCycleCalculator;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
@@ -39,6 +41,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import java.io.File;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -61,6 +66,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     protected BufferMode writeBufferMode = BufferMode.None, readBufferMode = BufferMode.None;
     @Nullable
     protected EventLoop eventLoop;
+    @NotNull
+    protected CycleCalculator cycleCalculator = DefaultCycleCalculator.INSTANCE;
     private long bufferCapacity;
     private int indexSpacing;
     private int indexCount;
@@ -93,6 +100,18 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     protected Logger getLogger() {
         return LoggerFactory.getLogger(getClass().getName());
+    }
+
+    @Override
+    @NotNull
+    public CycleCalculator cycleCalculator() {
+        return cycleCalculator;
+    }
+
+    @Override
+    public B rollTime(@NotNull final LocalTime time, final ZoneId zoneId) {
+        this.epoch = TimeUnit.SECONDS.toMillis(time.toSecondOfDay());
+        return (B) this;
     }
 
     /**
@@ -364,6 +383,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.readOnly = readOnly;
         return (B) this;
     }
+
+
 
     @NotNull
     public AbstractChronicleQueueBuilder encryptSupplier(Supplier<Cipher> encryptSupplier) {

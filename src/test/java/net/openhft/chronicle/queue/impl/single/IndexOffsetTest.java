@@ -34,6 +34,7 @@ public class IndexOffsetTest {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
     }
 
     @After

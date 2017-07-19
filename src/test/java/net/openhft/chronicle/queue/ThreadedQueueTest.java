@@ -20,7 +20,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.Utils;
+import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,6 +44,7 @@ public class ThreadedQueueTest {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
     }
 
     @After
@@ -54,7 +55,7 @@ public class ThreadedQueueTest {
     @Test(timeout = 10000)
     public void testMultipleThreads() throws java.io.IOException, InterruptedException, ExecutionException, TimeoutException {
 
-        final File path = Utils.tempDir("testMultipleThreads");
+        final File path = DirectoryUtils.tempDir("testMultipleThreads");
 
         final AtomicInteger counter = new AtomicInteger();
 
@@ -114,7 +115,7 @@ public class ThreadedQueueTest {
     @Test//(timeout = 5000)
     public void testTailerReadingEmptyQueue() throws java.io.IOException {
 
-        final File path = Utils.tempDir("testTailerReadingEmptyQueue");
+        final File path = DirectoryUtils.tempDir("testTailerReadingEmptyQueue");
 
         final ChronicleQueue rqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)
                 .testBlockSize()

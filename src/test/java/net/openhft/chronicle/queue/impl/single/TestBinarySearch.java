@@ -74,12 +74,10 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                             assert myDataO1.value != null;
                         }
 
-
                         try (final DocumentContext dc = o2.readingDocument()) {
                             myDataO2 = dc.wire().getValueIn().typedMarshallable();
                             assert myDataO2.value != null;
                         }
-
 
                         final int compare = Integer.compare(myDataO1.key, myDataO2.key);
 
@@ -91,7 +89,6 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
 
                     }
                 };
-
 
                 long index = BinarySearch.search(queue, key, comparator);
                 //   assert index != -1 : "i=" + j;

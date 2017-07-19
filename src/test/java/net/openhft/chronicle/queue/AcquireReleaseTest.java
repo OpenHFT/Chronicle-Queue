@@ -5,7 +5,6 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.Utils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -16,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class AcquireReleaseTest extends ChronicleQueueTestBase {
     @Test
     public void testAccquireAndRelease() throws Exception {
-        File dir = Utils.tempDir("AcquireReleaseTest");
+        File dir = DirectoryUtils.tempDir("AcquireReleaseTest");
         try {
             AtomicInteger acount = new AtomicInteger();
             AtomicInteger qcount = new AtomicInteger();

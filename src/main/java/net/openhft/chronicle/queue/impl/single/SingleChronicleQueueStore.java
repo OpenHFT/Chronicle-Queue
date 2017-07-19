@@ -384,6 +384,5 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-
 }
 

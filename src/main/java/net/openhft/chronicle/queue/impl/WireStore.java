@@ -30,7 +30,6 @@ import java.util.concurrent.TimeoutException;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable, Closeable {
 
-
     /**
      * @return the file associated with this store.
      */

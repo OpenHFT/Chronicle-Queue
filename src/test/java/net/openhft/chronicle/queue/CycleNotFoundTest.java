@@ -18,7 +18,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,7 +44,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 50000)
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
-        File path = Utils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make
+        File path = DirectoryUtils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make
 
         ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG);
         AtomicLong counter = new AtomicLong();
@@ -83,12 +82,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                     Assert.assertFalse(dc.isPresent());
                 }
 
-
             } finally {
                 System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
             }
         };
-
 
         List<Future> tailers = new ArrayList<>();
         for (int i = 0; i < NUMBER_OF_TAILERS; i++) {
@@ -119,7 +116,6 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
             }
             wqueue.close();
         }).get();
-
 
         System.out.println("appender is done.");
 

@@ -3,7 +3,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.Utils;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,7 +42,7 @@ public class RollingChronicleQueueTest {
 
         final AtomicLong time = new AtomicLong();
 
-        File name = Utils.tempDir("testCountExcerptsWhenTheCycleIsRolled");
+        File name = DirectoryUtils.tempDir("testCountExcerptsWhenTheCycleIsRolled");
         try (final SingleChronicleQueue q = binary(name)
                 .testBlockSize()
                 .timeProvider(time::get)

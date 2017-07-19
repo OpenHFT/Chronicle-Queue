@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
@@ -52,6 +53,7 @@ public class ToEndTest {
     @Before
     public void before() {
         threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 
@@ -173,12 +175,12 @@ public class ToEndTest {
         SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
         // the reference count here is 2, one of the reference is the appender, one the tailer, once in the queue itself
-        assertEquals(3, store2.refCount());
+        assertEquals(2, store2.refCount());
     }
 
     @Test
     public void toEndTest() {
-        File baseDir = Utils.tempDir("toEndTest");
+        File baseDir = DirectoryUtils.tempDir("toEndTest");
 
         List<Integer> results = new ArrayList<>();
         try (RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
@@ -224,7 +226,7 @@ public class ToEndTest {
 
     @Test
     public void toEndBeforeWriteTest() {
-        File baseDir = Utils.tempDir("toEndBeforeWriteTest");
+        File baseDir = DirectoryUtils.tempDir("toEndBeforeWriteTest");
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
@@ -259,7 +261,7 @@ public class ToEndTest {
 
     @Test
     public void toEndAfterWriteTest() {
-        File file = Utils.tempDir("toEndAfterWriteTest");
+        File file = DirectoryUtils.tempDir("toEndAfterWriteTest");
         IOTools.shallowDeleteDirWithFiles(file);
 
         final SetTimeProvider stp = new SetTimeProvider();

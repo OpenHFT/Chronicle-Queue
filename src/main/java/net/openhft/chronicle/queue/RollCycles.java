@@ -88,5 +88,4 @@ public enum RollCycles implements RollCycle {
         return Maths.toUInt31(index >> cycleShift);
     }
 
-
 }
