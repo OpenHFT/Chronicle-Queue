@@ -1,4 +1,5 @@
 == Chronicle Queue (Enterprise Edition)
+
 Chronicle Queue (Enterprise Edition) is a commercially supported version of our successful open source Chronicle Queue.
 
 The open source documentation is extended by this document to describe the additional features that are available when you are licenced for Enterprise Edition. These are:
