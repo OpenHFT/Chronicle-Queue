@@ -42,4 +42,4 @@ To use this feature you must use the Chronicle distributed time provider, `net.o
 
 '''
 
-<<../README.adoc#,Back to Chronicle Queue (Enterprise Edition)>>
+<<../README.adoc#,Back to Chronicle Queue>>

@@ -244,4 +244,4 @@ public interface QueueView<T, M> extends TopicPublisher<T, M>, KeyedView {
 
 '''
 
-<<../README.adoc#,Back to Chronicle Queue (Enterprise Edition)>>
+<<../README.adoc#,Back to Chronicle Queue>>

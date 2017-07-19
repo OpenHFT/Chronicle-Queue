@@ -54,5 +54,5 @@ public EnterpriseChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiCons
 
 '''
 
-<<../README.adoc#,Back to Chronicle Queue (Enterprise Edition)>>
+<<../README.adoc#,Back to Chronicle Queue>>
 
