@@ -4,21 +4,29 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class ChronicleReaderTest {
@@ -42,25 +50,101 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldHandleQueueDataRollingPastEndOfTailerCapacity() throws Exception {
+    public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
+        DirectoryUtils.deleteDir(dataDir.toFile());
+        dataDir.toFile().mkdirs();
         try(final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build();
             final SingleChronicleQueue inputQueue = SingleChronicleQueueBuilder.binary(dataDir).readOnly(true).build()) {
 
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
+            events.say("hello");
 
-            final ExcerptTailer tailer = inputQueue.createTailer();
-            final AtomicLong readerCapacity = new AtomicLong();
-            try (final DocumentContext ctx = tailer.readingDocument()) {
-                readerCapacity.set(ctx.wire().bytes().capacity());
-            }
+            final long readerCapacity = new RandomAccessFile(
+                    Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
+                            orElseThrow(AssertionError::new).toFile(), "r").length();
+            final AtomicLong count = new AtomicLong();
+            final CountDownLatch latch = new CountDownLatch(1);
+            final StringEvents counter = new StringEvents() {
+                @Override
+                public void say(final String msg) {
+                    try {
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                    if (!msg.startsWith("0x")) {
+                        count.incrementAndGet();
+                    }
+                }
+            };
+            final ChronicleReader chronicleReader = basicReader().withMessageSink(counter::say);
 
-            for (int i = 0; i < (readerCapacity.get() / ONE_KILOBYTE.length) + 1; i++) {
+            final ExecutorService executorService = Executors.newSingleThreadExecutor();
+            executorService.submit(chronicleReader::execute);
+
+            final long expectedReadingDocumentCount = (readerCapacity / ONE_KILOBYTE.length) + 1;
+            int i;
+            for (i = 0; i < expectedReadingDocumentCount; i++) {
                 events.say(new String(ONE_KILOBYTE));
             }
 
-            while (tailer.readingDocument().isPresent()) {
-                // spin
+            latch.countDown();
+            executorService.shutdown();
+            executorService.awaitTermination(5L, TimeUnit.SECONDS);
+
+            assertEquals(expectedReadingDocumentCount, count.get() - 1);
+        }
+    }
+
+    @Ignore
+    @Test
+    public void readOnlyQueueTailerInFollowModeShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
+        DirectoryUtils.deleteDir(dataDir.toFile());
+        dataDir.toFile().mkdirs();
+        try(final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build();
+            final SingleChronicleQueue inputQueue = SingleChronicleQueueBuilder.binary(dataDir).readOnly(true).build()) {
+
+            final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
+            events.say("hello");
+
+            final long readerCapacity = new RandomAccessFile(
+                    Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
+                            orElseThrow(AssertionError::new).toFile(), "r").length();
+            final AtomicLong count = new AtomicLong();
+            final CountDownLatch latch = new CountDownLatch(1);
+            final StringEvents counter = new StringEvents() {
+                @Override
+                public void say(final String msg) {
+                    try {
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                    if (!msg.startsWith("0x")) {
+                        count.incrementAndGet();
+                    }
+                }
+            };
+            final ChronicleReader chronicleReader = basicReader().tail().withMessageSink(counter::say);
+
+            final ExecutorService executorService = Executors.newSingleThreadExecutor();
+            executorService.submit(chronicleReader::execute);
+
+            final long expectedReadingDocumentCount = (readerCapacity / ONE_KILOBYTE.length) + 1;
+            int i;
+            for (i = 0; i < expectedReadingDocumentCount; i++) {
+                events.say(new String(ONE_KILOBYTE));
             }
+
+            latch.countDown();
+            while (count.get() - 1 != expectedReadingDocumentCount) {
+                System.out.printf("%d / %d%n", count.get(), expectedReadingDocumentCount);
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(100L));
+            }
+            executorService.shutdownNow();
+            executorService.awaitTermination(5L, TimeUnit.SECONDS);
+
+            assertEquals(expectedReadingDocumentCount, count.get() - 1);
         }
     }
 
