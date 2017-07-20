@@ -108,7 +108,7 @@ index: [ #  <2>
 ----
 <1> `position` specifies the point in the queue where the data begins.
 
-<2> `data` defines the following information is data (`--- !!data #binary #`) rather than than meta data (`--- !!meta-data #binary`).
+<2> `data` defines the information that follows is data (`--- !!data #binary #`), rather than than meta data (`--- !!meta-data #binary`).
 
 
 == Configuration File
