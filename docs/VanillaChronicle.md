@@ -47,10 +47,10 @@ The source sends a message for;
 Concurrent Producer
 -------------------
 
-Any number of threads can be writing to the Chronicle at the same time provided
+Any number of threads can be writen to the Chronicle queue at the same time provided that you:
 
- - you only append OR
- - you modify records using a lock or CAS operation
+ - only append OR
+ - modify records using a lock or CAS operation
 
 Example
 
@@ -65,7 +65,13 @@ Example
 Concurrent Consumers
 --------------------
 
-Consumers can work on either a Topic basis (the default) or can be applied on a Queue basis (where only one consumer "gets" a message)
+Consumers can work on either:
+
+- a topic basis (the default), or
+- a queue basis (where only one consumer "gets" a message
+
+[source, java]
+----
 
     ExcerptTailer tailer = chronicle.createTailer();
     int threadId = AffinitySupport.getThreadId();
@@ -82,3 +88,4 @@ Consumers can work on either a Topic basis (the default) or can be applied on a 
         tailer.finish();
     }
 
+----

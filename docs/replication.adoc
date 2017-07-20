@@ -10,7 +10,9 @@ toc::[]
 
 Chronicle Queue replicates Chronicle Queue messages over TCP/IP, from the `PRIMARY` to the `SECONDARY` to provide real-time back-up of your Chronicle queues.
 
-Chronicle Queue automatically performs replication if it finds this replication artifact in the class path.
+Chronicle Queue automatically performs replication if the `chronicle-queue-enterprise.jar` is available in your class path, and you have set up a cluster in the `cluster.yaml` configuration file.
+
+NOTE: For more information on obtaining the `chronicle-queue-enterprise.jar` please contact mailto:sales@chronicle.software[sales@chronicle.software].
 
 Chronicle Queue replication works by replicating all messages from the `PRIMARY` queue to the `SECONDARY` queue.
 
@@ -67,11 +69,11 @@ index2index: [ #  <2>
   262568, #  <3>
   0, 0, 0, 0, 0,
 ]
-<1> `position` specifies the point in the queue.
+<1> `position` specifies the starting address of the data that follows, within the the queue (*.cq4) file.
 
 <2> `index2Index` defines a pointer to the next lower level of index.
 
-<3> specifies the point in the queue where the next level of indexing begins.
+<3> specifies the point to the next level index.
 
 NOTE: In this way, indexes can be tiered (primary, secondary, tertiary, etc.) as required to enhance indexing speed and efficiency.
 ----
@@ -103,9 +105,10 @@ index: [ #  <2>
 # 785952 bytes remaining
 
 ----
-<1> `position` specifies the point in the queue.
+<1> `position` specifies the point in the queue where the data begins.
 
-<2> `data` defines the location as the start of the data.
+<2> `data` defines the following information is data (`--- !!data #binary #`) rather than than meta data (`--- !!meta-data #binary`).
+
 
 == Configuration File
 
