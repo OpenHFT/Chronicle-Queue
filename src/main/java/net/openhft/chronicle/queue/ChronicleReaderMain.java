@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
 
+import static java.util.Arrays.stream;
+
 /**
  * Display records in a Chronicle in a text form.
  *
@@ -85,10 +87,10 @@ public enum ChronicleReaderMain {
 
     private static void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
         if (commandLine.hasOption('i')) {
-            chronicleReader.withInclusionRegex(commandLine.getOptionValue('i'));
+            stream(commandLine.getOptionValues('i')).forEach(chronicleReader::withInclusionRegex);
         }
         if (commandLine.hasOption('e')) {
-            chronicleReader.withExclusionRegex(commandLine.getOptionValue('e'));
+            stream(commandLine.getOptionValues('e')).forEach(chronicleReader::withExclusionRegex);
         }
         if (commandLine.hasOption('f')) {
             chronicleReader.tail();
