@@ -33,7 +33,7 @@ public class DirectoryUtils {
         return tmpDir;
     }
 
-    static void deleteDir(@NotNull File dir) {
+    public static void deleteDir(@NotNull File dir) {
         if (dir.isDirectory()) {
             File[] files = dir.listFiles();
             if (files != null) {
