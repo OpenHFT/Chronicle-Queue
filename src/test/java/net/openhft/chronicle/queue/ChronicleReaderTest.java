@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
@@ -153,6 +154,11 @@ public class ChronicleReaderTest {
                 forEach(msg -> assertThat(msg, containsString("goodbye")));
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
                 forEach(msg -> assertThat(msg, not(containsString("hello"))));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldThrowExceptionIfInputDirectoryDoesNotExist() throws Exception {
+        basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
     }
 
     @Test

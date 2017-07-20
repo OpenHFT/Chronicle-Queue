@@ -28,7 +28,9 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.TextWire;
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -174,6 +176,9 @@ final class ChronicleReader {
 
     @NotNull
     private SingleChronicleQueue createQueue() {
+        if (!Files.exists(basePath)) {
+            throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
+        }
         return SingleChronicleQueueBuilder.
                 binary(basePath.toFile()).
                 readOnly(!OS.isWindows()).
