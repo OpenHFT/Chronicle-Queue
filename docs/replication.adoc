@@ -69,6 +69,8 @@ index2index: [ #  <2>
   262568, #  <3>
   0, 0, 0, 0, 0,
 ]
+----
+
 <1> `position` specifies the starting address of the data that follows, within the the queue (*.cq4) file.
 
 <2> `index2Index` defines a pointer to the next lower level of index.
@@ -76,7 +78,6 @@ index2index: [ #  <2>
 <3> specifies the point to the next level index.
 
 NOTE: In this way, indexes can be tiered (primary, secondary, tertiary, etc.) as required to enhance indexing speed and efficiency.
-----
 
 === Final level index
 
