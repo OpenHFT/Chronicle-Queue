@@ -20,7 +20,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -68,13 +67,6 @@ public final class ChunkAllocationAfterGarbageCollectionTest {
         final SingleChronicleQueue outputQueue = (SingleChronicleQueue) helloWorldService.outputQueue();
         outputQueue.storeForCycle(outputQueue.cycle(), 0, true).bytes().
                 setNewChunkListener(outputQueueChunkListener);
-
-
-
-        final CountingNewChunkListener inputQueueChunkListener = new CountingNewChunkListener();
-        Arrays.stream(helloWorldService.inputQueues()).map(q -> (SingleChronicleQueue) q).
-                forEach(queue -> queue.storeForCycle(builder.inputQueue().cycle(), 0, true).bytes().
-                setNewChunkListener(inputQueueChunkListener));
 
         eventLoop.start();
 

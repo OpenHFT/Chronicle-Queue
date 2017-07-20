@@ -6,6 +6,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -60,25 +62,10 @@ public class ChronicleReaderTest {
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
             events.say("hello");
 
-            final long readerCapacity = new RandomAccessFile(
-                    Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
-                            orElseThrow(AssertionError::new).toFile(), "r").length();
-            final AtomicLong count = new AtomicLong();
-            final CountDownLatch latch = new CountDownLatch(1);
-            final StringEvents counter = new StringEvents() {
-                @Override
-                public void say(final String msg) {
-                    try {
-                        latch.await();
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
-                    if (!msg.startsWith("0x")) {
-                        count.incrementAndGet();
-                    }
-                }
-            };
-            final ChronicleReader chronicleReader = basicReader().withMessageSink(counter::say);
+            final long readerCapacity = getCurrentQueueFileLength(dataDir);
+
+            final RecordCounter recordCounter = new RecordCounter();
+            final ChronicleReader chronicleReader = basicReader().withMessageSink(recordCounter);
 
             final ExecutorService executorService = Executors.newSingleThreadExecutor();
             executorService.submit(chronicleReader::execute);
@@ -89,11 +76,11 @@ public class ChronicleReaderTest {
                 events.say(new String(ONE_KILOBYTE));
             }
 
-            latch.countDown();
+            recordCounter.latch.countDown();
             executorService.shutdown();
             executorService.awaitTermination(5L, TimeUnit.SECONDS);
 
-            assertEquals(expectedReadingDocumentCount, count.get() - 1);
+            assertEquals(expectedReadingDocumentCount, recordCounter.recordCount.get() - 1);
         }
     }
 
@@ -106,25 +93,11 @@ public class ChronicleReaderTest {
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
             events.say("hello");
 
-            final long readerCapacity = new RandomAccessFile(
-                    Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
-                            orElseThrow(AssertionError::new).toFile(), "r").length();
-            final CountDownLatch latch = new CountDownLatch(1);
-            final AtomicReference<String> lastReceivedMessage = new AtomicReference<>();
-            final StringEvents counter = new StringEvents() {
-                @Override
-                public void say(final String msg) {
-                    try {
-                        latch.await();
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
-                    if (!msg.startsWith("0x")) {
-                        lastReceivedMessage.set(msg);
-                    }
-                }
-            };
-            final ChronicleReader chronicleReader = basicReader().tail().withMessageSink(counter::say);
+            final long readerCapacity = getCurrentQueueFileLength(dataDir);
+
+            final AtomicReference<String> messageReceiver = new AtomicReference<>();
+            final ChronicleReader chronicleReader = basicReader().tail().
+                    withMessageSink(messageReceiver::set);
 
             final ExecutorService executorService = Executors.newSingleThreadExecutor();
             executorService.submit(chronicleReader::execute);
@@ -136,8 +109,7 @@ public class ChronicleReaderTest {
             }
             events.say(LAST_MESSAGE);
 
-            latch.countDown();
-            while (!(lastReceivedMessage.get() != null && lastReceivedMessage.get().contains(LAST_MESSAGE))) {
+            while (!(messageReceiver.get() != null && messageReceiver.get().contains(LAST_MESSAGE))) {
                 LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000L));
             }
             executorService.shutdownNow();
@@ -225,6 +197,24 @@ public class ChronicleReaderTest {
         assertThat(pollMethod.invocationCount, is(expectedPollCountWhenDocumentIsEmpty));
     }
 
+    private static final class RecordCounter implements Consumer<String> {
+        private final AtomicLong recordCount = new AtomicLong();
+        private final CountDownLatch latch = new CountDownLatch(1);
+
+        @Override
+        public void accept(final String msg) {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                // ignore
+            }
+
+            if (!msg.startsWith("0x")) {
+                recordCount.incrementAndGet();
+            }
+        }
+    }
+
     private static final class FiniteDocumentPollMethod implements Function<ExcerptTailer, DocumentContext> {
 
         private final int maxPollsReturningEmptyDocument;
@@ -247,6 +237,12 @@ public class ChronicleReaderTest {
 
             return documentContext;
         }
+    }
+
+    private static long getCurrentQueueFileLength(final Path dataDir) throws IOException {
+        return new RandomAccessFile(
+                Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
+                        orElseThrow(AssertionError::new).toFile(), "r").length();
     }
 
     private String findAnExistingIndex() {

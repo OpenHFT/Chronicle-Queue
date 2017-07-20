@@ -13,7 +13,7 @@ public final class PretouchHandler implements EventHandler {
 
     @Override
     public boolean action() {
-        queue.acquireAppender().pretouch();
+        queue.acquireAppender().lazyIndexing(true).pretouch();
         return false;
     }
 
