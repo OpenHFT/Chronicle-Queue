@@ -29,6 +29,8 @@ import net.openhft.chronicle.wire.TextWire;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -37,8 +39,8 @@ final class ChronicleReader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
     private Path basePath;
-    private Pattern inclusionRegex = null;
-    private Pattern exclusionRegex = null;
+    private List<Pattern> inclusionRegex = new ArrayList<>();
+    private List<Pattern> exclusionRegex = new ArrayList<>();
     private long startIndex = UNSET_VALUE;
     private boolean tailInputSource = false;
     private long maxHistoryRecords = UNSET_VALUE;
@@ -107,12 +109,12 @@ final class ChronicleReader {
     }
 
     ChronicleReader withInclusionRegex(final String regex) {
-        this.inclusionRegex = Pattern.compile(regex);
+        this.inclusionRegex.add(Pattern.compile(regex));
         return this;
     }
 
     ChronicleReader withExclusionRegex(final String regex) {
-        this.exclusionRegex = Pattern.compile(regex);
+        this.exclusionRegex.add(Pattern.compile(regex));
         return this;
     }
 
@@ -179,12 +181,22 @@ final class ChronicleReader {
     }
 
     private void applyFiltersAndLog(final String text, final long index) {
-        if (inclusionRegex == null || inclusionRegex.matcher(text).find()) {
-            if (exclusionRegex == null || !exclusionRegex.matcher(text).find()) {
+        if (inclusionRegex.isEmpty() || checkForMatches(inclusionRegex, text, true)) {
+            if (exclusionRegex.isEmpty() || checkForMatches(exclusionRegex, text, false)) {
                 messageSink.accept("0x" + Long.toHexString(index) + ": ");
                 messageSink.accept(text);
             }
         }
+    }
+
+    private static boolean checkForMatches(final List<Pattern> patterns, final String text,
+                                           final boolean shouldBePresent) {
+        for (Pattern pattern : patterns) {
+            if (!shouldBePresent == pattern.matcher(text).find()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean isSet(final long configValue) {

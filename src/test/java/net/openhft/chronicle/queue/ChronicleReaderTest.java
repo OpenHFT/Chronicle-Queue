@@ -145,11 +145,29 @@ public class ChronicleReaderTest {
     }
 
     @Test
+    public void shouldFilterByMultipleInclusionRegex() throws Exception {
+        basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
+
+        assertThat(capturedOutput.size(), is(24));
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, containsString("goodbye")));
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, not(containsString("hello"))));
+    }
+
+    @Test
     public void shouldFilterByExclusionRegex() throws Exception {
         basicReader().withExclusionRegex(".*good.*").execute();
 
         assertThat(capturedOutput.size(), is(24));
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
+    }
+
+    @Test
+    public void shouldFilterByMultipleExclusionRegex() throws Exception {
+        basicReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
+
+        assertThat(capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count(), is(0L));
     }
 
     @Test
