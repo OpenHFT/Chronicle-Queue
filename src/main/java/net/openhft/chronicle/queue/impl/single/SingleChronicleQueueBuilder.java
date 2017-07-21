@@ -30,6 +30,8 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -52,6 +54,8 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
         CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
 
     @SuppressWarnings("unchecked")
     @Deprecated
@@ -77,6 +81,17 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     @NotNull
     public static SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
+        if (file.isFile()) {
+            if (!file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
+                throw new IllegalArgumentException("Invalid file type: " + file.getName());
+            }
+
+            LOGGER.warn("Queues should be configured with the queue directory, not a specific filename. Actual path used: {}",
+                    file.getParentFile());
+
+            return new SingleChronicleQueueBuilder<>(file.getParentFile())
+                    .wireType(wireType);
+        }
         return new SingleChronicleQueueBuilder<>(file)
                 .wireType(wireType);
     }
