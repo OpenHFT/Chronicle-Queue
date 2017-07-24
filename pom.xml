@@ -28,7 +28,6 @@
         <relativePath />
     </parent>
 
-
     <artifactId>chronicle-queue</artifactId>
     <version>4.6.10-SNAPSHOT</version>
     <packaging>bundle</packaging>
@@ -50,7 +49,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.14.40-SNAPSHOT</version>
+                <version>1.14.40</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
