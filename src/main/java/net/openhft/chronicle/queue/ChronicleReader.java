@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.TextWire;
@@ -30,7 +31,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -48,6 +48,7 @@ final class ChronicleReader {
     private long maxHistoryRecords = UNSET_VALUE;
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
+    private Pauser pauser = Pauser.balanced();
 
     void execute() {
         long lastObservedTailIndex;
@@ -70,10 +71,11 @@ final class ChronicleReader {
                         try (DocumentContext dc = pollMethod.apply(tailer)) {
                             if (!dc.isPresent()) {
                                 if (tailInputSource) {
-                                    Jvm.pause(1000L);
+                                    pauser.pause();
                                 }
                                 break;
                             }
+                            pauser.reset();
 
                             final Bytes<?> serialisedMessage = dc.wire().bytes();
                             final byte dataFormatIndicator = serialisedMessage.readByte(serialisedMessage.readPosition());
