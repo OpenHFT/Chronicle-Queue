@@ -48,9 +48,9 @@ The following table lists the available command line option arguments:
 |===
 
 The following file contains the Chronicle Reader utility code:
-
-`C:\Users\Neil\IdeaProjects\Chronicle-Queue\src\main\java\net\openhft\chronicle\queue\ChronicleReaderMain.java` file:
-
+....
+C:\Users\Neil\IdeaProjects\Chronicle-Queue\src\main\java\net\openhft\chronicle\queue\ChronicleReaderMain.java
+....
 === Command-line examples
 
 The following examples show how the option arguments can be used:
