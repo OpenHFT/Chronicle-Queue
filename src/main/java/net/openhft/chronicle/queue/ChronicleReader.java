@@ -66,7 +66,6 @@ final class ChronicleReader {
                     moveToSpecifiedPosition(queue, tailer, isFirstIteration);
                     lastObservedTailIndex = tailer.index();
 
-                    //noinspection InfiniteLoopStatement
                     while (!Thread.currentThread().isInterrupted()) {
                         try (DocumentContext dc = pollMethod.apply(tailer)) {
                             if (!dc.isPresent()) {
