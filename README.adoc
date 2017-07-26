@@ -927,10 +927,10 @@ We do not recommend that you change the `epoch()` on an existing system, which a
 
 If you were to set :
 
- [source, Java]
- ----
- .epoch(System.currentTimeMillis()
- ----
+[source, Java]
+----
+.epoch(System.currentTimeMillis()
+----
 
 This would make the current time the roll time, and the cycle numbers would start from zero.
 
@@ -1231,7 +1231,7 @@ If both the appender and tailer are in the same process, the tailer can use a pa
 .Call the reader, and pause if no messages.
 [source, java]
 ----
-pauser = balanced ? Parser.balanced() : Pauser.millis(1, 10);
+pauser = balanced ? Pauser.balanced() : Pauser.millis(1, 10);
 while (!closed) {
     if (reader.readOne())
         pauser.reset();
