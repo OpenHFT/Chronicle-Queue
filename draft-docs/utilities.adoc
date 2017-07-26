@@ -20,7 +20,9 @@ Chronicle Reader allows you to specify a Chronicle Queue folder and export the q
 To run the Chronicle Reader utility using Maven:
 
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"
+....
 
 You can specify arguments that tailor the way that the Chronicle Reader utility behaves. For example:
 
@@ -29,46 +31,59 @@ You can specify arguments that tailor the way that the Chronicle Reader utility 
 To follow a queue in `/data/queue`:
 
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f"
+....
 
 ==== Use regular expressions
 
 To follow a queue in `/data/queue` including only messages containing `USD`:
 
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD"
+....
 
 To display records that contain certain string values: For example:
 
-===== `USD`, *and* `CHI-X`:
+===== `USD`, *and* `CHI-X` - Include
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD" -i "CHI-X"
+....
 
-===== `USD`, *but not* `CHI-X`:
+===== `USD`, *but not* `CHI-X` - Exclude
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD" -e "CHI-X"
+....
 
 ==== Maximum message history
 
-To follow a queue in `/data/queue` including only the last 1000 messages:
+To follow a queue in `/data/queue` including only the last `1000` messages:
 
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -m 1000"
+....
 
 ==== Index points
 
-To follow a queue in `/data/queue` including only messages containing from index point 0x123ABE:
+To follow a queue in `/data/queue` including only messages containing from index point `0x123ABE`:
 
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -n 0x123ABE"
+....
 
 ==== Help
 
 To display the help message:
 
 [source, java]
+....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-h"
-
+....
 
 === Command-line option parameters
 
