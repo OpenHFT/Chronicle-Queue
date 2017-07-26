@@ -68,7 +68,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 Following a queue ensures that the latest messages are written out to Standard-Out. It will wait, and append new messages as they arrive on the queue.
 
-To follow a queue in `/data/queue`:
+To follow a queue:
 
 [source, java]
 ....
@@ -77,11 +77,11 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 ==== Use regular expressions
 
-To follow a queue in `/data/queue` including only messages containing `USD`:
+To export data from a queue which includes only messages containing `USD`:
 
 [source, java]
 ....
-$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD"
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD"
 ....
 
 To display records that contain certain string values: For example:
@@ -89,27 +89,27 @@ To display records that contain certain string values: For example:
 ===== `USD`, *and* `CHI-X` - Include
 [source, java]
 ....
-$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD" -i "CHI-X"
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD" -i "CHI-X"
 ....
 
 ===== `USD`, *but not* `CHI-X` - Exclude
 [source, java]
 ....
-$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD" -e "CHI-X"
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD" -e "CHI-X"
 ....
 
 ==== Maximum message history
 
-To follow a queue in `/data/queue` including only the last `1000` messages:
+To export (up to) the last `1000` messages from a queue:
 
 [source, java]
 ....
-$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -m 1000"
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -m 1000"
 ....
 
 ==== Index points
 
-To follow a queue in `/data/queue` including only messages containing from index point `0x123ABE`:
+To follow a queue from the index point `0x123ABE`:
 
 [source, java]
 ....
