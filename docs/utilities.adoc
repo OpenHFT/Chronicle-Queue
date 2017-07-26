@@ -1,0 +1,93 @@
+= Chronicle Queue Utilities
+Neil Clifford
+:toc: macro
+:toclevels: 3
+:css-signature: demo
+:toc-placement: macro
+:icons: font
+
+toc::[]
+
+This document describes Chronicle Queue utility problems that have been created to help in the maintainance of your Chronicle Queue environment.
+
+
+== Chronicle Reader utility
+
+Chronicle Reader allows you to specify a Chronicle Queue folder and export the queue message data to text in Standard-Out.
+
+=== Command-line examples
+
+To run the Chronicle Reader utility using Maven:
+
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"
+
+You can specify arguments that tailor the way that the Chronicle Reader utility behaves. For example:
+
+==== Follow a queue
+
+To follow a queue in `/data/queue`:
+
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f"
+
+==== Use regular expressions
+
+To follow a queue in `/data/queue` including only messages containing `USD`:
+
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD"
+
+To display records that contain certain string values: For example:
+
+===== `USD`, *and* `CHI-X`:
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD" -i "CHI-X"
+
+===== `USD`, *but not* `CHI-X`:
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -i USD" -e "CHI-X"
+
+==== Maximum message history
+
+To follow a queue in `/data/queue` including only the last 1000 messages:
+
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -m 1000"
+
+==== Index points
+
+To follow a queue in `/data/queue` including only messages containing from index point 0x123ABE:
+
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -n 0x123ABE"
+
+==== Help
+
+To display the help message:
+
+[source, java]
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-h"
+
+
+=== Command-line option parameters
+
+
+
+
+[source, java]
+....
+@NotNull
+private static Options options() {
+        final Options options = new Options();
+
+addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
+addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
+addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
+addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
+addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
+addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
+addOption(options, "h", "help-message", false, "Print this help and exit", false);
+return options;
+}
+....
