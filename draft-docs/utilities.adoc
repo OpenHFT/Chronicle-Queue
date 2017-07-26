@@ -13,9 +13,7 @@ This document describes Chronicle Queue utility problems that have been created 
 
 == Chronicle Reader utility
 
-Chronicle Reader allows you to specify a Chronicle Queue folder and export the queue message data to text in Standard-Out.
-
-=== Command-line examples
+Chronicle Reader allows you to specify a Chronicle Queue folder and export the queue message data to text in standard output (`stdout`).
 
 To run the Chronicle Reader utility using Maven:
 
@@ -26,7 +24,49 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 You can specify arguments that tailor the way that the Chronicle Reader utility behaves. For example:
 
+=== Command-line arguments
+The following table lists the available command line option arguments:
+
+.Command-line arguments
+
+|===
+|Argument |Description
+|`-d`
+|Mandatory. The directory containing the source chronicle queue files.
+|`-i`
+|Displays data containing this regular expression.
+|`-e`
+|Do not display data containing this regular expression.
+|`-f`
+|Follow - wait for new data to arrive.
+|`-m`
+|Show a maximum of this many messages from the end of the data set.
+|`-n`
+|Start reading from this index point.
+|`-h`
+|Print this help and exit.
+|===
+
+The following file contains the Chronicle Reader utility code:
+
+`C:\Users\Neil\IdeaProjects\Chronicle-Queue\src\main\java\net\openhft\chronicle\queue\ChronicleReaderMain.java` file:
+
+=== Command-line examples
+
+The following examples show how the option arguments can be used:
+
+==== Export data from a queue
+
+To write out the data from a queue that exists in `/data/queue`:
+
+[source, java]
+....
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue"
+....
+
 ==== Follow a queue
+
+Following a queue ensures that the latest messages are written out to Standard-Out. It will wait, and append new messages as they arrive on the queue.
 
 To follow a queue in `/data/queue`:
 
@@ -85,24 +125,5 @@ To display the help message:
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-h"
 ....
 
-=== Command-line option parameters
+NOTE: The `-h` argument cannot be used in conjunction with other arguments.
 
-
-
-
-[source, java]
-....
-@NotNull
-private static Options options() {
-        final Options options = new Options();
-
-addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
-addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
-addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
-addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
-addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
-addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
-addOption(options, "h", "help-message", false, "Print this help and exit", false);
-return options;
-}
-....
