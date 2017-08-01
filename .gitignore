@@ -22,3 +22,5 @@ hs_err_pid*
 # maven
 target
 queue-dir
+
+*.cq4

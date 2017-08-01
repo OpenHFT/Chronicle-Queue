@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
@@ -19,6 +20,9 @@ public class DumpQueueMainTest {
 
     @Test
     public void shouldBeAbleToDumpReadOnlyQueueFile() throws Exception {
+        if (OS.isWindows())
+            return;
+
         final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
         final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
