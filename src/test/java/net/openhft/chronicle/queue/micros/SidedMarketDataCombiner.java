@@ -33,6 +33,7 @@ public class SidedMarketDataCombiner implements SidedMarketDataListener {
         this.mdListener = mdListener;
     }
 
+    @Override
     public void onSidedPrice(@NotNull SidedPrice sidedPrice) {
         TopOfBookPrice price = priceMap.computeIfAbsent(sidedPrice.symbol, TopOfBookPrice::new);
         if (price.combine(sidedPrice))

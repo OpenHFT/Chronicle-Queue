@@ -37,6 +37,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *
      * @return the document context
      */
+    @Override
     @NotNull
     default DocumentContext readingDocument() {
         return readingDocument(false);
@@ -49,6 +50,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return the index just read, this include the cycle and the sequence number from with this
      * cycle
      */
+    @Override
     long index();
 
     /**

@@ -157,6 +157,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     //
     // *************************************************************************
 
+    @Override
     @NotNull
     public SingleChronicleQueue build() {
         if (buffered())

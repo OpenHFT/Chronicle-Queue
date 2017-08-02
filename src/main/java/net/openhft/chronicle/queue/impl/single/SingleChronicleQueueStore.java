@@ -178,10 +178,12 @@ public class SingleChronicleQueueStore implements WireStore {
      * when using replication to another host, this is the last index that has been confirmed to *
      * have been read by the remote host.
      */
+    @Override
     public long lastAcknowledgedIndexReplicated() {
         return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue();
     }
 
+    @Override
     public void lastAcknowledgedIndexReplicated(long newValue) {
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
@@ -259,6 +261,7 @@ public class SingleChronicleQueueStore implements WireStore {
         return this.refCount.get();
     }
 
+    @Override
     public void close() {
         while (refCount.get() > 0) {
             refCount.release();

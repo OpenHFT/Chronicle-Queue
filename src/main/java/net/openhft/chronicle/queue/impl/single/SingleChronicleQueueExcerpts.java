@@ -40,7 +40,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
-import java.nio.BufferUnderflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeoutException;
 
@@ -105,6 +104,7 @@ public class SingleChronicleQueueExcerpts {
             closableResources = new ClosableResources(queue);
         }
 
+        @Override
         @NotNull
         public Padding padToCacheAlignMode() {
             return padToCacheLines;
@@ -119,6 +119,7 @@ public class SingleChronicleQueueExcerpts {
          *                        reason we pad is to ensure that a message header does not straggle
          *                        a cache line.
          */
+        @Override
         public void padToCacheAlign(Padding padToCacheLines) {
             this.padToCacheLines = padToCacheLines;
         }
@@ -126,6 +127,7 @@ public class SingleChronicleQueueExcerpts {
         /**
          * @param marshallable to write to excerpt.
          */
+        @Override
         public void writeBytes(@NotNull WriteBytesMarshallable marshallable) throws UnrecoverableTimeoutException {
             try (DocumentContext dc = writingDocument()) {
                 marshallable.writeMarshallable(dc.wire().bytes());
@@ -549,6 +551,7 @@ public class SingleChronicleQueueExcerpts {
             return cycle;
         }
 
+        @Override
         @NotNull
         public SingleChronicleQueue queue() {
             return queue;
@@ -870,6 +873,7 @@ public class SingleChronicleQueueExcerpts {
                     !((MappedBytes) bytes).mappedFile().file().canWrite();
         }
 
+        @Override
         public boolean readDocument(@NotNull ReadMarshallable reader) {
             try (@NotNull DocumentContext dc = readingDocument(false)) {
                 if (!dc.isPresent())
@@ -879,6 +883,7 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
+        @Override
         @NotNull
         public DocumentContext readingDocument() {
             return readingDocument(false);
@@ -1432,6 +1437,7 @@ public class SingleChronicleQueueExcerpts {
             return this;
         }
 
+        @Override
         @NotNull
         public RollingChronicleQueue queue() {
             return queue;

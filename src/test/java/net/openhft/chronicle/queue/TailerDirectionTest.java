@@ -183,6 +183,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
         queue.close();
     }
 
+    @Override
     @After
     public void checkRegisteredBytes() {
         BytesUtil.checkRegisteredBytes();

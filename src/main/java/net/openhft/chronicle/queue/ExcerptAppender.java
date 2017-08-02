@@ -90,6 +90,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     void padToCacheAlign(Padding padToCacheAlign);
 
+    @Override
     @NotNull
     Padding padToCacheAlignMode();
 

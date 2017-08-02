@@ -60,10 +60,12 @@ public enum RollCycles implements RollCycle {
         return this.length;
     }
 
+    @Override
     public int defaultIndexCount() {
         return indexCount;
     }
 
+    @Override
     public int defaultIndexSpacing() {
         return indexSpacing;
     }
