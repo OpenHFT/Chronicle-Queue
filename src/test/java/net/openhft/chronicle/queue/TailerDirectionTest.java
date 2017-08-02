@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-/**
+/*
  * Created by Marcus Spiegel on 29/09/16.
  */
 public class TailerDirectionTest extends ChronicleQueueTestBase {

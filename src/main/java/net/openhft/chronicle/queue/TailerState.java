@@ -16,7 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
-/**
+/*
  * Created by peter on 27/07/16.
  */
 public enum TailerState {

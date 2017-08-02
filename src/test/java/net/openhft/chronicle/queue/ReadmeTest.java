@@ -26,7 +26,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-/**
+/*
  * Created by peter on 15/03/16.
  */
 public class ReadmeTest {

@@ -19,7 +19,7 @@ package net.openhft.chronicle.queue;
 
 import java.util.List;
 
-/**
+/*
  * Created by peter on 06/04/16.
  */
 public interface JDBCResult {

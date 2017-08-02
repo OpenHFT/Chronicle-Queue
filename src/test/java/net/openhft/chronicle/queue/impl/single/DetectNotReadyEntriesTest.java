@@ -29,7 +29,7 @@ import java.io.FileNotFoundException;
 
 import static org.junit.Assert.assertEquals;
 
-/**
+/*
  * Created by peter on 19/05/16.
  */
 public class DetectNotReadyEntriesTest {

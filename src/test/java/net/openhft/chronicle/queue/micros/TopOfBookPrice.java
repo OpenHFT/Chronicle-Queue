@@ -22,7 +22,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
 
-/**
+/*
  * Created by peter on 22/03/16.
  */
 public class TopOfBookPrice extends AbstractMarshallable {

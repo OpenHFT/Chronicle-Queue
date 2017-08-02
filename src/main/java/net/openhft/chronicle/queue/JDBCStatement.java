@@ -17,7 +17,7 @@
 
 package net.openhft.chronicle.queue;
 
-/**
+/*
  * Created by peter on 06/04/16.
  */
 public interface JDBCStatement {

@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue.micros;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import org.jetbrains.annotations.NotNull;
 
-/**
+/*
  * Created by peter on 22/03/16.
  */
 public class SidedPrice extends AbstractMarshallable {

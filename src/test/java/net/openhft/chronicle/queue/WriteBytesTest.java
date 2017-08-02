@@ -32,7 +32,7 @@ import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
 
-/**
+/*
  * Created by daniel on 16/05/2016.
  */
 public class WriteBytesTest {

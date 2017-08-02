@@ -43,7 +43,7 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
-/**
+/*
  * Created by peter on 22/05/16.
  */
 class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
@@ -316,6 +316,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             if (wire.readDataHeader())
                 return linearScan(wire, index, 0, wire.bytes().readPosition());
         } catch (EOFException fallback) {
+            // fallback
         }
         return ScanResult.NOT_FOUND;
     }
@@ -529,9 +530,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     break Outer;
                 }
             }
-        } catch (EOFException e) {
-            Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
-        } catch (IllegalStateException e) {
+        } catch (EOFException | IllegalStateException e) {
             Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
         }
         try {

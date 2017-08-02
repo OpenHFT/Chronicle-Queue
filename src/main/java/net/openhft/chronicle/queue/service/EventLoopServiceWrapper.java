@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/**
+/*
  * Created by peter on 01/04/16.
  */
 public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler {

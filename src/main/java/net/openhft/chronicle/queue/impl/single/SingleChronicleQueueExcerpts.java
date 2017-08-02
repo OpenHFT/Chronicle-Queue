@@ -320,8 +320,7 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException("Unable to roll to the current cycle");
 
             } finally {
-                if (!ok)
-                    assert resetAppendingThread();
+                assert ok || resetAppendingThread();
             }
         }
 
@@ -949,7 +948,6 @@ public class SingleChronicleQueueExcerpts {
                     return context;
                 }
                 RollCycle rollCycle = queue.rollCycle();
-                ;
                 if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
                     int firstCycle = queue.firstCycle();
                     if (rollCycle.toCycle(index) < firstCycle)
@@ -1089,10 +1087,11 @@ public class SingleChronicleQueueExcerpts {
                     long now = queue.time().currentTimeMillis();
                     boolean cycleChange2 = now >= timeForNextCycle;
 
-                    if (first && cycleChange2 && !isReadOnly(bytes))
-                        return checkMoveToNextCycle(includeMetaData, bytes);
+                    return first
+                            && cycleChange2
+                            && !isReadOnly(bytes)
+                            && checkMoveToNextCycle(includeMetaData, bytes);
 
-                    return false;
                 }
                 case META_DATA:
                     context.metaData(true);

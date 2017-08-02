@@ -19,7 +19,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.wire.ByteableLongArrayValues;
 import net.openhft.chronicle.wire.Wire;
 
-/**
+/*
  * Created by peter on 11/08/15.
  */
 public class WireUtil {

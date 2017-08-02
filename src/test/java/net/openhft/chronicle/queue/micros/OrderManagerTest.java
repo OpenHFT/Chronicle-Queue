@@ -33,7 +33,7 @@ import java.io.File;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
-/**
+/*
  * Created by peter on 24/03/16.
  */
 public class OrderManagerTest {

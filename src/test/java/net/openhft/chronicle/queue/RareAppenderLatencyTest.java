@@ -37,7 +37,7 @@ import java.util.concurrent.Future;
 
 import static junit.framework.TestCase.assertFalse;
 
-/**
+/*
  * Created by skidder on 8/2/16.
  *
  * Targeting the problem of tailers in different threads where one writes very rarely, and the other

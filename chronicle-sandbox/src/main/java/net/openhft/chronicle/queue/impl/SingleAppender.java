@@ -28,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
-/**
+/*
  * Created by peter.lawrey on 30/01/15.
  */
 public class SingleAppender implements ExcerptAppender {

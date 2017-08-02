@@ -22,7 +22,7 @@ import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
-/**
+/*
  * Created by peter on 25/01/17.
  */
 public enum RunLargeQueueMain {

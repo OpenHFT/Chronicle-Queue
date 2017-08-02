@@ -19,7 +19,7 @@ package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.wire.AbstractMarshallable;
 
-/**
+/*
  * Created by peter on 24/03/16.
  */
 public class Order extends AbstractMarshallable {

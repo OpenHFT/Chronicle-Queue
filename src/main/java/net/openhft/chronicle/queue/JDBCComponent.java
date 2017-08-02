@@ -24,7 +24,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
+/*
  * Created by peter on 12/04/16.
  */
 public class JDBCComponent implements JDBCStatement {

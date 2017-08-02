@@ -19,7 +19,7 @@ package net.openhft.chronicle.queue.impl;
 
 import java.io.File;
 
-/**
+/*
  * Created by peter on 27/06/16.
  */
 @FunctionalInterface

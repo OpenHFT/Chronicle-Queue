@@ -23,7 +23,7 @@ import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 
-/**
+/*
  * Created by Rob Austin
  */
 public enum CoreFields implements WireKey {

@@ -32,7 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-/**
+/*
  * Created by peter on 22/05/16.
  */
 public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRecovery {

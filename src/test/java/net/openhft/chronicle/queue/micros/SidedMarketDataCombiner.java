@@ -22,7 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.TreeMap;
 
-/**
+/*
  * Created by peter on 22/03/16.
  */
 public class SidedMarketDataCombiner implements SidedMarketDataListener {

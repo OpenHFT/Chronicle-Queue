@@ -21,7 +21,6 @@ import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -78,14 +77,10 @@ public class RollingResourcesCache {
         }
 
         offsetTotalSeconds = (int) (millis / 1000);
-        try {
-            ZoneOffset zoneOffsetFromUtc = ZoneOffset.ofTotalSeconds(offsetTotalSeconds);
-            ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffsetFromUtc);
-            this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
-            this.fileFactory = nameToFile;
-        } catch (DateTimeException e) {
-            throw e;
-        }
+        ZoneOffset zoneOffsetFromUtc = ZoneOffset.ofTotalSeconds(offsetTotalSeconds);
+        ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffsetFromUtc);
+        this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
+        this.fileFactory = nameToFile;
 
     }
 

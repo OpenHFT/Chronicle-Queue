@@ -24,7 +24,7 @@ import java.util.function.LongSupplier;
 
 import static org.junit.Assert.assertEquals;
 
-/**
+/*
  * Created by peter on 28/11/16.
  */
 public class PretoucherStateTest {

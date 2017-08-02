@@ -39,7 +39,7 @@ import java.util.concurrent.TimeoutException;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
 
-/**
+/*
  * Created by Peter on 05/03/2016.
  */
 public class SingleCQFormatTest {

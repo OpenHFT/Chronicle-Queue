@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.Random;
 
-/**
+/*
  * Created by AM on 3/20/17. Mainly for documentation: Write counterpart for FsFullRestTest.
  * Fails on Linux with a JVM SIGBUS unfortunately. Would be great if it's a "normal" runtime
  * exception.

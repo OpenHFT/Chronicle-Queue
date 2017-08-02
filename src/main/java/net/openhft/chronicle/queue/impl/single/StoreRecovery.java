@@ -30,7 +30,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-/**
+/*
  * Created by peter on 21/05/16.
  */
 public interface StoreRecovery extends WriteMarshallable {

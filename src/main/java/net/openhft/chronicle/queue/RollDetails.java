@@ -40,8 +40,7 @@ public class RollDetails extends AbstractMarshallable {
 
         RollDetails that = (RollDetails) o;
 
-        if (cycle != that.cycle) return false;
-        return epoch == that.epoch;
+        return cycle == that.cycle && epoch == that.epoch;
     }
 
     // generated for performance

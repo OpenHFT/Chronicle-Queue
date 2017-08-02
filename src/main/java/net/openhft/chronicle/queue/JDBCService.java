@@ -31,7 +31,7 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
+/*
  * Created by peter on 06/04/16.
  */
 public class JDBCService implements Closeable {

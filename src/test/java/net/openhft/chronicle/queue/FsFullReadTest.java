@@ -22,7 +22,7 @@ import static junit.framework.TestCase.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-/**
+/*
  * Created by AM on 3/20/17. The specimen cq file was created when it hit the filesystem full.
  * The standard DC present code can read only 1 entry, while the dumper can read 31k entries.
  * It would be great if the normal code could read most of the entries also.
