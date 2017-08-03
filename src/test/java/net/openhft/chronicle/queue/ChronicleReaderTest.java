@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -115,9 +114,6 @@ public class ChronicleReaderTest {
 
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws Exception {
-        if (OS.isWindows())
-            return;
-
         final Path queueFile = Files.list(dataDir).findFirst().orElseThrow(() ->
                 new AssertionError("Could not find queue file in directory " + dataDir));
 
