@@ -38,13 +38,10 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -163,6 +160,48 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             service2.shutdown();
         }
     }
+
+    @Ignore("todo fix")
+    @Test
+    public void testReadWriteHourlyTailerCreatedFirst() throws InterruptedException {
+
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).build()) {
+
+
+            try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+                try (DocumentContext documentContext = qAppender.acquireAppender().writingDocument()) {
+                    documentContext.wire().write("somekey").text("somevalue");
+                }
+            }
+            try (DocumentContext documentContext2 = qTailer.createTailer().readingDocument()) {
+                String str = documentContext2.wire().read("somekey").text();
+                Assert.assertEquals("somevalue", str);
+            }
+        }
+    }
+
+    @Ignore("todo fix")
+    @Test
+    public void testReadWriteHourly() throws InterruptedException {
+
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+
+            try (DocumentContext documentContext = qAppender.acquireAppender().writingDocument()) {
+                documentContext.wire().write("somekey").text("somevalue");
+            }
+        }
+
+        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).build()) {
+
+            try (DocumentContext documentContext2 = qTailer.createTailer().readingDocument()) {
+                String str = documentContext2.wire().read("somekey").text();
+                Assert.assertEquals("somevalue", str);
+            }
+        }
+    }
+
 
     @Test
     public void testReadingLessBytesThanWritten() {
@@ -2602,7 +2641,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     MapWrapper object = documentContext.wire().read().object(MapWrapper.class);
-                    Assert.assertEquals(1.2, (double) object.map.get("hello"), 0.0);
+                    Assert.assertEquals(1.2, object.map.get("hello"), 0.0);
                 }
             }
         }
@@ -3507,7 +3546,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).build();
         final int iterationsPerThread = Short.MAX_VALUE / 8;
         final int totalIterations = iterationsPerThread * threadCount;
-        final int[] nonAtomicCounter = new int[] {0};
+        final int[] nonAtomicCounter = new int[]{0};
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 for (int j = 0; j < iterationsPerThread; j++) {
@@ -3540,7 +3579,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         executorService.shutdownNow();
 
         try {
-            executorService.awaitTermination(1,TimeUnit.SECONDS);
+            executorService.awaitTermination(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             executorService.shutdownNow();
         }
