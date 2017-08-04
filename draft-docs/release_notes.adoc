@@ -7,7 +7,7 @@ Release Notes for the following versions are available.
 
 This release was made available on 1st August 2017, and includes the following changes:
 
-- The `-d` parameter is now mandatory when running `ChronicleReader`
+- The `-d` parameter is now mandatory when running `ChronicleReader`.
 - `ChronicleReader` now uses a `Pauser` instead of a fixed length delay.
 
 '''
