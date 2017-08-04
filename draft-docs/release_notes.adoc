@@ -1,0 +1,16 @@
+= Release Notes
+
+Release Notes for the following versions are available.
+
+'''
+== Release 4.6.11
+
+This release was made available on 1st August 2017, and includes the following changes:
+
+- The `-d` parameter is now mandatory when running `ChronicleReader`
+- `ChronicleReader` now uses a `Pauser` instead of a fixed length delay.
+
+'''
+
+<<../README.adoc#,Back to Chronicle Queue>>
+
