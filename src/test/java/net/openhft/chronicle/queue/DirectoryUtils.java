@@ -21,6 +21,12 @@ public class DirectoryUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryUtils.class);
     private static final AtomicLong TIMESTAMPER = new AtomicLong(System.currentTimeMillis());
 
+    /**
+     * Beware, this can give different results depending on whether you are
+     * a) running inside maven
+     * b) are running in a clean directory (without a "target" dir)
+     * See OS.TARGET
+     */
     @NotNull
     public static File tempDir(String name) {
         final File tmpDir = new File(OS.TARGET, name + "-" + Long.toString(TIMESTAMPER.getAndIncrement(), 36));
@@ -43,7 +49,7 @@ public class DirectoryUtils {
                     if (file.isDirectory()) {
                         deleteDir(file);
                     } else if (!file.delete()) {
-                        LOGGER.info("... unable to delete {}", file);
+                        LOGGER.warn("... unable to delete {}", file);
                     }
                 }
             }
@@ -52,6 +58,7 @@ public class DirectoryUtils {
         dir.delete();
     }
 
+    // TODO: why not deleteOnExit?
     enum DeleteStatic {
         INSTANCE;
         final Set<File> toDeleteList = Collections.synchronizedSet(new LinkedHashSet<>());
