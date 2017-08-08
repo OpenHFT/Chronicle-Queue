@@ -1,4 +1,12 @@
 = Release Notes
+Neil Clifford
+:toc: macro
+:toclevels: 1
+:css-signature: demo
+:toc-placement: macro
+:icons: font
+
+toc::[]
 
 Release Notes for the following versions are available.
 
