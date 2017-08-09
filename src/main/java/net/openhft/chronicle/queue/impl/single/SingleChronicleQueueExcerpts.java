@@ -102,6 +102,7 @@ public class SingleChronicleQueueExcerpts {
             context = new StoreAppenderContext();
 
             closableResources = new ClosableResources(queue);
+            queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
         }
 
         @Override

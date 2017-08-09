@@ -238,6 +238,24 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test(expected = IllegalStateException.class)
+    public void shouldBlowUpOnAppendWhenRollCycleIncorrect() throws Exception {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue minuteRollCycleQueue = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
+
+            try (final ChronicleQueue hourlyRollCycleQueue = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+
+                try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
+                    documentContext.wire().write("somekey").text("somevalue");
+                }
+            }
+
+            try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
+                documentContext2.wire().write("otherkey").text("othervalue");
+            }
+        }
+    }
+
+    @Test(expected = IllegalStateException.class)
     public void testReadWriteHourlyTailerCreatedFirst() throws InterruptedException {
 
         File tmpDir = getTmpDir();
