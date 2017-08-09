@@ -11,20 +11,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static net.openhft.chronicle.queue.impl.single.RollCycleGetter.getRollCycle;
+import static net.openhft.chronicle.queue.impl.single.RollCycleRetriever.getRollCycle;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.builder;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class RollCycleGetterTest {
+public class RollCycleRetrieverTest {
 
     private static final RollCycles ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private static final WireType WIRE_TYPE = WireType.BINARY;
 
     @Test
     public void shouldRetrieveCorrectRollCycleFromExistingQueueFile() throws Exception {
-        final File queuePath = tempDir(RollCycleGetterTest.class.getSimpleName() + System.nanoTime());
+        final File queuePath = tempDir(RollCycleRetrieverTest.class.getSimpleName() + System.nanoTime());
 
         final SingleChronicleQueueBuilder builder =
                 builder(queuePath, WIRE_TYPE).testBlockSize().rollCycle(ROLL_CYCLE);
@@ -48,7 +48,7 @@ public class RollCycleGetterTest {
 
     @Test
     public void shouldReturnEmptyWhenNoQueueFilesHaveBeenWritten() throws Exception {
-        final File queuePath = tempDir(RollCycleGetterTest.class.getSimpleName() + System.nanoTime());
+        final File queuePath = tempDir(RollCycleRetrieverTest.class.getSimpleName() + System.nanoTime());
         assertTrue(queuePath.mkdirs());
         assertThat(getRollCycle(queuePath.toPath(), WIRE_TYPE, 4096).isPresent(), is(false));
     }

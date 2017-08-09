@@ -183,8 +183,10 @@ public class ToEndTest {
         File baseDir = DirectoryUtils.tempDir("toEndTest");
 
         List<Integer> results = new ArrayList<>();
+        final SingleChronicleQueue singleChronicleQueue = null;
         try (RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
+                .rollCycle(RollCycles.TEST_DAILY)
                 .indexCount(8)
                 .indexSpacing(1)
                 .build()) {

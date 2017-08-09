@@ -13,20 +13,22 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-public enum RollCycleGetter {
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
+
+public enum RollCycleRetriever {
     ;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RollCycleGetter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RollCycleRetriever.class);
     private static final RollCycles[] ROLL_CYCLES = RollCycles.values();
 
-    public static Optional<RollCycle> getRollCycle(final Path queuePath, final WireType wireType,
-                                            final long blockSize) throws IOException {
+    public static Optional<RollCycle> getRollCycle(final Path queuePath, final WireType wireType, final long blockSize) {
         if (Files.exists(queuePath) && hasQueueFiles(queuePath)) {
             final MappedBytes mappedBytes = mappedBytes(getLastQueueFile(queuePath), blockSize);
             mappedBytes.reserve();
@@ -74,23 +76,39 @@ public enum RollCycleGetter {
                 cycle.defaultIndexSpacing() == rollCycleIndexSpacing;
     }
 
-    private static Path getLastQueueFile(final Path queuePath) throws IOException {
-        try (final Stream<Path> children = Files.list(queuePath)) {
-            return children.filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
-                    sorted(Comparator.reverseOrder()).findFirst().get();
+    private static Path getLastQueueFile(final Path queuePath) {
+        try {
+            try (final Stream<Path> children = Files.list(queuePath)) {
+                return children.filter(p -> p.toString().endsWith(SUFFIX)).
+                        sorted(Comparator.reverseOrder()).findFirst().orElseThrow(() ->
+                            new UncheckedIOException(new IOException(
+                                    String.format("Expected at least one %s file in directory %s",
+                                            SUFFIX, queuePath))));
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(
+                    String.format("Failed to list contents of known directory %s", queuePath), e);
         }
     }
 
-    private static MappedBytes mappedBytes(@NotNull final Path queuePath,
-                                           final long blockSize) throws FileNotFoundException {
+    private static MappedBytes mappedBytes(@NotNull final Path queueFile,
+                                           final long blockSize) {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
-        return MappedBytes.mappedBytes(queuePath.toFile(), chunkSize, overlapSize, true);
+        try {
+            return MappedBytes.mappedBytes(queueFile.toFile(), chunkSize, overlapSize, true);
+        } catch (FileNotFoundException e) {
+            throw new UncheckedIOException(String.format("Failed to open existing file %s", queueFile), e);
+        }
     }
 
-    private static boolean hasQueueFiles(final Path queuePath) throws IOException {
-        try (final Stream<Path> children = Files.list(queuePath)) {
-            return children.anyMatch(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX));
+    private static boolean hasQueueFiles(final Path queuePath) {
+        try {
+            try (final Stream<Path> children = Files.list(queuePath)) {
+                return children.anyMatch(p -> p.toString().endsWith(SUFFIX));
+            }
+        } catch (IOException e) {
+            return false;
         }
     }
 }

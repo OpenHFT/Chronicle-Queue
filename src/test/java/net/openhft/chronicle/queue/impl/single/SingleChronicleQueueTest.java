@@ -218,8 +218,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
-    @Ignore
-    @Test
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldBlowUpIfIncorrectRollCycleIsSpecified() throws Exception {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+
+            try (DocumentContext documentContext = qAppender.acquireAppender().writingDocument()) {
+                documentContext.wire().write("somekey").text("somevalue");
+            }
+        }
+
+        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
+
+            try (DocumentContext documentContext2 = qTailer.createTailer().readingDocument()) {
+                String str = documentContext2.wire().read("somekey").text();
+                Assert.assertEquals("somevalue", str);
+            }
+        }
+    }
+
+    @Test(expected = IllegalStateException.class)
     public void testReadWriteHourlyTailerCreatedFirst() throws InterruptedException {
 
         File tmpDir = getTmpDir();

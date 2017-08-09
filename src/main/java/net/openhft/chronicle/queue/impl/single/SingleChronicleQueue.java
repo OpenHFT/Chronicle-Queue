@@ -99,6 +99,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     int firstAndLastRetry = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
+    private boolean persistedRollCycleCheckPerformed = false;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -600,6 +601,23 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     public TimeProvider time() {
         return time;
+    }
+
+    void ensureThatRollCycleDoesNotConflictWithExistingQueueFiles() {
+        if (!persistedRollCycleCheckPerformed) {
+            final Optional<RollCycle> existingRollCycle =
+                    RollCycleRetriever.getRollCycle(path.toPath(), wireType, blockSize);
+            existingRollCycle.ifPresent(rc -> {
+                if (rc != rollCycle) {
+                    throw new IllegalStateException(
+                            String.format("Queue instance has roll-cycle %s, but queue files in %s have roll-cycle %s. " +
+                                            "Please re-create this queue instance with the correct roll-cycle (%s).",
+                                    rollCycle, path, rc, rc));
+                }
+            });
+
+            persistedRollCycleCheckPerformed = true;
+        }
     }
 
     private class StoreSupplier implements WireStoreSupplier {
