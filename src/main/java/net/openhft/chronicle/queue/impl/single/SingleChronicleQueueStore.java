@@ -371,6 +371,10 @@ public class SingleChronicleQueueStore implements WireStore {
         return deltaCheckpointInterval;
     }
 
+    int length() {
+        return roll.length();
+    }
+
     enum MetaDataField implements WireKey {
         wireType,
         writePosition,

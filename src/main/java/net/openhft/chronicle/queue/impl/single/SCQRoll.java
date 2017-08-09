@@ -65,6 +65,10 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
         return this.epoch;
     }
 
+    int length() {
+        return length;
+    }
+
     enum RollFields implements WireKey {
         length, format, epoch,
     }

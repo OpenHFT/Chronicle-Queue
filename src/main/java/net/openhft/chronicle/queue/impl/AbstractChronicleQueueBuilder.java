@@ -391,6 +391,14 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
     }
 
+    protected void preBuild() {
+        assignRollCycleFromExistingQueueFile();
+    }
+
+    private void assignRollCycleFromExistingQueueFile() {
+
+    }
+
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
         NONE;
 

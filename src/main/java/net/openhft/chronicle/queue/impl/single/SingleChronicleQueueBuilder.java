@@ -26,6 +26,8 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -153,6 +155,24 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return wireStore;
     }
 
+    @NotNull
+    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
+        final StringBuilder eventName = new StringBuilder();
+        while (wire.hasMore()) {
+            eventName.setLength(0);
+            wire.readEventName(eventName);
+            if (eventName.toString().equals(MetaDataKeys.header.name())) {
+                final SingleChronicleQueueStore store = wire.read().typedMarshallable();
+                if (store == null) {
+                    throw new IllegalArgumentException("Unable to load wire store");
+                }
+                return store;
+            }
+        }
+
+        throw new IllegalArgumentException("Unable to load wire store");
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -162,6 +182,9 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     public SingleChronicleQueue build() {
         if (buffered())
             onlyAvailableInEnterprise("Buffering");
+
+        super.preBuild();
+
         return new SingleChronicleQueue(this);
     }
 
