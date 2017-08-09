@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.single.RollCycleGetter;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.threads.Pauser;
@@ -36,8 +37,11 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -81,6 +85,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
             Jvm.debug().on(getClass(), "File released " + file);
 
     private boolean readOnly = false;
+    private boolean rollCycleSet = false;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -165,6 +170,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public B rollCycle(@NotNull RollCycle rollCycle) {
         this.rollCycle = rollCycle;
+        rollCycleSet = true;
         return (B) this;
     }
 
@@ -392,11 +398,24 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     protected void preBuild() {
-        assignRollCycleFromExistingQueueFile();
+        try {
+            assignRollCycleFromExistingQueueFile();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
-    private void assignRollCycleFromExistingQueueFile() {
-
+    private void assignRollCycleFromExistingQueueFile() throws IOException {
+        final Optional<RollCycle> existingRollCycle = RollCycleGetter.getRollCycle(path.toPath(), wireType, blockSize);
+        existingRollCycle.ifPresent(rc -> {
+            if (rollCycleSet && rc != rollCycle) {
+                throw new IllegalArgumentException(String.format(
+                        "Trying to create queue with roll cycle %s, but existing queue files use %s",
+                        rollCycle, rc));
+            } else {
+                rollCycle = rc;
+            }
+        });
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

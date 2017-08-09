@@ -7,11 +7,15 @@ import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
+import static net.openhft.chronicle.queue.impl.single.RollCycleGetter.getRollCycle;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.builder;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class RollCycleGetterTest {
 
@@ -32,7 +36,20 @@ public class RollCycleGetterTest {
             }
         }
 
-        assertThat(RollCycleGetter.getRollCycle(queuePath.toPath(), WIRE_TYPE, builder.blockSize()).isPresent(), is(true));
-        assertThat(RollCycleGetter.getRollCycle(queuePath.toPath(), WIRE_TYPE, builder.blockSize()).get(), is(ROLL_CYCLE));
+        assertThat(getRollCycle(queuePath.toPath(), WIRE_TYPE, builder.blockSize()).isPresent(), is(true));
+        assertThat(getRollCycle(queuePath.toPath(), WIRE_TYPE, builder.blockSize()).get(), is(ROLL_CYCLE));
+    }
+
+    @Test
+    public void shouldReturnEmptyWhenQueueDirDoesNotExist() throws Exception {
+        final Path nonExistentPath = Paths.get("non", "existent", "path", Long.toHexString(System.nanoTime()));
+        assertThat(getRollCycle(nonExistentPath, WIRE_TYPE, 4096).isPresent(), is(false));
+    }
+
+    @Test
+    public void shouldReturnEmptyWhenNoQueueFilesHaveBeenWritten() throws Exception {
+        final File queuePath = tempDir(RollCycleGetterTest.class.getSimpleName() + System.nanoTime());
+        assertTrue(queuePath.mkdirs());
+        assertThat(getRollCycle(queuePath.toPath(), WIRE_TYPE, 4096).isPresent(), is(false));
     }
 }

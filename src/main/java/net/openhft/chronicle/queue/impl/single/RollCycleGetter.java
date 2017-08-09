@@ -25,7 +25,7 @@ public enum RollCycleGetter {
     private static final Logger LOGGER = LoggerFactory.getLogger(RollCycleGetter.class);
     private static final RollCycles[] ROLL_CYCLES = RollCycles.values();
 
-    static Optional<RollCycle> getRollCycle(final Path queuePath, final WireType wireType,
+    public static Optional<RollCycle> getRollCycle(final Path queuePath, final WireType wireType,
                                             final long blockSize) throws IOException {
         if (Files.exists(queuePath) && hasQueueFiles(queuePath)) {
             final MappedBytes mappedBytes = mappedBytes(getLastQueueFile(queuePath), blockSize);
@@ -36,12 +36,23 @@ public enum RollCycleGetter {
 
                 final Bytes<?> bytes = wire.bytes();
                 bytes.readLimit(bytes.capacity());
+
+                if (bytes.readLimit() < 4) {
+                    return Optional.empty();
+                }
+
                 bytes.readSkip(4);
                 try (final SingleChronicleQueueStore queueStore = SingleChronicleQueueBuilder.loadStore(wire)) {
-                    final int rollCycleLength = queueStore.length();
+                    if (queueStore == null) {
+                        return Optional.empty();
+                    }
+
+                    final int rollCycleLength = queueStore.rollCycleLength();
+                    final int rollCycleIndexCount = queueStore.rollIndexCount();
+                    final int rollCycleIndexSpacing = queueStore.rollIndexSpacing();
 
                     for (final RollCycle cycle : ROLL_CYCLES) {
-                        if (cycle.length() == rollCycleLength) {
+                        if (rollCycleMatches(cycle, rollCycleLength, rollCycleIndexCount, rollCycleIndexSpacing)) {
                             return Optional.of(cycle);
                         }
                     }
@@ -55,6 +66,12 @@ public enum RollCycleGetter {
             }
         }
         return Optional.empty();
+    }
+
+    private static boolean rollCycleMatches(final RollCycle cycle, final int rollCycleLength,
+                                            final int rollCycleIndexCount, final int rollCycleIndexSpacing) {
+        return cycle.length() == rollCycleLength && cycle.defaultIndexCount() == rollCycleIndexCount &&
+                cycle.defaultIndexSpacing() == rollCycleIndexSpacing;
     }
 
     private static Path getLastQueueFile(final Path queuePath) throws IOException {

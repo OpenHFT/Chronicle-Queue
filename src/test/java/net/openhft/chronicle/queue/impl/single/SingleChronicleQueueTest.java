@@ -202,7 +202,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("todo fix")
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() throws Exception {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).build()) {
+            try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                documentContext.wire().write("somekey").text("somevalue");
+            }
+        }
+
+
+        try (final ChronicleQueue recreated = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+
+        }
+
+    }
+
+    @Ignore
     @Test
     public void testReadWriteHourlyTailerCreatedFirst() throws InterruptedException {
 
@@ -222,7 +238,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("todo fix")
     @Test
     public void testReadWriteHourly() throws InterruptedException {
 

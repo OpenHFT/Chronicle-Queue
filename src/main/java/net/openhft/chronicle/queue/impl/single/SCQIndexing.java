@@ -673,6 +673,14 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return sequenceForPosition(recovery, ec, Long.MAX_VALUE, false);
     }
 
+    int indexCount() {
+        return indexCount;
+    }
+
+    int indexSpacing() {
+        return indexSpacing;
+    }
+
     enum IndexingFields implements WireKey {
         indexCount, indexSpacing, index2Index,
         // nextEntryToBeIndexed

@@ -45,15 +45,15 @@ public class NotCompleteTest {
 
     private final boolean lazyIndexing;
 
-    public NotCompleteTest(boolean lazyIndexing) {
+    public NotCompleteTest(final String type, boolean lazyIndexing) {
         this.lazyIndexing = lazyIndexing;
     }
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {false},
-                {true}
+                {"eager", false},
+                {"lazy", true}
         });
     }
 
@@ -155,6 +155,7 @@ public class NotCompleteTest {
             // didn't call dc.close();
         }
 
+        final SingleChronicleQueue singleChronicleQueue = null;
         try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().build()) {
             ExcerptTailer tailer = queue.createTailer();
 
@@ -199,7 +200,7 @@ public class NotCompleteTest {
                     "# position: 576, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 654780 bytes remaining\n";
+                    "# 327100 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -224,7 +225,7 @@ public class NotCompleteTest {
                     "# position: 377, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 654979 bytes remaining\n";
+                    "# 327299 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
         }
 

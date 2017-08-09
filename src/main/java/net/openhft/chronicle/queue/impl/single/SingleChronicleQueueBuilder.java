@@ -155,22 +155,20 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return wireStore;
     }
 
-    @NotNull
+    @Nullable
     static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
         final StringBuilder eventName = new StringBuilder();
-        while (wire.hasMore()) {
-            eventName.setLength(0);
-            wire.readEventName(eventName);
-            if (eventName.toString().equals(MetaDataKeys.header.name())) {
-                final SingleChronicleQueueStore store = wire.read().typedMarshallable();
-                if (store == null) {
-                    throw new IllegalArgumentException("Unable to load wire store");
-                }
-                return store;
+        wire.readEventName(eventName);
+        if (eventName.toString().equals(MetaDataKeys.header.name())) {
+            final SingleChronicleQueueStore store = wire.read().typedMarshallable();
+            if (store == null) {
+                throw new IllegalArgumentException("Unable to load wire store");
             }
+            return store;
         }
 
-        throw new IllegalArgumentException("Unable to load wire store");
+        LOGGER.warn("Unable to load store file from input. Queue file may be corrupted.");
+        return null;
     }
 
     // *************************************************************************
