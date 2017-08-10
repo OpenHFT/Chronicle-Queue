@@ -21,7 +21,7 @@ import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.Nullable;
 
 /*
- * Created by peter on 07/07/16.
+ * Created by Peter Lawrey on 07/07/16.
  */
 public interface ExcerptContext {
     @Nullable

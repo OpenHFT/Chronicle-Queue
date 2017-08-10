@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.TimeUnit;
 
 /*
- * Created by peter on 22/03/16.
+ * Created by Peter Lawrey on 22/03/16.
  */
 public class TopOfBookPrice extends AbstractMarshallable {
     public static final long TIMESTAMP_LIMIT = TimeUnit.SECONDS.toMillis(1000);

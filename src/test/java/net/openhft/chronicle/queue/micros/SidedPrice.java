@@ -21,7 +21,7 @@ import net.openhft.chronicle.wire.AbstractMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 /*
- * Created by peter on 22/03/16.
+ * Created by Peter Lawrey on 22/03/16.
  */
 public class SidedPrice extends AbstractMarshallable {
     String symbol;

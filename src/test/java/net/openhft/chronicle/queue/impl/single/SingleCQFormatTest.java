@@ -42,7 +42,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.*;
 
 /*
- * Created by Peter on 05/03/2016.
+ * Created by Peter Lawrey on 05/03/2016.
  */
 public class SingleCQFormatTest {
     static {

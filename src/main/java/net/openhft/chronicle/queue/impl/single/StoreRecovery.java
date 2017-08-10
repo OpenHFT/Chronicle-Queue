@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /*
- * Created by peter on 21/05/16.
+ * Created by Peter Lawrey on 21/05/16.
  */
 public interface StoreRecovery extends WriteMarshallable {
     long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;

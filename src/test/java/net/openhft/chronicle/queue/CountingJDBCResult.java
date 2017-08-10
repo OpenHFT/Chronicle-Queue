@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /*
- * Created by Peter on 18/06/2016.
+ * Created by Peter Lawrey on 18/06/2016.
  */
 class CountingJDBCResult implements JDBCResult {
     private final AtomicLong queries;

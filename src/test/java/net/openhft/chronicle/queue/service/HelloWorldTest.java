@@ -29,7 +29,7 @@ import java.io.File;
 import static org.easymock.EasyMock.*;
 
 /*
- * Created by peter on 23/04/16.
+ * Created by Peter Lawrey on 23/04/16.
  */
 public class HelloWorldTest {
     @Test

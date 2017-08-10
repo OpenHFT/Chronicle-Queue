@@ -23,12 +23,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.BufferMode;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
-import net.openhft.chronicle.queue.CycleCalculator;
-import net.openhft.chronicle.queue.DefaultCycleCalculator;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.RollCycleRetriever;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
@@ -52,7 +47,7 @@ import java.util.function.Supplier;
 import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 
 /*
- * Created by peter on 05/03/2016.
+ * Created by Peter Lawrey on 05/03/2016.
  */
 @SuppressWarnings("ALL")
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>

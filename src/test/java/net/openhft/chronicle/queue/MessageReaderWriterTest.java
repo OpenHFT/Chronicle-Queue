@@ -35,7 +35,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /*
- * Created by Peter on 25/03/2016.
+ * Created by Peter Lawrey on 25/03/2016.
  */
 public class MessageReaderWriterTest {
     private ThreadDump threadDump;

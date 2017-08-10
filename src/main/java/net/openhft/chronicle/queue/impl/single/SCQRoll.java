@@ -24,7 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /*
- * Created by peter on 22/05/16.
+ * Created by Peter Lawrey on 22/05/16.
  */
 class SCQRoll implements Demarshallable, WriteMarshallable {
     private final int length;

@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /*
- * Created by peter on 21/05/16.
+ * Created by Peter Lawrey on 21/05/16.
  */
 public class TimedStoreRecovery extends AbstractMarshallable implements StoreRecovery, Demarshallable {
     public static final StoreRecoveryFactory FACTORY = TimedStoreRecovery::new;

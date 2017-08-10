@@ -27,7 +27,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /*
- * Created by peter on 02/08/16.
+ * Created by Peter Lawrey on 02/08/16.
  */
 public class WriteReadTextTest {
 

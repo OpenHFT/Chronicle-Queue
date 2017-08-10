@@ -17,7 +17,7 @@
 package net.openhft.chronicle.queue;
 
 /*
- * Created by Peter on 05/03/2016.
+ * Created by Peter Lawrey on 05/03/2016.
  */
 public enum TailerDirection {
     NONE(0), // don't move after a read.

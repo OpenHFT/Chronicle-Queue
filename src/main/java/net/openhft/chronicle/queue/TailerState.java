@@ -17,7 +17,7 @@
 package net.openhft.chronicle.queue;
 
 /*
- * Created by peter on 27/07/16.
+ * Created by Peter Lawrey on 27/07/16.
  */
 public enum TailerState {
     END_OF_CYCLE, FOUND_CYCLE, BEYOND_START_OF_CYCLE, CYCLE_NOT_FOUND, UNINITIALISED

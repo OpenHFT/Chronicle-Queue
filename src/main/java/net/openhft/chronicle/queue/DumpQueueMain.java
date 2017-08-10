@@ -33,7 +33,7 @@ import java.util.Arrays;
 import static java.lang.System.err;
 
 /*
- * Created by Peter on 07/03/2016.
+ * Created by Peter Lawrey on 07/03/2016.
  */
 public class DumpQueueMain {
     private static final String FILE = System.getProperty("file");

@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /*
- * Created by peter on 24/03/16.
+ * Created by Peter Lawrey on 24/03/16.
  */
 public class OrderManager implements MarketDataListener, OrderIdeaListener {
     final OrderListener orderListener;

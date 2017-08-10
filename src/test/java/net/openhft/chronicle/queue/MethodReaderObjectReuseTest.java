@@ -10,7 +10,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /*
- * Created by peter on 08/05/2017.
+ * Created by Peter Lawrey on 08/05/2017.
  */
 public class MethodReaderObjectReuseTest {
     @Test

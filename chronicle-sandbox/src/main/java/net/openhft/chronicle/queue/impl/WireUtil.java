@@ -20,7 +20,7 @@ import net.openhft.chronicle.wire.ByteableLongArrayValues;
 import net.openhft.chronicle.wire.Wire;
 
 /*
- * Created by peter on 11/08/15.
+ * Created by Peter Lawrey on 11/08/15.
  */
 public class WireUtil {
     public static ThreadLocal<ByteableLongArrayValues> newLongArrayValuesPool(Class<? extends Wire> aClass) {

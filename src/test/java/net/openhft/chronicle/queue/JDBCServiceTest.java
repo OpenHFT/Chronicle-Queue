@@ -34,7 +34,7 @@ import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /*
- * Created by peter on 08/04/16.
+ * Created by Peter Lawrey on 08/04/16.
  */
 public class JDBCServiceTest {
     @Test

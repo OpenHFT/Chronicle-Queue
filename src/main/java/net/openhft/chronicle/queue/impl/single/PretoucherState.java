@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.function.LongSupplier;
 
 /*
- * Created by peter on 25/11/2016.
+ * Created by Peter Lawrey on 25/11/2016.
  */
 class PretoucherState {
     private static final int HEAD_ROOM = 256 << 10;

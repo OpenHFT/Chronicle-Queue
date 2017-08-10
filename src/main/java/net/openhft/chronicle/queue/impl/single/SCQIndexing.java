@@ -44,7 +44,7 @@ import java.util.function.Supplier;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 /*
- * Created by peter on 22/05/16.
+ * Created by Peter Lawrey on 22/05/16.
  */
 class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     private final int indexCount, indexCountBits;

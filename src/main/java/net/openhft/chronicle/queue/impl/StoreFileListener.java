@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue.impl;
 import java.io.File;
 
 /*
- * Created by peter on 27/06/16.
+ * Created by Peter Lawrey on 27/06/16.
  */
 @FunctionalInterface
 public interface StoreFileListener {

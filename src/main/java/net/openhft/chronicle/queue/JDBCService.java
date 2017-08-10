@@ -32,7 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /*
- * Created by peter on 06/04/16.
+ * Created by Peter Lawrey on 06/04/16.
  */
 public class JDBCService implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
