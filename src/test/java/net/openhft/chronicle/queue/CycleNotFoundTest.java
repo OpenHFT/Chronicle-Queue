@@ -94,7 +94,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
         // Appender run in a different thread
         ExecutorService executorService1 = Executors.newSingleThreadExecutor();
-        executorService1.submit(() -> {
+        Future<?> submit = executorService1.submit(() -> {
             ChronicleQueue wqueue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
                     .testBlockSize()
@@ -115,7 +115,8 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                     return;
             }
             wqueue.close();
-        }).get();
+        });
+        submit.get();
 
         System.out.println("appender is done.");
 
