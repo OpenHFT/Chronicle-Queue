@@ -59,15 +59,15 @@ public class SingleCQFormat2Test {
     private int appendMode;
     private ThreadDump threadDump;
 
-    public SingleCQFormat2Test(boolean lazyIndexing) {
+    public SingleCQFormat2Test(String testType, boolean lazyIndexing) {
         this.lazyIndexing = lazyIndexing;
     }
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {false},
-                {true}
+                {"eager", false},
+                {"lazy", true}
         });
     }
 
@@ -1348,7 +1348,7 @@ public class SingleCQFormat2Test {
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 640,\n" +
+                    "  writePosition: 631,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -1378,7 +1378,7 @@ public class SingleCQFormat2Test {
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
                     "  576,\n" +
-                    "  640,\n" +
+                    "  631,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 576, header: 0\n" +
@@ -1387,7 +1387,7 @@ public class SingleCQFormat2Test {
                     "side: Buy\n" +
                     "limitPrice: 1.2345\n" +
                     "quantity: 1e6\n" +
-                    "# position: 640, header: 1\n" +
+                    "# position: 631, header: 1\n" +
                     "--- !!data #binary\n" +
                     "newOrder: !Order {\n" +
                     "  symbol: Symbol2,\n" +
@@ -1396,11 +1396,11 @@ public class SingleCQFormat2Test {
                     "  quantity: 10e6\n" +
                     "}\n" +
                     "...\n" +
-                    "# 326952 bytes remaining\n";
+                    "# 326966 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 438,\n" +
+                    "  writePosition: 432,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -1424,7 +1424,7 @@ public class SingleCQFormat2Test {
                     "side: Buy\n" +
                     "limitPrice: 1.2345\n" +
                     "quantity: 1e6\n" +
-                    "# position: 438, header: 1\n" +
+                    "# position: 432, header: 1\n" +
                     "--- !!data #binary\n" +
                     "newOrder: !Order {\n" +
                     "  symbol: Symbol2,\n" +
@@ -1433,7 +1433,7 @@ public class SingleCQFormat2Test {
                     "  quantity: 10e6\n" +
                     "}\n" +
                     "...\n" +
-                    "# 327154 bytes remaining\n";
+                    "# 327164 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
         }
     }
