@@ -59,15 +59,15 @@ public class SingleCQFormat2Test {
     private int appendMode;
     private ThreadDump threadDump;
 
-    public SingleCQFormat2Test(boolean lazyIndexing) {
+    public SingleCQFormat2Test(String testType, boolean lazyIndexing) {
         this.lazyIndexing = lazyIndexing;
     }
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {false},
-                {true}
+                {"eager", false},
+                {"lazy", true}
         });
     }
 
