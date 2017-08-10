@@ -1272,15 +1272,16 @@ This check is enforced by `SingleChronicleQueueBuilder`, so the following code c
 [source,java]
 ----
 final Path queueDir = Paths.get("/data/queue/my-queue");
-try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(SECONDLY).build()) {
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(SECONDLY).build()) {
     // this append call will 'lock' the queue to use the SECONDLY roll-cycle
     try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
         documentContext.wire().write("somekey").text("somevalue");
     }
 }
 
-// this call will fail since we are trying to create a new queue, at the same location, with a different roll-cycle
-try (final ChronicleQueue recreated = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(HOURLY).build()) {
+// this call will fail since we are trying to create a new queue,
+// at the same location, with a different roll-cycle
+try (ChronicleQueue recreated = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(HOURLY).build()) {
 
 }
 ----
@@ -1293,9 +1294,9 @@ of the situation:
 [source,java]
 ----
 // creates a queue with roll-cycle MINUTELY
-try (final ChronicleQueue minuteRollCycleQueue = builder(queuePath, wireType).rollCycle(MINUTELY).build()) {
+try (ChronicleQueue minuteRollCycleQueue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(MINUTELY).build()) {
     // creates a queue with roll-cycle HOURLY - valid since no appends have yet been made
-    try (final ChronicleQueue hourlyRollCycleQueue = builder(queuePath, wireType).rollCycle(HOURLY).build()) {
+    try (ChronicleQueue hourlyRollCycleQueue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(HOURLY).build()) {
         // append using the HOURLY roll-cycle
         try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
             documentContext.wire().write("somekey").text("somevalue");
@@ -1310,5 +1311,6 @@ try (final ChronicleQueue minuteRollCycleQueue = builder(queuePath, wireType).ro
 console output:
 [source]
 ----
-[main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY. Overriding this queue to use HOURLY
+[main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY.
+    Overriding this queue to use HOURLY
 ----
