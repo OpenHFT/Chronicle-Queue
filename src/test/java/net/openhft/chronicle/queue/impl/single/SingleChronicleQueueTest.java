@@ -222,7 +222,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
 
-        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).build()) {
+        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
 
             try (DocumentContext documentContext2 = qTailer.createTailer().readingDocument()) {
                 String str = documentContext2.wire().read("somekey").text();
@@ -525,7 +525,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 130477 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
@@ -571,7 +571,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 130477 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
@@ -617,7 +617,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 130477 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
@@ -663,7 +663,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 130477 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
@@ -709,7 +709,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 130477 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
@@ -753,7 +753,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n";
+                    "# 130477 bytes remaining\n";
 
         if (wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
@@ -801,7 +801,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327077 bytes remaining\n" +
+                    "# 130469 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -847,7 +847,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327077 bytes remaining\n" +
+                    "# 130469 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -893,7 +893,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327077 bytes remaining\n" +
+                    "# 130469 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -939,7 +939,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327077 bytes remaining\n" +
+                    "# 130469 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -985,7 +985,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327077 bytes remaining\n" +
+                    "# 130469 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -1029,7 +1029,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
-                    "# 327077 bytes remaining\n";
+                    "# 130469 bytes remaining\n";
 
         throw new IllegalStateException("unsupported wire-type=" + wireType);
     }
@@ -2989,7 +2989,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 326988 bytes remaining\n";
+                    "# 130380 bytes remaining\n";
         if (wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -3059,7 +3059,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 326980 bytes remaining\n";
+                    "# 130372 bytes remaining\n";
 
         throw new IllegalStateException("unknown wiretype=" + wireType);
     }
@@ -3617,12 +3617,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
-        return SingleChronicleQueueBuilder.builder(file, wireType).testBlockSize();
+        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
     }
 
     @NotNull
     protected SingleChronicleQueueBuilder binary(@NotNull File file) {
-        return SingleChronicleQueueBuilder.binary(file).testBlockSize();
+        return builder(file, WireType.BINARY_LIGHT);
     }
 
     private MappedFile toMappedFile(@NotNull DocumentContext documentContext) {

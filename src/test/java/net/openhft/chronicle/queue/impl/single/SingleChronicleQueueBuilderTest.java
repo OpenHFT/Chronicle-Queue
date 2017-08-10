@@ -17,8 +17,9 @@ public class SingleChronicleQueueBuilderTest {
     public void shouldDetermineQueueDirectoryFromQueueFile() throws Exception {
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         try (final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.
-                             binary(path).build()) {
+                     SingleChronicleQueueBuilder.binary(path)
+                             .testBlockSize()
+                             .build()) {
             assertThat(queue.createTailer().readingDocument().isPresent(), is(true));
         }
     }
@@ -28,6 +29,6 @@ public class SingleChronicleQueueBuilderTest {
         final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
         tempFile.deleteOnExit();
         SingleChronicleQueueBuilder.
-                        binary(tempFile);
+                binary(tempFile);
     }
 }

@@ -34,6 +34,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
@@ -43,6 +45,10 @@ import static org.junit.Assert.*;
  * Created by Peter on 05/03/2016.
  */
 public class SingleCQFormatTest {
+    static {
+        SingleChronicleQueueBuilder.addAliases();
+    }
+
     private ThreadDump threadDump;
 
     private static void expected(@NotNull ExcerptTailer tailer, String expected) {
@@ -72,11 +78,12 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        try (@NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE)) {
+        try (@NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), 64 << 10)) {
             bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
             try (@NotNull SingleChronicleQueue queue = binary(dir)
-                    .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                    .rollCycle(RollCycles.TEST4_DAILY)
+                    .testBlockSize()
                     .build()) {
                 assertEquals(1, queue.firstCycle());
                 assertEquals(1, queue.lastCycle());
@@ -100,15 +107,21 @@ public class SingleCQFormatTest {
     }
 
     @Test
-    public void testNoHeader() throws FileNotFoundException {
+    public void testNoHeader() throws IOException {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            byte[] bytes = new byte[1024];
+            for (int i = 0; i < 128; i++) {
+                fos.write(bytes);
+            }
+        }
 
-        bytes.release();
         @NotNull SingleChronicleQueue queue = binary(dir)
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .rollCycle(RollCycles.TEST4_DAILY)
+                .testBlockSize()
                 .build();
 
         testQueue(queue);
@@ -155,14 +168,15 @@ public class SingleCQFormatTest {
         @NotNull File dir = DirectoryUtils.tempDir("testCompleteHeader");
         dir.mkdirs();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX),
+                ChronicleQueue.TEST_BLOCK_SIZE * 2);
         @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
                 w.write(() -> "wireType").object(WireType.BINARY);
                 w.write(() -> "writePosition").int64forBinding(0);
-                w.write(() -> "roll").typedMarshallable(new SCQRoll(RollCycles.DAILY, 0));
-                w.write(() -> "indexing").typedMarshallable(new SCQIndexing(WireType.BINARY, 32 << 10, 32));
+                w.write(() -> "roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0));
+                w.write(() -> "indexing").typedMarshallable(new SCQIndexing(WireType.BINARY, 32, 4));
                 w.write(() -> "lastAcknowledgedIndexReplicated").int64forBinding(0);
             });
         }
@@ -177,8 +191,8 @@ public class SingleCQFormatTest {
                 "    epoch: 0\n" +
                 "  },\n" +
                 "  indexing: !SCQSIndexing {\n" +
-                "    indexCount: !int 32768,\n" +
-                "    indexSpacing: 32,\n" +
+                "    indexCount: 32,\n" +
+                "    indexSpacing: 4,\n" +
                 "    index2Index: 0,\n" +
                 "    lastIndex: 0\n" +
                 "  },\n" +
@@ -187,7 +201,8 @@ public class SingleCQFormatTest {
         bytes.release();
 
         @NotNull SingleChronicleQueue queue = binary(dir)
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .rollCycle(RollCycles.TEST4_DAILY)
+                .testBlockSize()
                 .build();
         testQueue(queue);
 
@@ -204,7 +219,7 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE * 2);
         @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typedMarshallable(
@@ -236,7 +251,7 @@ public class SingleCQFormatTest {
         bytes.release();
 
         @NotNull SingleChronicleQueue queue = binary(dir)
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build();
         testQueue(queue);
@@ -264,6 +279,7 @@ public class SingleCQFormatTest {
 
         bytes.release();
         try (@NotNull SingleChronicleQueue queue = binary(dir)
+                .rollCycle(RollCycles.TEST4_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
             testQueue(queue);
@@ -285,10 +301,10 @@ public class SingleCQFormatTest {
     public void testTwoMessages() throws FileNotFoundException {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
-        @NotNull RollCycles cycle = RollCycles.DAILY;
+        @NotNull RollCycles cycle = RollCycles.TEST4_DAILY;
 
         {
-            @NotNull MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+            @NotNull MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), 64 << 10);
             @NotNull Wire wire = new BinaryWire(mappedBytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName(() -> "header").typedMarshallable(
@@ -313,8 +329,8 @@ public class SingleCQFormatTest {
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: !short 16384,\n" +
-                    "    indexSpacing: 16,\n" +
+                    "    indexCount: 32,\n" +
+                    "    indexSpacing: 4,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
@@ -336,7 +352,7 @@ public class SingleCQFormatTest {
 
         @NotNull SingleChronicleQueue queue = binary(dir)
                 .rollCycle(cycle)
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .testBlockSize()
                 .build();
         @NotNull ExcerptTailer tailer = queue.createTailer();
         readTwo(tailer);

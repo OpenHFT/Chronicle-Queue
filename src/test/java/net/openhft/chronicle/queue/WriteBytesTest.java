@@ -1115,7 +1115,7 @@ public class WriteBytesTest {
                     "--- !!data\n" +
                     "\u007F\u007F\u007F\u007F\u007F\u007F\u007F\u007F\n" +
                     "...\n" +
-                    "# 323360 bytes remaining\n", queue.dump());
+                    "# 126752 bytes remaining\n", queue.dump());
 
         } finally {
             try {

@@ -1,9 +1,9 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -112,7 +112,7 @@ public class RollingChronicleQueueTest {
                     "# position: 763, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 326913 bytes remaining\n" +
+                    "# 130305 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -154,7 +154,7 @@ public class RollingChronicleQueueTest {
                     "# position: 734, header: 0 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 326942 bytes remaining\n" +
+                    "# 130334 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -197,7 +197,7 @@ public class RollingChronicleQueueTest {
                     "--- !!data\n" +
                     "some more text\n" +
                     "...\n" +
-                    "# 326923 bytes remaining\n";
+                    "# 130315 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -244,7 +244,7 @@ public class RollingChronicleQueueTest {
                     "# position: 762, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 326914 bytes remaining\n" +
+                    "# 130306 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -272,7 +272,7 @@ public class RollingChronicleQueueTest {
                     "# position: 407, header: 0 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327269 bytes remaining\n" +
+                    "# 130661 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -314,7 +314,7 @@ public class RollingChronicleQueueTest {
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
-                    "# 326924 bytes remaining\n";
+                    "# 130316 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, q.dump());
 
             assertEquals(5, q.countExcerpts(start, end));

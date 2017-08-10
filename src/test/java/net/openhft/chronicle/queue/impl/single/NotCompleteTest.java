@@ -19,11 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Test;
@@ -200,7 +196,7 @@ public class NotCompleteTest {
                     "# position: 576, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 327100 bytes remaining\n";
+                    "# 130492 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -225,11 +221,11 @@ public class NotCompleteTest {
                     "# position: 377, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 327299 bytes remaining\n";
+                    "# 130691 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
         }
 
-        try (final ChronicleQueue queue = binary(tmpDir).timeoutMS(500).build()) {
+        try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().timeoutMS(500).build()) {
             ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
@@ -275,7 +271,7 @@ public class NotCompleteTest {
                     "--- !!data #binary\n" +
                     "some: data\n" +
                     "...\n" +
-                    "# 83885486 bytes remaining\n", queue.dump());
+                    "# 130478 bytes remaining\n", queue.dump());
         }
     }
 

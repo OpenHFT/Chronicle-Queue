@@ -74,7 +74,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     default B testBlockSize() {
         // small size for testing purposes only.
-        return blockSize(256 << 10);
+        return blockSize(64 << 10);
     }
 
     long blockSize();

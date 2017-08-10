@@ -115,7 +115,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         path = builder.path();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
-        overlapSize = builder.blockSize() / 4;
+        overlapSize = Math.max(64 << 10, builder.blockSize() / 4);
         eventLoop = builder.eventLoop();
         bufferCapacity = builder.bufferCapacity();
         onRingBufferStats = builder.onRingBufferStats();

@@ -55,6 +55,10 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
 
+    public static void addAliases() {
+        // static initialiser.
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
 
     @SuppressWarnings("unchecked")

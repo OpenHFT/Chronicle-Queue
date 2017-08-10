@@ -42,7 +42,10 @@ public class ReadWriteTest {
     @Before
     public void setup() {
         chroniclePath = new File(OS.TARGET, "read_only");
-        try (SingleChronicleQueue readWrite = SingleChronicleQueueBuilder.binary(chroniclePath).readOnly(false).testBlockSize().build()) {
+        try (SingleChronicleQueue readWrite = SingleChronicleQueueBuilder.binary(chroniclePath)
+                .readOnly(false)
+                .testBlockSize()
+                .build()) {
             final ExcerptAppender appender = readWrite.acquireAppender();
             appender.writeText(STR1);
             try (DocumentContext dc = appender.writingDocument()) {
@@ -61,7 +64,7 @@ public class ReadWriteTest {
         try (SingleChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
-                .readOnly(true)
+                .readOnly(!OS.isWindows())
                 .build()) {
             // check dump
             assertTrue(out.dump().length() > 1);

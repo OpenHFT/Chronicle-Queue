@@ -167,7 +167,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Hello World\n" +
                     "...\n" +
-                    "# 327080 bytes remaining\n";
+                    "# 130472 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -206,7 +206,7 @@ public class SingleCQFormat2Test {
                     "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
-                    "# 327084 bytes remaining\n";
+                    "# 130476 bytes remaining\n";
             checkFileContents(dir.listFiles()[0], lazyIndexing ? expectedLazy : expectedEager);
 
             appendMessage(queue, start + 1, "Another Hello World");
@@ -253,7 +253,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Another Hello World\n" +
                     "...\n" +
-                    "# 327052 bytes remaining\n";
+                    "# 130444 bytes remaining\n";
             String expectedLazy2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -295,7 +295,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Another Hello World\n" +
                     "...\n" +
-                    "# 327056 bytes remaining\n";
+                    "# 130448 bytes remaining\n";
             checkFileContents(dir.listFiles()[0], lazyIndexing ? expectedLazy2 : expectedEager2);
 
             appendMessage(queue, start + 2, "Bye for now");
@@ -347,7 +347,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 327032 bytes remaining\n";
+                    "# 130424 bytes remaining\n";
             String expectedLazy3 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -392,7 +392,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 327036 bytes remaining\n";
+                    "# 130428 bytes remaining\n";
             checkFileContents(dir.listFiles()[0], lazyIndexing ? expectedLazy3 : expectedEager3);
             }
         }
@@ -462,7 +462,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Hello World\n" +
                     "...\n" +
-                    "# 327080 bytes remaining\n";
+                    "# 130472 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -501,7 +501,7 @@ public class SingleCQFormat2Test {
                     "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
-                    "# 327084 bytes remaining\n";
+                    "# 130476 bytes remaining\n";
             checkFileContents(dir.listFiles()[0],
                     (lazyIndexing ? expectedLazy : expectedEager)
                             .replace("indexSpacing: 1", "indexSpacing: " + spacing)
@@ -646,7 +646,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326312 bytes remaining\n";
+                    "# 129704 bytes remaining\n";
             @NotNull String expected2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -758,7 +758,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326409 bytes remaining\n";
+                    "# 129801 bytes remaining\n";
             @NotNull String expected3 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -859,7 +859,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326504 bytes remaining\n";
+                    "# 129896 bytes remaining\n";
             String lazy1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -955,7 +955,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326504 bytes remaining\n";
+                    "# 129896 bytes remaining\n";
             String lazy2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -1051,7 +1051,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326504 bytes remaining\n";
+                    "# 129896 bytes remaining\n";
             String lazy3 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -1147,7 +1147,7 @@ public class SingleCQFormat2Test {
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326504 bytes remaining\n";
+                    "# 129896 bytes remaining\n";
             assertNotEquals(lazy1, expected1);
             assertNotEquals(lazy2, expected2);
             assertNotEquals(lazy3, expected3);
@@ -1287,7 +1287,7 @@ public class SingleCQFormat2Test {
                     "hello: world\n" +
                     "number: 1\n" +
                     "...\n" +
-                    "# 326972 bytes remaining\n";
+                    "# 130364 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -1322,7 +1322,7 @@ public class SingleCQFormat2Test {
                     "hello: world\n" +
                     "number: 1\n" +
                     "...\n" +
-                    "# 327171 bytes remaining\n";
+                    "# 130563 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
 
             @NotNull ExcerptTailer tailer = queue.createTailer();
@@ -1348,7 +1348,7 @@ public class SingleCQFormat2Test {
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 640,\n" +
+                    "  writePosition: 631,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -1378,7 +1378,7 @@ public class SingleCQFormat2Test {
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
                     "  576,\n" +
-                    "  640,\n" +
+                    "  631,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 576, header: 0\n" +
@@ -1387,7 +1387,7 @@ public class SingleCQFormat2Test {
                     "side: Buy\n" +
                     "limitPrice: 1.2345\n" +
                     "quantity: 1e6\n" +
-                    "# position: 640, header: 1\n" +
+                    "# position: 631, header: 1\n" +
                     "--- !!data #binary\n" +
                     "newOrder: !Order {\n" +
                     "  symbol: Symbol2,\n" +
@@ -1396,11 +1396,11 @@ public class SingleCQFormat2Test {
                     "  quantity: 10e6\n" +
                     "}\n" +
                     "...\n" +
-                    "# 326952 bytes remaining\n";
+                    "# 130358 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 438,\n" +
+                    "  writePosition: 432,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -1424,7 +1424,7 @@ public class SingleCQFormat2Test {
                     "side: Buy\n" +
                     "limitPrice: 1.2345\n" +
                     "quantity: 1e6\n" +
-                    "# position: 438, header: 1\n" +
+                    "# position: 432, header: 1\n" +
                     "--- !!data #binary\n" +
                     "newOrder: !Order {\n" +
                     "  symbol: Symbol2,\n" +
@@ -1433,7 +1433,7 @@ public class SingleCQFormat2Test {
                     "  quantity: 10e6\n" +
                     "}\n" +
                     "...\n" +
-                    "# 327154 bytes remaining\n";
+                    "# 130556 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
         }
     }
@@ -1487,7 +1487,7 @@ public class SingleCQFormat2Test {
                     "--- !!data\n" +
                     "msg-1\n" +
                     "...\n" +
-                    "# 327091 bytes remaining\n";
+                    "# 130483 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -1513,7 +1513,7 @@ public class SingleCQFormat2Test {
                     "--- !!data\n" +
                     "msg-1\n" +
                     "...\n" +
-                    "# 327290 bytes remaining\n";
+                    "# 130682 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
             for (int i = 1; i <= 16; i++)
                 appender.writeText("msg-" + i);
@@ -1632,7 +1632,7 @@ public class SingleCQFormat2Test {
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
-                    "# 326748 bytes remaining\n";
+                    "# 130140 bytes remaining\n";
             String expectedLazy2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -1706,7 +1706,7 @@ public class SingleCQFormat2Test {
                     "--- !!data\n" +
                     "msg-16\n" +
                     "...\n" +
-                    "# 327139 bytes remaining\n";
+                    "# 130531 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy2 : expectedEager2, queue.dump());
         }
     }
