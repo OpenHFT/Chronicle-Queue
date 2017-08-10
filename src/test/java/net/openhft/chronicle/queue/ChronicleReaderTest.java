@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -33,13 +34,14 @@ public class ChronicleReaderTest {
     static {
         Arrays.fill(ONE_KILOBYTE, (byte) 7);
     }
+
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
 
     @Before
     public void before() throws Exception {
         dataDir = DirectoryUtils.tempDir(ChronicleReaderTest.class.getSimpleName()).toPath();
-        try(final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build()) {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
 
             for (int i = 0; i < 24; i++) {
@@ -52,7 +54,7 @@ public class ChronicleReaderTest {
     public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();
-        try(final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build();) {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
 
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
             events.say("hello");
@@ -63,7 +65,7 @@ public class ChronicleReaderTest {
             final ChronicleReader chronicleReader = basicReader().withMessageSink(recordCounter);
 
             final ExecutorService executorService = Executors.newSingleThreadExecutor();
-            executorService.submit(chronicleReader::execute);
+            Future<?> submit = executorService.submit(chronicleReader::execute);
 
             final long expectedReadingDocumentCount = (readerCapacity / ONE_KILOBYTE.length) + 1;
             int i;
@@ -71,9 +73,10 @@ public class ChronicleReaderTest {
                 events.say(new String(ONE_KILOBYTE));
             }
 
+            submit.get();
             recordCounter.latch.countDown();
             executorService.shutdown();
-            executorService.awaitTermination(5L, TimeUnit.SECONDS);
+            executorService.awaitTermination(Jvm.isDebug() ? 50 : 5, TimeUnit.SECONDS);
 
             assertEquals(expectedReadingDocumentCount, recordCounter.recordCount.get() - 1);
         }
@@ -83,7 +86,7 @@ public class ChronicleReaderTest {
     public void readOnlyQueueTailerInFollowModeShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();
-        try(final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build()) {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
 
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
             events.say("hello");
@@ -95,7 +98,7 @@ public class ChronicleReaderTest {
                     withMessageSink(messageReceiver::set);
 
             final ExecutorService executorService = Executors.newSingleThreadExecutor();
-            executorService.submit(chronicleReader::execute);
+            Future<?> submit = executorService.submit(chronicleReader::execute);
 
             final long expectedReadingDocumentCount = (readerCapacity / ONE_KILOBYTE.length) + 1;
             int i;
@@ -104,6 +107,7 @@ public class ChronicleReaderTest {
             }
             events.say(LAST_MESSAGE);
 
+            submit.get();
             while (!(messageReceiver.get() != null && messageReceiver.get().contains(LAST_MESSAGE))) {
                 LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000L));
             }

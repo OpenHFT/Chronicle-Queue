@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Pauser;
@@ -182,7 +181,7 @@ final class ChronicleReader {
         }
         return SingleChronicleQueueBuilder.
                 binary(basePath.toFile()).
-                readOnly(!OS.isWindows()).
+                readOnly(true).
                 build();
     }
 
