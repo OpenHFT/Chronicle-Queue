@@ -50,54 +50,59 @@ final class ChronicleReader {
     private Pauser pauser = Pauser.balanced();
 
     void execute() {
-        long lastObservedTailIndex;
-        long highestReachedIndex = 0L;
-        boolean isFirstIteration = true;
-        do {
-            try (final SingleChronicleQueue queue = createQueue()) {
-                final ExcerptTailer tailer = queue.createTailer();
+        try {
+            long lastObservedTailIndex;
+            long highestReachedIndex = 0L;
+            boolean isFirstIteration = true;
+            do {
+                try (final SingleChronicleQueue queue = createQueue()) {
+                    final ExcerptTailer tailer = queue.createTailer();
 
-                if (highestReachedIndex != 0L) {
-                    tailer.moveToIndex(highestReachedIndex);
-                }
-                final Bytes textConversionTarget = Bytes.elasticByteBuffer();
-                try {
-                    moveToSpecifiedPosition(queue, tailer, isFirstIteration);
-                    lastObservedTailIndex = tailer.index();
-
-                    while (!Thread.currentThread().isInterrupted()) {
-                        try (DocumentContext dc = pollMethod.apply(tailer)) {
-                            if (!dc.isPresent()) {
-                                if (tailInputSource) {
-                                    pauser.pause();
-                                }
-                                break;
-                            }
-                            pauser.reset();
-
-                            final Bytes<?> serialisedMessage = dc.wire().bytes();
-                            final byte dataFormatIndicator = serialisedMessage.readByte(serialisedMessage.readPosition());
-                            String text;
-
-                            if (isBinaryFormat(dataFormatIndicator)) {
-                                textConversionTarget.clear();
-                                final BinaryWire binaryWire = new BinaryWire(serialisedMessage);
-                                binaryWire.copyTo(new TextWire(textConversionTarget));
-                                text = textConversionTarget.toString();
-                            } else {
-                                text = serialisedMessage.toString();
-                            }
-
-                            applyFiltersAndLog(text, tailer.index());
-                        }
+                    if (highestReachedIndex != 0L) {
+                        tailer.moveToIndex(highestReachedIndex);
                     }
-                } finally {
-                    textConversionTarget.release();
-                    highestReachedIndex = tailer.index();
-                    isFirstIteration = false;
+                    final Bytes textConversionTarget = Bytes.elasticByteBuffer();
+                    try {
+                        moveToSpecifiedPosition(queue, tailer, isFirstIteration);
+                        lastObservedTailIndex = tailer.index();
+
+                        while (!Thread.currentThread().isInterrupted()) {
+                            try (DocumentContext dc = pollMethod.apply(tailer)) {
+                                if (!dc.isPresent()) {
+                                    if (tailInputSource) {
+                                        pauser.pause();
+                                    }
+                                    break;
+                                }
+                                pauser.reset();
+
+                                final Bytes<?> serialisedMessage = dc.wire().bytes();
+                                final byte dataFormatIndicator = serialisedMessage.readByte(serialisedMessage.readPosition());
+                                String text;
+
+                                if (isBinaryFormat(dataFormatIndicator)) {
+                                    textConversionTarget.clear();
+                                    final BinaryWire binaryWire = new BinaryWire(serialisedMessage);
+                                    binaryWire.copyTo(new TextWire(textConversionTarget));
+                                    text = textConversionTarget.toString();
+                                } else {
+                                    text = serialisedMessage.toString();
+                                }
+
+                                applyFiltersAndLog(text, tailer.index());
+                            }
+                        }
+                    } finally {
+                        textConversionTarget.release();
+                        highestReachedIndex = tailer.index();
+                        isFirstIteration = false;
+                    }
                 }
-            }
-        } while (tailInputSource || queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex));
+            } while (tailInputSource || queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex));
+        } catch (Throwable t) {
+            t.printStackTrace();
+            throw t;
+        }
     }
 
     ChronicleReader withMessageSink(final Consumer<String> messageSink) {
@@ -179,10 +184,11 @@ final class ChronicleReader {
         if (!Files.exists(basePath)) {
             throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
         }
-        return SingleChronicleQueueBuilder.
-                binary(basePath.toFile()).
-                readOnly(true).
-                build();
+        return SingleChronicleQueueBuilder
+                .binary(basePath.toFile())
+                .testBlockSize()
+                .readOnly(true)
+                .build();
     }
 
     private void applyFiltersAndLog(final String text, final long index) {

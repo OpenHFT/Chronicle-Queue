@@ -52,7 +52,6 @@ public class ChronicleReaderTest {
     }
 
     @Test(timeout = 5000)
-    @Ignore("TODO FIX")
     public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();
@@ -84,7 +83,7 @@ public class ChronicleReaderTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
     @Ignore("TODO FIX")
     public void readOnlyQueueTailerInFollowModeShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
@@ -110,12 +109,12 @@ public class ChronicleReaderTest {
             }
             events.say(LAST_MESSAGE);
 
-            submit.get();
             while (!(messageReceiver.get() != null && messageReceiver.get().contains(LAST_MESSAGE))) {
                 LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000L));
             }
             executorService.shutdownNow();
             executorService.awaitTermination(5L, TimeUnit.SECONDS);
+            submit.get();
         }
     }
 
