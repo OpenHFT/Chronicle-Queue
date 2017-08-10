@@ -69,10 +69,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     final AtomicBoolean isClosed = new AtomicBoolean();
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
     @NotNull
-    private final RollCycle rollCycle;
-    @NotNull
-    private final RollingResourcesCache dateCache;
-    @NotNull
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
@@ -95,17 +91,25 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final boolean readOnly;
     @NotNull
     private final CycleCalculator cycleCalculator;
+    @NotNull
+    private final Function<String, File> nameToFile;
+    @NotNull
+    private RollCycle rollCycle;
+    @NotNull
+    private RollingResourcesCache dateCache;
     long firstAndLastCycleTime = 0;
     int firstAndLastRetry = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
+    private boolean persistedRollCycleCheckPerformed = false;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
         cycleCalculator = builder.cycleCalculator();
         epoch = builder.epoch();
-        dateCache = new RollingResourcesCache(this.rollCycle, epoch, textToFile(builder),
-                fileToText());
+        nameToFile = textToFile(builder);
+        assignRollCycleDependentFields();
+
         pool = WireStorePool.withSupplier(new StoreSupplier(), builder.storeFileListener());
         isBuffered = builder.buffered();
         path = builder.path();
@@ -600,6 +604,32 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     public TimeProvider time() {
         return time;
+    }
+
+    void ensureThatRollCycleDoesNotConflictWithExistingQueueFiles() {
+        if (!persistedRollCycleCheckPerformed) {
+            final Optional<RollCycle> existingRollCycle =
+                    RollCycleRetriever.getRollCycle(path.toPath(), wireType, blockSize);
+            existingRollCycle.ifPresent(rc -> {
+                if (rc != rollCycle) {
+                    LOG.warn("Queue created with roll-cycle {}, but files on disk use roll-cycle {}. " +
+                            "Overriding this queue to use {}", rollCycle, rc, rc);
+                    overrideRollCycle(rc);
+                }
+            });
+
+            persistedRollCycleCheckPerformed = true;
+        }
+    }
+
+    private void overrideRollCycle(final RollCycle rollCycle) {
+        this.rollCycle = rollCycle;
+        assignRollCycleDependentFields();
+    }
+
+    private void assignRollCycleDependentFields() {
+        dateCache = new RollingResourcesCache(this.rollCycle, epoch, nameToFile,
+                fileToText());
     }
 
     private class StoreSupplier implements WireStoreSupplier {

@@ -102,6 +102,7 @@ public class SingleChronicleQueueExcerpts {
             context = new StoreAppenderContext();
 
             closableResources = new ClosableResources(queue);
+            queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
         }
 
         @Override
@@ -865,6 +866,7 @@ public class SingleChronicleQueueExcerpts {
             queue.addCloseListener(this, StoreTailer::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
             closableResources = new ClosableResources(queue);
+            queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
         }
 
         private static boolean isReadOnly(Bytes bytes) {

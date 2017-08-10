@@ -215,17 +215,31 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue recreated = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
 
         }
-
     }
 
-    @Ignore
     @Test
-    public void testReadWriteHourlyTailerCreatedFirst() throws InterruptedException {
+    public void shouldOverrideRollCycleOnPreCreatedAppender() throws Exception {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue minuteRollCycleQueue = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
+
+            try (final ChronicleQueue hourlyRollCycleQueue = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+
+                try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
+                    documentContext.wire().write("somekey").text("somevalue");
+                }
+            }
+
+            try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
+                documentContext2.wire().write("otherkey").text("othervalue");
+            }
+        }
+    }
+
+    @Test
+    public void shouldOverrideRollCycleOnPreCreatedTailer() throws InterruptedException {
 
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).build()) {
-
-
+        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
             try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
                 try (DocumentContext documentContext = qAppender.acquireAppender().writingDocument()) {
                     documentContext.wire().write("somekey").text("somevalue");

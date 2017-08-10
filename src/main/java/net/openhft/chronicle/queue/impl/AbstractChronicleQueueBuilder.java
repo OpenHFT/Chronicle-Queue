@@ -23,8 +23,13 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.single.RollCycleGetter;
+import net.openhft.chronicle.queue.BufferMode;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.CycleCalculator;
+import net.openhft.chronicle.queue.DefaultCycleCalculator;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.single.RollCycleRetriever;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.threads.Pauser;
@@ -37,8 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Optional;
@@ -55,6 +58,7 @@ import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>
         implements ChronicleQueueBuilder<B> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractChronicleQueueBuilder.class);
     protected final File path;
     protected long blockSize;
     @NotNull
@@ -398,21 +402,19 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     protected void preBuild() {
-        try {
-            assignRollCycleFromExistingQueueFile();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        assignRollCycleFromExistingQueueFile();
     }
 
-    private void assignRollCycleFromExistingQueueFile() throws IOException {
-        final Optional<RollCycle> existingRollCycle = RollCycleGetter.getRollCycle(path.toPath(), wireType, blockSize);
+    private void assignRollCycleFromExistingQueueFile()  {
+        final Optional<RollCycle> existingRollCycle = RollCycleRetriever.getRollCycle(path.toPath(), wireType, blockSize);
         existingRollCycle.ifPresent(rc -> {
             if (rollCycleSet && rc != rollCycle) {
                 throw new IllegalArgumentException(String.format(
                         "Trying to create queue with roll cycle %s, but existing queue files use %s",
                         rollCycle, rc));
-            } else {
+            } else if (rc != rollCycle) {
+                LOGGER.warn("Builder configured to use roll-cycle {}, but existing queue files use {}, defaulting to use {}",
+                        rollCycle, rc, rc);
                 rollCycle = rc;
             }
         });
