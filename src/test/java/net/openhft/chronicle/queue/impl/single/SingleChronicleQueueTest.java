@@ -215,30 +215,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue recreated = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
 
         }
-
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void shouldBlowUpIfIncorrectRollCycleIsSpecified() throws Exception {
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-
-            try (DocumentContext documentContext = qAppender.acquireAppender().writingDocument()) {
-                documentContext.wire().write("somekey").text("somevalue");
-            }
-        }
-
-        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
-
-            try (DocumentContext documentContext2 = qTailer.createTailer().readingDocument()) {
-                String str = documentContext2.wire().read("somekey").text();
-                Assert.assertEquals("somevalue", str);
-            }
-        }
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void shouldBlowUpOnAppendWhenRollCycleIncorrect() throws Exception {
+    @Test
+    public void shouldOverrideRollCycleOnPreCreatedAppender() throws Exception {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue minuteRollCycleQueue = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
 
@@ -255,13 +235,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testReadWriteHourlyTailerCreatedFirst() throws InterruptedException {
+    @Test
+    public void shouldOverrideRollCycleOnPreCreatedTailer() throws InterruptedException {
 
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).build()) {
-
-
+        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
             try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
                 try (DocumentContext documentContext = qAppender.acquireAppender().writingDocument()) {
                     documentContext.wire().write("somekey").text("somevalue");
