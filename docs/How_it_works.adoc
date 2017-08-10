@@ -146,3 +146,67 @@ reader.finish();
 ----
 
 
+=== Configuration
+
+Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
+
+
+==== RollCycle
+
+One such piece of configuration is the `RollCycle` that determines the rate at which CQ will roll the underlying queue files.
+For instance, using the following code snippet will result in the queue files being rolled (i.e. a new file created) every hour:
+
+[source,java]
+----
+SingleChronicleQueueBuilder.binary(queuePath).rollCycle(RollCycles.HOURLY).build()
+----
+
+Once a queue's roll-cycle has been set, it cannot be changed at a later date.
+More formally, after the first append has been made to a Chronicle Queue, any further instances of `SingleChronicleQueue`
+configured to use the same path _must_ be configured to use the same roll-cycle.
+
+This check is enforced by `SingleChronicleQueueBuilder`, so the following code causes an exception to be thrown:
+
+[source,java]
+----
+final Path queueDir = Paths.get("/data/queue/my-queue");
+try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(SECONDLY).build()) {
+    // this append call will 'lock' the queue to use the SECONDLY roll-cycle
+    try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+        documentContext.wire().write("somekey").text("somevalue");
+    }
+}
+
+// this call will fail since we are trying to create a new queue, at the same location, with a different roll-cycle
+try (final ChronicleQueue recreated = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(HOURLY).build()) {
+
+}
+----
+
+In the case where a Chronicle Queue instance is created _before_ any appends have been made, and there is
+a subsequent append operation with a _different_ roll-cycle, then the roll-cycle will be updated to match the
+persisted roll-cycle. In this case, a warning log message will be printed in order to notify the library user
+of the situation:
+
+[source,java]
+----
+// creates a queue with roll-cycle MINUTELY
+try (final ChronicleQueue minuteRollCycleQueue = builder(queuePath, wireType).rollCycle(MINUTELY).build()) {
+    // creates a queue with roll-cycle HOURLY - valid since no appends have yet been made
+    try (final ChronicleQueue hourlyRollCycleQueue = builder(queuePath, wireType).rollCycle(HOURLY).build()) {
+        // append using the HOURLY roll-cycle
+        try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
+            documentContext.wire().write("somekey").text("somevalue");
+        }
+    }
+    // now try to append using the queue configured with roll-cycle MINUTELY
+    try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
+        documentContext2.wire().write("otherkey").text("othervalue");
+    }
+}
+----
+console output:
+[source]
+----
+[main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY. Overriding this queue to use HOURLY
+----
