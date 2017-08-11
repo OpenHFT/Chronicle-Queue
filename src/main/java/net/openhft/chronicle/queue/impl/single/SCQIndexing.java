@@ -393,7 +393,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         @NotNull
         final Bytes<?> bytes = wire.bytes();
 
-        long end = writePosition.getVolatileValue();
         bytes.readPositionUnlimited(knownAddress);
 
         for (long i = fromKnownIndex; ; i++) {
@@ -401,8 +400,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 if (wire.readDataHeader()) {
                     if (i == toIndex)
                         return ScanResult.FOUND;
-                    if (bytes.readPosition() > end)
-                        return ScanResult.NOT_REACHED;
                     int header = bytes.readInt();
                     if (Wires.isNotComplete(header)) // or isEndOfFile
                         return ScanResult.NOT_REACHED;
