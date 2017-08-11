@@ -35,10 +35,6 @@ they need and perform queries without needed to touch the critical system as the
 
 Chronicle works best in SEDA style event driven systems, where latency is critical and you need a record of exactly what was performed when. (Without expensive network sniffing/recording systems)
 
-=== What is the performance like?
-
-While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
-
 === How does Chronicle Queue use memory? 
 
 Chronicle Queue is designed to use virtual memory which can be much larger than main memory (or the heap) without a significant impact on your system. This allows you to access the data at random quickly.
@@ -46,16 +42,10 @@ Chronicle Queue is designed to use virtual memory which can be much larger than 
 Here is a link to an article with an example of a process writing 1 TB in 3 hours: https://vanilla-java.github.io/2017/01/27/Chronicle-Queue-storing-1-TB-in-virtual-memory-on-a-128-GB-machine.html
 
 This shows how much slower it gets as the queue grows.
-Even after it is 1 TB in size on a machine with 128 GB, it write 1 GB under 2 seconds pretty consistently.
+Even after it is 1 TB in size on a machine with 128 GB, it can write 1 GB in under 2 seconds pretty consistently.
 
-While this doesn't cause a technical problem, we are aware this does concern people who also find this "weird", and we plan to have a mode which reduces virtual memory use (even if a little slower for some use cases).
-
-=== With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
-
-Two approaches for reducing CPU usage are;
-
- - combine tasks into the same thread. EventGroup in chronicle-threads helps to this dynamically.
- - use a Pauser such as a LongPauser to control how a thread backs off if there is nothing to do.  Note: There is a PauseMonitor to allow you to print how busy each thread is periodically.
+While this doesn't cause a technical problem, we are aware this does concern people who also find this "weird",
+and we plan to have a mode which reduces virtual memory use (even if a little slower for some use cases).
 
 === What was the library originally designed for?
 
@@ -72,14 +62,14 @@ This library now supports low latency/GC-less writing and reading/parsing or tex
 
 ===  How fast is fast?
 
-Chronicle is design to persist messages and replay them in micro-second time.  Simple messages are as low as 0.4 micro-seconds.
+Chronicle is designed to persist messages and replay them in micro-second time.  Simple messages are as low as 0.4 micro-seconds.
 Complex messages might take 10 micro-seconds to write and read.
 
 Chronicle is designed to sustain millions of inserts and updates per second. For burst of up to 10% of your main memory, you can sustain rates of 1 - 3 GB/second written.
 e.g. A laptop with 8 GB of memory might handle bursts of 800 MB at a rate of 1 GB per second.
 A server with 64 GB of memory might handle a burst of 6.5 GB at a rate of 3 GB per second.
 
-If your key system is not measuring latency in micro-seconds and throughput in thousands per second, it is not that fast.  It may well be fast enough however. ;)
+If your key system is not measuring latency in micro-seconds and throughput in thousands per second, it is not that fast. It may well be fast enough however. ;)
 
 === How does it scale?
 
@@ -94,12 +84,12 @@ Having one node which can handle the load of data centre also save money and pow
 
 Chronicle has an advantage over other queuing systems that the consumer can be any amount behind the producer (up to the free space on your disk)
 Chronicle has been tested where the consumer was more than main memory behind the producer.  This reduced the maximum throughput by about half.
-Most systems, in Java, where the queue exceed the main memory cause the machine to become unusable.
+Most systems, in Java, where the queue exceeds the size of main memory cause the machine to become unusable.
 
 Note: the Consumer can stop, restart and continue with minimal impact to the producer, if the data is still in main memory.
 
 Having a faster disk sub-system helps in extreme conditions like these.
-Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s and an over-clocked hex core i7 PCI-SSD card which sustained write speed of 900 MB/s.
+Chronicle has been tested on a laptop with an HDD with a write speed of 12 MB/s and an over-clocked hex core i7 PCI-SSD card, which sustained a write speed of 900 MB/s.
 
 === Can Chronicle Queue be used like RMI?
 
@@ -233,7 +223,7 @@ It might be practical to have multiple chronicles, one which stores large update
 
 === I want to store large messages, what is the limit.
 
-The limit is about 1 GB as Chronicle 4.x.
+The limit is about 1 GB as of Chronicle 4.x.
 The practical limit without tuning the configuration is about 16 MB.
 At this point you get significant inefficiencies unless you increase the data allocation chunk size.
 
@@ -263,9 +253,10 @@ Where XML is needed down stream, I suggest writing in binary format and have the
 
 Chronicle Queue v4.x doesn't at the moment.  The best approach is to wait for a replicated message to be acknowledged.
 
-=== Does CQ can compete with Spark in this domain ?
+=== Can CQ compete with Spark in this domain ?
 
-To my knowledge, Spark Streaming is designed for real time but is looking to support a much lower message rate and doesn't attempt to be ultra low GC. e.g. minor GC less than once a day.  I haven't heard of any one using Spark in the core of a Trading system. It tends to be used for downstream monitoring and reporting.
+To my knowledge, Spark Streaming is designed for real time but is looking to support a much lower message rate and doesn't attempt to be ultra low GC.
+e.g. minor GC less than once a day.  I haven't heard of any one using Spark in the core of a Trading system. It tends to be used for downstream monitoring and reporting.
 
 === It seems that you have some clients that use CQ for Big Data style problems.
 
@@ -273,7 +264,10 @@ Our largest CQ client pulls in up to 100 TB into a single JVM using an earlier v
 
 === Could you please us more about the way they use CQ ?
 
-Where CQ is compelling is it's no-flow control model.  CQ is designed to not slow the producer if you have a slow consumer.  Instead you need to give it plenty of disk space as your buffer.  Disk space is cheaper than main memory and is cheaper than heap space. You can buy a system with multiple 16 TB SSD drives today. No one would consider having a JVM heap with 100 TB.
+Where CQ is compelling is its no-flow control model.
+CQ is designed to not slow the producer if you have a slow consumer.
+Instead you need to give it plenty of disk space as your buffer.  Disk space is cheaper than main memory and is cheaper than heap space.
+You can buy a system with multiple 16 TB SSD drives today. No one would consider having a JVM heap with 100 TB.
 
 A couple of prime examples are
 
@@ -284,14 +278,18 @@ A couple of prime examples are
 
 Chronicle Queue v4+ doesn't have the limitation of using just one thread. It supports any number of threads with a single file per cycle.
 
-=== What is recommended pattern to implement such an event listener?
+=== What is the recommended pattern to implement an event listener?
 
 The recommended pattern for implementing a listener pattern is to use the methodReader/methodWriter which can also take care of timestamps when where you read was up.
 
-Say you want a built-in chronicle queue mechanism for asynchronous 'appender -> tailer' notifications, such that upon receipt of a notification event, a given tailer is guaranteed to have at least one entry posted by appender, ready for read. For the tailer, the only way it know there is a message is by reading/polling the end of the queue. If the appender and tailer are in the same process you can use a different mechanism of your choice.
+Say you want a built-in chronicle queue mechanism for asynchronous 'appender -> tailer' notifications, such that upon receipt of a notification event,
+a given tailer is guaranteed to have at least one entry posted by appender, ready for read.
+For the tailer, the only way it know there is a message is by reading/polling the end of the queue. If the appender and tailer are in
+the same process you can use a different mechanism of your choice.
 
 We suggest you read these https://vanilla-java.github.io/tag/Microservices/ from the bottom up starting with Part 1.
 
 === What would cause Chronicle Queue to segfault?
 
-It could be a race condition. When a memory mapping is truly freed it cannot be accessed or it will trigger a segmentation fault. The reason to suspect this is that it should be free on a roll from one cycle to the next.
+It could be a race condition. When a memory mapping is truly freed it cannot be accessed or it will trigger a segmentation fault.
+The reason to suspect this is that it should be free on a roll from one cycle to the next.
