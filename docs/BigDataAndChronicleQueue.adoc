@@ -8,7 +8,7 @@ How is Chronicle Queue being used for Big Data solutions in Java and how does it
 == What is Chronicle Queue?
 
 Chronicle Queue (CQ) is a persisted journal of messages.
-CQ support concurrent writers and readers even across multiple JVMs on the same machine.
+CQ supports concurrent writers and readers even across multiple JVMs on the same machine.
 Every reader sees every message and a reader can join at any time and still see every message.
 We assume you can read/scan through messages fast enough that even if you are not interested in most messages it will still be fast enough.
 These are not consumers as such and messages don't disappear after reading them.
@@ -48,7 +48,7 @@ Desktop applications can be run on a variety of machines, over a variety of netw
 Any faster than about 20 times a second and it is just appears as just a blur and counter productive.
 
 It makes a lot sense for a desktop application to only receive as much data as it can handle, as much data as the person having to view it and to push back on the server when it cannot handle this data rate.
-http://www.reactive-streams.org/[Reactive Stream] are an excellent way to model such client centric solutions.
+http://www.reactive-streams.org/[Reactive Streams] are an excellent way to model such client centric solutions.
 
 ==== Producer Centric solution
 
@@ -72,7 +72,7 @@ This has some advantages
 
 The main disadvantage is that this assumes disk space is cheap.  If you look at retail prices for Enteprise grade disks you can get TBs of disk for a few hundred dollars.
 Many Investment Banks, don't take this approach and internal charge rates for managed storage can be orders of magnitude higher.
-I have worked on systems which has more free memory than free disk space.
+I have worked on systems that have more free memory than free disk space.
 
 == What technology does Chronicle Queue using?
 
@@ -81,17 +81,18 @@ It can outperform many data storage solutions written in C.
 You might be wondering, how is this possible given that well written C is usually faster than Java.
 
 You need a degree of protection between your application and your data storage to minimise the risk of corruption.
-As Java uses a JVM, it already has an abstraction layer and a degree of protection,a dn if an appication throws an exception this doesn't mean the data structure is corrupted.
+As Java uses a JVM, it already has an abstraction layer and a degree of protection, and if an application throws an exception this doesn't mean the data structure is corrupted.
 To get a degree of isolation in C, many data storage solutions use TCP.
 The overhead of using TCP, even over loopback can exceed the benefit of using C,
 and the throughput/latencies of CQ can be 10x greater by being able to use the data in process.
-CQ supports sharing of the data structure in memory for multiple JVMs avoiding the need to use TCP to shared data.
+CQ supports sharing of the data structure in memory for multiple JVMs avoiding the need to use TCP to share data.
 
 === What does the data structure look like?
 
-One of our key objective is transparency, and we have worked hard to make sure you can see exactly what has been written to this data structure.
+One of our key objectives is transparency, and we have worked hard to make sure you can see exactly
+what has been written to this data structure.
 
-We use YAML as this is a format which is design to be readable.
+We use YAML as this is a format which is designed to be readable.
 JSON and XML we see as a subset of Javascript and SGML, and not as readable. We support JSON for messaging with browsers.
 For performance reasons we use a binary form of YAML, which can be automatically translated to YAML for viewing.
 
@@ -121,7 +122,7 @@ File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
 try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
     ExcerptAppender appender = queue.acquireAppender();
     appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6)); // <1>
-    appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
+    appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6))); // <2>
     System.out.print(queue.dump());
 }
 ----
@@ -173,9 +174,12 @@ You will note that YAML supports; typed data, enumerated values, comments, and m
 === Append only data structure
 
 CQ is design for sequential writes and reads.  It also supports random access and updates in place although you cannot change the size of an existing entry. You can pad an entry for future use.
-This append only structure is more efficient for passing data between threads via the CPU L2 cache coherence bus and it can be faster than attempting to pass an object between threads as it avoid random access which can be common in Java objects where there can be a lof of reference chasing.
+This append only structure is more efficient for passing data between threads via the CPU L2 cache coherence bus
+and it can be faster than attempting to pass an object between threads as it avoid random access which can be
+common in Java objects where there can be a lot of reference chasing.
 
-It is also more efficient for persistence to disk as HDD and SSD are much efficient when accessed sequentially.  The append only structure makes replication much simpler as well.
+It is also more efficient for persistence to disk as HDD and SSD are much more efficient when accessed sequentially.
+The append only structure makes replication much simpler as well.
 
 === Unbounded memory mapped files
 
@@ -188,10 +192,12 @@ The key benefit of using memory mapped files, is you are no longer limited by th
 or even the size of your main memory.  You are only limit by the amount of disk space you have.
 If you want to load 100 TB into a JVM for replay the OS does all the heavy lifting for you.
 
-A benefit of using a memory mapped file is the ability to bind to a portion of memory to an object.
-The key attributes in the header, are bound when first loading and after that whey work like a normal object, updating off heap memory and the file in a thread safe manner.
+A benefit of using a memory mapped file is the ability to bind a portion of memory to an object.
+The key attributes in the header are bound when first loading and after that whey work like a normal object,
+updating off heap memory and the file in a thread safe manner.
 You can perform operations like compareAndSet, atomic add or set max value (a set which only ever increases the value).
-As the data access is thread safe, it can be shared between threads, or processes as fast as the time it takes for an L2 cache miss, up to 25 nano-seconds.
+As the data access is thread safe, it can be shared between threads, or processes as fast as the time it
+takes for an L2 cache miss, up to 25 nano-seconds.
 
 === The data structure in more detail
 
@@ -201,8 +207,10 @@ Each record is a "Size Prefixed Blob" where the first four bytes contain a 30 bi
  - a bit to flag whether the message is complete or not.
 
 When the message is not complete, it cannot be read.  However, if the length is known, a writer can skip such messages, attempt to write after it.
-Say Thread1 is in the middle of writing a message, but it know how long it will be, it can write 4 bytes which indicate the length.
-Thread2 can see that there will be a message and skip over it looking for a place to write.  This way multiple threads can be writing to the queue concurrently.
+Say Thread1 is in the middle of writing a message, but it knows how long it will be,
+it can write 4 bytes which indicate the length.
+Thread2 can see that there will be a message and skip over it looking for a place to write.
+This way multiple threads can be writing to the queue concurrently.
 Any message which is detected as bad e.g. the thread died, can be marked as meta data and skipped by the reader.
 
 There is a special value which is a "poison pill" value, which indicates the file has been rolled.
@@ -234,7 +242,7 @@ header: !SCQStore { # <2>
 <2> the type of header is aliased as the name SCQStore.
 <3> the `writePosition` is the first bound value. It is the highest known byte which has been written to and is updated atomically.
 <4> the roll cycle is daily.
-<5> this class control how it will be indexed on demand.  This adds meta data entries for indexed lookup.
+<5> this class controls how it will be indexed on demand.  This adds meta data entries for indexed lookup.
 <6> this is the highest message index which was acknowledged by a replica.
 
 For us a key feature of CQ is not just how the data structure is arranged,
