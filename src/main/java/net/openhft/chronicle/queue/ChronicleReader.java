@@ -23,9 +23,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.TextWire;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
@@ -56,7 +54,8 @@ final class ChronicleReader {
             long highestReachedIndex = 0L;
             boolean isFirstIteration = true;
             do {
-                try (final SingleChronicleQueue queue = createQueue()) {
+                try (final SingleChronicleQueue queue = createQueue();
+                     final MessageToTextQueueEntryHandler messageConverter = new MessageToTextQueueEntryHandler()) {
                     final ExcerptTailer tailer = queue.createTailer();
 
                     if (highestReachedIndex != 0L) {
@@ -78,20 +77,10 @@ final class ChronicleReader {
                                 pauser.reset();
 
                                 final Bytes<?> serialisedMessage = dc.wire().bytes();
-                                final byte dataFormatIndicator = serialisedMessage.readByte(serialisedMessage.readPosition());
-                                String text;
-
-                                if (isBinaryFormat(dataFormatIndicator)) {
-                                    textConversionTarget.clear();
-                                    final BinaryWire binaryWire = new BinaryWire(serialisedMessage);
-                                    binaryWire.copyTo(new TextWire(textConversionTarget));
-                                    text = textConversionTarget.toString();
-                                } else {
-                                    text = serialisedMessage.toString();
-                                }
-
-                                applyFiltersAndLog(excludeMessageHistory ? stripMessageHistory(text) : text,
-                                        tailer.index());
+                                messageConverter.accept(serialisedMessage, text -> {
+                                    applyFiltersAndLog(excludeMessageHistory ? stripMessageHistory(text) : text,
+                                            tailer.index());
+                                });
                             }
                         }
                     } finally {
