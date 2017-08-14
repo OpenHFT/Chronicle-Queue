@@ -43,16 +43,17 @@ The following table lists the available command line option arguments:
 |Show a maximum of this many messages from the end of the data set.
 |`-n`
 |Start reading from this index point.
+|`-r`
+|For use when reading from a queue written to by a `MethodWriter`.
 |`-h`
 |Print this help and exit. +
 
 The `-h` argument cannot be used in conjunction with other arguments.
 |===
 
-The following file contains the Chronicle Reader utility code:
-....
-C:\Users\Neil\IdeaProjects\Chronicle-Queue\src\main\java\net\openhft\chronicle\queue\ChronicleReaderMain.java
-....
+The Chronicle Reader main class is located at
+https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/ChronicleReaderMain.java
+
 === Command-line examples
 
 The following examples show how the option arguments can be used:
@@ -117,6 +118,21 @@ To follow a queue from the index point `0x123ABE`:
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -n 0x123ABE"
 ....
+
+==== Method Reader
+
+When reading from a queue that has been created using a MethodWriter:
+
+[source, java]
+....
+MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+methodWriterBuilder.recordHistory(true);
+StringEvents events = methodWriterBuilder.build();
+events.say("hello");
+....
+
+Using `-r` will cause the Reader to treat each event within a Document Excerpt as a single message
+for the purposes of applying regular expressions.
 
 ==== Help
 
