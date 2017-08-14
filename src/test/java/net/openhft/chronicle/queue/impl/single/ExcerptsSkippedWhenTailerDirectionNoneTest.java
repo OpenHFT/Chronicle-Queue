@@ -1,0 +1,65 @@
+package net.openhft.chronicle.queue.impl.single;
+
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueIn;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import java.io.File;
+
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+
+@Ignore("WIP")
+public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
+    @Test
+    public void shouldNotSkipMessageAtStartOfQueue() throws Exception {
+        final File tmpDir = DirectoryUtils.tempDir(ExcerptsSkippedWhenTailerDirectionNoneTest.class.getSimpleName());
+        try (final ChronicleQueue writeQueue =
+                     SingleChronicleQueueBuilder.binary(tmpDir)
+                             .testBlockSize()
+                             .rollCycle(TEST_DAILY)
+                             .build()) {
+            final ExcerptAppender excerptAppender = writeQueue.acquireAppender();
+            try (final DocumentContext ctx = excerptAppender.writingDocument()) {
+                ctx.wire().getValueOut().object("first");
+            }
+            try (final DocumentContext ctx = excerptAppender.writingDocument()) {
+                ctx.wire().getValueOut().object("second");
+            }
+        }
+
+        try (final SingleChronicleQueue readQueue =
+                     SingleChronicleQueueBuilder.binary(tmpDir)
+                             .testBlockSize()
+                             .rollCycle(TEST_DAILY)
+                             .build()) {
+
+            final ExcerptTailer tailer = readQueue.createTailer();
+            final RollCycle rollCycle = readQueue.rollCycle();
+            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(0L));
+            try (final DocumentContext ctx = tailer.direction(TailerDirection.NONE).readingDocument()) {
+                // access the first document without incrementing sequence number
+            }
+            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(0L));
+
+            String value;
+            try (DocumentContext dc =
+                         tailer.direction(TailerDirection.FORWARD).readingDocument()) {
+                System.out.println(dc.isPresent());
+                ValueIn valueIn = dc.wire().getValueIn();
+                value = (String) valueIn.object();
+            }
+            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(1L));
+
+            assertThat(value, is("first"));
+        }
+    }
+}
