@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.MethodWriterBuilder;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -43,12 +44,29 @@ public class ChronicleReaderTest {
     public void before() throws Exception {
         dataDir = DirectoryUtils.tempDir(ChronicleReaderTest.class.getSimpleName()).toPath();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
-            final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            methodWriterBuilder.recordHistory(true);
+            final StringEvents events = methodWriterBuilder.build();
 
             for (int i = 0; i < 24; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
+    }
+
+    @Test
+    public void shouldExcludeMessageHistoryByDefault() throws Exception {
+        basicReader().execute();
+
+        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(false));
+    }
+
+    @Test
+    public void shouldIncludeMessageHistoryWhenConfigured() throws Exception {
+        basicReader().includeMessageHistory().execute();
+
+        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
     }
 
     @Test(timeout = 5000)

@@ -39,15 +39,16 @@ import java.util.regex.Pattern;
 final class ChronicleReader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
+    private final List<Pattern> inclusionRegex = new ArrayList<>();
+    private final List<Pattern> exclusionRegex = new ArrayList<>();
+    private final Pauser pauser = Pauser.balanced();
     private Path basePath;
-    private List<Pattern> inclusionRegex = new ArrayList<>();
-    private List<Pattern> exclusionRegex = new ArrayList<>();
     private long startIndex = UNSET_VALUE;
     private boolean tailInputSource = false;
+    private boolean excludeMessageHistory = true;
     private long maxHistoryRecords = UNSET_VALUE;
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
-    private Pauser pauser = Pauser.balanced();
 
     void execute() {
         try {
@@ -89,7 +90,8 @@ final class ChronicleReader {
                                     text = serialisedMessage.toString();
                                 }
 
-                                applyFiltersAndLog(text, tailer.index());
+                                applyFiltersAndLog(excludeMessageHistory ? stripMessageHistory(text) : text,
+                                        tailer.index());
                             }
                         }
                     } finally {
@@ -140,10 +142,24 @@ final class ChronicleReader {
         return this;
     }
 
+    ChronicleReader includeMessageHistory() {
+        excludeMessageHistory = false;
+        return this;
+    }
+
     // visible for testing
     ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
         this.pollMethod = pollMethod;
         return this;
+    }
+
+    private String stripMessageHistory(final String text) {
+        if (!excludeMessageHistory || !text.startsWith("history: {\n")) {
+            return text;
+        }
+        final int messageHistoryClosingBracePosition = text.indexOf('}');
+
+        return text.substring(Math.min(text.length() - 1, messageHistoryClosingBracePosition + 2), text.length());
     }
 
     private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex) {
