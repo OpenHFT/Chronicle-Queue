@@ -117,6 +117,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
                 assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
+
+            assertThat(countEntries(queue), is(10L));
         }
     }
 
@@ -3655,5 +3657,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         public MyMarshable() {
         }
+    }
+
+    private static long countEntries(final ChronicleQueue queue) {
+        final ExcerptTailer tailer = queue.createTailer();
+        tailer.toStart().direction(TailerDirection.FORWARD);
+        long entryCount = 0L;
+        while (true) {
+            try (final DocumentContext ctx = tailer.readingDocument()) {
+                if (!ctx.isPresent()) {
+                    break;
+                }
+
+                entryCount++;
+            }
+        }
+
+        return entryCount;
     }
 }
