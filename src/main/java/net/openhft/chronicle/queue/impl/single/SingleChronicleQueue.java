@@ -482,6 +482,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return rollCycle().toIndex(cycle, 0);
     }
 
+    public long entryCount() {
+        final ExcerptTailer tailer = createTailer();
+        tailer.toEnd();
+        return countExcerpts(firstIndex(), tailer.index());
+    }
+
     @Nullable
     String[] getList() {
         return path.list();
