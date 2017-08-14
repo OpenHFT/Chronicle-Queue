@@ -1,17 +1,18 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.TextWire;
+import net.openhft.chronicle.wire.WireIn;
 
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public final class MessageToTextQueueEntryHandler implements BiConsumer<Bytes<?>, Consumer<String>>, AutoCloseable {
+public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
     private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
 
     @Override
-    public void accept(final Bytes<?> serialisedMessage, final Consumer<String> messageHandler) {
+    public void accept(final WireIn wireIn, final Consumer<String> messageHandler) {
+        final Bytes<?> serialisedMessage = wireIn.bytes();
         final byte dataFormatIndicator = serialisedMessage.readByte(serialisedMessage.readPosition());
         String text;
 

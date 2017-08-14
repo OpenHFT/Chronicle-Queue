@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.queue.reader.ChronicleReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -101,8 +102,8 @@ public enum ChronicleReaderMain {
         if (commandLine.hasOption('n')) {
             chronicleReader.withStartIndex(Long.decode(commandLine.getOptionValue('n')));
         }
-        if (commandLine.hasOption('s')) {
-            chronicleReader.includeMessageHistory();
+        if (commandLine.hasOption('r')) {
+            chronicleReader.asMethodReader();
         }
     }
 
@@ -116,7 +117,7 @@ public enum ChronicleReaderMain {
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
         addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
         addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
-        addOption(options, "s", "show-message-history", false, "Show MessageHistory when reading from a queue generated using a MethodWriter", false);
+        addOption(options, "r", "as-method-reader", false, "Use when reading from a queue generated using a MethodWriter", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
         return options;
     }

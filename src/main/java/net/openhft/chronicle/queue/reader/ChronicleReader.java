@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Pauser;
@@ -32,9 +34,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-final class ChronicleReader {
+public final class ChronicleReader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
     private final List<Pattern> inclusionRegex = new ArrayList<>();
@@ -43,19 +46,19 @@ final class ChronicleReader {
     private Path basePath;
     private long startIndex = UNSET_VALUE;
     private boolean tailInputSource = false;
-    private boolean excludeMessageHistory = true;
     private long maxHistoryRecords = UNSET_VALUE;
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
+    private Supplier<QueueEntryHandler> entryHandlerFactory = MessageToTextQueueEntryHandler::new;
 
-    void execute() {
+    public void execute() {
         try {
             long lastObservedTailIndex;
             long highestReachedIndex = 0L;
             boolean isFirstIteration = true;
             do {
                 try (final SingleChronicleQueue queue = createQueue();
-                     final MessageToTextQueueEntryHandler messageConverter = new MessageToTextQueueEntryHandler()) {
+                     final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
                     final ExcerptTailer tailer = queue.createTailer();
 
                     if (highestReachedIndex != 0L) {
@@ -76,10 +79,8 @@ final class ChronicleReader {
                                 }
                                 pauser.reset();
 
-                                final Bytes<?> serialisedMessage = dc.wire().bytes();
-                                messageConverter.accept(serialisedMessage, text -> {
-                                    applyFiltersAndLog(excludeMessageHistory ? stripMessageHistory(text) : text,
-                                            tailer.index());
+                                messageConverter.accept(dc.wire(), text -> {
+                                    applyFiltersAndLog(text, tailer.index());
                                 });
                             }
                         }
@@ -96,43 +97,43 @@ final class ChronicleReader {
         }
     }
 
-    ChronicleReader withMessageSink(final Consumer<String> messageSink) {
+    public ChronicleReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
         return this;
     }
 
-    ChronicleReader withBasePath(final Path path) {
+    public ChronicleReader withBasePath(final Path path) {
         this.basePath = path;
         return this;
     }
 
-    ChronicleReader withInclusionRegex(final String regex) {
+    public ChronicleReader withInclusionRegex(final String regex) {
         this.inclusionRegex.add(Pattern.compile(regex));
         return this;
     }
 
-    ChronicleReader withExclusionRegex(final String regex) {
+    public ChronicleReader withExclusionRegex(final String regex) {
         this.exclusionRegex.add(Pattern.compile(regex));
         return this;
     }
 
-    ChronicleReader withStartIndex(final long index) {
+    public ChronicleReader withStartIndex(final long index) {
         this.startIndex = index;
         return this;
     }
 
-    ChronicleReader tail() {
+    public ChronicleReader tail() {
         this.tailInputSource = true;
         return this;
     }
 
-    ChronicleReader historyRecords(final long maxHistoryRecords) {
+    public ChronicleReader historyRecords(final long maxHistoryRecords) {
         this.maxHistoryRecords = maxHistoryRecords;
         return this;
     }
 
-    ChronicleReader includeMessageHistory() {
-        excludeMessageHistory = false;
+    public ChronicleReader asMethodReader() {
+        entryHandlerFactory = MethodReaderQueueEntryHandler::new;
         return this;
     }
 
@@ -140,15 +141,6 @@ final class ChronicleReader {
     ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
         this.pollMethod = pollMethod;
         return this;
-    }
-
-    private String stripMessageHistory(final String text) {
-        if (!excludeMessageHistory || !text.startsWith("history: {\n")) {
-            return text;
-        }
-        final int messageHistoryClosingBracePosition = text.indexOf('}');
-
-        return text.substring(Math.min(text.length() - 1, messageHistoryClosingBracePosition + 2), text.length());
     }
 
     private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex) {
