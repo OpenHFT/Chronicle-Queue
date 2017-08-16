@@ -1298,10 +1298,6 @@ public class SingleChronicleQueueExcerpts {
             }
             index(queue.rollCycle().toIndex(cycle, 0));
 
-            if (indexAtCreation == Long.MIN_VALUE) {
-                indexAtCreation = index;
-            }
-
             state = FOUND_CYCLE;
             if (wire() != null)
                 wire().bytes().readPosition(0);
@@ -1511,6 +1507,10 @@ public class SingleChronicleQueueExcerpts {
         // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
         void index(long index) {
             this.index = index;
+
+            if (indexAtCreation == Long.MIN_VALUE) {
+                indexAtCreation = index;
+            }
         }
 
         private boolean cycle(final int cycle, boolean createIfAbsent) {
