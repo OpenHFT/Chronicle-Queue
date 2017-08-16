@@ -8,7 +8,6 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -17,7 +16,6 @@ import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-@Ignore("WIP")
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
     @Test
     public void shouldNotSkipMessageAtStartOfQueue() throws Exception {
@@ -53,13 +51,30 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
             String value;
             try (DocumentContext dc =
                          tailer.direction(TailerDirection.FORWARD).readingDocument()) {
-                System.out.println(dc.isPresent());
                 ValueIn valueIn = dc.wire().getValueIn();
                 value = (String) valueIn.object();
             }
             assertThat(rollCycle.toSequenceNumber(tailer.index()), is(1L));
 
             assertThat(value, is("first"));
+
+            try (DocumentContext dc =
+                         tailer.direction(TailerDirection.NONE).readingDocument()) {
+                ValueIn valueIn = dc.wire().getValueIn();
+                value = (String) valueIn.object();
+            }
+            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(1L));
+
+            assertThat(value, is("second"));
+
+            try (DocumentContext dc =
+                         tailer.direction(TailerDirection.NONE).readingDocument()) {
+                ValueIn valueIn = dc.wire().getValueIn();
+                value = (String) valueIn.object();
+            }
+            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(1L));
+
+            assertThat(value, is("second"));
         }
     }
 }

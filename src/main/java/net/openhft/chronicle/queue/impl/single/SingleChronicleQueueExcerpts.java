@@ -45,6 +45,7 @@ import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
+import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
@@ -858,6 +859,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean readAfterReplicaAcknowledged;
         @NotNull
         private TailerState state = UNINITIALISED;
+        private long indexAtCreation = Long.MIN_VALUE;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -887,6 +889,10 @@ public class SingleChronicleQueueExcerpts {
         @Override
         @NotNull
         public DocumentContext readingDocument() {
+            // trying to create an initial document without a direction should not consume a message
+            if (direction == NONE && index == indexAtCreation) {
+                return NoDocumentContext.INSTANCE;
+            }
             return readingDocument(false);
         }
 
@@ -1291,6 +1297,11 @@ public class SingleChronicleQueueExcerpts {
                     state = FOUND_CYCLE;
             }
             index(queue.rollCycle().toIndex(cycle, 0));
+
+            if (indexAtCreation == Long.MIN_VALUE) {
+                indexAtCreation = index;
+            }
+
             state = FOUND_CYCLE;
             if (wire() != null)
                 wire().bytes().readPosition(0);
