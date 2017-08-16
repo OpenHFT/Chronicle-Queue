@@ -53,7 +53,7 @@ public class SingleCQFormatTest {
 
     private static void expected(@NotNull ExcerptTailer tailer, String expected) {
         try (DocumentContext dc = tailer.readingDocument()) {
-            assertTrue(dc.isPresent());
+            assertTrue("No document found", dc.isPresent());
             Bytes bytes2 = Bytes.elasticHeapByteBuffer(128);
             dc.wire().copyTo(new TextWire(bytes2));
             assertEquals(expected, bytes2.toString());

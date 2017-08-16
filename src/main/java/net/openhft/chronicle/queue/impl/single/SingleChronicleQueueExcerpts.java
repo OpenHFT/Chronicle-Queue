@@ -860,6 +860,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private TailerState state = UNINITIALISED;
         private long indexAtCreation = Long.MIN_VALUE;
+        private boolean readingDocumentFound = false;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -890,7 +891,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public DocumentContext readingDocument() {
             // trying to create an initial document without a direction should not consume a message
-            if (direction == NONE && index == indexAtCreation) {
+            if (direction == NONE && index == indexAtCreation && !readingDocumentFound) {
                 return NoDocumentContext.INSTANCE;
             }
             return readingDocument(false);
@@ -953,6 +954,7 @@ public class SingleChronicleQueueExcerpts {
 
                 if (context.present(next)) {
                     context.setStart(context.wire().bytes().readPosition() - 4);
+                    readingDocumentFound = true;
                     return context;
                 }
                 RollCycle rollCycle = queue.rollCycle();
