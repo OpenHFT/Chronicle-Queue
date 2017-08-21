@@ -1,7 +1,37 @@
 = Release Notes
-Peter Lawrey
+Chronicle Developers
+:toc: macro
+:toclevels: 1
+:css-signature: demo
+:toc-placement: macro
+:icons: font
 
-=== Changes from 4.4.0 to 4.5.0
+toc::[]
+
+Release Notes for the following versions are available.
+
+'''
+== Release 4.6.13
+
+This release was made available on 17th August 2017, and includes the following changes:
+
+- Update Chronicle-Core dependency to 1.9.3
+- Fix for issue #367
+
+
+
+'''
+== Release 4.6.11
+
+This release was made available on 1st August 2017, and includes the following changes:
+
+- The `-d` parameter is now mandatory when running `ChronicleReader`.
+- `ChronicleReader` now uses a `Pauser` instead of a fixed length delay.
+
+
+
+'''
+== Changes from 4.4.0 to 4.5.0
 
 - Improved support for binary messages (Bytes based instead of Wire based) in Queue
 - A number of performance improvements to support replication.
@@ -17,3 +47,5 @@ Peter Lawrey
 - Improve cleanup of resources on a close().
 - Support Tailer direction() as either TailerDirection.NONE, FORWARD, or BACKWARD
 - Code simplification after review.
+
+'''
