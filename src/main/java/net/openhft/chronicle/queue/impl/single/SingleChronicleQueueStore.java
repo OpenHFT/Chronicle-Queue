@@ -74,7 +74,7 @@ public class SingleChronicleQueueStore implements WireStore {
     private SingleChronicleQueueStore(@NotNull WireIn wire) {
         assert wire.startUse();
         try {
-            this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
+            this.wireType = wire.read(MetaDataField.wireType).asEnum(WireType.class);
             assert wireType != null;
             this.writePosition = wire.newLongReference();
             wire.read(MetaDataField.writePosition).int64(writePosition);
@@ -317,7 +317,7 @@ public class SingleChronicleQueueStore implements WireStore {
         if (lastAcknowledgedIndexReplicated == null)
             lastAcknowledgedIndexReplicated = wire.newLongReference();
 
-        wire.write(MetaDataField.wireType).object(wireType)
+        wire.write(MetaDataField.wireType).asEnum(wireType)
                 .writeAlignTo(8, 0).write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
                 .write(MetaDataField.roll).typedMarshallable(this.roll)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
