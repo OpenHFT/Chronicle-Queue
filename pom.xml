@@ -22,9 +22,10 @@
         <groupId>software.chronicle</groupId>
         <artifactId>chronicle-enterprise-root-pom</artifactId>
         <version>1.0.6</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
+    <groupId>net.openhft</groupId>
     <artifactId>chronicle</artifactId>
     <version>3.6.6-SNAPSHOT</version>
     <packaging>bundle</packaging>
