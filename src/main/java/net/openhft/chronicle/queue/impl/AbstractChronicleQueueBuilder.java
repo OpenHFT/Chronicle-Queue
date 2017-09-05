@@ -408,8 +408,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
                         "Trying to create queue with roll cycle %s, but existing queue files use %s",
                         rollCycle, rc));
             } else if (rc != rollCycle) {
-                LOGGER.warn("Builder configured to use roll-cycle {}, but existing queue files use {}, defaulting to use {}",
-                        rollCycle, rc, rc);
                 rollCycle = rc;
             }
         });
