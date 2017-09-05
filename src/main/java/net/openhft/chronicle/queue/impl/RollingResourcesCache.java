@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.util.function.Function;
@@ -43,11 +44,11 @@ public class RollingResourcesCache {
     @NotNull
     private final Resource[] values;
     private final int length;
-
     @NotNull
     private final Function<File, String> fileToName;
-    private ParseCount lastParseCount = NO_PARSE_COUNT;
     private final int offsetTotalSeconds;
+    private final String format;
+    private ParseCount lastParseCount = NO_PARSE_COUNT;
     private int dayAdjustmentDueToNegativeOffset;
 
     public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
@@ -79,7 +80,8 @@ public class RollingResourcesCache {
         offsetTotalSeconds = (int) (millis / 1000);
         ZoneOffset zoneOffsetFromUtc = ZoneOffset.ofTotalSeconds(offsetTotalSeconds);
         ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffsetFromUtc);
-        this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
+        this.format = format;
+        this.formatter = DateTimeFormatter.ofPattern(this.format).withZone(zoneId);
         this.fileFactory = nameToFile;
 
     }
@@ -113,15 +115,20 @@ public class RollingResourcesCache {
     }
 
     private int parseCount0(@NotNull String name) {
-        TemporalAccessor parse = formatter.parse(name);
+        try {
+            TemporalAccessor parse = formatter.parse(name);
 
-        long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
-        if (parse.isSupported(ChronoField.SECOND_OF_DAY))
-            epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
+            long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
+            if (parse.isSupported(ChronoField.SECOND_OF_DAY))
+                epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
 
-        return Maths.toInt32(epochDay / (length / 1000)) +
-                (offsetTotalSeconds < 0 ? 1 : 0) -
-                dayAdjustmentDueToNegativeOffset;
+            return Maths.toInt32(epochDay / (length / 1000)) +
+                    (offsetTotalSeconds < 0 ? 1 : 0) -
+                    dayAdjustmentDueToNegativeOffset;
+        } catch (DateTimeParseException e) {
+            throw new RuntimeException(String.format(
+                    "Unable to parse %s using format %s", name, format), e);
+        }
     }
 
     public Long toLong(File file) {

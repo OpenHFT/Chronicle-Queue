@@ -54,6 +54,13 @@ public class RollingResourcesCacheTest {
         assertThat(cache.parseCount(FILE_NAME), is(CYCLE_NUMBER));
     }
 
+    @Test(expected = RuntimeException.class)
+    public void parseIncorrectlyFormattedName() throws Exception {
+        final RollingResourcesCache cache =
+                new RollingResourcesCache(RollCycles.HOURLY, BUGGY_EPOCH, File::new, File::getName);
+        cache.parseCount("foobar-qux");
+    }
+
     @Test
     public void fuzzyConversionTest() throws Exception {
         final int maxAddition = (int) ChronoUnit.DECADES.getDuration().toMillis();
