@@ -7,10 +7,12 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -18,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
@@ -42,7 +46,19 @@ public enum RollCycleRetriever {
                 if (bytes.readLimit() < 4) {
                     return Optional.empty();
                 }
+                final File file = mappedBytes.mappedFile().file();
+                for (int i = 0; i < 500 && file.length() == 0; i++) {
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1L));
+                }
+                if (file.length() < 4) {
+                    LOGGER.warn("Queue file exists, but is truncated, cannot determine existing roll cycle");
+                    return Optional.empty();
+                }
 
+                final int firstInt = bytes.peekVolatileInt();
+                if (!Wires.isReady(firstInt)) {
+                    return Optional.empty();
+                }
                 bytes.readSkip(4);
                 try (final SingleChronicleQueueStore queueStore = SingleChronicleQueueBuilder.loadStore(wire)) {
                     if (queueStore == null) {
@@ -59,7 +75,7 @@ public enum RollCycleRetriever {
                         }
                     }
 
-                } catch (final RuntimeException e) {
+                } catch (final Throwable e) {
                     LOGGER.warn("Unable to load queue store from path {}", queuePath, e);
                 }
 
