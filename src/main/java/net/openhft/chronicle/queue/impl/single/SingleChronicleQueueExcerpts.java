@@ -1475,8 +1475,6 @@ public class SingleChronicleQueueExcerpts {
                     break;
                 case FORWARD:
                     if (rollCycle.toSequenceNumber(seq) < seq) {
-                        System.out.printf("Setting cycle from %d to %d, seq: %d from index: %d%n",
-                                cycle, cycle + 1, seq - direction.add(), index);
                         cycle(cycle + 1, false);
                         seq = 0;
                     }
@@ -1516,7 +1514,6 @@ public class SingleChronicleQueueExcerpts {
 
         // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
         void index(long index) {
-//            new RuntimeException("Setting index to " + index).printStackTrace(System.out);
             this.index = index;
 
             if (indexAtCreation == Long.MIN_VALUE) {
