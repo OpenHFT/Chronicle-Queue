@@ -19,6 +19,7 @@ import static org.junit.Assert.assertThat;
 
 @Ignore
 public final class DuplicateMessageReadTest {
+    private static final RollCycles QUEUE_CYCLE = RollCycles.DAILY;
 
     @Test
     public void shouldNotReceiveDuplicateMessages() throws Exception {
@@ -26,33 +27,27 @@ public final class DuplicateMessageReadTest {
 
         final SingleChronicleQueue chronicleQueue = SingleChronicleQueueBuilder
                 .binary(location)
-                .rollCycle(RollCycles.HOURLY)
+                .rollCycle(QUEUE_CYCLE)
                 .build();
 
-        // this warmup with a different appender creates the problem
-        final ExcerptAppender preTouchAppender = chronicleQueue.acquireAppender();
-        preTouchAppender.pretouch();
-
-
-        System.out.printf("First appender: %s%n", preTouchAppender);
+        final ExcerptAppender appender = chronicleQueue.acquireAppender();
+        appender.pretouch();
 
         final List<Data> expected = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 50; i < 60; i++) {
             expected.add(new Data(i));
         }
 
         final ExcerptTailer tailer = chronicleQueue.createTailer();
         tailer.toEnd(); // move to end of chronicle before writing
 
-        // use different appender to write data
-        final ExcerptAppender appender = chronicleQueue.acquireAppender();
-        System.out.printf("Writing appender: %s%n", appender);
         for (final Data data : expected) {
             write(appender, data);
         }
 
         final List<Data> actual = new ArrayList<>();
-        for (Data data = read(tailer); data != null; data = read(tailer)) {
+        Data data;
+        while ((data = read(tailer)) != null) {
             actual.add(data);
         }
 
@@ -71,6 +66,7 @@ public final class DuplicateMessageReadTest {
             if (!dc.isPresent()) {
                 return null;
             }
+
             final ObjectInput in = dc.wire().objectInput();
             return new Data(in.readInt());
         }

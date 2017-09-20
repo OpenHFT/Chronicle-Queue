@@ -1338,6 +1338,12 @@ public class SingleChronicleQueueExcerpts {
                 // flag we want to count it even though we don't know if it will be meta data or not.
 
                 long sequenceNumber = store.lastSequenceNumber(this);
+
+                // fixes #378
+                if (sequenceNumber == -1L) {
+                    // nothing has been written yet, so point to start of cycle
+                    return rollCycle.toIndex(lastCycle, 0L);
+                }
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
             } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
@@ -1469,6 +1475,8 @@ public class SingleChronicleQueueExcerpts {
                     break;
                 case FORWARD:
                     if (rollCycle.toSequenceNumber(seq) < seq) {
+                        System.out.printf("Setting cycle from %d to %d, seq: %d from index: %d%n",
+                                cycle, cycle + 1, seq - direction.add(), index);
                         cycle(cycle + 1, false);
                         seq = 0;
                     }
@@ -1508,6 +1516,7 @@ public class SingleChronicleQueueExcerpts {
 
         // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
         void index(long index) {
+//            new RuntimeException("Setting index to " + index).printStackTrace(System.out);
             this.index = index;
 
             if (indexAtCreation == Long.MIN_VALUE) {
