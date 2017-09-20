@@ -5,7 +5,6 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -17,7 +16,6 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-@Ignore
 public final class DuplicateMessageReadTest {
     private static final RollCycles QUEUE_CYCLE = RollCycles.DAILY;
 
