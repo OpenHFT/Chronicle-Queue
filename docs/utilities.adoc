@@ -8,7 +8,7 @@ Neil Clifford
 
 toc::[]
 
-This document describes Chronicle Queue utility problems that have been created to help in the maintainance of your Chronicle Queue environment.
+This document describes Chronicle Queue utility programs that have been created to help in the maintenance of your Chronicle Queue environment.
 
 
 == Chronicle Reader utility
@@ -144,3 +144,27 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 ....
 
 
+== Packaging
+
+For convenience, this tool back be packaged for deployment to a server environment.
+
+To create an archive for deployment, run the following from the project root:
+
+[source,bash]
+....
+$ ./bin/package_scripts.sh
+Created /tmp/chronicle-queue-tools.tar
+....
+
+The resulting tar file can be copied to another location & expanded.
+Once unpacked, invoke the `queue_reader.sh` script in order to execute the
+ChronicleReader utility:
+
+[source,bash]
+....
+$ ./queue_reader.sh
+Please specify the directory with -d
+
+usage: ChronicleReaderMain [-d <directory>] [-e <exclude-regex>] [-f]
+    [-h] [-i <include-regex>] [-m <max-history>] [-n <from-index>] [-r]
+....

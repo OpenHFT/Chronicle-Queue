@@ -1314,3 +1314,9 @@ console output:
 [main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY.
     Overriding this queue to use HOURLY
 ----
+
+
+=== More information
+
+More in-depth information can be found in the
+https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs[docs directory].
