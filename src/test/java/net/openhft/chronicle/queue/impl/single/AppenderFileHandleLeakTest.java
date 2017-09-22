@@ -72,7 +72,7 @@ public final class AppenderFileHandleLeakTest {
 
     private static void readMessage(final SingleChronicleQueue queue) {
         final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
-        queue.createTailer().toStart().readBytes(bytes);
+        queue.acquireTailer().toStart().readBytes(bytes);
         assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
         bytes.release();
     }
