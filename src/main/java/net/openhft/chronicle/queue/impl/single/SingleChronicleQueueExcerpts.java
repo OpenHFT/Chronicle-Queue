@@ -1464,6 +1464,15 @@ public class SingleChronicleQueueExcerpts {
             return closableResources::releaseResources;
         }
 
+        /**
+         * Can be used to manually release resources when this
+         * StoreTailer is no longer used.
+         */
+        public void releaseResources() {
+            queue.removeCloseListener(this);
+            getCloserJob().run();
+        }
+
         private void incrementIndex() {
             RollCycle rollCycle = queue.rollCycle();
             long seq = rollCycle.toSequenceNumber(this.index);

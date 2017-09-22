@@ -649,6 +649,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 fileToText());
     }
 
+    void removeCloseListener(final StoreTailer storeTailer) {
+        synchronized (closers) {
+            closers.remove(storeTailer);
+        }
+    }
+
     private class StoreSupplier implements WireStoreSupplier {
 
         @Override
