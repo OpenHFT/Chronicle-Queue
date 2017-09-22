@@ -317,7 +317,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     @Override
     public ExcerptTailer createTailer() {
-        return new StoreTailer(this).toStart();
+        final StoreTailer storeTailer = new StoreTailer(this);
+        if (SHOULD_RELEASE_RESOURCES) {
+            StoreComponentReferenceHandler.register(
+                    new WeakReference<>(storeTailer, StoreComponentReferenceHandler.tailerQueue()),
+                    storeTailer.getCloserJob());
+        }
+        return storeTailer.toStart();
     }
 
     @Nullable
