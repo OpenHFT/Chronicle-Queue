@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>4.6.19-SNAPSHOT</version>
+    <version>4.6.20-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
 
