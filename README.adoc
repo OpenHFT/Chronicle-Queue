@@ -24,7 +24,12 @@ https://player.vimeo.com/video/201989439
 
 http://jrvis.com/red-dwarf/?user=openhft&repo=chronicle-queue[Chronicle Queue usage heatmap]
 
-=== What is Chronicle Queue 
+=== What is Chronicle Queue
+
+What is Chronicle Queue
+
+* You could consider Chronicle Queue to be similar to a low latency durable/persisted JVM topic.
+
 Chronicle Queue is a distributed unbounded persisted queue. Chronicle Queue:
 
 * supports asynchronous RMI and Publish/Subscribe interfaces with microsecond latencies.
