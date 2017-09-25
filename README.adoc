@@ -124,7 +124,6 @@ In addition, you will be fully supported by our technical experts.
 For more information on Chronicle Queue (Enterprise Edition), please contact mailto:sales@chronicle.software[sales@chronicle.software].
 
 
-
 == How does Chronicle Queue v4 work
 
 === Terminology
@@ -645,7 +644,7 @@ Chronicle queue tailers may create file handlers, the file handlers are cleaned 
 If you are writing your code not have GC pauses and you explicitly want to clean up the file handlers, you can call the following:
 
 ```java
-StoreTailer.releaseResources()
+((StoreTailer)tailer).releaseResources()
 ```
 
 
