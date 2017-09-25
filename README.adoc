@@ -543,7 +543,7 @@ header: !SCQStore {
 
 NOTE: The example above does not show any user data, because no user data was written to this example file.
 
-=== Reading from a Queue
+=== Reading from a Queue using a Tailer
 
 Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
 
@@ -553,6 +553,7 @@ Reading the queue follows the same pattern as writing, except there is a possibi
 try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
    final ExcerptTailer tailer = queue.createTailer();
 ----
+
 
 You can turn each message into a method call based on the content of the message.
 
@@ -631,7 +632,17 @@ assertTrue(tailer.readBytes(b -> {
     assertEquals("Hello World", text);
     // do something with values
 }));
+
 ----
+==== Tailers and File Handlers Clean up
+
+Chronicle queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue is close() or whenever the Jvm runs a Garbage Collection.
+If you are writing your code not have GC pauses and you explicitly want to clean up the file handlers, you can call the following:
+
+```java
+StoreTailer.releaseResources()
+```
+
 
 === High level interface
 
