@@ -762,7 +762,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
             final NavigableMap<Long, File> tree = new TreeMap<>();
 
-            final File[] files = parentFile.listFiles((File file) -> file.getName().endsWith(SUFFIX));
+            final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
 
             for (File file : files) {
                 tree.put(dateCache.toLong(file), file);
