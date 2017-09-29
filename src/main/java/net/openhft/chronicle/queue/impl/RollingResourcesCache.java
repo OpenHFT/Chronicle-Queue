@@ -28,6 +28,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 public class RollingResourcesCache {
@@ -36,6 +38,7 @@ public class RollingResourcesCache {
     private static final int HALF_DAY_IN_MILLIS = ONE_DAY_IN_MILLIS / 2;
 
     public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
+    private static final int MAX_TIMESTAMP_CACHE_SIZE = 32;
 
     @NotNull
     private final Function<String, File> fileFactory;
@@ -48,6 +51,8 @@ public class RollingResourcesCache {
     private final Function<File, String> fileToName;
     private final int offsetTotalSeconds;
     private final String format;
+    private final ConcurrentMap<File, Long> filenameToTimestampCache =
+            new ConcurrentHashMap<>(MAX_TIMESTAMP_CACHE_SIZE);
     private ParseCount lastParseCount = NO_PARSE_COUNT;
     private int dayAdjustmentDueToNegativeOffset;
 
@@ -132,11 +137,24 @@ public class RollingResourcesCache {
     }
 
     public Long toLong(File file) {
-        TemporalAccessor parse = formatter.parse(fileToName.apply(file));
+        final Long cachedValue = filenameToTimestampCache.get(file);
+        if (cachedValue != null) {
+            return cachedValue;
+        }
+
+        final TemporalAccessor parse = formatter.parse(fileToName.apply(file));
+        final long value;
         if (length == ONE_DAY_IN_MILLIS) {
-            return parse.getLong(ChronoField.EPOCH_DAY);
-        } else
-            return Instant.from(parse).toEpochMilli() / length;
+            value = parse.getLong(ChronoField.EPOCH_DAY);
+        } else {
+            value = Instant.from(parse).toEpochMilli() / length;
+        }
+        if (filenameToTimestampCache.size() >= MAX_TIMESTAMP_CACHE_SIZE) {
+            filenameToTimestampCache.clear();
+        }
+        filenameToTimestampCache.put(file, Long.valueOf(value));
+
+        return value;
     }
 
     static class ParseCount {
@@ -153,11 +171,13 @@ public class RollingResourcesCache {
         public final long millis;
         public final String text;
         public final File path;
+        public final File parentPath;
 
         Resource(long millis, String text, File path) {
             this.millis = millis;
             this.text = text;
             this.path = path;
+            this.parentPath = path.getParentFile();
         }
     }
 }
