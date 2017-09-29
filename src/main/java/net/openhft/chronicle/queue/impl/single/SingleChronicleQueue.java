@@ -105,6 +105,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private int deltaCheckpointInterval;
     private boolean persistedRollCycleCheckPerformed = false;
     private long lastModified;
+    private int pollCount;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -516,11 +517,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             Thread.yield();
         }
 
-        if (path.lastModified() < lastModified) {
+        if (path.lastModified() < lastModified && pollCount++ < 100) {
             return;
         }
 
         lastModified = path.lastModified();
+        pollCount = 0;
+
         firstCycle = Integer.MAX_VALUE;
         lastCycle = Integer.MIN_VALUE;
 
@@ -749,7 +752,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
             final NavigableMap<Long, File> tree = new TreeMap<>();
 
-            if (cachedChildFiles == null || parentFile.lastModified() > lastModificationCheckTime) {
+            if (cachedChildFiles == null || parentFile.lastModified() >= lastModificationCheckTime) {
                 cachedChildFiles = parentFile.listFiles((File file) -> file.getName().endsWith(SUFFIX));
                 lastModificationCheckTime = parentFile.lastModified();
             }
