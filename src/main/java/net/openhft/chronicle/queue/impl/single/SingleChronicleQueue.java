@@ -37,7 +37,9 @@ import java.io.*;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -102,6 +104,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
     private boolean persistedRollCycleCheckPerformed = false;
+    private long lastModified;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -513,6 +516,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             Thread.yield();
         }
 
+        if (path.lastModified() < lastModified) {
+            return;
+        }
+
+        lastModified = path.lastModified();
         firstCycle = Integer.MAX_VALUE;
         lastCycle = Integer.MIN_VALUE;
 
@@ -656,6 +664,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     private class StoreSupplier implements WireStoreSupplier {
+        private File[] cachedChildFiles = null;
+        private long lastModificationCheckTime = 0L;
 
         @Override
         public WireStore acquire(int cycle, boolean createIfAbsent) {
@@ -665,7 +675,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     .dateCache.resourceFor(cycle);
             try {
                 File path = dateValue.path;
-                final File parentFile = path.getParentFile();
+                final File parentFile = dateValue.parentPath;
                 if (parentFile != null && !parentFile.exists()) {
                     if (createIfAbsent)
                         parentFile.mkdirs();
@@ -739,14 +749,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
             final NavigableMap<Long, File> tree = new TreeMap<>();
 
-            final File[] files = parentFile.listFiles((File file) -> file.getName().endsWith(SUFFIX));
+            if (cachedChildFiles == null || parentFile.lastModified() > lastModificationCheckTime) {
+                cachedChildFiles = parentFile.listFiles((File file) -> file.getName().endsWith(SUFFIX));
+                lastModificationCheckTime = parentFile.lastModified();
+            }
+
+            final File[] files = cachedChildFiles;
 
             for (File file : files) {
                 tree.put(dateCache.toLong(file), file);
             }
 
             return tree;
-
         }
 
         @Override
