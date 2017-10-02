@@ -36,6 +36,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -312,7 +313,7 @@ public class ToEndTest {
     }
 
     private void checkOneFile(@NotNull File baseDir) {
-        String[] files = baseDir.list();
+        String[] files = baseDir.list((dir, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
 
         if (files == null || files.length == 0)
             return;
