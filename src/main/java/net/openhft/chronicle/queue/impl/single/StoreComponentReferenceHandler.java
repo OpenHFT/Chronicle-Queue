@@ -10,6 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 
 public enum StoreComponentReferenceHandler {
     ;
@@ -30,12 +33,19 @@ public enum StoreComponentReferenceHandler {
     private static final boolean SHOULD_RELEASE_RESOURCES =
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
                     Boolean.TRUE.toString()));
+    private static final int MAX_BATCH_SIZE =
+            Integer.getInteger("chronicle.queue.release.weakRef.maxBatch", 10_000);
+    private static final AtomicBoolean MAX_BATCH_WARNING_LOGGED = new AtomicBoolean(false);
 
     static {
         THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
-                processReferenceQueue(EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE);
-                processReferenceQueue(EXPIRED_THREAD_LOCAL_TAILERS_QUEUE);
+                boolean referenceWasProcessed = processReferenceQueue(EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE);
+                referenceWasProcessed |= processReferenceQueue(EXPIRED_THREAD_LOCAL_TAILERS_QUEUE);
+
+                if (!referenceWasProcessed) {
+                    LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(1L));
+                }
             }
         });
     }
@@ -52,21 +62,30 @@ public enum StoreComponentReferenceHandler {
         CLOSE_ACTIONS.put(reference, cleanupJob);
     }
 
-    private static void processReferenceQueue(final ReferenceQueue<?> referenceQueue) {
+    private static boolean processReferenceQueue(final ReferenceQueue<?> referenceQueue) {
+        int processedCount = 0;
         try {
-            final Reference<?> reference = referenceQueue.remove(1000L);
+            Reference<?> reference;
 
-            if (reference != null && reference.get() == null) {
-                final Runnable closeAction = CLOSE_ACTIONS.remove(reference);
-                if (closeAction != null && SHOULD_RELEASE_RESOURCES) {
-                    closeAction.run();
+            while ((reference = referenceQueue.poll()) != null) {
+                if (processedCount++ == MAX_BATCH_SIZE) {
+                    if (!MAX_BATCH_WARNING_LOGGED.get()) {
+                        MAX_BATCH_WARNING_LOGGED.set(true);
+                        LOGGER.warn("Weak ref queue processed {} entries, consider increasing max batch size" +
+                                " via -Dchronicle.queue.release.weakRef.maxBatch", MAX_BATCH_SIZE);
+                    }
+                    return true;
+                }
+                if (reference.get() == null) {
+                    final Runnable closeAction = CLOSE_ACTIONS.remove(reference);
+                    if (closeAction != null && SHOULD_RELEASE_RESOURCES) {
+                        closeAction.run();
+                    }
                 }
             }
-        } catch (InterruptedException e) {
-            LOGGER.warn("Thread-local cleaner thread was interrupted. Exiting.");
-            Thread.currentThread().interrupt();
         } catch (RuntimeException e) {
             LOGGER.warn("Error occurred attempting to close ExcerptAppender.", e);
         }
+        return processedCount != 0;
     }
 }
