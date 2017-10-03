@@ -48,9 +48,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileNotFoundException;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StreamCorruptedException;
@@ -81,10 +79,6 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerp
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
-    public static final FileFilter QUEUE_FILE_FILTER =
-            pathname -> pathname.getPath().endsWith(SUFFIX);
-    public static final FilenameFilter QUEUE_FILENAME_FILTER =
-            (dir, name) -> name.endsWith(SUFFIX);
     private static final boolean SHOULD_RELEASE_RESOURCES =
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
                     Boolean.TRUE.toString()));
@@ -123,8 +117,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final CycleCalculator cycleCalculator;
     @NotNull
     private final Function<String, File> nameToFile;
-    @NotNull
-    private final DirectoryContent directoryContent;
     @NotNull
     private RollCycle rollCycle;
     @NotNull
@@ -172,7 +164,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
         readOnly = builder.readOnly();
-        directoryContent = new DirectoryContent(path.toPath());
     }
 
     @Nullable
@@ -707,8 +698,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
                 if (!path.exists() && !createIfAbsent)
                     return null;
-
-                directoryContent.onFileCreated(null, cycle);
 
                 if (createIfAbsent)
                     checkDiskSpace(path);

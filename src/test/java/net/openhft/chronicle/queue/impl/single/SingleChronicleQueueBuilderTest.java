@@ -1,29 +1,21 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.core.OS;
 import org.junit.Test;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_FILE_FILTER;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class SingleChronicleQueueBuilderTest {
+    private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
+
     @Test
     public void shouldDetermineQueueDirectoryFromQueueFile() throws Exception {
-        final File queuePath = DirectoryUtils.tempDir(getClass().getSimpleName());
-        try (final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(queuePath)
-                             .testBlockSize()
-                             .build()) {
-            try (DocumentContext ctx = queue.acquireAppender().writingDocument()) {
-                ctx.wire().write("key").text("value");
-            }
-        }
-        final Path path = queuePath.listFiles(QUEUE_FILE_FILTER)[0].toPath();
+        final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(path)
                              .testBlockSize()

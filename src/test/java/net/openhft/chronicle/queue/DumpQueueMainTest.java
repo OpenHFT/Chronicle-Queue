@@ -32,8 +32,7 @@ public class DumpQueueMainTest {
         excerptAppender.writeText("first");
         excerptAppender.writeText("last");
 
-        final Path queueFile = Files.list(dataDir.toPath()).filter(p -> p.toString().
-                endsWith(SingleChronicleQueue.SUFFIX)).findFirst().orElseThrow(() ->
+        final Path queueFile = Files.list(dataDir.toPath()).findFirst().orElseThrow(() ->
                 new AssertionError("Could not find queue file in directory " + dataDir));
         assertThat(queueFile.toFile().setWritable(false), is(true));
 

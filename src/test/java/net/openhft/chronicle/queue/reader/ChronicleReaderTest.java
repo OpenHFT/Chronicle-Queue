@@ -151,9 +151,7 @@ public class ChronicleReaderTest {
 
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws Exception {
-        final Path queueFile = Files.list(dataDir).
-                filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
-                findFirst().orElseThrow(() ->
+        final Path queueFile = Files.list(dataDir).findFirst().orElseThrow(() ->
                 new AssertionError("Could not find queue file in directory " + dataDir));
 
         assertThat(queueFile.toFile().setWritable(false), is(true));
