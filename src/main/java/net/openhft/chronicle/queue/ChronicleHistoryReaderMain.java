@@ -84,6 +84,7 @@ public enum ChronicleHistoryReaderMain {
     private static Options options() {
         final Options options = new Options();
         ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
+        ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
         options.addOption(new Option("p", false, "Show progress"));
         return options;
     }

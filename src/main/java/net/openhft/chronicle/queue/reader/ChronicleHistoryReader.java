@@ -121,6 +121,10 @@ public class ChronicleHistoryReader {
                 }
                 lastTime = processedByThisComponent;
             }
+            if (history.sources() > 1) {
+                Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> new Histogram());
+                histoE2E.sample(history.timing((history.sources() * 2) - 1) - history.timing(0));
+            }
         };
     }
 }
