@@ -53,6 +53,11 @@ public class ChronicleHistoryReader {
     }
 
     public void execute() {
+        readChronicle();
+        printPercentilesSummary();
+    }
+
+    public Map<String, Histogram> readChronicle() {
         final SingleChronicleQueue q = createQueue();
         final ExcerptTailer tailer = q.createTailer();
         final WireParselet parselet = parselet();
@@ -67,10 +72,10 @@ public class ChronicleHistoryReader {
             }
         }
 
-        printPercentilesSummary();
+        return histos;
     }
 
-    private void printPercentilesSummary() {
+    public void printPercentilesSummary() {
         // we should also consider the case where >1 output messages are from 1 incoming
 
         int counter = 0;
