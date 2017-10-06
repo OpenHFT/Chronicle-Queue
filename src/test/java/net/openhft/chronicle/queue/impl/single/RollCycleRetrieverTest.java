@@ -42,7 +42,7 @@ public class RollCycleRetrieverTest {
 
     @Test
     public void shouldReturnEmptyWhenQueueDirDoesNotExist() throws Exception {
-        final Path nonExistentPath = Paths.get("non", "existent", "path", Long.toHexString(System.nanoTime()));
+        final Path nonExistentPath = Paths.get("non", "existent", "file", Long.toHexString(System.nanoTime()));
         assertThat(getRollCycle(nonExistentPath, WIRE_TYPE, 4096).isPresent(), is(false));
     }
 

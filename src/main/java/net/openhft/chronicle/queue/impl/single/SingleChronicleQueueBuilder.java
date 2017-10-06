@@ -90,7 +90,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
                 throw new IllegalArgumentException("Invalid file type: " + file.getName());
             }
 
-            LOGGER.warn("Queues should be configured with the queue directory, not a specific filename. Actual path used: {}",
+            LOGGER.warn("Queues should be configured with the queue directory, not a specific filename. Actual file used: {}",
                     file.getParentFile());
 
             return new SingleChronicleQueueBuilder<>(file.getParentFile())

@@ -101,7 +101,7 @@ public interface ChronicleQueue extends Closeable {
     void clear();
 
     /**
-     * @return the base path where ChronicleQueue stores its data.
+     * @return the base file where ChronicleQueue stores its data.
      */
     @NotNull
     File file();

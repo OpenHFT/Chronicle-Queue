@@ -19,6 +19,8 @@ import net.openhft.chronicle.core.annotation.Nullable;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
@@ -27,8 +29,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class WireStorePool {
     private static final Logger LOGGER = LoggerFactory.getLogger(WireStorePool.class);
@@ -92,7 +92,7 @@ public class WireStorePool {
         return supplier.nextCycle(currentCycle, direction);
     }
 
-    public synchronized void release(@NotNull WireStore store) {
+    public synchronized void release(@NotNull CommonStore store) {
         store.release();
 
         long refCount = store.refCount();

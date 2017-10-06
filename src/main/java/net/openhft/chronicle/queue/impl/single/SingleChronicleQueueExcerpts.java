@@ -27,6 +27,7 @@ import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -43,9 +44,7 @@ import java.nio.BufferOverflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeoutException;
 
-import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
-import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
-import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
@@ -808,7 +807,7 @@ public class SingleChronicleQueueExcerpts {
         private volatile Bytes wireReference = null;
         private volatile Bytes bufferWireReference = null;
         private volatile Bytes wireForIndexReference = null;
-        private volatile WireStore storeReference = null;
+        private volatile CommonStore storeReference = null;
 
         ClosableResources(final SingleChronicleQueue queue) {
             this.queue = queue;

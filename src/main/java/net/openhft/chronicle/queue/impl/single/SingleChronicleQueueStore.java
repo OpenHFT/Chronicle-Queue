@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.RollCycle;
@@ -381,22 +380,6 @@ public class SingleChronicleQueueStore implements WireStore {
 
     int rollIndexSpacing() {
         return indexing.indexSpacing();
-    }
-
-    enum MetaDataField implements WireKey {
-        wireType,
-        writePosition,
-        roll,
-        indexing,
-        lastAcknowledgedIndexReplicated,
-        recovery,
-        deltaCheckpointInterval;
-
-        @Nullable
-        @Override
-        public Object defaultValue() {
-            throw new IORuntimeException("field " + name() + " required");
-        }
     }
 
 }

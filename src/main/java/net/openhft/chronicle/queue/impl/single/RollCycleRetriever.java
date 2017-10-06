@@ -76,7 +76,7 @@ public enum RollCycleRetriever {
                     }
 
                 } catch (final Throwable e) {
-                    LOGGER.warn("Unable to load queue store from path {}", queuePath, e);
+                    LOGGER.warn("Unable to load queue store from file {}", queuePath, e);
                 }
 
             } finally {

@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -62,8 +62,8 @@ public class FsFullReadTest {
             }
         }
         System.out.println(String.format("Read %d entries.",entries));
-        WireStore wireStore = queue.storeForCycle(queue.cycle(), 0, false);
-        File file  = wireStore.file();
+        CommonStore commonStore = queue.storeForCycle(queue.cycle(), 0, false);
+        File file = commonStore.file();
         queue.close();
         int dumpEntries = 0;
         try {
