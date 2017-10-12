@@ -64,11 +64,6 @@ public enum ChronicleHistoryReaderMain {
             printUsageAndExit(options);
         }
 
-        if (!commandLine.hasOption('d')) {
-            System.out.println("Please specify the directory with -d\n");
-            printUsageAndExit(options);
-        }
-
         return commandLine;
     }
 
@@ -83,7 +78,7 @@ public enum ChronicleHistoryReaderMain {
     @NotNull
     private static Options options() {
         final Options options = new Options();
-        ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
+        ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
         options.addOption(new Option("p", false, "Show progress"));
         return options;
