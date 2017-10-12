@@ -2,14 +2,19 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.MethodReader;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
@@ -19,36 +24,25 @@ import static org.junit.Assert.assertThat;
 public final class MessageHistoryTest {
     @Rule
     public final TestName testName = new TestName();
+    private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private File inputQueueDir;
     private File outputQueueDir;
+
 
     @Before
     public void setUp() throws Exception {
         inputQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
         outputQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
+        final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
+        messageHistory.addSourceDetails(true);
+        MessageHistory.set(messageHistory);
     }
 
     @Test
-    public void shouldAccessMessageHistoryWhenTailerToEndIsUsed() throws Exception {
+    public void shouldAccessMessageHistory() throws Exception {
         try (final SingleChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final SingleChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
-            final First first = inputQueue.acquireAppender().
-                    methodWriterBuilder(First.class).recordHistory(true).build();
-            first.say("one");
-            first.say("two");
-            first.say("three");
-
-            final LoggingFirst loggingFirst =
-                    new LoggingFirst(outputQueue.acquireAppender().
-                            methodWriterBuilder(Second.class).build());
-
-            final MethodReader reader = inputQueue.createTailer().
-                    methodReaderBuilder().build(loggingFirst);
-
-            assertThat(reader.readOne(), is(true));
-            assertThat(reader.readOne(), is(true));
-            assertThat(reader.readOne(), is(true));
-            assertThat(reader.readOne(), is(false));
+            generateTestData(inputQueue, outputQueue);
 
             final ExcerptTailer tailer = outputQueue.createTailer();
 
@@ -60,8 +54,52 @@ public final class MessageHistoryTest {
         }
     }
 
+    @Ignore("wip #381")
+    @Test
+    public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() throws Exception {
+        try (final SingleChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
+             final SingleChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
+            generateTestData(inputQueue, outputQueue);
+
+            final ExcerptTailer tailer = outputQueue.createTailer();
+            tailer.direction(TailerDirection.BACKWARD).toEnd();
+
+            final ValidatingSecond validatingSecond = new ValidatingSecond();
+            final MethodReader validator = tailer.methodReader(validatingSecond);
+
+            assertThat(validator.readOne(), is(true));
+            assertThat(validatingSecond.messageHistoryPresent(), is(true));
+        }
+    }
+
+    private void generateTestData(final SingleChronicleQueue inputQueue, final SingleChronicleQueue outputQueue) {
+        final First first = inputQueue.acquireAppender().
+                methodWriterBuilder(First.class).recordHistory(true).build();
+        first.say("one");
+        first.say("two");
+        first.say("three");
+
+        final LoggingFirst loggingFirst =
+                new LoggingFirst(outputQueue.acquireAppender().
+                        methodWriterBuilder(Second.class).build());
+
+        final MethodReader reader = inputQueue.createTailer().
+                methodReaderBuilder().build(loggingFirst);
+
+        assertThat(reader.readOne(), is(true));
+        assertThat(reader.readOne(), is(true));
+
+        // roll queue file
+        clock.addAndGet(TimeUnit.DAYS.toMillis(2));
+
+
+        assertThat(reader.readOne(), is(true));
+        assertThat(reader.readOne(), is(false));
+    }
+
     private SingleChronicleQueue createQueue(final File queueDir, final int sourceId) {
         return SingleChronicleQueueBuilder.binary(queueDir).sourceId(sourceId).
+                timeProvider(clock::get).
                 testBlockSize().build();
     }
 
