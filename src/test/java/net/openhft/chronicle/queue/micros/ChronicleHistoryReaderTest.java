@@ -38,7 +38,7 @@ import static org.junit.Assert.assertTrue;
 /*
  * Created by Jerry Shea on 12/10/17
  */
-public class MessageHistoryTest {
+public class ChronicleHistoryReaderTest {
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitial() {
