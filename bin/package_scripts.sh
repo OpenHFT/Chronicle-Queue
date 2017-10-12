@@ -25,6 +25,10 @@ echo "java -cp $JAR_FILE \\" > $TMP_DIR/queue_reader.sh
 echo 'net.openhft.chronicle.queue.ChronicleReaderMain "$@"' >> $TMP_DIR/queue_reader.sh
 chmod +x $TMP_DIR/queue_reader.sh
 
+echo "java -cp $JAR_FILE \\" > $TMP_DIR/history_reader.sh
+echo 'net.openhft.chronicle.queue.ChronicleHistoryReaderMain "$@"' >> $TMP_DIR/history_reader.sh
+chmod +x $TMP_DIR/queue_reader.sh
+
 cd $TMP_DIR
 tar cf $TOOL_ARCHIVE *.*
 cd $OLD_PWD

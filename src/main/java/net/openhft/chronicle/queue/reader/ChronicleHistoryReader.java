@@ -96,6 +96,7 @@ public class ChronicleHistoryReader {
     private String percentiles(final int index) {
         final StringBuilder sb = new StringBuilder("        ");
         histos.forEach((id, histogram) -> {
+            // TODO: histogram.sampleCount()
             if (index >= histogram.getPercentiles().length - 1) {
                 sb.append(String.format("%12s ", " "));
                 return;
@@ -113,13 +114,20 @@ public class ChronicleHistoryReader {
             v.skipValue();
             final MessageHistory history = MessageHistory.get();
             long lastTime = 0;
+            // if the tailer has recordHistory(true) then the MessageHistory will be
+            // written with a single timing and nothing else. This is then carried through
+            int firstWriteOffset = history.timings() - (history.sources() * 2);
+            assert firstWriteOffset == 0 || firstWriteOffset == 1;
             for (int sourceIndex=0; sourceIndex<history.sources(); sourceIndex++) {
                 String sourceId = Integer.toString(history.sourceId(sourceIndex));
                 Histogram histo = histos.computeIfAbsent(sourceId, s -> new Histogram());
-                long receivedByThisComponent = history.timing(2 * sourceIndex);
-                long processedByThisComponent = history.timing((2 * sourceIndex) + 1);
+                long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
+                long processedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset + 1);
                 histo.sample(processedByThisComponent - receivedByThisComponent);
-                if (lastTime != 0) {
+                if (lastTime == 0 && firstWriteOffset > 0) {
+                    Histogram histo1 = histos.computeIfAbsent("startTo" + sourceId, s -> new Histogram());
+                    histo1.sample(receivedByThisComponent - history.timing(0));
+                } else if (lastTime != 0) {
                     Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex-1)) + "to" + sourceId, s -> new Histogram());
                     // here we are comparing System.nanoTime across processes. YMMV
                     histo1.sample(receivedByThisComponent - lastTime);
@@ -128,7 +136,7 @@ public class ChronicleHistoryReader {
             }
             if (history.sources() > 1) {
                 Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> new Histogram());
-                histoE2E.sample(history.timing((history.sources() * 2) - 1) - history.timing(0));
+                histoE2E.sample(history.timing(history.timings() - 1) - history.timing(0));
             }
         };
     }
