@@ -7,7 +7,6 @@ import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.MethodReader;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -54,7 +53,6 @@ public final class MessageHistoryTest {
         }
     }
 
-    @Ignore("wip #381")
     @Test
     public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() throws Exception {
         try (final SingleChronicleQueue inputQueue = createQueue(inputQueueDir, 1);

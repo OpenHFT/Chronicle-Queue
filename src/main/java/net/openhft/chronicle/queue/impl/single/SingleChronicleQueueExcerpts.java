@@ -1377,6 +1377,7 @@ public class SingleChronicleQueueExcerpts {
             final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
             assert headerNumberCheck(wire);
             this.context.wire(wire);
+            wire.parent(this);
 
             Wire wireForIndexOld = wireForIndex;
             wireForIndex = readAnywhere(wireType.apply(store.bytes()));
