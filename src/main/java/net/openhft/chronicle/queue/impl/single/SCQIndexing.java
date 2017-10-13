@@ -413,8 +413,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    ScanResult linearScanTo(final long toIndex, final long knownIndex, final ExcerptContext ec) {
-        return linearScan(ec.wire(), toIndex, knownIndex, ec.wire().bytes().readPosition());
+    ScanResult linearScanTo(final long toIndex, final long knownIndex, final ExcerptContext ec, final long knownAddress) {
+        return linearScan(ec.wire(), toIndex, knownIndex, knownAddress);
     }
 
     long linearScanByPosition(@NotNull final Wire wire,

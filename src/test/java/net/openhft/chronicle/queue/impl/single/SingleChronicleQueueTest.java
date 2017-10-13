@@ -1361,7 +1361,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                try (final DocumentContext context = appender.writingDocument()) {
+                    context.wire().write(() -> "key").text("value=" + j);
+                }
             }
             long lastIndex = appender.lastIndexAppended();
 
@@ -1370,15 +1372,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals(queue.lastCycle(), cycle);
             final ExcerptTailer tailer = queue.createTailer();
 
-            System.out.println(queue.dump());
-
             StringBuilder sb = new StringBuilder();
 
             for (int i : new int[]{0, 8, 7, 9, 64, 65, 66}) {
+                final long index = queue.rollCycle().toIndex(cycle, i);
                 assertTrue("i: " + i,
                         tailer.moveToIndex(
-                                queue.rollCycle().toIndex(cycle, i)));
-                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+                                index));
+                final DocumentContext context = tailer.readingDocument();
+                assertThat(context.index(), is(index));
+                context.wire().read(() -> "key").text(sb);
                 Assert.assertEquals("value=" + i, sb.toString());
             }
         }

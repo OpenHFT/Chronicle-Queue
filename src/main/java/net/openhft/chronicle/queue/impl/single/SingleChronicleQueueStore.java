@@ -350,8 +350,8 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public ScanResult linearScanTo(final long index, final long knownIndex, final ExcerptContext ec) {
-        return indexing.linearScanTo(index, knownIndex, ec);
+    public ScanResult linearScanTo(final long index, final long knownIndex, final ExcerptContext ec, final long knownAddress) {
+        return indexing.linearScanTo(index, knownIndex, ec, knownAddress);
     }
 
     @Override

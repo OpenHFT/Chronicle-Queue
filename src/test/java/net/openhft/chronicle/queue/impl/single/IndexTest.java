@@ -26,7 +26,6 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -103,7 +102,6 @@ public class IndexTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("wip")
     @Test
     public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex() throws Exception {
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder
@@ -134,12 +132,12 @@ public class IndexTest extends ChronicleQueueTestBase {
             assertThat(tailer.index(), is(indices[0]));
             assertThat(tailer.getIndexMoveCount(), is(1));
 
-            tailer.moveToIndex(indices[1]);
-            assertThat(tailer.index(), is(indices[1]));
+            tailer.moveToIndex(indices[2]);
+            assertThat(tailer.index(), is(indices[2]));
             assertThat(tailer.getIndexMoveCount(), is(1));
 
-            tailer.moveToIndex(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 1]);
-            assertThat(tailer.index(), is(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 1]));
+            tailer.moveToIndex(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 2]);
+            assertThat(tailer.index(), is(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 2]));
             assertThat(tailer.getIndexMoveCount(), is(2));
 
             // document that moving backwards requires an index scan
