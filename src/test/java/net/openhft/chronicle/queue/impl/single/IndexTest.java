@@ -21,10 +21,12 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -33,7 +35,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreTailer.INDEXING_LINEAR_SCAN_THRESHOLD;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 /**
  * @author Rob Austin.
@@ -95,6 +100,52 @@ public class IndexTest extends ChronicleQueueTestBase {
                 long indexA = appender.lastIndexAppended();
                 accessHexEquals(index0, indexA);
             }
+        }
+    }
+
+    @Ignore("wip")
+    @Test
+    public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex() throws Exception {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder
+                .binary(getTmpDir())
+                .testBlockSize()
+                .wireType(this.wireType)
+                .build()) {
+
+            final ExcerptAppender appender = queue.acquireAppender();
+
+            final int messageCount = INDEXING_LINEAR_SCAN_THRESHOLD + 5;
+            final long[] indices = new long[messageCount];
+            for (int i = 0; i < messageCount; i++) {
+                try (final DocumentContext ctx = appender.writingDocument()) {
+                    ctx.wire().write("event").int32(i);
+                    indices[i] = ctx.index();
+                }
+            }
+
+            final SingleChronicleQueueExcerpts.StoreTailer tailer =
+                    (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
+            tailer.moveToIndex(indices[0]);
+
+            assertThat(tailer.index(), is(indices[0]));
+            assertThat(tailer.getIndexMoveCount(), is(1));
+
+            tailer.moveToIndex(indices[0]);
+            assertThat(tailer.index(), is(indices[0]));
+            assertThat(tailer.getIndexMoveCount(), is(1));
+
+            tailer.moveToIndex(indices[1]);
+            assertThat(tailer.index(), is(indices[1]));
+            assertThat(tailer.getIndexMoveCount(), is(1));
+
+            tailer.moveToIndex(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 1]);
+            assertThat(tailer.index(), is(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 1]));
+            assertThat(tailer.getIndexMoveCount(), is(2));
+
+            // document that moving backwards requires an index scan
+            tailer.moveToIndex(indices[INDEXING_LINEAR_SCAN_THRESHOLD - 1]);
+            assertThat(tailer.index(), is(indices[INDEXING_LINEAR_SCAN_THRESHOLD - 1]));
+            assertThat(tailer.getIndexMoveCount(), is(3));
         }
     }
 

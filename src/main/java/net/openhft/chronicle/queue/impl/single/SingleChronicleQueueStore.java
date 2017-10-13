@@ -350,6 +350,11 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
+    public ScanResult linearScanTo(final long index, final long knownIndex, final ExcerptContext ec) {
+        return indexing.linearScanTo(index, knownIndex, ec);
+    }
+
+    @Override
     public long writeHeader(@NotNull Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
         return recovery.writeHeader(wire, length, safeLength, timeoutMS, writePosition);
     }

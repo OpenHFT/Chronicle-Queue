@@ -71,4 +71,6 @@ public interface WireStore extends CommonStore {
     int deltaCheckpointInterval();
 
     boolean indexable(long index);
+
+    ScanResult linearScanTo(long index, long knownIndex, ExcerptContext ec);
 }

@@ -26,12 +26,28 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.TailerState;
 import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.BinaryReadDocumentContext;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.SourceContext;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -44,8 +60,14 @@ import java.nio.BufferOverflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeoutException;
 
-import static net.openhft.chronicle.queue.TailerDirection.*;
-import static net.openhft.chronicle.queue.TailerState.*;
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
+import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
+import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
+import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
@@ -842,6 +864,7 @@ public class SingleChronicleQueueExcerpts {
      * Tailer
      */
     public static class StoreTailer implements ExcerptTailer, SourceContext, ExcerptContext {
+        static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
@@ -862,6 +885,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean readingDocumentFound = false;
         private long lastMovedToIndex = Long.MIN_VALUE;
         private TailerDirection directionAtLastMoveTo = TailerDirection.FORWARD;
+        private int indexMoveCount = 0;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -1254,10 +1278,20 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
-            if (index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
-                    direction == directionAtLastMoveTo) {
+            if (canReuseLastIndexMove(index)) {
                 return true;
             }
+//            else if(indexIsCloseToAndAheadOfLastIndexMove(index)) {
+//                final boolean found =
+//                        this.store.linearScanTo(index, lastMovedToIndex, this) ==
+//                                ScanResult.FOUND;
+//                if (found) {
+//                    index(index);
+//                    directionAtLastMoveTo = direction;
+//                    lastMovedToIndex = index;
+//                }
+//                return found;
+//            }
 
             return moveToIndexInternal(index);
         }
@@ -1314,6 +1348,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean moveToIndexInternal(final long index) {
+            this.indexMoveCount++;
             final ScanResult scanResult = moveToIndexResult(index);
             return scanResult == FOUND;
         }
@@ -1699,6 +1734,25 @@ public class SingleChronicleQueueExcerpts {
             timeForNextCycle = cycle == Integer.MIN_VALUE ? Long.MAX_VALUE :
                     (long) (cycle + 1) * queue.rollCycle().length() + queue.epoch();
 
+        }
+
+        // visible for testing
+        int getIndexMoveCount() {
+            return indexMoveCount;
+        }
+
+        private boolean indexIsCloseToAndAheadOfLastIndexMove(final long index) {
+            return lastMovedToIndex != Long.MIN_VALUE &&
+                    index - lastMovedToIndex < INDEXING_LINEAR_SCAN_THRESHOLD && state == FOUND_CYCLE &&
+                    direction == directionAtLastMoveTo &&
+                    queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex) &&
+                    index > lastMovedToIndex;
+        }
+
+        private boolean canReuseLastIndexMove(final long index) {
+            return index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
+                    direction == directionAtLastMoveTo &&
+                    queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
         }
 
         class StoreTailerContext extends BinaryReadDocumentContext {
