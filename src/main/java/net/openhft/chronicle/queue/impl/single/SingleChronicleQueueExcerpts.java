@@ -85,6 +85,7 @@ public class SingleChronicleQueueExcerpts {
     //
     // *************************************************************************
 
+    @FunctionalInterface
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
     }

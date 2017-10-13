@@ -132,6 +132,7 @@ public class ChronicleHistoryReaderTest {
         }
     }
 
+    @FunctionalInterface
     private interface DummyListener {
         void say(String what);
     }

@@ -314,6 +314,7 @@ public class ChronicleReaderTest {
                 withBasePath(dataDir).withMessageSink(capturedOutput::add);
     }
 
+    @FunctionalInterface
     private interface StringEvents {
         void say(final String msg);
     }

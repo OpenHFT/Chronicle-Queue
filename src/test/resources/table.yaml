@@ -1,0 +1,18 @@
+--- !!meta-data #binary
+header: !STStore {
+  wireType: !WireType BINARY_LIGHT,
+  recovery: !TimedStoreRecovery {
+    timeStamp: 0
+  }
+}
+# position: 112, header: 0
+--- !!data #binary
+a: 1
+# position: 128, header: 1
+--- !!data #binary
+b: 22
+# position: 144, header: 2
+--- !!data #binary
+c: 3
+...
+# 65372 bytes remaining

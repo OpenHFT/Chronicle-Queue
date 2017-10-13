@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.service;
 /*
  * Created by Peter Lawrey on 23/04/16.
  */
+@FunctionalInterface
 public interface HelloReplier {
     void reply(String message);
 }

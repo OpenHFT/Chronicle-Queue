@@ -51,6 +51,7 @@ public class MethodReaderObjectReuseTest {
         }
     }
 
+    @FunctionalInterface
     interface Pinger {
         void ping(PingDTO pingDTO);
     }

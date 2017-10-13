@@ -66,6 +66,7 @@ public class TableStoreTest {
                     "c: 3\n" +
                     "...\n" +
                     "# 65372 bytes remaining\n", table.dump());
+            System.out.println(table.dump());
         }
     }
 }
