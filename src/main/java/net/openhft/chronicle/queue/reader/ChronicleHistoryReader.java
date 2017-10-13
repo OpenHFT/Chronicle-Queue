@@ -86,7 +86,7 @@ public class ChronicleHistoryReader {
         // we should also consider the case where >1 output messages are from 1 incoming
 
         int counter = 0;
-        messageSink.accept("Timings below in ns");
+        messageSink.accept("Timings below in " + timeUnit.name());
         final StringBuilder sb = new StringBuilder("sourceId        ");
         histos.forEach((id, histogram) -> sb.append(String.format("%12s ", id)));
         messageSink.accept(sb.toString());
