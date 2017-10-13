@@ -78,7 +78,7 @@ public enum BinarySearch {
                 final int compare = c.compare(dc.wire(), key);
                 if (compare == 0)
                     return current;
-                else if (compare == 1)
+                else if (compare > 0)
                     return prevIndex;
                 prevIndex = current;
             }

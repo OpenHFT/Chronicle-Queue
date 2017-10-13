@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -104,8 +105,13 @@ public class ChronicleHistoryReaderTest {
                 assertFalse(reader.readOne());
             }
 
-            Map<String, Histogram> histos = new ChronicleHistoryReader().withBasePath(queuePath3.toPath()).readChronicle();
-            System.out.println(histos);
+            ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader().
+                    withBasePath(queuePath3.toPath()).
+                    withTimeUnit(TimeUnit.MICROSECONDS);
+            Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
+
+            chronicleHistoryReader.withMessageSink(System.out::println);
+            chronicleHistoryReader.printPercentilesSummary();
 
             if (recordHistoryFirst) {
                 Assert.assertEquals(5, histos.size());

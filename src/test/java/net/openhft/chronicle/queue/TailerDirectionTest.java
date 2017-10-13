@@ -76,6 +76,8 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
         DocumentContext dc = tailer.readingDocument();
         try {
             if (dc.isPresent()) {
+                Object parent = dc.wire().parent();
+                assert parent == tailer;
                 return dc.wire().read().text();
             }
             return null;

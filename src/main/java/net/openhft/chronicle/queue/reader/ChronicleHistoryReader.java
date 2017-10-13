@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -23,8 +24,9 @@ public class ChronicleHistoryReader {
 
     private Path basePath;
     private Consumer<String> messageSink;
-    private Map<String, Histogram> histos = new LinkedHashMap<>();
     private boolean progress = false;
+    private TimeUnit timeUnit = TimeUnit.NANOSECONDS;
+    protected Map<String, Histogram> histos = new LinkedHashMap<>();
 
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
@@ -38,6 +40,11 @@ public class ChronicleHistoryReader {
 
     public ChronicleHistoryReader withProgress(boolean p) {
         this.progress = p;
+        return this;
+    }
+
+    public ChronicleHistoryReader withTimeUnit(TimeUnit p) {
+        this.timeUnit = p;
         return this;
     }
 
@@ -83,6 +90,7 @@ public class ChronicleHistoryReader {
         final StringBuilder sb = new StringBuilder("sourceId        ");
         histos.forEach((id, histogram) -> sb.append(String.format("%12s ", id)));
         messageSink.accept(sb.toString());
+        messageSink.accept("count:  " + count());
         messageSink.accept("50:     " + percentiles(counter++));
         messageSink.accept("90:     " + percentiles(counter++));
         messageSink.accept("99:     " + percentiles(counter++));
@@ -93,23 +101,29 @@ public class ChronicleHistoryReader {
         messageSink.accept("worst:  " + percentiles(-1));
     }
 
+    private String count() {
+        final StringBuilder sb = new StringBuilder("        ");
+        histos.forEach((id, histogram) -> sb.append(String.format("%12d ", histogram.totalCount())));
+        return sb.toString();
+    }
+
     private String percentiles(final int index) {
         final StringBuilder sb = new StringBuilder("        ");
         histos.forEach((id, histogram) -> {
-            // TODO: histogram.sampleCount()
-            if (index >= histogram.getPercentiles().length - 1) {
+            double[] percentiles = histogram.getPercentiles();
+            if (index >= percentiles.length - 1) {
                 sb.append(String.format("%12s ", " "));
                 return;
             }
             int myIndex = index;
-            if (myIndex == -1) myIndex = histogram.getPercentiles().length - 1;
-            double value = histogram.getPercentiles()[myIndex];
-            sb.append(String.format("%12.0f ", value));
+            if (myIndex == -1) myIndex = percentiles.length - 1;
+            double value = percentiles[myIndex];
+            sb.append(String.format("%12d ", timeUnit.convert((long)value, TimeUnit.NANOSECONDS)));
         });
         return sb.toString();
     }
 
-    private WireParselet parselet() {
+    protected WireParselet parselet() {
         return (methodName, v, $) -> {
             v.skipValue();
             final MessageHistory history = MessageHistory.get();
@@ -119,25 +133,30 @@ public class ChronicleHistoryReader {
             int firstWriteOffset = history.timings() - (history.sources() * 2);
             assert firstWriteOffset == 0 || firstWriteOffset == 1;
             for (int sourceIndex=0; sourceIndex<history.sources(); sourceIndex++) {
-                String sourceId = Integer.toString(history.sourceId(sourceIndex));
-                Histogram histo = histos.computeIfAbsent(sourceId, s -> new Histogram());
+                String histoId = Integer.toString(history.sourceId(sourceIndex));
+                Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
                 long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
                 long processedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset + 1);
                 histo.sample(processedByThisComponent - receivedByThisComponent);
                 if (lastTime == 0 && firstWriteOffset > 0) {
-                    Histogram histo1 = histos.computeIfAbsent("startTo" + sourceId, s -> new Histogram());
+                    Histogram histo1 = histos.computeIfAbsent("startTo" + histoId, s -> histogram());
                     histo1.sample(receivedByThisComponent - history.timing(0));
                 } else if (lastTime != 0) {
-                    Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex-1)) + "to" + sourceId, s -> new Histogram());
+                    Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex-1)) + "to" + histoId, s -> histogram());
                     // here we are comparing System.nanoTime across processes. YMMV
                     histo1.sample(receivedByThisComponent - lastTime);
                 }
                 lastTime = processedByThisComponent;
             }
             if (history.sources() > 1) {
-                Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> new Histogram());
+                Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> histogram());
                 histoE2E.sample(history.timing(history.timings() - 1) - history.timing(0));
             }
         };
+    }
+
+    @NotNull
+    protected Histogram histogram() {
+        return new Histogram(60, 4);
     }
 }

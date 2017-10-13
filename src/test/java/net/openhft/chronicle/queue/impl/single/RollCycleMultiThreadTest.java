@@ -165,7 +165,7 @@ public class RollCycleMultiThreadTest {
                 dc.wire().bytes().parse8bit(sb, StopCharTesters.ALL);
 
                 String readText = sb.toString();
-                if (java.util.Objects.equals(sb, "")) {
+                if (java.util.Objects.equals(readText, "")) {
                     return documentsRead;
                 }
                 System.out.println("Read a document " + readText);

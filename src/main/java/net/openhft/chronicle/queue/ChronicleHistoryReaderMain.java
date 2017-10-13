@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Reads @see MessageHistory from a chronicle and outputs histograms for
@@ -34,23 +35,36 @@ import java.nio.file.Paths;
  * </ul>
  * @author Jerry Shea
  */
-public enum ChronicleHistoryReaderMain {
-    ;
+public class ChronicleHistoryReaderMain {
 
     public static void main(@NotNull String[] args) throws IOException {
+        new ChronicleHistoryReaderMain().run(args);
+    }
 
+    protected void run(String[] args) throws IOException {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
-        final ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader().
-                withMessageSink(System.out::println).
-                withProgress(commandLine.hasOption('p')).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
-
+        final ChronicleHistoryReader chronicleHistoryReader = chronicleHistoryReader();
+        setup(commandLine, chronicleHistoryReader);
         chronicleHistoryReader.execute();
     }
 
-    static CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {
+    protected void setup(CommandLine commandLine, ChronicleHistoryReader chronicleHistoryReader) throws IOException {
+        chronicleHistoryReader.
+                withMessageSink(System.out::println).
+                withProgress(commandLine.hasOption('p')).
+                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+        if (commandLine.hasOption('t'))
+            chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
+    }
+
+    @NotNull
+    protected ChronicleHistoryReader chronicleHistoryReader() {
+        return new ChronicleHistoryReader();
+    }
+
+    protected CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
         try {
@@ -67,7 +81,7 @@ public enum ChronicleHistoryReaderMain {
         return commandLine;
     }
 
-    private static void printUsageAndExit(final Options options) {
+    protected void printUsageAndExit(final Options options) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printUsage(writer, 180,
                 ChronicleHistoryReaderMain.class.getSimpleName(), options);
@@ -76,10 +90,11 @@ public enum ChronicleHistoryReaderMain {
     }
 
     @NotNull
-    private static Options options() {
+    protected Options options() {
         final Options options = new Options();
         ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
+        ChronicleReaderMain.addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
         options.addOption(new Option("p", false, "Show progress"));
         return options;
     }

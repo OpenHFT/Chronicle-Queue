@@ -122,7 +122,7 @@ public enum ChronicleReaderMain {
         return options;
     }
 
-    static void addOption(final Options options, final String opt, final String argName, final boolean hasArg,
+    public static void addOption(final Options options, final String opt, final String argName, final boolean hasArg,
                                   final String description, final boolean isRequired) {
         final Option option = new Option(opt, hasArg, description);
         option.setArgName(argName);
