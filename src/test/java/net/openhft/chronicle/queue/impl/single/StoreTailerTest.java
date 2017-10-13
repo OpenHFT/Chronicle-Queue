@@ -118,6 +118,7 @@ public class StoreTailerTest {
         return queue;
     }
 
+    @FunctionalInterface
     public interface StringEvents {
         void onEvent(final String event);
     }

@@ -114,10 +114,12 @@ public final class MessageHistoryTest {
         }
     }
 
+    @FunctionalInterface
     interface First {
         void say(final String word);
     }
 
+    @FunctionalInterface
     interface Second {
         void count(final int value);
     }

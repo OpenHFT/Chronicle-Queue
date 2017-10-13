@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.micros;
 /*
  * Created by Peter Lawrey on 24/03/16.
  */
+@FunctionalInterface
 public interface OrderIdeaListener {
     void onOrderIdea(OrderIdea orderIdea);
 }

@@ -117,6 +117,7 @@ public final class QueueEpochTest {
         }
     }
 
+    @FunctionalInterface
     interface TestEvent {
         void setOrGetEvent(String event);
     }

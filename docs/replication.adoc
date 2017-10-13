@@ -21,7 +21,7 @@ image::Chronicle-Queue-Replication_diagram_02.jpg[Replication]
 IMPORTANT: Chronicle requires exclusive write access to the `SECONDARY`. You should treat the `SECONDARY` as read-only, and not attempt to manually write messages.
 
 == Queue header
-The Chronical Queue header is structured as follows:
+The Chronicle Queue header is structured as follows:
 
 [source, java]
 ----
