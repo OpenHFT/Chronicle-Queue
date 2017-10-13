@@ -1751,7 +1751,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean indexIsCloseToAndAheadOfLastIndexMove(final long index) {
             return lastMovedToIndex != Long.MIN_VALUE &&
                     index - lastMovedToIndex < INDEXING_LINEAR_SCAN_THRESHOLD &&
-                    index - lastMovedToIndex > 1 &&
+//                    index - lastMovedToIndex > 1 &&
                     state == FOUND_CYCLE &&
                     direction == directionAtLastMoveTo &&
                     queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex) &&
