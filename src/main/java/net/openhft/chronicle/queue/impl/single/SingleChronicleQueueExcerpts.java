@@ -884,10 +884,7 @@ public class SingleChronicleQueueExcerpts {
         private TailerState state = UNINITIALISED;
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
-        private long lastMovedToIndex = Long.MIN_VALUE;
-        private TailerDirection directionAtLastMoveTo = TailerDirection.FORWARD;
-        private int indexMoveCount = 0;
-        private long readPositionAtLastMove;
+        private final MoveToState moveToState = new MoveToState();
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -1280,22 +1277,18 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
-            if (canReuseLastIndexMove(index)) {
+            if (moveToState.canReuseLastIndexMove(index, state, direction, queue)) {
                 return true;
             }
-            else if(indexIsCloseToAndAheadOfLastIndexMove(index)) {
-                final long knownIndex = readPositionAtLastMove != wire().bytes().readPosition() ?
-                        lastMovedToIndex + 1 : lastMovedToIndex;
-                final long knownPosition = (readPositionAtLastMove != wire().bytes().readPosition()) ?
-                        wire().bytes().readPosition() : readPositionAtLastMove;
+            else if(moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
+                final long knownIndex = moveToState.calculateKnownIndex(wire().bytes().readPosition());
+                final long knownPosition = wire().bytes().readPosition();
                 final boolean found =
                         this.store.linearScanTo(index, knownIndex, this,
                                 knownPosition) == ScanResult.FOUND;
                 if (found) {
                     index(index);
-                    directionAtLastMoveTo = direction;
-                    lastMovedToIndex = index;
-                    readPositionAtLastMove = wire().bytes().readPosition();
+                    moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
                 }
                 return found;
             }
@@ -1321,9 +1314,7 @@ public class SingleChronicleQueueExcerpts {
             Bytes<?> bytes = wire().bytes();
             if (scanResult == FOUND) {
                 state = FOUND_CYCLE;
-                this.lastMovedToIndex = index;
-                this.directionAtLastMoveTo = direction;
-                this.readPositionAtLastMove = bytes.readPosition();
+                moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
                 return scanResult;
             }
 
@@ -1356,7 +1347,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean moveToIndexInternal(final long index) {
-            this.indexMoveCount++;
+            moveToState.indexMoveCount++;
             final ScanResult scanResult = moveToIndexResult(index);
             return scanResult == FOUND;
         }
@@ -1584,7 +1575,7 @@ public class SingleChronicleQueueExcerpts {
                 indexAtCreation = index;
             }
 
-            this.lastMovedToIndex = Long.MIN_VALUE;
+            moveToState.reset();
         }
 
         private boolean cycle(final int cycle, boolean createIfAbsent) {
@@ -1746,23 +1737,7 @@ public class SingleChronicleQueueExcerpts {
 
         // visible for testing
         int getIndexMoveCount() {
-            return indexMoveCount;
-        }
-
-        private boolean indexIsCloseToAndAheadOfLastIndexMove(final long index) {
-            return lastMovedToIndex != Long.MIN_VALUE &&
-                    index - lastMovedToIndex < INDEXING_LINEAR_SCAN_THRESHOLD &&
-//                    index - lastMovedToIndex > 1 &&
-                    state == FOUND_CYCLE &&
-                    direction == directionAtLastMoveTo &&
-                    queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex) &&
-                    index > lastMovedToIndex;
-        }
-
-        private boolean canReuseLastIndexMove(final long index) {
-            return index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
-                    direction == directionAtLastMoveTo &&
-                    queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
+            return moveToState.indexMoveCount;
         }
 
         class StoreTailerContext extends BinaryReadDocumentContext {
@@ -1802,6 +1777,58 @@ public class SingleChronicleQueueExcerpts {
                     oldWire.bytes().release();
             }
         }
+
+        private static final class MoveToState {
+            private long lastMovedToIndex = Long.MIN_VALUE;
+            private TailerDirection directionAtLastMoveTo = TailerDirection.NONE;
+            private long readPositionAtLastMove = Long.MIN_VALUE;
+            private int indexMoveCount = 0;
+
+            void onSuccessfulLookup(
+                    final long movedToIndex, final TailerDirection direction,
+                    final long readPosition) {
+                this.lastMovedToIndex = movedToIndex;
+                this.directionAtLastMoveTo = direction;
+                this.readPositionAtLastMove = readPosition;
+            }
+
+            void onSuccessfulScan(
+                    final long movedToIndex, final TailerDirection direction,
+                    final long readPosition) {
+                this.lastMovedToIndex = movedToIndex;
+                this.directionAtLastMoveTo = direction;
+                this.readPositionAtLastMove = readPosition;
+            }
+
+            void reset() {
+                lastMovedToIndex = Long.MIN_VALUE;
+                directionAtLastMoveTo = TailerDirection.NONE;
+                readPositionAtLastMove = Long.MIN_VALUE;
+            }
+
+            private long calculateKnownIndex(final long readPosition) {
+                return readPositionAtLastMove != readPosition ?
+                        lastMovedToIndex + 1 : lastMovedToIndex;
+            }
+
+            private boolean indexIsCloseToAndAheadOfLastIndexMove(
+                    final long index, final TailerState state, final TailerDirection direction,
+                    final SingleChronicleQueue queue) {
+                return lastMovedToIndex != Long.MIN_VALUE &&
+                        index - lastMovedToIndex < INDEXING_LINEAR_SCAN_THRESHOLD &&
+                        state == FOUND_CYCLE &&
+                        direction == directionAtLastMoveTo &&
+                        queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex) &&
+                        index > lastMovedToIndex;
+            }
+
+            private boolean canReuseLastIndexMove(
+                    final long index, final TailerState state, final TailerDirection direction,
+                    final SingleChronicleQueue queue) {
+                return index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
+                        direction == directionAtLastMoveTo &&
+                        queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
+            }
+        }
     }
 }
-
