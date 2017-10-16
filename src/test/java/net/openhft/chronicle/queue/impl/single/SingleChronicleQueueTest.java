@@ -91,6 +91,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
@@ -2547,6 +2548,24 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 readForward(chronicle, entries);
                 readBackward(chronicle, entries);
             }
+        }
+    }
+
+    @Test
+    public void shouldReadBackwardFromEndOfQueueWhenDirectionIsSetAfterMoveToEnd() throws Exception {
+        assumeTrue(wireType == WireType.BINARY);
+        try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
+                .rollCycle(TEST2_DAILY)
+                .build()) {
+
+            final ExcerptAppender appender = queue.acquireAppender();
+            appender.writeDocument(w -> w.writeEventName("hello").text("world"));
+
+            final ExcerptTailer tailer = queue.createTailer();
+            tailer.toEnd();
+            tailer.direction(TailerDirection.BACKWARD);
+
+            assertThat(tailer.readingDocument().isPresent(), is(true));
         }
     }
 

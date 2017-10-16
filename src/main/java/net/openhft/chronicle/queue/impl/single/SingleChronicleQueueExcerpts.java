@@ -1110,9 +1110,20 @@ public class SingleChronicleQueueExcerpts {
                     return false;
             }
 
-            if (direction != TailerDirection.FORWARD)
-                if (!moveToIndexInternal(index))
-                    return false;
+            if (direction != TailerDirection.FORWARD) {
+                if (!moveToIndexInternal(index)) {
+                    try {
+                        // after toEnd() call, index is past the end of the queue
+                        // so try to go back one (to the last record in the queue)
+                        if (!moveToIndexInternal(index - 1)) {
+                            return false;
+                        }
+                    } catch (RuntimeException e) {
+                        // can happen if index goes negative
+                        return false;
+                    }
+                }
+            }
             switch (wire().readDataHeader(includeMetaData)) {
                 case NONE: {
                     // if current time is not the current cycle, then write an EOF marker and
@@ -1453,7 +1464,8 @@ public class SingleChronicleQueueExcerpts {
                     state = UNINITIALISED;
                 return this;
             }
-            switch (moveToIndexResult(index)) {
+            final ScanResult scanResult = moveToIndexResult(index);
+            switch (scanResult) {
                 case NOT_FOUND:
                     if (moveToIndexResult(index - 1) == FOUND)
                         state = FOUND_CYCLE;
@@ -1493,8 +1505,9 @@ public class SingleChronicleQueueExcerpts {
             final TailerDirection oldDirection = this.direction();
             this.direction = direction;
             if (oldDirection == TailerDirection.BACKWARD &&
-                    direction == TailerDirection.FORWARD)
+                    direction == TailerDirection.FORWARD) {
                 moveToIndexInternal(index);
+            }
 
             return this;
         }
