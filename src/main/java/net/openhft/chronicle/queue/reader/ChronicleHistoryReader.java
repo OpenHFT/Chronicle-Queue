@@ -85,6 +85,10 @@ public class ChronicleHistoryReader {
     public void printPercentilesSummary() {
         // we should also consider the case where >1 output messages are from 1 incoming
 
+        if (histos.size() == 0) {
+            messageSink.accept("No data");
+            return;
+        }
         int counter = 0;
         messageSink.accept("Timings below in " + timeUnit.name());
         final StringBuilder sb = new StringBuilder("sourceId        ");
