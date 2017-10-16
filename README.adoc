@@ -648,6 +648,49 @@ If you are writing your code not have GC pauses and you explicitly want to clean
 ```
 
 
+==== `ExcerptTailer.toEnd()`
+
+In some applications, it may be necessary to start reading from the end of the queue
+(e.g. in a restart scenario). For this use-case, `ExcerptTailer` provides the `toEnd()`
+method.
+
+When the tailer direction is `FORWARD` (by default, or as set by the `ExcerptTailer.direction`
+method), then calling `toEnd()` will place the tailer just *after* the last existing record in the
+queue. In this case, the tailer is now ready for reading any new records appended to the
+queue. Until any new messages are appended to the queue, there will be no new `DocumentContext`
+available for reading:
+
+[source,java]
+....
+// this will be false until new messages are appended to the queue
+boolean messageAvailable = tailer.toEnd().readingDocument().isPresent();
+....
+
+
+If it is necessary to read backwards through the queue from the end, then the tailer can be
+set to read backwards:
+
+[source,java]
+....
+ExcerptTailer tailer = queue.createTailer();
+tailer.direction(TailerDirection.BACKWARD).toEnd();
+....
+
+When reading backwards, then the `toEnd()` method will move the tailer to the
+last record in the queue. If the queue is not empty, then there will be a
+`DocumentContext` available for reading:
+
+[source,java]
+....
+// this will be true if there is at least one message in the queue
+boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
+        readingDocument().isPresent();
+....
+
+
+
+
+
 === High level interface
 
 Chronicle v4.4+ supports the use of proxies to send and consume messages.  You start by defining an asynchronous `interface`, where all methods have:
