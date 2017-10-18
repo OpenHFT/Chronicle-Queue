@@ -290,7 +290,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * targetIndex only stores the position of every 64th excerpt), so from every 64th excerpt a
      * linear scan occurs.
      *
-     * @param recovery
+     * @param recovery todo
      * @param ec       the data structure we are navigating
      * @param index    the index we wish to move to
      * @return the position of the {@code targetIndex} or -1 if the index can not be found
@@ -322,14 +322,10 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     @Nullable
-    ScanResult moveToIndex0(@NotNull StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index)
-            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    private ScanResult moveToIndex0(@NotNull StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
         try {
             LongArrayValues index2index = getIndex2index(recovery, ec, ec.timeoutMS());
-
-            @NotNull final Bytes<?> bytes = ec.wireForIndex().bytes();
-
             long primaryOffset = toAddress0(index);
 
             long secondaryAddress = 0;
@@ -390,8 +386,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                                   final long toIndex,
                                   final long fromKnownIndex,
                                   final long knownAddress) {
-        @NotNull
-        final Bytes<?> bytes = wire.bytes();
+        @NotNull final Bytes<?> bytes = wire.bytes();
 
         bytes.readPositionUnlimited(knownAddress);
 
@@ -473,7 +468,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 ".readPosition()=" + bytes.readPosition() + ",toPosition=" + toPosition);
     }
 
-    public long nextEntryToBeIndexed() {
+    long nextEntryToBeIndexed() {
         return nextEntryToBeIndexed.getVolatileValue();
     }
 
@@ -616,9 +611,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * @param ec             the wire that used to store the data
      * @param sequenceNumber the sequenceNumber that the data will be stored to
      * @param position       the position the data is at
-     * @throws EOFException
-     * @throws UnrecoverableTimeoutException
-     * @throws StreamCorruptedException
+     * @throws EOFException                  todo
+     * @throws UnrecoverableTimeoutException todo
+     * @throws StreamCorruptedException      todo
      */
     void setPositionForSequenceNumber(@NotNull StoreRecovery recovery,
                                       @NotNull ExcerptContext ec,
