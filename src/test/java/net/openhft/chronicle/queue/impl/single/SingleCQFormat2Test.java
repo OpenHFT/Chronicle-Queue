@@ -1386,14 +1386,14 @@ public class SingleCQFormat2Test {
                     "symbol: Symbol\n" +
                     "side: Buy\n" +
                     "limitPrice: 1.2345\n" +
-                    "quantity: 1e6\n" +
+                    "quantity: 1E6\n" +
                     "# position: 631, header: 1\n" +
                     "--- !!data #binary\n" +
                     "newOrder: !Order {\n" +
                     "  symbol: Symbol2,\n" +
                     "  side: Sell,\n" +
                     "  limitPrice: 2.999,\n" +
-                    "  quantity: 10e6\n" +
+                    "  quantity: 10E6\n" +
                     "}\n" +
                     "...\n" +
                     "# 130358 bytes remaining\n";
@@ -1423,14 +1423,14 @@ public class SingleCQFormat2Test {
                     "symbol: Symbol\n" +
                     "side: Buy\n" +
                     "limitPrice: 1.2345\n" +
-                    "quantity: 1e6\n" +
+                    "quantity: 1E6\n" +
                     "# position: 432, header: 1\n" +
                     "--- !!data #binary\n" +
                     "newOrder: !Order {\n" +
                     "  symbol: Symbol2,\n" +
                     "  side: Sell,\n" +
                     "  limitPrice: 2.999,\n" +
-                    "  quantity: 10e6\n" +
+                    "  quantity: 10E6\n" +
                     "}\n" +
                     "...\n" +
                     "# 130556 bytes remaining\n";
