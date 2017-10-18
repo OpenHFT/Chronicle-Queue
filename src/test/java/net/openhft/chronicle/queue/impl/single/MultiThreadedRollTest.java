@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -50,6 +51,7 @@ public class MultiThreadedRollTest {
     }
 
     @Test(timeout = 10000)
+    @Ignore
     public void test() throws ExecutionException, InterruptedException {
 
         final SetTimeProvider timeProvider = new SetTimeProvider();

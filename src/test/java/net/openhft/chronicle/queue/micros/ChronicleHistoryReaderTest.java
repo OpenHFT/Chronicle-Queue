@@ -27,6 +27,7 @@ import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.MethodReader;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -43,11 +44,13 @@ public class ChronicleHistoryReaderTest {
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitial() {
+        Assume.assumeFalse(OS.isWindows());
         doTest(true);
     }
 
     @Test
     public void testWithQueueHistory() {
+        Assume.assumeFalse(OS.isWindows());
         doTest(false);
     }
 

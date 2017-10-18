@@ -1012,11 +1012,11 @@ public class SingleChronicleQueueExcerpts {
                                 state = FOUND_CYCLE;
                                 continue;
                             }
+                            // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
+                            int nextCycle = queue.rollCycle().toCycle(nextIndex);
+                            cycle(nextCycle, false);
+                            state = CYCLE_NOT_FOUND;
                         }
-                        // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
-                        int nextCycle = queue.rollCycle().toCycle(nextIndex);
-                        cycle(nextCycle, false);
-                        state = CYCLE_NOT_FOUND;
                         return false;
                     }
                     case BEYOND_START_OF_CYCLE: {
