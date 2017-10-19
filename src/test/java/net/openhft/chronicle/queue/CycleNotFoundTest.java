@@ -20,7 +20,6 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -43,7 +42,6 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final long NUMBER_OF_MSG = 100_000; // this is working this  1_000_000 but
     // reduced so that it runs quicker for the continuous integration (CI)
 
-    @Ignore
     @Test(timeout = 50000)
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
         File path = DirectoryUtils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make

@@ -1016,6 +1016,9 @@ public class SingleChronicleQueueExcerpts {
                             int nextCycle = queue.rollCycle().toCycle(nextIndex);
                             cycle(nextCycle, false);
                             state = CYCLE_NOT_FOUND;
+
+                        } else {
+                            state = END_OF_CYCLE;
                         }
                         return false;
                     }

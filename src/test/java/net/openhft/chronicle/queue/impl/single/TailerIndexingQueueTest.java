@@ -49,7 +49,7 @@ public final class TailerIndexingQueueTest {
             try (final DocumentContext readCtx = tailer.readingDocument()) {
                 assertThat(readCtx.isPresent(), is(false));
             }
-            assertThat(tailer.state(), is(TailerState.CYCLE_NOT_FOUND));
+            assertThat(tailer.state(), is(TailerState.END_OF_CYCLE));
 
             tailer.direction(TailerDirection.BACKWARD);
 
