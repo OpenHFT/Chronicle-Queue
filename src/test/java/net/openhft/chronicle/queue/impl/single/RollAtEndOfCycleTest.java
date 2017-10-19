@@ -22,7 +22,7 @@ public final class RollAtEndOfCycleTest {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
     @Test
-    public void shouldRollAtEndOfCycle() throws Exception {
+    public void shouldRollAndAppendToNewFile() throws Exception {
         try (final SingleChronicleQueue queue = createQueue()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
@@ -45,6 +45,35 @@ public final class RollAtEndOfCycleTest {
             });
 
             assertQueueFileCount(queue.path.toPath(), 2);
+            try (final DocumentContext context = tailer.readingDocument()) {
+                assertTrue(context.isPresent());
+            }
+        }
+    }
+
+    @Test
+    public void shouldAppendToExistingQueueFile() throws Exception {
+        try (final SingleChronicleQueue queue = createQueue()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+
+            appender.writeDocument(1, (w, i) -> {
+                w.int32(i);
+            });
+
+            final ExcerptTailer tailer = queue.createTailer();
+            try (final DocumentContext context = tailer.readingDocument()) {
+                assertTrue(context.isPresent());
+            }
+
+            assertQueueFileCount(queue.path.toPath(), 1);
+
+            assertFalse(tailer.readingDocument().isPresent());
+
+            appender.writeDocument(2, (w, i) -> {
+                w.int32(i);
+            });
+
+            assertQueueFileCount(queue.path.toPath(), 1);
             try (final DocumentContext context = tailer.readingDocument()) {
                 assertTrue(context.isPresent());
             }
