@@ -129,7 +129,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         Bytes<?> bytes = wire.bytes();
         while (true) {
             long offset = bytes.writePosition();
-            int num = bytes.readInt(offset);
+            int num = bytes.readVolatileInt(offset);
             if (Wires.isEndOfFile(num))
                 throw new EOFException();
             if (Wires.isNotComplete(num) && bytes.compareAndSwapInt(offset, num, 0)) {
