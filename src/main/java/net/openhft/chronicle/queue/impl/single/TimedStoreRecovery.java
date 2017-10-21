@@ -164,7 +164,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
         } catch (TimeoutException e) {
             warn().on(getClass(), e);
-            // this really shouldn't happen as we were in the happy path now.
+            // Could happen if another thread recovers, writes 2 messages but the second one is corrupt.
             return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
         } catch (EOFException e) {
             throw new AssertionError(e);
