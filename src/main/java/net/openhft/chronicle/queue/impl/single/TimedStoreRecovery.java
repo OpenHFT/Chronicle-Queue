@@ -69,7 +69,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
 
     @NotNull
     private static ExceptionHandler warn() {
-        // prevent a warning to be logged back to the same queue potenitally corrupting it.
+        // prevent a warning to be logged back to the same queue potentially corrupting it.
         // return Jvm.warn();
         return Slf4jExceptionHandler.WARN;
     }
