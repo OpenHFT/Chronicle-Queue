@@ -40,6 +40,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -123,7 +124,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         indexSpacing = builder.indexSpacing();
         time = builder.timeProvider();
         pauserSupplier = builder.pauserSupplier();
-        timeoutMS = builder.timeoutMS();
+        // add a 10% random element to make it less likely threads will timeout at the same time.
+        timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
