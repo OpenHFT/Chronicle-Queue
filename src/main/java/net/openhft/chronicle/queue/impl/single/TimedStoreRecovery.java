@@ -21,6 +21,8 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.onoes.ExceptionHandler;
+import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.*;
@@ -65,6 +67,13 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         out.write("timeStamp").int64forBinding(0);
     }
 
+    @NotNull
+    private static ExceptionHandler warn() {
+        // prevent a warning to be logged back to the same queue potenitally corrupting it.
+        // return Jvm.warn();
+        return Slf4jExceptionHandler.WARN;
+    }
+
     long acquireLock(long timeoutMS) {
         long start = System.currentTimeMillis();
         while (true) {
@@ -74,7 +83,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             if (ts < now && timeStamp.compareAndSwapValue(ts, tsEnd))
                 return tsEnd;
             if (now >= start + timeoutMS) {
-                Jvm.warn().on(getClass(), "Unable to obtain the global lock in time, retrying");
+                warn().on(getClass(), "Unable to obtain the global lock in time, retrying");
                 start = now;
             }
             Jvm.pause(1);
@@ -84,17 +93,17 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     void releaseLock(long tsEnd) {
         if (timeStamp.compareAndSwapValue(tsEnd, 0L))
             return;
-        Jvm.warn().on(getClass(), "Another thread obtained the lock ??");
+        warn().on(getClass(), "Another thread obtained the lock ??");
     }
 
     @Override
     public long recoverIndex2Index(@NotNull LongValue index2Index, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         long tsEnd = acquireLock(timeoutMS);
         if (index2Index.getValue() == BinaryLongReference.LONG_NOT_COMPLETE) {
-            Jvm.warn().on(getClass(), "Rebuilding the index2index, resetting to 0");
+            warn().on(getClass(), "Rebuilding the index2index, resetting to 0");
             index2Index.setValue(0);
         } else {
-            Jvm.warn().on(getClass(), "The index2index value has changed, assuming it was recovered");
+            warn().on(getClass(), "The index2index value has changed, assuming it was recovered");
         }
         try {
             return action.call();
@@ -109,10 +118,10 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     public long recoverSecondaryAddress(@NotNull LongArrayValues index2indexArr, int index2, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         long tsEnd = acquireLock(timeoutMS);
         if (index2indexArr.getValueAt(index2) == BinaryLongReference.LONG_NOT_COMPLETE) {
-            Jvm.warn().on(getClass(), "Rebuilding the index2index[" + index2 + "], resetting to 0");
+            warn().on(getClass(), "Rebuilding the index2index[" + index2 + "], resetting to 0");
             index2indexArr.setValueAt(index2, 0L);
         } else {
-            Jvm.warn().on(getClass(), "The index2index[" + index2 + "] value has changed, assuming it was recovered");
+            warn().on(getClass(), "The index2index[" + index2 + "] value has changed, assuming it was recovered");
         }
 
         try {
@@ -133,14 +142,14 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             if (Wires.isEndOfFile(num))
                 throw new EOFException();
             if (Wires.isNotComplete(num) && bytes.compareAndSwapInt(offset, num, 0)) {
-                Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting");
+                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting");
             } else {
-                Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " unable to reset.");
+                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " unable to reset.");
             }
             try {
                 return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
             } catch (TimeoutException e) {
-                Jvm.warn().on(getClass(), e);
+                warn().on(getClass(), e);
             } catch (EOFException e) {
                 throw new AssertionError(e);
             }
