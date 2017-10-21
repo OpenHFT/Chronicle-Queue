@@ -62,6 +62,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
         }
     }
+
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write("timeStamp").int64forBinding(0);
@@ -141,10 +142,21 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             int num = bytes.readVolatileInt(offset);
             if (Wires.isEndOfFile(num))
                 throw new EOFException();
-            if (Wires.isNotComplete(num) && bytes.compareAndSwapInt(offset, num, 0)) {
-                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting");
+            if (Wires.isNotComplete(num)) {
+                if (bytes.compareAndSwapInt(offset, num, Wires.END_OF_DATA)) {
+                    warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting to EOD");
+                } else {
+                    int num2 = bytes.readVolatileInt(offset);
+                    if (num2 == Wires.END_OF_DATA) {
+                        warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to EOD.");
+                    } else {
+                        warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to " + Integer.toHexString(num2));
+                    }
+                }
+                // trigger file rolling code.
+                throw new EOFException();
             } else {
-                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " unable to reset.");
+                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " but message now exists.");
             }
             try {
                 return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
