@@ -137,34 +137,37 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     @Override
     public long recoverAndWriteHeader(@NotNull Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
-        while (true) {
-            long offset = bytes.writePosition();
-            int num = bytes.readVolatileInt(offset);
-            if (Wires.isEndOfFile(num))
-                throw new EOFException();
-            if (Wires.isNotComplete(num)) {
-                if (bytes.compareAndSwapInt(offset, num, Wires.END_OF_DATA)) {
-                    warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting to EOD");
-                } else {
-                    int num2 = bytes.readVolatileInt(offset);
-                    if (num2 == Wires.END_OF_DATA) {
-                        warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to EOD.");
-                    } else {
-                        warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to " + Integer.toHexString(num2));
-                    }
-                }
+
+        long offset = bytes.writePosition();
+        int num = bytes.readVolatileInt(offset);
+        if (Wires.isNotComplete(num)) {
+            if (bytes.compareAndSwapInt(offset, num, Wires.END_OF_DATA)) {
+                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting to EOD");
                 // trigger file rolling code.
                 throw new EOFException();
             } else {
-                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " but message now exists.");
+                int num2 = bytes.readVolatileInt(offset);
+                if (num2 == Wires.END_OF_DATA) {
+                    warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to EOD.");
+                    // trigger file rolling code.
+                    throw new EOFException();
+                } else {
+                    warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to " + Integer.toHexString(num2));
+                    // might be okay now, try again. Will StackOverflow rather than go into an infinite loop.
+                    return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
+                }
             }
-            try {
-                return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
-            } catch (TimeoutException e) {
-                warn().on(getClass(), e);
-            } catch (EOFException e) {
-                throw new AssertionError(e);
-            }
+        }
+        warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " but message now exists.");
+
+        try {
+            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
+        } catch (TimeoutException e) {
+            warn().on(getClass(), e);
+            // this really shouldn't happen as we were in the happy path now.
+            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
+        } catch (EOFException e) {
+            throw new AssertionError(e);
         }
     }
 }
