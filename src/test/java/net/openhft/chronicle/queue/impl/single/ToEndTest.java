@@ -312,7 +312,7 @@ public class ToEndTest {
     }
 
     private void checkOneFile(@NotNull File baseDir) {
-        String[] files = baseDir.list();
+        String[] files = baseDir.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
 
         if (files == null || files.length == 0)
             return;
