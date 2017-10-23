@@ -2,6 +2,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -10,6 +12,7 @@ import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
 
 final class DirectoryListing {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryListing.class);
     private static final long LOCK_ACQUISITION_TIMEOUT_MILLIS =
             Long.getLong("chronicle.listing.lock.timeout", TimeUnit.SECONDS.toMillis(20L));
     private static final long LOCK_MAX_AGE_MILLIS =
@@ -24,23 +27,33 @@ final class DirectoryListing {
     private final LongValue maxCycleValue;
     private final LongValue minCycleValue;
     private final LongValue lock;
+    private final boolean readOnly;
 
     DirectoryListing(
             final TableStore tableStore, final Path queuePath,
-            final ToIntFunction<File> fileToCycleFunction) {
+            final ToIntFunction<File> fileToCycleFunction,
+            final boolean readOnly) {
         this.tableStore = tableStore;
         this.queuePath = queuePath;
         this.fileToCycleFunction = fileToCycleFunction;
         maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
         minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
         lock = tableStore.acquireValueFor(LOCK);
+        this.readOnly = readOnly;
     }
 
     void refresh() {
+        if (readOnly) {
+            return;
+        }
         tryWithLock(this::refreshIndex);
     }
 
     void onFileCreated(final File file, final int cycle) {
+        if (readOnly) {
+            LOGGER.warn("DirectoryListing is read-only, not updating listing");
+            return;
+        }
         tryWithLock(() -> {
             maxCycleValue.setMaxValue(cycle);
             minCycleValue.setMinValue(cycle);
@@ -49,10 +62,16 @@ final class DirectoryListing {
     }
 
     int getMaxCreatedCycle() {
+        if (readOnly) {
+            return getMaxCycleValue();
+        }
         return tryWithLock(this::getMaxCycleValue);
     }
 
     int getMinCreatedCycle() {
+        if (readOnly) {
+            return getMinCycleValue();
+        }
         return tryWithLock(this::getMinCycleValue);
     }
 

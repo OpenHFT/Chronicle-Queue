@@ -38,6 +38,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -3632,7 +3633,27 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } catch (InterruptedException e) {
             executorService.shutdownNow();
         }
+    }
 
+    @Test
+    public void shouldBeAbleToLoadQueueFromReadOnlyFiles() throws Exception {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = builder(queueDir, wireType).
+                testBlockSize().build()) {
+            queue.acquireAppender().writeDocument("foo", (v, t) -> {
+                v.text(t);
+            });
+        }
+
+        Files.list(queueDir.toPath()).forEach(p -> {
+            assertTrue(p.toFile().setWritable(false));
+        });
+
+        try (final SingleChronicleQueue queue = builder(queueDir, wireType).
+                readOnly(true).
+                testBlockSize().build()) {
+            assertTrue(queue.createTailer().readingDocument().isPresent());
+        }
     }
 
     @NotNull

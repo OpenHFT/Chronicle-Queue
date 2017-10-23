@@ -157,10 +157,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         storeFactory = builder.storeFactory();
         final File listingPath = createDirectoryListingFile();
         this.directoryListing = new DirectoryListing(SingleTableBuilder.
-                binary(listingPath).build(), path.toPath(), f -> {
+                binary(listingPath).readOnly(builder.readOnly()).build(), path.toPath(), f -> {
             final String name = f.getName();
             return dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
-        });
+        }, builder.readOnly());
         this.directoryListing.refresh();
         this.addCloseListener(directoryListing, dl -> {
             dl.close();
@@ -715,7 +715,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (createIfAbsent)
                     checkDiskSpace(path);
 
-                directoryListing.onFileCreated(path, cycle);
+                if (createIfAbsent && !path.exists()) {
+                    directoryListing.onFileCreated(path, cycle);
+                }
 
                 final MappedBytes mappedBytes = mappedBytes(path);
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
