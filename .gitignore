@@ -23,3 +23,4 @@ target
 queue-dir
 
 *.cq4
+src/test/resources/tr2/directory-listing.cq4t
