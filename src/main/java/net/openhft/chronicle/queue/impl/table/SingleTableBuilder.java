@@ -54,7 +54,7 @@ public class SingleTableBuilder {
     private WireType wireType;
     private boolean readOnly;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery::new;
-    private long timeoutMS;
+    private long timeoutMS = TimeUnit.SECONDS.toMillis(5);
 
     private SingleTableBuilder(@NotNull File path) {
         this.file = path;
