@@ -15,7 +15,6 @@ final class DirectoryListing {
     private static final long LOCK_MAX_AGE_MILLIS =
             Long.getLong("chronicle.listing.lock.maxAge", TimeUnit.SECONDS.toMillis(10L));
 
-
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String LOCK = "listing.exclusiveLock";
@@ -73,7 +72,9 @@ final class DirectoryListing {
                 try {
                     return function.getAsInt();
                 } finally {
-                    lock.setOrderedValue(0);
+                    if (!lock.compareAndSwapValue(currentTime, 0)) {
+                        throw new IllegalStateException("Unable to reset lock state");
+                    }
                 }
 
             } else  {
@@ -84,7 +85,9 @@ final class DirectoryListing {
                         try {
                             return function.getAsInt();
                         } finally {
-                            lock.setOrderedValue(0);
+                            if (!lock.compareAndSwapValue(currentTime, 0)) {
+                                throw new IllegalStateException("Unable to reset lock state");
+                            }
                         }
                     }
                 }
