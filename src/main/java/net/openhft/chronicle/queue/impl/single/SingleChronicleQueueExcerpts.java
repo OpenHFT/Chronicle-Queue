@@ -309,7 +309,7 @@ public class SingleChronicleQueueExcerpts {
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
                         position(pos);
                         context.isClosed = false;
-                        context.wire = wire;
+                        context.wire = Jvm.isDebug() ? acquireBufferWire() : wire;
                         context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
                         context.metaData(metaData);
                         ok = true;
