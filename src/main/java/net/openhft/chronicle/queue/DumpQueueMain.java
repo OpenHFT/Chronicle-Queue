@@ -52,7 +52,7 @@ public class DumpQueueMain {
 
     public static void dump(@NotNull File path, @NotNull PrintStream out, long upperLimit) {
         if (path.isDirectory()) {
-            File[] files = path.listFiles();
+            File[] files = path.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
             if (files == null) {
                 err.println("Directory not found " + path);
                 System.exit(1);

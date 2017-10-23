@@ -35,6 +35,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -207,7 +208,7 @@ public class SingleCQFormat2Test {
                     "]\n" +
                     "...\n" +
                     "# 130476 bytes remaining\n";
-            checkFileContents(dir.listFiles()[0], lazyIndexing ? expectedLazy : expectedEager);
+            checkFileContents(getFirstQueueFile(dir), lazyIndexing ? expectedLazy : expectedEager);
 
             appendMessage(queue, start + 1, "Another Hello World");
             @NotNull String expectedEager2 = "--- !!meta-data #binary\n" +
@@ -296,7 +297,7 @@ public class SingleCQFormat2Test {
                     "msg: Another Hello World\n" +
                     "...\n" +
                     "# 130448 bytes remaining\n";
-            checkFileContents(dir.listFiles()[0], lazyIndexing ? expectedLazy2 : expectedEager2);
+            checkFileContents(getFirstQueueFile(dir), lazyIndexing ? expectedLazy2 : expectedEager2);
 
             appendMessage(queue, start + 2, "Bye for now");
 
@@ -393,9 +394,13 @@ public class SingleCQFormat2Test {
                     "msg: Bye for now\n" +
                     "...\n" +
                     "# 130428 bytes remaining\n";
-            checkFileContents(dir.listFiles()[0], lazyIndexing ? expectedLazy3 : expectedEager3);
+            checkFileContents(getFirstQueueFile(dir), lazyIndexing ? expectedLazy3 : expectedEager3);
             }
         }
+    }
+
+    private File getFirstQueueFile(final File file) {
+        return file.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX))[0];
     }
 
     public void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
@@ -502,7 +507,7 @@ public class SingleCQFormat2Test {
                     "]\n" +
                     "...\n" +
                     "# 130476 bytes remaining\n";
-            checkFileContents(dir.listFiles()[0],
+            checkFileContents(getFirstQueueFile(dir),
                     (lazyIndexing ? expectedLazy : expectedEager)
                             .replace("indexSpacing: 1", "indexSpacing: " + spacing)
                             .replace("lastIndex: 1", "lastIndex: " + spacing));
@@ -1159,7 +1164,7 @@ public class SingleCQFormat2Test {
                             spacing == 1 ? expected1 :
                                     spacing == 2 ? expected2 : expected3);
 
-            checkFileContents(dir.listFiles()[0], expected);
+            checkFileContents(getFirstQueueFile(dir), expected);
             }
         }
     }
