@@ -155,7 +155,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         // add a 10% random element to make it less likely threads will timeout at the same time.
         timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
-
         final File listingPath = createDirectoryListingFile();
         this.directoryListing = new DirectoryListing(SingleTableBuilder.
                 binary(listingPath).build(), path.toPath(), f -> {
@@ -356,6 +355,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @Override
     public ExcerptTailer createTailer() {
         final StoreTailer storeTailer = new StoreTailer(this);
+        directoryListing.refresh();
         if (SHOULD_RELEASE_RESOURCES) {
             StoreComponentReferenceHandler.register(
                     new WeakReference<>(storeTailer, StoreComponentReferenceHandler.tailerQueue()),
