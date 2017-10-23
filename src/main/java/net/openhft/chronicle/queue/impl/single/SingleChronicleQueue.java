@@ -162,6 +162,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             return dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
         });
         this.directoryListing.refresh();
+        this.addCloseListener(directoryListing, dl -> {
+            dl.close();
+        });
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
             try {

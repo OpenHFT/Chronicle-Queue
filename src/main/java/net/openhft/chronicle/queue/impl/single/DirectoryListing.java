@@ -113,4 +113,8 @@ final class DirectoryListing {
         }
         return 0;
     }
+
+    void close() {
+        tableStore.close();
+    }
 }
