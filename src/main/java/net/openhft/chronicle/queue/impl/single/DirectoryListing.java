@@ -10,6 +10,12 @@ import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
 
 final class DirectoryListing {
+    private static final long LOCK_ACQUISITION_TIMEOUT_MILLIS =
+            Long.getLong("chronicle.listing.lock.timeout", TimeUnit.SECONDS.toMillis(20L));
+    private static final long LOCK_MAX_AGE_MILLIS =
+            Long.getLong("chronicle.listing.lock.maxAge", TimeUnit.SECONDS.toMillis(10L));
+
+
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String LOCK = "listing.exclusiveLock";
@@ -31,7 +37,6 @@ final class DirectoryListing {
         lock = tableStore.acquireValueFor(LOCK);
     }
 
-    // TODO timeouts as system properties
     void refresh() {
         tryWithLock(this::refreshIndex);
     }
@@ -61,7 +66,7 @@ final class DirectoryListing {
     }
 
     private int tryWithLock(final IntSupplier function) {
-        final long lockAcquisitionTimeout = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10L);
+        final long lockAcquisitionTimeout = System.currentTimeMillis() + LOCK_ACQUISITION_TIMEOUT_MILLIS;
         long currentTime;
         while ((currentTime = System.currentTimeMillis()) < lockAcquisitionTimeout) {
             if (lock.compareAndSwapValue(0, currentTime)) {
@@ -72,23 +77,23 @@ final class DirectoryListing {
                 }
 
             } else  {
-                // assume that previous lock holder has died
                 final long lastLockTime = lock.getValue();
-                if (lastLockTime < currentTime - TimeUnit.SECONDS.toMillis(5L)) {
+                if (lastLockTime < currentTime - LOCK_MAX_AGE_MILLIS) {
+                    // assume that previous lock holder has died
                     if (lock.compareAndSwapValue(lastLockTime, currentTime)) {
                         try {
-                            refreshIndex();
+                            return function.getAsInt();
                         } finally {
                             lock.setOrderedValue(0);
                         }
-                        return function.getAsInt();
                     }
                 }
                 Thread.yield();
             }
         }
 
-        throw new IllegalStateException("Unable to acquire exclusive lock on directory listing");
+        throw new IllegalStateException("Unable to acquire exclusive lock on directory listing.\n" +
+                "Consider changing system properties chronicle.listing.lock.timeout/chronicle.listing.lock.maxAge");
     }
 
     private int refreshIndex() {
