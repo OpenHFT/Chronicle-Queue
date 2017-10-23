@@ -21,14 +21,17 @@ import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.MethodReader;
+import net.openhft.chronicle.wire.WireOut;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -379,8 +382,98 @@ public class NotCompleteTest {
         }
     }
 
+    @Test
+    public void testInterruptedDuringSerialisation()
+            throws TimeoutException, ExecutionException, InterruptedException {
+
+        final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
+        DirectoryUtils.deleteDir(tmpDir);
+        tmpDir.mkdirs();
+
+        final List<String> names = Collections.synchronizedList(new ArrayList<>());
+        final Person person1 = new Person(40, "Terry");
+        final Person person2 = new Person(50, Person.INTERRUPT);
+
+        Thread readerThread = new Thread(() -> {
+            try (final ChronicleQueue queue = binary(tmpDir)
+                    .testBlockSize()
+                    .timeoutMS(500)
+                    .build()) {
+
+                ExcerptTailer tailer = queue.createTailer();
+                MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
+
+                long start = System.currentTimeMillis();
+                while (names.size() < 2) {
+                    reader.readOne();
+                    if (System.currentTimeMillis() > (start + 500)) {
+                        break;
+                    }
+                }
+            }
+        });
+
+        Thread writerThread = new Thread(() -> {
+            try (final ChronicleQueue queue = binary(tmpDir)
+                    .testBlockSize()
+                    .rollCycle(RollCycles.TEST_DAILY)
+                    .build()) {
+
+                ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
+                PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
+                proxy.accept(person1);
+                // thread is interrupted during this
+                proxy.accept(person2);
+            }
+        });
+
+        writerThread.start();
+        readerThread.start();
+
+        writerThread.join();
+        readerThread.join();
+
+        assertEquals(2, names.size());
+        assertEquals(person1.name, names.get(0));
+        // Person gets serialised but incompletely
+        assertEquals(null, names.get(1));
+    }
+
     @After
     public void checkMappedFiles() {
         MappedFile.checkMappedFiles();
+    }
+
+    private interface PersonListener {
+        void accept(Person name);
+    }
+
+    private class Person implements Marshallable {
+        static final String INTERRUPT = "Arthur";
+        final int age;
+        final String name;
+
+        public Person(int age, String name) {
+            this.age = age;
+            this.name = name;
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull WireOut wire) {
+            wire.write("age").int32(age);
+            if (INTERRUPT.equals(name)) {
+                Thread.currentThread().interrupt();
+            } else {
+                wire.write("name").text(name);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Person{" +
+                    "age=" + age +
+                    ", name='" + name + '\'' +
+                    '}';
+        }
     }
 }
