@@ -20,7 +20,8 @@ final class DirectoryListing {
 
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
-    private static final String LOCK = "listing.exclusiveLock";
+    // visible for testing
+    static final String LOCK = "listing.exclusiveLock";
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
@@ -39,6 +40,9 @@ final class DirectoryListing {
         maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
         minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
         lock = tableStore.acquireValueFor(LOCK);
+        if (lock.getVolatileValue() == Long.MIN_VALUE) {
+            lock.compareAndSwapValue(Long.MIN_VALUE, 0);
+        }
         this.readOnly = readOnly;
     }
 
@@ -98,9 +102,11 @@ final class DirectoryListing {
 
             } else  {
                 final long lastLockTime = lock.getValue();
-                if (lastLockTime < currentTime - LOCK_MAX_AGE_MILLIS) {
+                if (lastLockTime != 0 && lastLockTime < currentTime - LOCK_MAX_AGE_MILLIS) {
                     // assume that previous lock holder has died
                     if (lock.compareAndSwapValue(lastLockTime, currentTime)) {
+                        LOGGER.warn("Forcing lock on directory listing as it is {}sec old",
+                                (currentTime - lastLockTime) / 1000);
                         try {
                             return function.getAsInt();
                         } finally {
