@@ -1376,5 +1376,14 @@ console output:
 
 === More information
 
-More in-depth information can be found in the
-https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs[docs directory].
+More in-depth information can be found in the following topics:
+
+
+   * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some of the techniques utilised by Chronicle Queue
+   * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/encryption.adoc[Encryption] - describes how to encrypt the contents of a Queue
+   * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/FAQ.adoc[FAQ] - questions asked by customers
+   * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
+   * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/replication.adoc[Replication] - an overview of the replication mechanism
+   * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/timezone_rollover.adoc[Timezone rollover] - describes how to configure file-rolling at a specific time in a given time-zone
+   * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
+
