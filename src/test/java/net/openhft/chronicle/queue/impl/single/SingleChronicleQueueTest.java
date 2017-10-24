@@ -3656,6 +3656,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Test
+    public void shouldCreateQueueInCurrentDirectory() throws Exception {
+        try (final SingleChronicleQueue queue =
+                     builder(new File(""), wireType).
+                             testBlockSize().build()) {
+
+        }
+
+        new File("directory-listing.cq4t").delete();
+    }
+
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
