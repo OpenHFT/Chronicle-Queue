@@ -145,6 +145,26 @@ Object ret = reader.readObject();
 reader.finish();
 ----
 
+=== File rolling
+
+A Chronicle Queue is a logical view of a directory on the file-system.
+The queue data itself is split across multiple files, each of which contains
+data belonging to a single _cycle_. The length of the cycle is determined by
+the _rollCycle_ parameter passed to the queue builder.
+
+Example configuration of _RollCycle_:
+
+   * `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
+   * `RollCycles.HOURLY` every hour, a new queue file will be created for written events
+
+As new files are created to accommodate events being written to the queue, a persisted
+data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
+_cycle_ numbers present in the directory.
+
+Maintaining this table allows an `ExcerptTailer` to busy-spin waiting for new data to
+be appended to the queue, without the need to make costly calls to the file-system to
+check for the existence of new queue files.
+
 
 === Configuration
 
