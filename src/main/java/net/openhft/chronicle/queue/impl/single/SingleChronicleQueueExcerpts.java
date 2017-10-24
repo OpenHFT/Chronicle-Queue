@@ -422,7 +422,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeBytes(long index, @NotNull BytesStore bytes) {
             if (index < 0)
-                throw new IllegalArgumentException("index: " + Long.toString(index));
+                throw new IllegalArgumentException("index: " + Long.toHexString(index));
             if (bytes.isEmpty())
                 throw new UnsupportedOperationException("Cannot append a zero length message");
             assert checkAppendingThread();
