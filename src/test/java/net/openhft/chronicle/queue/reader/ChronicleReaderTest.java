@@ -4,8 +4,11 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MethodWriterBuilder;
 import org.junit.Before;
@@ -72,6 +75,14 @@ public class ChronicleReaderTest {
         path.toFile().mkdirs();
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertTrue(capturedOutput.isEmpty());
+    }
+
+    @Test
+    @Ignore
+    public void shouldNotFailWhenNoDirectoryListing() throws IOException {
+        Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableBuilder.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
+        basicReader().execute();
+        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
     }
 
     @Test
