@@ -1172,6 +1172,11 @@ public class SingleChronicleQueueExcerpts {
                 }
             } else {
                 Jvm.debug().on(getClass(), "Unable to append EOF to ReadOnly store, skipping");
+                // even though we couldn't write EOF, we still need to indicate we're at EOF to prevent looping forever
+                // only do that if we waited long enough to prevent terminating too early
+                long now = queue.time().currentTimeMillis();
+                if (now >= timeForNextCycle + timeoutMS()*2)
+                    throw new EOFException();
             }
             return inACycle(includeMetaData, false);
         }
