@@ -748,6 +748,11 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
+                if (Thread.currentThread().isInterrupted()) {
+                    LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
+                    return;
+                }
+
                 try {
                     if (wire == StoreAppender.this.wire) {
                         if (padToCacheAlign)
