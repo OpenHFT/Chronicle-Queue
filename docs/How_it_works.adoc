@@ -165,6 +165,16 @@ Maintaining this table allows an `ExcerptTailer` to busy-spin waiting for new da
 be appended to the queue, without the need to make costly calls to the file-system to
 check for the existence of new queue files.
 
+==== Read-only mode
+
+When opening a queue in read-only mode, it is not possible to utilise the structure
+described above (since the structure needs to be written to). In this case,
+Chronicle Queue will fallback to inspecting the file-system to determine when
+new queue files are created.
+
+For this reason, significant garbage will be generated when using an `ExcerptTailer`
+in a busy-spin loop in read-only mode.
+
 
 === Configuration
 
