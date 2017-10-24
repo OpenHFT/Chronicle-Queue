@@ -688,7 +688,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     return null;
 
                 if (createIfAbsent)
-                    checkDiskSpace(path);
+                    checkDiskSpace(that.path);
 
                 if (createIfAbsent && !path.exists()) {
                     directoryListing.onFileCreated(path, cycle);
@@ -726,12 +726,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
-        private void checkDiskSpace(@NotNull final File path) throws IOException {
-            final Path root = path.getParentFile().toPath().getRoot();
-            if (root != null && root.getFileSystem() != null) {
+        private void checkDiskSpace(@NotNull final File filePath) throws IOException {
+            Path path = filePath.toPath();
+            if (path.getFileSystem() != null) {
                 // The returned number of unallocated bytes is a hint, but not a guarantee
-                long unallocatedBytes = Files.getFileStore(root).getUnallocatedSpace();
-                long totalSpace = Files.getFileStore(root).getTotalSpace();
+                long unallocatedBytes = Files.getFileStore(path).getUnallocatedSpace();
+                long totalSpace = Files.getFileStore(path).getTotalSpace();
 
                 if (unallocatedBytes < totalSpace * .05)
                     LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
