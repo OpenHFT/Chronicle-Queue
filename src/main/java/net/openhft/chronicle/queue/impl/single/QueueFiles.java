@@ -81,7 +81,7 @@ public enum QueueFiles {
                     if (queueStore == null) {
                         return Optional.empty();
                     }
-                    return Optional.of(processor.apply(wire, queueStore));
+                    return Optional.ofNullable(processor.apply(wire, queueStore));
 
 
                 } catch (final Throwable e) {
