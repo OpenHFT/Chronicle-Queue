@@ -74,6 +74,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
@@ -133,6 +134,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private boolean persistedRollCycleCheckPerformed = false;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
+        readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
         cycleCalculator = builder.cycleCalculator();
         epoch = builder.epoch();
@@ -155,12 +157,15 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         // add a 10% random element to make it less likely threads will timeout at the same time.
         timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
-        final File listingPath = createDirectoryListingFile();
-        this.directoryListing = new DirectoryListing(SingleTableBuilder.
-                binary(listingPath).readOnly(builder.readOnly()).build(), path.toPath(), f -> {
-            final String name = f.getName();
-            return dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
-        }, builder.readOnly());
+        if (readOnly) {
+            this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
+        } else {
+            final File listingPath = createDirectoryListingFile();
+            this.directoryListing = new TableDirectoryListing(SingleTableBuilder.
+                    binary(listingPath).readOnly(builder.readOnly()).build(),
+                    path.toPath(), fileToCycleFunction(), builder.readOnly());
+        }
+
         this.directoryListing.refresh();
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
@@ -176,7 +181,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
-        readOnly = builder.readOnly();
     }
 
     @Nullable
@@ -569,7 +573,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             listingPath.getParentFile().mkdirs();
         }
         try {
-            if (listingPath.createNewFile()) {
+            if (!readOnly && listingPath.createNewFile()) {
                 if (!listingPath.canWrite()) {
                     throw new IllegalStateException("Cannot write to cycle file");
                 }
@@ -688,6 +692,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 fileToText());
     }
 
+    @NotNull
+    private ToIntFunction<File> fileToCycleFunction() {
+        return f -> {
+            final String name = f.getName();
+            return dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
+        };
+    }
+
     void removeCloseListener(final StoreTailer storeTailer) {
         synchronized (closers) {
             closers.remove(storeTailer);
@@ -763,8 +775,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (unallocatedBytes < totalSpace * .05)
                     LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
                             "it runs out of space.");
-                else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
-                    LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
+                else
+                    if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
+                        LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
             }
         }
 
