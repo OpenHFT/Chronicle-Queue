@@ -38,6 +38,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class ChronicleReaderTest {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
@@ -63,6 +64,14 @@ public class ChronicleReaderTest {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
+    }
+
+    @Test
+    public void shouldNotFailOnEmptyQueue() {
+        Path path = DirectoryUtils.tempDir("shouldNotFailOnEmptyQueue").toPath();
+        path.toFile().mkdirs();
+        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        assertTrue(capturedOutput.isEmpty());
     }
 
     @Test
