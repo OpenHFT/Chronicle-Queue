@@ -35,7 +35,7 @@ public class RollingResourcesCacheTest {
 
         final int cycle = ROLL_CYCLE.current(System::currentTimeMillis, 0);
         assertCorrectConversion(cache, cycle, Instant.now(),
-                DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.systemDefault()));
+                DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.of("GMT")));
     }
 
     /*
