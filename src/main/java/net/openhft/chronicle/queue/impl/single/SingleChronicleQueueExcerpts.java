@@ -309,7 +309,7 @@ public class SingleChronicleQueueExcerpts {
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
                         position(pos);
                         context.isClosed = false;
-                        context.wire = Jvm.isDebug() ? acquireBufferWire() : wire;
+                        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
                         context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
                         context.metaData(metaData);
                         ok = true;
@@ -422,7 +422,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeBytes(long index, @NotNull BytesStore bytes) {
             if (index < 0)
-                throw new IllegalArgumentException("index: " + index);
+                throw new IllegalArgumentException("index: " + Long.toHexString(index));
             if (bytes.isEmpty())
                 throw new UnsupportedOperationException("Cannot append a zero length message");
             assert checkAppendingThread();
@@ -1278,8 +1278,7 @@ public class SingleChronicleQueueExcerpts {
         public boolean moveToIndex(final long index) {
             if (moveToState.canReuseLastIndexMove(index, state, direction, queue)) {
                 return true;
-            }
-            else if(moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
+            } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
                 final long knownIndex = moveToState.calculateKnownIndex(wire().bytes().readPosition());
                 final long knownPosition = wire().bytes().readPosition();
                 final boolean found =
