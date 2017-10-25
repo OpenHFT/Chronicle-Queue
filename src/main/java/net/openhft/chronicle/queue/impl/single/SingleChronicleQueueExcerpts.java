@@ -299,7 +299,9 @@ public class SingleChronicleQueueExcerpts {
             try {
                 int cycle = queue.cycle();
 
-                if (this.cycle != cycle || wire == null)
+                if (wire == null)
+                    setCycle2(cycle, true);
+                if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
@@ -607,9 +609,10 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
-            if (this.cycle == cycle)
-                throw new AssertionError();
             if (wire != null) {
+                // only a valid check if the wire was set.
+                if (this.cycle == cycle)
+                    throw new AssertionError();
                 try {
                     store.writeEOF(wire, timeoutMS());
                 } catch (TimeoutException e) {
