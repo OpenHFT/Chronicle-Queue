@@ -17,28 +17,37 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Calendar;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class RollEOFTest {
 
+    public static final long TIMEOUT = Jvm.isDebug() ? 500000L : 5000L;
     private final File path = DirectoryUtils.tempDir(getClass().getName());
 
     @Test(timeout = 5000L)
@@ -60,6 +69,59 @@ public class RollEOFTest {
         new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
         // 2 entries per message
         assertEquals(4, l.size());
+    }
+
+    @Test//(timeout = 5000L)
+    public void testRollWithoutEOFDoesntBlowup() throws Exception {
+
+        final MutableTimeProvider timeProvider = new MutableTimeProvider();
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_MONTH, -1);
+        timeProvider.setTime(cal.getTimeInMillis());
+        createQueueAndWriteData(timeProvider);
+        assertEquals(1, getNumberOfQueueFiles());
+
+        // adjust time
+        timeProvider.setTime(System.currentTimeMillis());
+        createQueueAndWriteData(timeProvider);
+        assertEquals(2, getNumberOfQueueFiles());
+
+        Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
+
+        assertTrue(firstQueueFile.isPresent());
+
+        // remove EOF from first file
+        removeEOF(firstQueueFile.get());
+
+        List<String> l = new LinkedList<>();
+        new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
+        // 2 entries per message
+        assertEquals(4, l.size());
+    }
+
+    private void removeEOF(Path path) throws IOException {
+        long blockSize = 64 << 10;
+        long chunkSize = OS.pageAlign(blockSize);
+        long overlapSize = OS.pageAlign(blockSize / 4);
+        final MappedBytes mappedBytes = MappedBytes.mappedBytes(path.toFile(), chunkSize, overlapSize, false);
+        mappedBytes.reserve();
+        try {
+            final Wire wire = WireType.BINARY_LIGHT.apply(mappedBytes);
+            final Bytes<?> bytes = wire.bytes();
+            bytes.readLimit(bytes.capacity());
+            bytes.readSkip(4);
+            // move past header
+            try (final SingleChronicleQueueStore qs = SingleChronicleQueueBuilder.loadStore(wire)) {
+                assertNotNull(qs);
+                long l = qs.writePosition();
+                long len = Wires.lengthOf(bytes.readVolatileInt(l));
+                long eofOffset = l + len + 4L;
+                bytes.writePosition(eofOffset);
+                bytes.writeInt(0);
+            }
+        } finally {
+            mappedBytes.release();
+        }
     }
 
     private long getNumberOfQueueFiles() throws IOException {

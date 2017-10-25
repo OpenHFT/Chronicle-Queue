@@ -299,7 +299,9 @@ public class SingleChronicleQueueExcerpts {
             try {
                 int cycle = queue.cycle();
 
-                if (this.cycle != cycle || wire == null)
+                if (wire == null)
+                    setCycle2(cycle, true);
+                if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
@@ -336,7 +338,7 @@ public class SingleChronicleQueueExcerpts {
                 // few milliseconds since
                 setCycle2(++cycle, true);
             } else
-                throw new IllegalStateException("Found an EOF on the next cycle file," +
+                Jvm.warn().on(this.getClass(), "Found an EOF on the next cycle file," +
                         " this next file, should not have an EOF as its cycle " +
                         "number is greater than the current cycle (based on the " +
                         "current time), this should only happen " +
@@ -607,9 +609,10 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
-            if (this.cycle == cycle)
-                throw new AssertionError();
             if (wire != null) {
+                // only a valid check if the wire was set.
+                if (this.cycle == cycle)
+                    throw new AssertionError();
                 try {
                     store.writeEOF(wire, timeoutMS());
                 } catch (TimeoutException e) {
@@ -1172,6 +1175,11 @@ public class SingleChronicleQueueExcerpts {
                 }
             } else {
                 Jvm.debug().on(getClass(), "Unable to append EOF to ReadOnly store, skipping");
+                // even though we couldn't write EOF, we still need to indicate we're at EOF to prevent looping forever
+                // only do that if we waited long enough to prevent terminating too early
+                long now = queue.time().currentTimeMillis();
+                if (now >= timeForNextCycle + timeoutMS() * 2)
+                    throw new EOFException();
             }
             return inACycle(includeMetaData, false);
         }

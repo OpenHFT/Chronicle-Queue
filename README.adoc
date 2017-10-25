@@ -1032,7 +1032,7 @@ You can use `isPresent()` to check that there is data to read.
 try (DocumentContext dc = tailer.readingDocument()) {
     if(!dc.isPresent()) // this will tell you if there is any data  to read
         return;
-    Bytes bytes = wire.bytes();
+    Bytes bytes = dc.wire().bytes();
     // read from the bytes
 }
 ----
@@ -1067,7 +1067,10 @@ try (DocumentContext dc = appender.writingDocument()) {
 
 ==== Ensure long Running tasks are not performed with a writingDocument()
 
-The `writingDocument()` should be performed as quickly as possible because a write lock is held until the `DocumentContext` is closed by the try-with-resources. This blocks other appenders and tailers.
+The `writingDocument()` should be performed as quickly as possible because a write lock is held until the `DocumentContext` is closed by the try-with-resources. This blocks other appenders and tailers. More dangerously,
+if something keeps the thread busy long enough(more than recovery timeout, which is 20 seconds by defult) between call to `appender.writingDocument()` and code that actually writes something into bytes,
+it can cause recovery to kick in from other appenders (potentially in other process), which will rewrite message header, and if your thread subsequently continues writing its own message it will corrupt queue file.
+
 
 [source, Java]
 ----
@@ -1086,13 +1089,12 @@ You should try to avoid abruptly killing Chronicle Queue, especially if its in t
 ----
 try (DocumentContext dc = appender.writingDocument()) {
     // killing chronicle queue here will leave the file in a locked state
- }
+}
 ----
 
 If you kill Chronicle Queue when its half way through writing a document, this can leave your Chronicle Queue in a locked state, which could later prevent other appenders from  writing to the queue file.
 
-Although, we do not recommend that you `$kill -9` your process, 
-in the event that your process abruptly terminates, we have added recovery code  that should recover from this situation.
+Although we do not recommend that you `$kill -9` your process,  in the event that your process abruptly terminates we have added recovery code  that should recover from this situation.
 
 == Design
 
