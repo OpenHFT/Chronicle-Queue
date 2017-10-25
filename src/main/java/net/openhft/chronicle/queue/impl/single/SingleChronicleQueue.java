@@ -164,6 +164,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             this.directoryListing = new TableDirectoryListing(SingleTableBuilder.
                     binary(listingPath).readOnly(builder.readOnly()).build(),
                     path.toPath(), fileToCycleFunction(), builder.readOnly());
+            directoryListing.init();
         }
 
         this.directoryListing.refresh();

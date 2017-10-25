@@ -3,14 +3,19 @@ package net.openhft.chronicle.queue.impl.single;
 import java.io.File;
 import java.util.function.ToIntFunction;
 
-public final class FileSystemDirectoryListing implements DirectoryListing {
+final class FileSystemDirectoryListing implements DirectoryListing {
     private final File queueDir;
     private final ToIntFunction<File> fileToCycleFunction;
 
-    public FileSystemDirectoryListing(final File queueDir,
+    FileSystemDirectoryListing(final File queueDir,
                                       final ToIntFunction<File> fileToCycleFunction) {
         this.queueDir = queueDir;
         this.fileToCycleFunction = fileToCycleFunction;
+    }
+
+    @Override
+    public void init() {
+        // no-op
     }
 
     @Override

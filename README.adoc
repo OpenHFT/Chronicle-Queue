@@ -799,6 +799,15 @@ An Appender is something like an iterator in Chronicle environment. You add data
 +
 Each Chronicle queue is composed of excerpts. Putting data to a Chronicle queue means starting a new excerpt, writing data into it, and finishing the excerpt at the end.
 
+=== File Rolling
+
+Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
+When the roll cycle reaches the point it should roll, appender will atomically writes `EOF` mark at the end of current file to indicate that no other appender should write to this file and no tailer should read further, and instead everyone
+should use new file.
+
+If the process was shutdown, and restarted later when the roll cycle should be using a new file, appender will try to locate old file and write `EOF` mark in it to help tailers reading it. However, tailers are robust enough to understand that the `EOF` mark should
+be present in the file from previous roll cycle even if it's not written, after certain timeout.
+
 == Changes from Chronicle Queue v3
 
 Chronicle Queue v4 solves a number of issues that existed in Chronicle Queue v3.

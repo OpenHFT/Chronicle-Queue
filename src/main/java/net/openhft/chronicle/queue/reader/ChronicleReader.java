@@ -47,6 +47,7 @@ public final class ChronicleReader {
     private long startIndex = UNSET_VALUE;
     private boolean tailInputSource = false;
     private long maxHistoryRecords = UNSET_VALUE;
+    private boolean readOnly = true;
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
     private Supplier<QueueEntryHandler> entryHandlerFactory = MessageToTextQueueEntryHandler::new;
@@ -95,6 +96,11 @@ public final class ChronicleReader {
             t.printStackTrace();
             throw t;
         }
+    }
+
+    ChronicleReader withReadOnly(boolean readOnly) {
+        this.readOnly = readOnly;
+        return this;
     }
 
     public ChronicleReader withMessageSink(final Consumer<String> messageSink) {
@@ -184,7 +190,7 @@ public final class ChronicleReader {
         return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .testBlockSize()
-                .readOnly(true)
+                .readOnly(readOnly)
                 .build();
     }
 

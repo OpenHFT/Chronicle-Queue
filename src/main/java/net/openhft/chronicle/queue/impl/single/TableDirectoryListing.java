@@ -1,12 +1,17 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
@@ -25,9 +30,9 @@ final class TableDirectoryListing implements DirectoryListing {
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
-    private final LongValue maxCycleValue;
-    private final LongValue minCycleValue;
-    private final LongValue lock;
+    private volatile LongValue maxCycleValue;
+    private volatile LongValue minCycleValue;
+    private volatile LongValue lock;
     private final boolean readOnly;
 
     TableDirectoryListing(
@@ -37,13 +42,30 @@ final class TableDirectoryListing implements DirectoryListing {
         this.tableStore = tableStore;
         this.queuePath = queuePath;
         this.fileToCycleFunction = fileToCycleFunction;
-        maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
-        minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
-        lock = tableStore.acquireValueFor(LOCK);
-        if (lock.getVolatileValue() == Long.MIN_VALUE) {
-            lock.compareAndSwapValue(Long.MIN_VALUE, 0);
-        }
         this.readOnly = readOnly;
+    }
+
+    @Override
+    public void init() {
+        final long timeoutAt = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(20L);
+        while (System.currentTimeMillis() < timeoutAt) {
+            try (final FileChannel channel = FileChannel.open(tableStore.file().toPath(),
+                    StandardOpenOption.WRITE);
+                 final FileLock fileLock = channel.tryLock()) {
+                maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
+                minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
+                lock = tableStore.acquireValueFor(LOCK);
+                if (lock.getVolatileValue() == Long.MIN_VALUE) {
+                    lock.compareAndSwapValue(Long.MIN_VALUE, 0);
+                }
+                return;
+            } catch (IOException | RuntimeException e) {
+                // failed to acquire the lock, wait until other operation completes
+                Jvm.pause(50L);
+            }
+        }
+
+        throw new IllegalStateException("Unable to claim exclusive lock on file " + tableStore.file());
     }
 
     @Override
