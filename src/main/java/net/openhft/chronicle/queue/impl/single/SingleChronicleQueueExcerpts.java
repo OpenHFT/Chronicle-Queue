@@ -337,7 +337,7 @@ public class SingleChronicleQueueExcerpts {
                 // for the rare case where the qCycle has just changed in the last
                 // few milliseconds since
                 setCycle2(++cycle, true);
-            } else
+            } else {
                 Jvm.warn().on(this.getClass(), "Found an EOF on the next cycle file," +
                         " this next file, should not have an EOF as its cycle " +
                         "number is greater than the current cycle (based on the " +
@@ -347,7 +347,8 @@ public class SingleChronicleQueueExcerpts {
                         "EPOC or different roll cycle." +
                         "All your appenders ( that write to a given directory ) " +
                         "should have the same EPOCH and roll cycle" +
-                        " qCycle=" + qCycle + ", cycle=" + cycle);
+                        " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.file().getAbsolutePath());
+            }
             return cycle;
         }
 
