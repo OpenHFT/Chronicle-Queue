@@ -74,6 +74,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
@@ -133,6 +134,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private boolean persistedRollCycleCheckPerformed = false;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
+        readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
         cycleCalculator = builder.cycleCalculator();
         epoch = builder.epoch();
@@ -155,16 +157,16 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         // add a 10% random element to make it less likely threads will timeout at the same time.
         timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
-        final File listingPath = createDirectoryListingFile();
-        this.directoryListing = new DirectoryListing(SingleTableBuilder.
-                binary(listingPath).readOnly(builder.readOnly()).build(), path.toPath(), f -> {
-            final String name = f.getName();
-            return dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
-        }, builder.readOnly());
+        if (readOnly) {
+            this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
+        } else {
+            final File listingPath = createDirectoryListingFile();
+            this.directoryListing = new TableDirectoryListing(SingleTableBuilder.
+                    binary(listingPath).readOnly(builder.readOnly()).build(),
+                    path.toPath(), fileToCycleFunction(), builder.readOnly());
+        }
+
         this.directoryListing.refresh();
-        this.addCloseListener(directoryListing, dl -> {
-            dl.close();
-        });
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
             try {
@@ -179,7 +181,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
-        readOnly = builder.readOnly();
     }
 
     @Nullable
@@ -564,10 +565,15 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     private File createDirectoryListingFile() {
-        final File listingPath = new File(path, "directory-listing" + SingleTableBuilder.SUFFIX);
-        listingPath.getParentFile().mkdirs();
+        final File listingPath;
+        if ("".equals(path.getPath())) {
+            listingPath = new File("directory-listing" + SingleTableBuilder.SUFFIX);
+        } else {
+            listingPath = new File(path, "directory-listing" + SingleTableBuilder.SUFFIX);
+            listingPath.getParentFile().mkdirs();
+        }
         try {
-            if (listingPath.createNewFile()) {
+            if (!readOnly && listingPath.createNewFile()) {
                 if (!listingPath.canWrite()) {
                     throw new IllegalStateException("Cannot write to cycle file");
                 }
@@ -686,6 +692,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 fileToText());
     }
 
+    @NotNull
+    private ToIntFunction<File> fileToCycleFunction() {
+        return f -> {
+            final String name = f.getName();
+            return dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
+        };
+    }
+
     void removeCloseListener(final StoreTailer storeTailer) {
         synchronized (closers) {
             closers.remove(storeTailer);
@@ -713,10 +727,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     return null;
 
                 if (createIfAbsent)
-                    checkDiskSpace(path);
+                    checkDiskSpace(that.path);
 
                 if (createIfAbsent && !path.exists()) {
                     directoryListing.onFileCreated(path, cycle);
+                    // before we create a new file, we need to ensure previous file has got EOF mark
+                    QueueFiles.writeEOFIfNeeded(that.path.toPath(), wireType(), blockSize(), timeoutMS);
                 }
 
                 final MappedBytes mappedBytes = mappedBytes(path);
@@ -749,18 +765,19 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
-        private void checkDiskSpace(@NotNull final File path) throws IOException {
-            final Path root = path.getParentFile().toPath().getRoot();
-            if (root != null && root.getFileSystem() != null) {
+        private void checkDiskSpace(@NotNull final File filePath) throws IOException {
+            Path path = filePath.toPath();
+            if (path.getFileSystem() != null) {
                 // The returned number of unallocated bytes is a hint, but not a guarantee
-                long unallocatedBytes = Files.getFileStore(root).getUnallocatedSpace();
-                long totalSpace = Files.getFileStore(root).getTotalSpace();
+                long unallocatedBytes = Files.getFileStore(path).getUnallocatedSpace();
+                long totalSpace = Files.getFileStore(path).getTotalSpace();
 
                 if (unallocatedBytes < totalSpace * .05)
                     LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
                             "it runs out of space.");
-                else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
-                    LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
+                else
+                    if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
+                        LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
             }
         }
 

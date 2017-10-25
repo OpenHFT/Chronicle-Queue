@@ -14,8 +14,8 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-public class DirectoryListingTest {
-    private DirectoryListing listing;
+public class TableDirectoryListingTest {
+    private TableDirectoryListing listing;
     private File testDirectory;
     private File tableFile;
 
@@ -24,7 +24,7 @@ public class DirectoryListingTest {
         testDirectory = testDirectory();
         testDirectory.mkdirs();
         tableFile = new File(testDirectory, "dir-list" + SingleTableBuilder.SUFFIX);
-        listing = new DirectoryListing(SingleTableBuilder.
+        listing = new TableDirectoryListing(SingleTableBuilder.
                 binary(tableFile).build(),
                 testDirectory.toPath(),
                 f -> Integer.parseInt(f.getName().split("\\.")[0]),
@@ -63,7 +63,7 @@ public class DirectoryListingTest {
         listing.onFileCreated(null, 8);
 
         final TableStore tableCopy = SingleTableBuilder.binary(tableFile).build();
-        final LongValue lock = tableCopy.acquireValueFor(DirectoryListing.LOCK);
+        final LongValue lock = tableCopy.acquireValueFor(TableDirectoryListing.LOCK);
         lock.setOrderedValue(System.currentTimeMillis() - (TimeUnit.SECONDS.toMillis(9) + 500));
 
         listing.onFileCreated(null, 9);
@@ -72,6 +72,6 @@ public class DirectoryListingTest {
 
     @NotNull
     private static File testDirectory() {
-        return DirectoryUtils.tempDir(DirectoryListingTest.class.getSimpleName());
+        return DirectoryUtils.tempDir(TableDirectoryListingTest.class.getSimpleName());
     }
 }

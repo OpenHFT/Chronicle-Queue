@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -19,13 +20,15 @@ import java.util.concurrent.atomic.AtomicLong;
 import static java.util.stream.IntStream.range;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assume.assumeFalse;
 
 public final class TailerIndexingQueueTest {
-    private final File path = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName());
+    private final File path = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName() + "-" + System.nanoTime());
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
     @Test
     public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws Exception {
+        assumeFalse(OS.isWindows());
         try (final SingleChronicleQueue queue = createQueue(path, clock::get)) {
             final ExcerptAppender appender = queue.acquireAppender();
             // generate some cycle files
@@ -39,9 +42,13 @@ public final class TailerIndexingQueueTest {
 
         // remove all but the first file
         final Path firstFile =
-                Files.list(this.path.toPath()).sorted(Comparator.comparing(Path::toString)).findFirst().
-                        orElseThrow(AssertionError::new);
-        Files.list(this.path.toPath()).filter(p -> !p.equals(firstFile)).forEach(TailerIndexingQueueTest::deleteFile);
+                Files.list(this.path.toPath())
+                        .sorted(Comparator.comparing(Path::toString))
+                        .findFirst()
+                        .orElseThrow(AssertionError::new);
+        Files.list(this.path.toPath())
+                .filter(p -> !p.equals(firstFile))
+                .forEach(TailerIndexingQueueTest::deleteFile);
 
         try (final SingleChronicleQueue queue = createQueue(path, SystemTimeProvider.INSTANCE)) {
             final ExcerptTailer tailer = queue.createTailer().toEnd();

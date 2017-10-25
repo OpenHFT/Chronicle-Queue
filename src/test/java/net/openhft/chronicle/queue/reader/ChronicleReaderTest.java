@@ -6,6 +6,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MethodWriterBuilder;
 import org.junit.Before;
@@ -38,6 +39,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class ChronicleReaderTest {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
@@ -63,6 +65,21 @@ public class ChronicleReaderTest {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
+    }
+
+    @Test
+    public void shouldNotFailOnEmptyQueue() {
+        Path path = DirectoryUtils.tempDir("shouldNotFailOnEmptyQueue").toPath();
+        path.toFile().mkdirs();
+        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        assertTrue(capturedOutput.isEmpty());
+    }
+
+    @Test
+    public void shouldFailWhenNoDirectoryListing() throws IOException {
+        Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableBuilder.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
+        basicReader().execute();
+        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
     }
 
     @Test

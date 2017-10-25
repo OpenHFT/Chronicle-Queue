@@ -311,7 +311,7 @@ public class SingleChronicleQueueExcerpts {
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
                         position(pos);
                         context.isClosed = false;
-                        context.wire = Jvm.isDebug() ? acquireBufferWire() : wire;
+                        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
                         context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
                         context.metaData(metaData);
                         ok = true;
@@ -338,7 +338,7 @@ public class SingleChronicleQueueExcerpts {
                 // few milliseconds since
                 setCycle2(++cycle, true);
             } else
-                throw new IllegalStateException("Found an EOF on the next cycle file," +
+                Jvm.warn().on(this.getClass(), "Found an EOF on the next cycle file," +
                         " this next file, should not have an EOF as its cycle " +
                         "number is greater than the current cycle (based on the " +
                         "current time), this should only happen " +
@@ -424,7 +424,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeBytes(long index, @NotNull BytesStore bytes) {
             if (index < 0)
-                throw new IllegalArgumentException("index: " + index);
+                throw new IllegalArgumentException("index: " + Long.toHexString(index));
             if (bytes.isEmpty())
                 throw new UnsupportedOperationException("Cannot append a zero length message");
             assert checkAppendingThread();
@@ -748,6 +748,11 @@ public class SingleChronicleQueueExcerpts {
 
                 if (isClosed) {
                     LOG.warn("Already Closed, close was called twice.");
+                    return;
+                }
+
+                if (Thread.currentThread().isInterrupted()) {
+                    LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
                     return;
                 }
 
@@ -1170,6 +1175,11 @@ public class SingleChronicleQueueExcerpts {
                 }
             } else {
                 Jvm.debug().on(getClass(), "Unable to append EOF to ReadOnly store, skipping");
+                // even though we couldn't write EOF, we still need to indicate we're at EOF to prevent looping forever
+                // only do that if we waited long enough to prevent terminating too early
+                long now = queue.time().currentTimeMillis();
+                if (now >= timeForNextCycle + timeoutMS() * 2)
+                    throw new EOFException();
             }
             return inACycle(includeMetaData, false);
         }
@@ -1276,8 +1286,7 @@ public class SingleChronicleQueueExcerpts {
         public boolean moveToIndex(final long index) {
             if (moveToState.canReuseLastIndexMove(index, state, direction, queue)) {
                 return true;
-            }
-            else if(moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
+            } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
                 final long knownIndex = moveToState.calculateKnownIndex(wire().bytes().readPosition());
                 final long knownPosition = wire().bytes().readPosition();
                 final boolean found =

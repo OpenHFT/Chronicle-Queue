@@ -406,7 +406,7 @@ public class NotCompleteTest {
                 MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
 
                 long start = System.currentTimeMillis();
-                while (names.size() < 2) {
+                while (names.size() < 1) {
                     reader.readOne();
                     if (System.currentTimeMillis() > (start + 500)) {
                         break;
@@ -435,10 +435,8 @@ public class NotCompleteTest {
         writerThread.join();
         readerThread.join();
 
-        assertEquals(2, names.size());
+        assertEquals(1, names.size());
         assertEquals(person1.name, names.get(0));
-        // Person gets serialised but incompletely
-        assertEquals(null, names.get(1));
     }
 
     @After
