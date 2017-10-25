@@ -29,6 +29,7 @@ public class TableDirectoryListingTest {
                 testDirectory.toPath(),
                 f -> Integer.parseInt(f.getName().split("\\.")[0]),
                 false);
+        listing.init();
     }
 
     @Test
