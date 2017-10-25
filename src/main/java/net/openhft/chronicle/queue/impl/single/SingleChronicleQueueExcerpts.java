@@ -1092,13 +1092,14 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean inACycle(boolean includeMetaData, boolean first)
                 throws EOFException, StreamCorruptedException {
-            Bytes<?> bytes = wire().bytes();
+            Wire wire = wire();
+            Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
             if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
             if (direction != TailerDirection.FORWARD && inACycleNotForward()) return false;
 
-            switch (wire().readDataHeader(includeMetaData)) {
+            switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
                     return inACycleNone(includeMetaData, first, bytes);
 
