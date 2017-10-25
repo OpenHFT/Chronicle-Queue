@@ -1090,45 +1090,18 @@ public class SingleChronicleQueueExcerpts {
             throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
         }
 
-        private boolean inACycle(boolean includeMetaData, boolean first) throws EOFException,
-                StreamCorruptedException {
+        private boolean inACycle(boolean includeMetaData, boolean first)
+                throws EOFException, StreamCorruptedException {
             Bytes<?> bytes = wire().bytes();
             bytes.readLimit(bytes.capacity());
-            if (readAfterReplicaAcknowledged) {
-                long lastSequenceAck = store.lastAcknowledgedIndexReplicated();
-                long seq = queue.rollCycle().toSequenceNumber(index);
-                if (seq > lastSequenceAck)
-                    return false;
-            }
+            if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
-            if (direction != TailerDirection.FORWARD) {
-                if (!moveToIndexInternal(index)) {
-                    try {
-                        // after toEnd() call, index is past the end of the queue
-                        // so try to go back one (to the last record in the queue)
-                        if (!moveToIndexInternal(index - 1)) {
-                            return false;
-                        }
-                    } catch (RuntimeException e) {
-                        // can happen if index goes negative
-                        return false;
-                    }
-                }
-            }
+            if (direction != TailerDirection.FORWARD && inACycleNotForward()) return false;
+
             switch (wire().readDataHeader(includeMetaData)) {
-                case NONE: {
-                    // if current time is not the current cycle, then write an EOF marker and
-                    // re-read from here, you may find that in the mean time an appender writes
-                    // another message, however the EOF marker will always be at the end.
-                    long now = queue.time().currentTimeMillis();
-                    boolean cycleChange2 = now >= timeForNextCycle;
+                case NONE:
+                    return inACycleNone(includeMetaData, first, bytes);
 
-                    return first
-                            && cycleChange2
-                            && !isReadOnly(bytes)
-                            && checkMoveToNextCycle(includeMetaData, bytes);
-
-                }
                 case META_DATA:
                     context.metaData(true);
                     break;
@@ -1137,6 +1110,35 @@ public class SingleChronicleQueueExcerpts {
                     break;
             }
 
+            inACycleFound(bytes);
+            return true;
+        }
+
+        private boolean inACycleCheckRep() {
+            long lastSequenceAck = store.lastAcknowledgedIndexReplicated();
+            long seq = queue.rollCycle().toSequenceNumber(index);
+            if (seq > lastSequenceAck)
+                return true;
+            return false;
+        }
+
+        private boolean inACycleNotForward() {
+            if (!moveToIndexInternal(index)) {
+                try {
+                    // after toEnd() call, index is past the end of the queue
+                    // so try to go back one (to the last record in the queue)
+                    if (!moveToIndexInternal(index - 1)) {
+                        return true;
+                    }
+                } catch (RuntimeException e) {
+                    // can happen if index goes negative
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void inACycleFound(Bytes<?> bytes) throws StreamCorruptedException {
             if ((index & indexSpacingMask) == 0)
                 indexEntry(bytes);
 
@@ -1144,7 +1146,19 @@ public class SingleChronicleQueueExcerpts {
             wire().readAndSetLength(bytes.readPosition());
             long end = bytes.readLimit();
             context.closeReadPosition(end);
-            return true;
+        }
+
+        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException, StreamCorruptedException {
+            // if current time is not the current cycle, then write an EOF marker and
+            // re-read from here, you may find that in the mean time an appender writes
+            // another message, however the EOF marker will always be at the end.
+            long now = queue.time().currentTimeMillis();
+            boolean cycleChange2 = now >= timeForNextCycle;
+
+            return first
+                    && cycleChange2
+                    && !isReadOnly(bytes)
+                    && checkMoveToNextCycle(includeMetaData, bytes);
         }
 
         private void indexEntry(@NotNull Bytes<?> bytes) throws StreamCorruptedException {
