@@ -33,11 +33,12 @@ public class RollCycleMultiThreadStressTest {
     public void stress() throws Exception {
         final File path = DirectoryUtils.tempDir("rollCycleStress");
         LOG.warn("using path {}", path);
+        final int numWriters = 1;
         final int numThreads = Runtime.getRuntime().availableProcessors() * 2;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
         final AtomicInteger wrote = new AtomicInteger();
-        final int[] read = new int[numThreads - 1];
+        final int[] read = new int[numThreads - numWriters];
         final AtomicBoolean[] finished = new AtomicBoolean[numThreads];
         final String[] errors = new String[numThreads];
 
@@ -51,7 +52,7 @@ public class RollCycleMultiThreadStressTest {
                         .testBlockSize()
                         .rollCycle(RollCycles.TEST_SECONDLY)
                         .build()) {
-                    if (finalThreadId == 0) {
+                    if (finalThreadId < numWriters) {
                         final ExcerptAppender appender = queue.acquireAppender();
                         while (System.currentTimeMillis() < endTime) {
                             try (DocumentContext writingDocument = appender.writingDocument()) {
@@ -66,8 +67,8 @@ public class RollCycleMultiThreadStressTest {
                             try (DocumentContext rd = tailer.readingDocument()) {
                                 if (rd.isPresent()) {
                                     int v = rd.wire().getValueIn().int32();
-                                    assertEquals(read[finalThreadId - 1], v);
-                                    read[finalThreadId - 1]++;
+                                    assertEquals(read[finalThreadId - numWriters], v);
+                                    read[finalThreadId - numWriters]++;
                                 }
                                 //LockSupport.parkNanos(SLEEP_PER_WRITE_NANOS / 2);
                             }
