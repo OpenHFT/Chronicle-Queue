@@ -92,6 +92,8 @@ public class RollCycleMultiThreadStressTest {
         }
         Thread.sleep(100);
 
+        Arrays.stream(errors).filter(Objects::nonNull).forEach(System.out::println);
+
         System.out.println("read:  "+ Arrays.toString(read));
         if (Arrays.stream(read).anyMatch(readValue -> readValue < wrote.get()))
             Assert.fail("Not all readers read all values " + wrote.get() + " vs " + Arrays.toString(read));
@@ -99,7 +101,6 @@ public class RollCycleMultiThreadStressTest {
         if (Arrays.stream(finished).anyMatch(atomicBoolean -> ! atomicBoolean.get()))
             Assert.fail("Thread did not finish " + Arrays.toString(finished));
 
-        Arrays.stream(errors).filter(Objects::nonNull).forEach(System.out::println);
         assertEquals(0, Arrays.stream(errors).filter(Objects::nonNull).count());
     }
 }
