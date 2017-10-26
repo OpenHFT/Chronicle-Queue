@@ -733,7 +733,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (createIfAbsent && !path.exists()) {
                     directoryListing.onFileCreated(path, cycle);
                     // before we create a new file, we need to ensure previous file has got EOF mark
-                    QueueFiles.writeEOFIfNeeded(that.path.toPath(), wireType(), blockSize(), timeoutMS);
+                    QueueFiles.writeEOFIfNeeded(path.toPath(), wireType(), blockSize(), timeoutMS);
                 }
 
                 final MappedBytes mappedBytes = mappedBytes(path);

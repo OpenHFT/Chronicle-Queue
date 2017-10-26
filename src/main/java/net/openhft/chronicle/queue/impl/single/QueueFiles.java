@@ -48,70 +48,91 @@ public enum QueueFiles {
     ;
     private static final Logger LOGGER = LoggerFactory.getLogger(RollCycleRetriever.class);
 
+    static <T> Optional<T> processQueueFile(Path filePath, WireType wireType, long blockSize, boolean readOnly,
+                                            BiFunction<Wire, SingleChronicleQueueStore, T> processor) {
+        final MappedBytes mappedBytes = mappedBytes(filePath, blockSize, readOnly);
+        mappedBytes.reserve();
+        try {
+            final Wire wire = wireType.apply(mappedBytes);
+            // move past header
+
+            final Bytes<?> bytes = wire.bytes();
+            bytes.readLimit(bytes.capacity());
+
+            if (bytes.readLimit() < 4) {
+                return Optional.empty();
+            }
+            final File file = mappedBytes.mappedFile().file();
+            for (int i = 0; i < 500 && file.length() == 0; i++) {
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1L));
+            }
+            if (file.length() < 4) {
+                LOGGER.warn("Queue file exists, but is truncated, cannot determine existing roll cycle");
+                return Optional.empty();
+            }
+
+            final int firstInt = bytes.peekVolatileInt();
+            if (!Wires.isReady(firstInt)) {
+                return Optional.empty();
+            }
+            bytes.readSkip(4);
+            try (final SingleChronicleQueueStore queueStore = SingleChronicleQueueBuilder.loadStore(wire)) {
+                if (queueStore == null) {
+                    return Optional.empty();
+                }
+                return Optional.ofNullable(processor.apply(wire, queueStore));
+
+
+            } catch (final Throwable e) {
+                LOGGER.warn("Unable to load queue store from file {}", filePath, e);
+                return Optional.empty();
+            }
+
+        } finally {
+            mappedBytes.release();
+        }
+    }
+
     static <T> Optional<T> processLastQueueFile(Path queuePath, WireType wireType, long blockSize, boolean readOnly,
                                                 BiFunction<Wire, SingleChronicleQueueStore, T> processor) {
         if (Files.exists(queuePath) && hasQueueFiles(queuePath)) {
-            final MappedBytes mappedBytes = mappedBytes(getLastQueueFile(queuePath), blockSize, readOnly);
-            mappedBytes.reserve();
-            try {
-                final Wire wire = wireType.apply(mappedBytes);
-                // move past header
-
-                final Bytes<?> bytes = wire.bytes();
-                bytes.readLimit(bytes.capacity());
-
-                if (bytes.readLimit() < 4) {
-                    return Optional.empty();
-                }
-                final File file = mappedBytes.mappedFile().file();
-                for (int i = 0; i < 500 && file.length() == 0; i++) {
-                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1L));
-                }
-                if (file.length() < 4) {
-                    LOGGER.warn("Queue file exists, but is truncated, cannot determine existing roll cycle");
-                    return Optional.empty();
-                }
-
-                final int firstInt = bytes.peekVolatileInt();
-                if (!Wires.isReady(firstInt)) {
-                    return Optional.empty();
-                }
-                bytes.readSkip(4);
-                try (final SingleChronicleQueueStore queueStore = SingleChronicleQueueBuilder.loadStore(wire)) {
-                    if (queueStore == null) {
-                        return Optional.empty();
-                    }
-                    return Optional.ofNullable(processor.apply(wire, queueStore));
-
-
-                } catch (final Throwable e) {
-                    LOGGER.warn("Unable to load queue store from file {}", queuePath, e);
-                }
-
-            } finally {
-                mappedBytes.release();
-            }
+            return processQueueFile(getLastQueueFile(queuePath), wireType, blockSize, readOnly, processor);
         }
         return Optional.empty();
     }
 
-    static void writeEOFIfNeeded(@NotNull Path queuePath, @NotNull WireType wireType, long blockSize, long timeoutMS) {
-        processLastQueueFile(queuePath, wireType, blockSize, false, (w, qs) -> {
-            long l = qs.writePosition();
-            Bytes<?> bytes = w.bytes();
-            long len = Wires.lengthOf(bytes.readVolatileInt(l));
-            long eofOffset = l + len + 4L;
-            if (0 == bytes.readVolatileInt(eofOffset)) {
-                // no EOF found - write EOF
-                try {
-                    bytes.writePosition(eofOffset);
-                    w.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, eofOffset);
-                } catch (TimeoutException e) {
-                    Jvm.warn().on(RollCycleRetriever.class, "Timeout writing EOF for last file in " + queuePath);
-                }
+    static void writeEOFIfNeeded(@NotNull Path newFilePath, @NotNull WireType wireType, long blockSize, long timeoutMS) {
+        Path queuePath = newFilePath.getParent();
+        if (Files.exists(queuePath) && hasQueueFiles(queuePath))
+            getLastQueueFileButNotTheNew(queuePath, newFilePath).ifPresent(f ->
+                    processQueueFile(f, wireType, blockSize, false, (w, qs) -> {
+                        long l = qs.writePosition();
+                        Bytes<?> bytes = w.bytes();
+                        long len = Wires.lengthOf(bytes.readVolatileInt(l));
+                        long eofOffset = l + len + 4L;
+                        if (0 == bytes.readVolatileInt(eofOffset)) {
+                            // no EOF found - write EOF
+                            try {
+                                bytes.writePosition(eofOffset);
+                                w.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, eofOffset);
+                            } catch (TimeoutException e) {
+                                Jvm.warn().on(RollCycleRetriever.class, "Timeout writing EOF for last file in " + queuePath);
+                            }
+                        }
+                        return null;
+                    }));
+    }
+
+    private static Optional<Path> getLastQueueFileButNotTheNew(final Path queuePath, final Path newFilePath) {
+        try {
+            try (final Stream<Path> children = Files.list(queuePath)) {
+                return children.filter(p -> p.toString().endsWith(SUFFIX) && !p.equals(newFilePath)).
+                        sorted(Comparator.reverseOrder()).findFirst();
             }
-            return null;
-        });
+        } catch (IOException e) {
+            throw new UncheckedIOException(
+                    String.format("Failed to list contents of known directory %s", queuePath), e);
+        }
     }
 
     private static Path getLastQueueFile(final Path queuePath) {
