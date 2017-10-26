@@ -295,6 +295,8 @@ public class SingleChronicleQueueExcerpts {
         public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             assert checkAppendingThread();
             assert checkWritePositionHeaderNumber();
+            if (queue.isClosed.get())
+                throw new IllegalStateException("Queue is closed");
             boolean ok = false;
             try {
                 int cycle = queue.cycle();
@@ -950,6 +952,8 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
+            if (queue.isClosed.get())
+                throw new IllegalStateException("Queue is closed");
             try {
                 boolean next = false, tryAgain = true;
                 if (state == FOUND_CYCLE) {
