@@ -54,6 +54,7 @@ public class ChronicleHistoryReaderMain {
         chronicleHistoryReader.
                 withMessageSink(System.out::println).
                 withProgress(commandLine.hasOption('p')).
+                withHistosByMethod(commandLine.hasOption('m')).
                 withBasePath(Paths.get(commandLine.getOptionValue('d')));
         if (commandLine.hasOption('t'))
             chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
@@ -96,6 +97,7 @@ public class ChronicleHistoryReaderMain {
         ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
         ChronicleReaderMain.addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
         options.addOption(new Option("p", false, "Show progress"));
+        options.addOption(new Option("m", false, "By method"));
         return options;
     }
 }

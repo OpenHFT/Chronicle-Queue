@@ -26,6 +26,7 @@ public class ChronicleHistoryReader {
     private Consumer<String> messageSink;
     private boolean progress = false;
     private TimeUnit timeUnit = TimeUnit.NANOSECONDS;
+    protected boolean histosByMethod = false;
     protected Map<String, Histogram> histos = new LinkedHashMap<>();
 
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
@@ -45,6 +46,11 @@ public class ChronicleHistoryReader {
 
     public ChronicleHistoryReader withTimeUnit(TimeUnit p) {
         this.timeUnit = p;
+        return this;
+    }
+
+    public ChronicleHistoryReader withHistosByMethod(boolean b) {
+        this.histosByMethod = b;
         return this;
     }
 
@@ -130,6 +136,7 @@ public class ChronicleHistoryReader {
     protected WireParselet parselet() {
         return (methodName, v, $) -> {
             v.skipValue();
+            CharSequence extraHistoId = histosByMethod ? ("_"+methodName) : "";
             final MessageHistory history = MessageHistory.get();
             long lastTime = 0;
             // if the tailer has recordHistory(true) then the MessageHistory will be
@@ -137,7 +144,7 @@ public class ChronicleHistoryReader {
             int firstWriteOffset = history.timings() - (history.sources() * 2);
             assert firstWriteOffset == 0 || firstWriteOffset == 1;
             for (int sourceIndex=0; sourceIndex<history.sources(); sourceIndex++) {
-                String histoId = Integer.toString(history.sourceId(sourceIndex));
+                String histoId = Integer.toString(history.sourceId(sourceIndex)) + extraHistoId;
                 Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
                 long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
                 long processedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset + 1);
