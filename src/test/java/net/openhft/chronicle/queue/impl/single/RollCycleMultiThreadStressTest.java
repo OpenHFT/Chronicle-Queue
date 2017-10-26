@@ -1,32 +1,35 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
     private static final long SLEEP_PER_WRITE_NANOS = 50_000;
-    private static final int RUN_TIME_MILLIS = 120_400;
 
     @Ignore("long running")
     @Test
@@ -38,69 +41,164 @@ public class RollCycleMultiThreadStressTest {
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
         final AtomicInteger wrote = new AtomicInteger();
-        final int[] read = new int[numThreads - numWriters];
-        final AtomicBoolean[] finished = new AtomicBoolean[numThreads];
-        final String[] errors = new String[numThreads];
+        final int expectedNumberOfMessages = 1_000_000;
 
-        final long endTime = System.currentTimeMillis() + RUN_TIME_MILLIS;
-        for (int threadId = 0; threadId < numThreads; threadId++) {
-            final int finalThreadId = threadId;
-            finished[finalThreadId] = new AtomicBoolean();
-            executorService.submit(() -> {
-                // create a queue per thread
-                try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                        .testBlockSize()
-                        .rollCycle(RollCycles.TEST_SECONDLY)
-                        .build()) {
-                    if (finalThreadId < numWriters) {
-                        final ExcerptAppender appender = queue.acquireAppender();
-                        while (System.currentTimeMillis() < endTime) {
-                            try (DocumentContext writingDocument = appender.writingDocument()) {
-                                ValueOut valueOut = writingDocument.wire().getValueOut();
-                                valueOut.int32(wrote.getAndIncrement());
-                                LockSupport.parkNanos(SLEEP_PER_WRITE_NANOS);
-                            }
-                        }
-                    } else {
-                        final ExcerptTailer tailer = queue.createTailer();
-                        while (System.currentTimeMillis() < endTime + 500) {
-                            try (DocumentContext rd = tailer.readingDocument()) {
-                                if (rd.isPresent()) {
-                                    int v = rd.wire().getValueIn().int32();
-                                    assertEquals(read[finalThreadId - numWriters], v);
-                                    read[finalThreadId - numWriters]++;
-                                }
-                                //LockSupport.parkNanos(SLEEP_PER_WRITE_NANOS / 2);
-                            }
+        System.out.printf("Running test with %d writers and %d readers%n",
+                numWriters, numThreads - numWriters);
+        System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
+                SLEEP_PER_WRITE_NANOS);
+        System.out.printf("Should take ~%dsec%n",
+                TimeUnit.NANOSECONDS.toSeconds(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / numWriters);
+
+        final List<Future<Throwable>> results = new ArrayList<>();
+        final List<Reader> readers = new ArrayList<>();
+
+        for (int i = 0; i < numWriters; i++) {
+            results.add(executorService.submit(new Writer(path, wrote, expectedNumberOfMessages)));
+        }
+        for (int i = 0; i < numThreads - numWriters; i++) {
+            final Reader reader = new Reader(path, expectedNumberOfMessages);
+            readers.add(reader);
+            results.add(executorService.submit(reader));
+        }
+
+
+        final long maxWritingTime = TimeUnit.MINUTES.toMillis(3);
+        final long giveUpWritingAt = System.currentTimeMillis() + maxWritingTime;
+        int i = 0;
+        while (System.currentTimeMillis() < giveUpWritingAt) {
+            if (wrote.get() < expectedNumberOfMessages) {
+                System.out.printf("Writer has written %d of %d messages after %ds. Waiting...%n",
+                        wrote.get() + 1, expectedNumberOfMessages,
+                        i * 10);
+                LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10L));
+            } else {
+                break;
+            }
+            i++;
+        }
+
+        assertTrue("Did not write " + expectedNumberOfMessages + " within timeout",
+                wrote.get() >= expectedNumberOfMessages);
+
+        final long giveUpReadingAt = System.currentTimeMillis() + 60_000L;
+        while (System.currentTimeMillis() < giveUpReadingAt) {
+            boolean allReadersComplete = areAllReadersComplete(expectedNumberOfMessages, readers);
+
+            if (allReadersComplete) {
+                break;
+            }
+
+            System.out.printf("Not all readers are complete. Waiting...%n");
+            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10L));
+        }
+        assertTrue("Readers did not catch up",
+                areAllReadersComplete(expectedNumberOfMessages, readers));
+
+        executorService.shutdownNow();
+
+        results.forEach(f -> {
+            try {
+
+                final Throwable exception = f.get();
+                if (exception != null) {
+                    exception.printStackTrace();
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+
+        System.out.println("Test complete");
+    }
+
+    private boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
+        boolean allReadersComplete = true;
+
+        for (Reader reader : readers) {
+            if (reader.lastRead < expectedNumberOfMessages - 1) {
+                allReadersComplete = false;
+                System.out.printf("Reader last read: %d%n", reader.lastRead);
+            }
+        }
+        return allReadersComplete;
+    }
+
+    private static final class Reader implements Callable<Throwable> {
+        private final File path;
+        private final int expectedNumberOfMessages;
+        private volatile int lastRead = -1;
+
+        Reader(final File path, final int expectedNumberOfMessages) {
+            this.path = path;
+            this.expectedNumberOfMessages = expectedNumberOfMessages;
+        }
+
+        @Override
+        public Throwable call() {
+
+            try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                    .testBlockSize()
+                    .rollCycle(RollCycles.TEST_SECONDLY)
+                    .build()) {
+
+                final ExcerptTailer tailer = queue.createTailer();
+
+                while (lastRead != expectedNumberOfMessages - 1) {
+                    try (DocumentContext rd = tailer.readingDocument()) {
+                        if (rd.isPresent()) {
+                            int v = rd.wire().getValueIn().int32();
+
+                            assertEquals(lastRead + 1, v);
+                            lastRead = v;
                         }
                     }
-                } catch (Throwable t) {
-                    LOG.error("Error " + t.getMessage());
-                    StringWriter sw = new StringWriter();
-                    t.printStackTrace(new PrintWriter(sw));
-                    errors[finalThreadId] = Thread.currentThread().getName() + ": " + sw.toString();
                 }
-                finished[finalThreadId].set(true);
-            });
+            } catch (Throwable e) {
+                e.printStackTrace();
+                return e;
+            }
+
+            return null;
+        }
+    }
+
+    private static final class Writer implements Callable<Throwable> {
+
+        private final File path;
+        private final AtomicInteger wrote;
+        private final int expectedNumberOfMessages;
+
+        private Writer(final File path, final AtomicInteger wrote,
+                       final int expectedNumberOfMessages) {
+            this.path = path;
+            this.wrote = wrote;
+            this.expectedNumberOfMessages = expectedNumberOfMessages;
         }
 
-        executorService.shutdown();
-        boolean ok = executorService.awaitTermination(RUN_TIME_MILLIS + 1000, TimeUnit.MILLISECONDS);
-        if (!ok) {
-            LOG.error("shutdown now");
-            executorService.shutdownNow();
+        @Override
+        public Throwable call() {
+            try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                    .testBlockSize()
+                    .rollCycle(RollCycles.TEST_SECONDLY)
+                    .build()) {
+                final ExcerptAppender appender = queue.acquireAppender();
+                while (true) {
+                    final int value;
+
+                    try (DocumentContext writingDocument = appender.writingDocument()) {
+                        value = wrote.getAndIncrement();
+                        ValueOut valueOut = writingDocument.wire().getValueOut();
+                        valueOut.int32(value);
+                        LockSupport.parkNanos(SLEEP_PER_WRITE_NANOS);
+                    }
+                    if (value >= expectedNumberOfMessages) {
+                        return null;
+                    }
+                }
+            } catch (Exception e) {
+                return e;
+            }
         }
-        Thread.sleep(100);
-
-        Arrays.stream(errors).filter(Objects::nonNull).forEach(System.out::println);
-
-        System.out.println("read:  "+ Arrays.toString(read));
-        if (Arrays.stream(read).anyMatch(readValue -> readValue < wrote.get()))
-            Assert.fail("Not all readers read all values " + wrote.get() + " vs " + Arrays.toString(read));
-
-        if (Arrays.stream(finished).anyMatch(atomicBoolean -> ! atomicBoolean.get()))
-            Assert.fail("Thread did not finish " + Arrays.toString(finished));
-
-        assertEquals(0, Arrays.stream(errors).filter(Objects::nonNull).count());
     }
 }

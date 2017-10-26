@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +49,7 @@ final class TableDirectoryListing implements DirectoryListing {
     @Override
     public void init() {
         final long timeoutAt = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(20L);
+        boolean warnedOnFailure = false;
         while (System.currentTimeMillis() < timeoutAt) {
             try (final FileChannel channel = FileChannel.open(tableStore.file().toPath(),
                     StandardOpenOption.WRITE);
@@ -61,6 +63,11 @@ final class TableDirectoryListing implements DirectoryListing {
                 return;
             } catch (IOException | RuntimeException e) {
                 // failed to acquire the lock, wait until other operation completes
+                if (!warnedOnFailure) {
+                    LOGGER.warn("Failed to acquire a lock on the directory-listing file: {}:{}. Retrying.",
+                            e.getClass().getSimpleName(), e.getMessage());
+                    warnedOnFailure = true;
+                }
                 Jvm.pause(50L);
             }
         }
