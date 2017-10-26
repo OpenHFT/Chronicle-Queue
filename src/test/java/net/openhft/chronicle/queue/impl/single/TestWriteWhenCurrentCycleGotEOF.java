@@ -24,27 +24,29 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.concurrent.TimeoutException;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class TestWriteWhenCurrentCycleGotEOF extends ChronicleQueueTestBase {
 
     @Test
-    @Ignore("Synthetic")
-    public void shouldBeAbleToWrite() throws TimeoutException {
+    public void shouldBeAbleToWriteIfCurrentCycleGotEOF() throws TimeoutException {
         File tmpDir = getTmpDir();
         createQueueWithOnlyHeaderFile(tmpDir);
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir).testBlockSize().build();
 
         ExcerptAppender appender = queue.acquireAppender();
         try (DocumentContext dc = appender.writingDocument()) {
-            assertTrue(dc.isPresent());
+            dc.wire().write("test").text("Hello world");
+        }
+
+        try (DocumentContext dc = queue.acquireTailer().readingDocument()) {
+            assertEquals("Hello world", dc.wire().read("test").text());
         }
     }
 

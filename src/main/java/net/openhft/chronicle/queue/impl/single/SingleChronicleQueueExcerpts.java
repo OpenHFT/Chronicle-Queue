@@ -201,7 +201,11 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
             this.lazyIndexing = lazyIndexing;
-            resetPosition();
+            try {
+                resetPosition();
+            } catch (EOFException ex) {
+                throw new IllegalStateException("EOF found");
+            }
             return this;
         }
 
@@ -239,8 +243,12 @@ public class SingleChronicleQueueExcerpts {
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
-            resetPosition();
-            queue.onRoll(cycle);
+            try {
+                resetPosition();
+                queue.onRoll(cycle);
+            } catch (EOFException eof) {
+                cycle = handleRoll(cycle);
+            }
         }
 
         private void resetWires(@NotNull SingleChronicleQueue queue) {
@@ -264,7 +272,7 @@ public class SingleChronicleQueueExcerpts {
 
         }
 
-        private void resetPosition() throws UnrecoverableTimeoutException {
+        private void resetPosition() throws UnrecoverableTimeoutException, EOFException {
             try {
 
                 if (store == null || wire == null)
@@ -273,6 +281,9 @@ public class SingleChronicleQueueExcerpts {
 
                 Bytes<?> bytes = wire.bytes();
                 int header = bytes.readVolatileInt(position);
+                if (header == Wires.END_OF_DATA) {
+                    throw new EOFException();
+                }
                 assert position == 0 || Wires.isReadyData(header);
                 bytes.writePosition(position + 4 + Wires.lengthOf(header));
                 if (lazyIndexing) {
@@ -303,7 +314,7 @@ public class SingleChronicleQueueExcerpts {
 
                 if (wire == null)
                     setCycle2(cycle, true);
-                if (this.cycle != cycle)
+                else if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
