@@ -247,7 +247,7 @@ public class SingleChronicleQueueExcerpts {
                 resetPosition();
                 queue.onRoll(cycle);
             } catch (EOFException eof) {
-                cycle = handleRoll(cycle);
+                handleRoll(cycle);
             }
         }
 
