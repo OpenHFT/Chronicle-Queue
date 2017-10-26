@@ -48,6 +48,20 @@ public final class RollAtEndOfCycleTest {
             try (final DocumentContext context = tailer.readingDocument()) {
                 assertTrue(context.isPresent());
             }
+
+            final ExcerptTailer newTailer = queue.createTailer();
+            int totalCount = 0;
+            while (true) {
+                final DocumentContext context = newTailer.readingDocument();
+                if (context.isPresent() && context.isData()) {
+                    assertTrue(context.wire().read().int32() != 0);
+                    totalCount++;
+                } else if (!context.isPresent()) {
+                    break;
+                }
+            }
+
+            assertThat(totalCount, is(2));
         }
     }
 
