@@ -83,6 +83,19 @@ import java.util.Map;
  * <p>
  * Results 05/02/2017 running i7-4790, Centos 7 2.3M/s * 20M * 40B enableAffinity=true
  * 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.19 / 0.21  9.5 / 6,160  9,700 / 9,700  9,700 / 9,700
+ * <p>
+ * Results 27/10/2017 running i7-4790, Centos 7 100K/s * 20 M * 40B enableAffinity=true
+ * wr: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.014 / 0.017  0.017 / 0.021  0.026 / 0.91  20 / 104
+ * in: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.20 / 0.23  0.25 / 1.2  1.5 / 10  29 / 143
+ * co: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.21 / 0.24  0.26 / 1.2  1.5 / 10  56 / 143
+ * <p>
+ * Results 27/10/2017 running i7-4790, Centos 7 1M/s * 20 M * 40B enableAffinity=true
+ * wr: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.014 / 0.017  0.019 / 0.025  8.1 / 58  96 / 104
+ * in: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.18 / 0.20  0.24 / 0.82  6.8 / 88  143 / 143
+ * co: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.20 / 0.21  0.25 / 0.94  13 / 100  143 / 143
+ * <p>
+ * I ran with
+ * mvn -DenableAffinity=true exec:java -Dexec.classpathScope="test" -Dexec.mainClass=net.openhft.chronicle.queue.ChronicleQueueLatencyDistribution
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static final boolean SAMPLING = Boolean.getBoolean("sampling");
