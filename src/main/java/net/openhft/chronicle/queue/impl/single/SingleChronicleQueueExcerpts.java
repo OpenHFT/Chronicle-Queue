@@ -351,13 +351,12 @@ public class SingleChronicleQueueExcerpts {
                 // few milliseconds since
                 setCycle2(++cycle, true);
             } else {
-                Jvm.warn().on(this.getClass(), "Found an EOF on the next cycle file," +
+                throw new IllegalStateException("Found an EOF on the next cycle file," +
                         " this next file, should not have an EOF as its cycle " +
                         "number is greater than the current cycle (based on the " +
                         "current time), this should only happen " +
-                        "if it " +
-                        "was written by a different appender set with a different " +
-                        "EPOC or different roll cycle." +
+                        "if it was written by a different appender set with a different " +
+                        "EPOCH or different roll cycle." +
                         "All your appenders ( that write to a given directory ) " +
                         "should have the same EPOCH and roll cycle" +
                         " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.file().getAbsolutePath());
@@ -488,6 +487,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void position(long position) {
+            // did the position jump too far forward.
             if (position > store.writePosition() + queue.blockSize())
                 throw new IllegalArgumentException("pos: " + position + ", store.writePosition()=" +
                         store.writePosition() + " queue.blockSize()=" + queue.blockSize());

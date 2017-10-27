@@ -18,8 +18,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
@@ -140,32 +142,50 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
 
         long offset = bytes.writePosition();
         int num = bytes.readVolatileInt(offset);
+
+        String msgStart = "Unable to write a header at header number: " + Long.toHexString(wire.headerNumber()) + " position: " + offset;
         if (Wires.isNotComplete(num)) {
-            if (bytes.compareAndSwapInt(offset, num, Wires.END_OF_DATA)) {
-                warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting to EOD");
-                // trigger file rolling code.
-                throw new EOFException();
+            // TODO Determine what the safe size should be.
+            int sizeToSkip = 32 << 10;
+            if (bytes instanceof MappedBytes) {
+                MappedBytes mb = (MappedBytes) bytes;
+                sizeToSkip = Maths.toUInt31(mb.mappedFile().overlapSize() / 2);
+            }
+            // pad to a 4 byte word.
+            sizeToSkip = (sizeToSkip + 3) & ~3;
+            sizeToSkip -= (int) (offset & 3);
+            // clearing the start of the data so the meta data will look like 4 zero values with no event names.
+            long pos = bytes.writePosition();
+            try {
+                bytes.writeSkip(4);
+                wire.getValueOut().text("!! Skipped due to recovery of locked header !!");
+                wire.addPadding(Math.toIntExact(sizeToSkip + (pos + 4) - bytes.writePosition()));
+            } finally {
+                bytes.writePosition(pos);
+            }
+
+            int emptyMetaData = Wires.META_DATA | sizeToSkip;
+            if (bytes.compareAndSwapInt(offset, num, emptyMetaData)) {
+                warn().on(getClass(), msgStart + " switching to a corrupt meta data message");
+                bytes.writeSkip(sizeToSkip + 4);
+
             } else {
                 int num2 = bytes.readVolatileInt(offset);
-                if (num2 == Wires.END_OF_DATA) {
-                    warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to EOD.");
-                    // trigger file rolling code.
-                    throw new EOFException();
-                } else {
-                    warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " already set to " + Integer.toHexString(num2));
-                    // might be okay now, try again. Will StackOverflow rather than go into an infinite loop.
-                    return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
-                }
+                warn().on(getClass(), msgStart + " already set to " + Integer.toHexString(num2));
             }
+
+        } else {
+            warn().on(getClass(), msgStart + " but message now exists.");
         }
-        warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " but message now exists.");
 
         try {
             return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
+
         } catch (TimeoutException e) {
             warn().on(getClass(), e);
             // Could happen if another thread recovers, writes 2 messages but the second one is corrupt.
             return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
+
         } catch (EOFException e) {
             throw new AssertionError(e);
         }
