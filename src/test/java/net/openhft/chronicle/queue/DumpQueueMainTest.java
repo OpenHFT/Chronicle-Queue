@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,6 +13,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
@@ -24,24 +26,47 @@ public class DumpQueueMainTest {
             return;
 
         final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
-        final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
-                build();
+                build()) {
 
-        final ExcerptAppender excerptAppender = queue.acquireAppender();
-        excerptAppender.writeText("first");
-        excerptAppender.writeText("last");
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            excerptAppender.writeText("first");
+            excerptAppender.writeText("last");
 
-        final Path queueFile = Files.list(dataDir.toPath()).
-                filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
-                findFirst().orElseThrow(() ->
-                new AssertionError("Could not find queue file in directory " + dataDir));
-        assertThat(queueFile.toFile().setWritable(false), is(true));
+            final Path queueFile = Files.list(dataDir.toPath()).
+                    filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
+                    findFirst().orElseThrow(() ->
+                    new AssertionError("Could not find queue file in directory " + dataDir));
+            assertThat(queueFile.toFile().setWritable(false), is(true));
 
-        final CountingOutputStream countingOutputStream = new CountingOutputStream();
-        DumpQueueMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
+            final CountingOutputStream countingOutputStream = new CountingOutputStream();
+            DumpQueueMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
 
-        assertThat(countingOutputStream.bytes, is(not(0L)));
+            assertThat(countingOutputStream.bytes, is(not(0L)));
+        }
+    }
+
+    @Test
+    public void shouldDumpDirectoryListing() throws Exception {
+        final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
+                binary(dataDir).
+                build()) {
+
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            excerptAppender.writeText("first");
+            excerptAppender.writeText("last");
+
+            final ByteArrayOutputStream capture = new ByteArrayOutputStream();
+            DumpQueueMain.dump(dataDir, new PrintStream(capture), Long.MAX_VALUE);
+
+            final String capturedOutput = new String(capture.toByteArray());
+
+            assertThat(capturedOutput, containsString("listing.highestCycle"));
+            assertThat(capturedOutput, containsString("listing.lowestCycle"));
+            assertThat(capturedOutput, containsString("listing.exclusiveLock"));
+        }
     }
 
     private static final class CountingOutputStream extends OutputStream {

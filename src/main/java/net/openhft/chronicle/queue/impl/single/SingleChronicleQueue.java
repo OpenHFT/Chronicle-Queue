@@ -539,9 +539,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private File createDirectoryListingFile() {
         final File listingPath;
         if ("".equals(path.getPath())) {
-            listingPath = new File("directory-listing" + SingleTableBuilder.SUFFIX);
+            listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
         } else {
-            listingPath = new File(path, "directory-listing" + SingleTableBuilder.SUFFIX);
+            listingPath = new File(path, DirectoryListing.DIRECTORY_LISTING_FILE);
             listingPath.getParentFile().mkdirs();
         }
         try {

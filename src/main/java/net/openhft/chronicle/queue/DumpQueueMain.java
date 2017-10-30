@@ -19,7 +19,9 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.impl.single.DirectoryListing;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.wire.WireDumper;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,6 +54,11 @@ public class DumpQueueMain {
 
     public static void dump(@NotNull File path, @NotNull PrintStream out, long upperLimit) {
         if (path.isDirectory()) {
+            File[] directoryListing = path.
+                    listFiles((d, n) -> n.equals(DirectoryListing.DIRECTORY_LISTING_FILE));
+            if (directoryListing != null && directoryListing.length == 1) {
+                out.println(SingleTableBuilder.binary(directoryListing[0]).build().dump());
+            }
             File[] files = path.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
             if (files == null) {
                 err.println("Directory not found " + path);
