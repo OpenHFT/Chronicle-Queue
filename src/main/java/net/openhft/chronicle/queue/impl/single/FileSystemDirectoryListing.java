@@ -1,11 +1,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ToIntFunction;
 
 final class FileSystemDirectoryListing implements DirectoryListing {
     private final File queueDir;
     private final ToIntFunction<File> fileToCycleFunction;
+    private final AtomicLong modCount = new AtomicLong();
 
     FileSystemDirectoryListing(final File queueDir,
                                       final ToIntFunction<File> fileToCycleFunction) {
@@ -25,7 +27,7 @@ final class FileSystemDirectoryListing implements DirectoryListing {
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
-        // no-op
+        modCount.incrementAndGet();
     }
 
     @Override
@@ -50,5 +52,10 @@ final class FileSystemDirectoryListing implements DirectoryListing {
             }
         }
         return minCycle;
+    }
+
+    @Override
+    public long modCount() {
+        return modCount.get();
     }
 }

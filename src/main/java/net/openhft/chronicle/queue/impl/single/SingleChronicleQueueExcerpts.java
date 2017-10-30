@@ -898,7 +898,7 @@ public class SingleChronicleQueueExcerpts {
 
         private static boolean isReadOnly(Bytes bytes) {
             return bytes instanceof MappedBytes &&
-                    !((MappedBytes) bytes).mappedFile().file().canWrite();
+                    ((MappedBytes) bytes).isBackingFileReadOnly();
         }
 
         @Override

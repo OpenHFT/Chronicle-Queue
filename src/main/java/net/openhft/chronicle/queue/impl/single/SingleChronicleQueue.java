@@ -24,28 +24,59 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.CycleCalculator;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.impl.CommonStore;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.RollingResourcesCache;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.TextWire;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StreamCorruptedException;
+import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.*;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
@@ -678,7 +709,25 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
     }
 
+    private static final class CachedCycleTree {
+        private final long directoryModCount;
+        private final NavigableMap<Long, File> cachedCycleTree;
+
+        CachedCycleTree(final long directoryModCount, final NavigableMap<Long, File> cachedCycleTree) {
+            this.directoryModCount = directoryModCount;
+            this.cachedCycleTree = cachedCycleTree;
+        }
+    }
+
     private class StoreSupplier implements WireStoreSupplier {
+        private boolean queuePathExists;
+        private final AtomicLong cachedHighestCycleNumber = new AtomicLong(Long.MIN_VALUE);
+        private volatile long directoryModCount = 0L;
+
+        private volatile NavigableMap<Long, File> cachedCycleTree;
+
+        private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
+
         @Override
         public WireStore acquire(int cycle, boolean createIfAbsent) {
 
@@ -688,9 +737,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             try {
                 File path = dateValue.path;
 
-                // TODO use the DirectoryListing file to check for the file existence.
-                if (!path.exists() && !createIfAbsent)
+                if ((cycle > directoryListing.getMaxCreatedCycle() ||
+                        !path.exists()) &&
+                        !createIfAbsent) {
                     return null;
+                }
 
                 final File parentFile = dateValue.parentPath;
 
@@ -705,6 +756,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 }
 
                 final MappedBytes mappedBytes = mappedBytes(path);
+                queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
                 assert wire.startUse();
                 wire.pauser(pauserSupplier.get());
@@ -753,14 +805,62 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         /**
          * @return cycleTree for the current directory / parentFile
          * @throws ParseException
+         * @param force
          */
         @NotNull
-        private NavigableMap<Long, File> cycleTree() {
+        private NavigableMap<Long, File> cycleTree(final boolean force) {
 
             final File parentFile = path;
 
-            if (!parentFile.exists())
+            // use pre-calculated result in case where queue dir existed when StoreSupplier was constructed
+            if (!queuePathExists && !parentFile.exists())
                 throw new IllegalStateException("parentFile=" + parentFile.getName() + " does not exist");
+
+
+            CachedCycleTree cachedValue = cachedTree.get();
+            final long directoryModCount = directoryListing.modCount();
+            if (cachedValue == null || directoryModCount > cachedValue.directoryModCount) {
+
+                final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
+                final NavigableMap<Long, File> tree = new TreeMap<>();
+
+                final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
+                System.out.printf("Updating at %d, files: %s%n",
+                        directoryModCount, files.length);
+
+                for (File file : files) {
+                    tree.put(dateCache.toLong(file), file);
+                }
+
+                cachedValue = new CachedCycleTree(directoryModCount, tree);
+
+                while (true) {
+                    final CachedCycleTree existing = cachedTree.get();
+
+                    if (existing != null && existing.directoryModCount > cachedValue.directoryModCount) {
+                        break;
+                    }
+
+                    if (cachedTree.compareAndSet(existing, cachedValue)) {
+                        break;
+                    }
+                }
+            }
+
+            return cachedValue.cachedCycleTree;
+
+
+            /*
+            final int maxCreatedCycle = directoryListing.getMaxCreatedCycle();
+            final long currentHighest = cachedHighestCycleNumber.get();
+            final long currentModCount = directoryListing.modCount();
+
+            if (maxCreatedCycle > currentHighest &&
+                    cachedCycleTree != null && directoryModCount == directoryListing.modCount()) {
+                // nothing has changed, so return the cached instance of the cycle tree
+                return cachedCycleTree;
+            }
+            directoryModCount = currentModCount;
 
             final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
             final NavigableMap<Long, File> tree = new TreeMap<>();
@@ -771,7 +871,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 tree.put(dateCache.toLong(file), file);
             }
 
+            // TODO this is not safe
+            cachedHighestCycleNumber.compareAndSet(currentHighest, maxCreatedCycle);
+            cachedCycleTree = tree;
+
             return tree;
+            */
         }
 
         @Override
@@ -780,7 +885,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             if (direction == NONE)
                 throw new AssertionError("direction is NONE");
             assert currentCycle >= 0 : "currentCycle=" + Integer.toHexString(currentCycle);
-            final NavigableMap<Long, File> tree = cycleTree();
+            NavigableMap<Long, File> tree = cycleTree(false);
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
             if (!currentCycleFile.exists())
@@ -788,8 +893,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             Long key = dateCache.toLong(currentCycleFile);
             File file = tree.get(key);
-            if (file == null)
+            // TODO already checked that the file exists, so if it is null, call cycleTree again with force
+            if (file == null) {
+                tree = cycleTree(true);
+                file = tree.get(key);
+            }
+            if (file == null) {
                 throw new AssertionError("missing currentCycle, file=" + currentCycleFile);
+            }
 
             switch (direction) {
                 case FORWARD:
@@ -811,7 +922,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
          */
         @Override
         public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException {
-            final NavigableMap<Long, File> tree = cycleTree();
+            final NavigableMap<Long, File> tree = cycleTree(false);
             final Long lowerKey = toKey(lowerCycle, "lowerCycle");
             final Long upperKey = toKey(upperCycle, "upperCycle");
             assert lowerKey != null;

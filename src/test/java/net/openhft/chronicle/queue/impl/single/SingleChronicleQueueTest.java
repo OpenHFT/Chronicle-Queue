@@ -26,12 +26,29 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.Demarshallable;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -39,17 +56,42 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Files;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static net.openhft.chronicle.queue.RollCycles.*;
+import static net.openhft.chronicle.queue.RollCycles.DAILY;
+import static net.openhft.chronicle.queue.RollCycles.HOURLY;
+import static net.openhft.chronicle.queue.RollCycles.MINUTELY;
+import static net.openhft.chronicle.queue.RollCycles.TEST2_DAILY;
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
@@ -2795,20 +2837,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testToEndPrevCycleEOF() throws TimeoutException, ExecutionException, InterruptedException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType)
                 .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
                 .build()) {
 
             q.acquireAppender()
                     .writeText("first");
         }
 
-        Thread.sleep(1100);
+        clock.addAndGet(1100);
 
         // this will write an EOF
         try (ChronicleQueue q = builder(dir, wireType)
                 .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
                 .build()) {
 
             ExcerptTailer tailer = q.createTailer();
@@ -2820,6 +2865,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue q = builder(dir, wireType)
                 .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
                 .build()) {
 
             ExcerptTailer tailer = q.createTailer().toEnd();
@@ -2833,8 +2879,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
 
+        clock.addAndGet(50L);
+
         try (ChronicleQueue q = builder(dir, wireType)
                 .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
                 .build()) {
 
             ExcerptTailer excerptTailerBeforeAppend = q.createTailer().toEnd();
@@ -2847,6 +2896,43 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertEquals("even more text", excerptTailerBeforeAppend.readText());
         }
     }
+
+    @Test
+    public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() throws Exception {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        File dir = getTmpDir();
+        try (ChronicleQueue q = builder(dir, wireType)
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
+                .build()) {
+
+            q.acquireAppender()
+                    .writeText("first");
+        }
+
+        clock.addAndGet(1100);
+
+        // this will write an EOF
+        try (ChronicleQueue q = builder(dir, wireType)
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
+                .build()) {
+
+            ExcerptTailer tailer = q.createTailer();
+
+            Assert.assertEquals("first", tailer.readText());
+
+            final long startCollectionCount = GcControls.getGcCount();
+
+            for (int i = 0; i < 10_000; i++) {
+                Assert.assertEquals(null, tailer.readText());
+            }
+
+            // allow one GC due to possible side-effect
+            assertTrue(GcControls.getGcCount() < startCollectionCount + 1);
+        }
+    }
+
 
     @Test
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {

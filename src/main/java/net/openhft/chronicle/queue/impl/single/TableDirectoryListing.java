@@ -27,12 +27,14 @@ final class TableDirectoryListing implements DirectoryListing {
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     // visible for testing
     static final String LOCK = "listing.exclusiveLock";
+    static final String MOD_COUNT = "listing.modCount";
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue lock;
+    private volatile LongValue modCount;
     private final boolean readOnly;
 
     TableDirectoryListing(
@@ -56,8 +58,12 @@ final class TableDirectoryListing implements DirectoryListing {
                 maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
                 minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
                 lock = tableStore.acquireValueFor(LOCK);
+                modCount = tableStore.acquireValueFor(MOD_COUNT);
                 if (lock.getVolatileValue() == Long.MIN_VALUE) {
                     lock.compareAndSwapValue(Long.MIN_VALUE, 0);
+                }
+                if (modCount.getVolatileValue() == Long.MIN_VALUE) {
+                    modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
                 }
                 return;
             } catch (IOException | RuntimeException e) {
@@ -88,6 +94,7 @@ final class TableDirectoryListing implements DirectoryListing {
             LOGGER.warn("DirectoryListing is read-only, not updating listing");
             return;
         }
+        modCount.addAtomicValue(1);
         tryWithLock(() -> {
             maxCycleValue.setMaxValue(cycle);
             minCycleValue.setMinValue(cycle);
@@ -109,6 +116,16 @@ final class TableDirectoryListing implements DirectoryListing {
             return getMinCycleValue();
         }
         return tryWithLock(this::getMinCycleValue);
+    }
+
+    @Override
+    public long modCount() {
+        return modCount.getVolatileValue();
+    }
+
+    @Override
+    public String toString() {
+        return tableStore.dump();
     }
 
     private int getMaxCycleValue() {
