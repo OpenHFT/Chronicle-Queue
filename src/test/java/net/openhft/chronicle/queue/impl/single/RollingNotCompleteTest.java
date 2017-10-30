@@ -59,19 +59,17 @@ public class RollingNotCompleteTest {
         while (!started.get())
             ;
 
-        Thread.sleep(timeoutMS - 50);
-        long duration = start0 - System.currentTimeMillis();
+        while (System.currentTimeMillis() < start0 + (timeoutMS - 50))
+            Thread.sleep(10);
 
-        if (duration < timeoutMS) {
-            assertEquals("Nothing should have been written until timeout", 0, written.get());
+        assertEquals("Nothing should have been written until timeout", 0, written.get());
 
-            long start = System.currentTimeMillis();
-            while (System.currentTimeMillis() < start + timeoutMS) {
-                if (written.get() > 0)
-                    break;
-            }
-            assertTrue("Nothing was written after header was repaired", written.get() > 0);
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() < start + timeoutMS) {
+            if (written.get() > 0)
+                break;
         }
+        assertTrue("Nothing was written after header was repaired", written.get() > 0);
     }
 
     @After
