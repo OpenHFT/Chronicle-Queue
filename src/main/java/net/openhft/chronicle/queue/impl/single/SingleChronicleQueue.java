@@ -748,8 +748,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 //                        !changed ||
                         !path.exists()) &&
                         !createIfAbsent) {
-                    System.out.printf("%s/path %s for cycle %d does not exist, maxCreatedCycle: %d, dir changed: %s%n",
-                            Thread.currentThread().getName(), path.getName(), cycle, directoryListing.getMaxCreatedCycle(), changed);
+//                    System.out.printf("%s/path %s for cycle %d does not exist, maxCreatedCycle: %d, dir changed: %s%n",
+//                            Thread.currentThread().getName(), path.getName(), cycle, directoryListing.getMaxCreatedCycle(), changed);
                     return null;
                 }
 
@@ -902,10 +902,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             boolean changed = (directoryListing.modCount() > lastModCount.get());
             lastModCount.lazySet(directoryListing.modCount());
 
-            // TODO 10:53
+            // TODO 10:53 cycle file does exist, but we don't want to
+            // check for existence
             if (
-                    currentCycle > directoryListing.getMaxCreatedCycle() ||
-                    !currentCycleFile.exists())
+                    currentCycle > directoryListing.getMaxCreatedCycle() &&
+                            currentCycleFileExists(currentCycleFile))
                 throw new IllegalStateException("file not exists, currentCycle, " + "file=" + currentCycleFile);
 
             Long key = dateCache.toLong(currentCycleFile);
@@ -927,6 +928,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 default:
                     throw new UnsupportedOperationException("Unsupported Direction");
             }
+        }
+
+        private boolean currentCycleFileExists(final File currentCycleFile) {
+            return !currentCycleFile.exists();
         }
 
         /**

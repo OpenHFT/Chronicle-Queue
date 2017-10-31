@@ -2898,7 +2898,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore
     @Test
     public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() throws Exception {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -2926,15 +2925,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final long startCollectionCount = GcControls.getGcCount();
 
-            for (int i = 0; i < 1_000_000; i++) {
+            for (int i = 0; i < 100_000; i++) {
                 Assert.assertEquals(null, tailer.readText());
-                if (i % 10_000 == 0) {
-                    LockSupport.parkNanos(1_000_000_000);
-                }
             }
 
-            // allow one GC due to possible side-effect
-            assertTrue(GcControls.getGcCount() < startCollectionCount + 1);
+            // allow a few GCs due to possible side-effect
+            assertTrue(GcControls.getGcCount() < startCollectionCount + 3);
         }
     }
 
