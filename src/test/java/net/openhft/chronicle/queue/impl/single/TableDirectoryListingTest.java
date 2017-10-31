@@ -18,6 +18,7 @@ public class TableDirectoryListingTest {
     private TableDirectoryListing listing;
     private File testDirectory;
     private File tableFile;
+    private File tempFile;
 
     @Before
     public void setUp() throws Exception {
@@ -30,18 +31,20 @@ public class TableDirectoryListingTest {
                 f -> Integer.parseInt(f.getName().split("\\.")[0]),
                 false);
         listing.init();
+        tempFile = File.createTempFile("foo", "bar");
+        tempFile.deleteOnExit();
     }
 
     @Test
     public void shouldTrackMaxValue() throws Exception {
         listing.refresh();
 
-        listing.onFileCreated(null, 7);
+        listing.onFileCreated(tempFile, 7);
 
         assertThat(listing.getMaxCreatedCycle(), is(7));
         assertThat(listing.getMinCreatedCycle(), is(7));
 
-        listing.onFileCreated(null, 8);
+        listing.onFileCreated(tempFile, 8);
 
         assertThat(listing.getMaxCreatedCycle(), is(8));
         assertThat(listing.getMinCreatedCycle(), is(7));
@@ -61,13 +64,13 @@ public class TableDirectoryListingTest {
 
     @Test
     public void lockShouldTimeOut() throws Exception {
-        listing.onFileCreated(null, 8);
+        listing.onFileCreated(tempFile, 8);
 
         final TableStore tableCopy = SingleTableBuilder.binary(tableFile).build();
         final LongValue lock = tableCopy.acquireValueFor(TableDirectoryListing.LOCK);
         lock.setOrderedValue(System.currentTimeMillis() - (TimeUnit.SECONDS.toMillis(9) + 500));
 
-        listing.onFileCreated(null, 9);
+        listing.onFileCreated(tempFile, 9);
         assertThat(listing.getMaxCreatedCycle(), is(9));
     }
 

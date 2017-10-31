@@ -94,7 +94,9 @@ final class TableDirectoryListing implements DirectoryListing {
             LOGGER.warn("DirectoryListing is read-only, not updating listing");
             return;
         }
-        modCount.addAtomicValue(1);
+        final long newModCount = modCount.addAtomicValue(1);
+        new RuntimeException(System.currentTimeMillis() + "/new modCount: " + newModCount + "/" + file.getName()).printStackTrace(System.out);
+        System.out.println(file.getParentFile().listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
         tryWithLock(() -> {
             maxCycleValue.setMaxValue(cycle);
             minCycleValue.setMinValue(cycle);

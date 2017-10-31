@@ -60,6 +60,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -750,12 +751,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
                 if (createIfAbsent && !path.exists()) {
                     parentFile.mkdirs();
-                    directoryListing.onFileCreated(path, cycle);
                     // before we create a new file, we need to ensure previous file has got EOF mark
                     QueueFiles.writeEOFIfNeeded(path.toPath(), wireType(), blockSize(), timeoutMS);
                 }
 
                 final MappedBytes mappedBytes = mappedBytes(path);
+                directoryListing.onFileCreated(path, cycle);
                 queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
                 assert wire.startUse();
@@ -802,6 +803,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
+        private static final boolean NO_CACHING = true;
+
         /**
          * @return cycleTree for the current directory / parentFile
          * @throws ParseException
@@ -819,14 +822,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             CachedCycleTree cachedValue = cachedTree.get();
             final long directoryModCount = directoryListing.modCount();
-            if (cachedValue == null || directoryModCount > cachedValue.directoryModCount) {
+            if (NO_CACHING || force || (cachedValue == null || directoryModCount > cachedValue.directoryModCount)) {
 
                 final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
                 final NavigableMap<Long, File> tree = new TreeMap<>();
 
                 final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
-                System.out.printf("Updating at %d, files: %s%n",
-                        directoryModCount, files.length);
+                System.out.printf("%d/Updating at %d, files: %s%n",
+                        System.currentTimeMillis(), directoryModCount, Arrays.toString(files));
 
                 for (File file : files) {
                     tree.put(dateCache.toLong(file), file);
