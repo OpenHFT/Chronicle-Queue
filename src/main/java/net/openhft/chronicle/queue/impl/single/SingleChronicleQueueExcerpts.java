@@ -1315,7 +1315,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
-            if (moveToState.canReuseLastIndexMove(index, state, direction, queue)) {
+            if (moveToState.canReuseLastIndexMove(index, state, direction, queue, wire())) {
                 return true;
             } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
                 final long knownIndex = moveToState.calculateKnownIndex(wire().bytes().readPosition());
@@ -1863,8 +1863,10 @@ public class SingleChronicleQueueExcerpts {
 
             private boolean canReuseLastIndexMove(
                     final long index, final TailerState state, final TailerDirection direction,
-                    final SingleChronicleQueue queue) {
-                return index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
+                    final SingleChronicleQueue queue, final Wire wire) {
+
+                return ((wire == null) || wire.bytes().readPosition() == readPositionAtLastMove) &&
+                        index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
                         direction == directionAtLastMoveTo &&
                         queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
             }
