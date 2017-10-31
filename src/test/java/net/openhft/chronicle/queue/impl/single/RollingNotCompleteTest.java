@@ -72,11 +72,7 @@ public class RollingNotCompleteTest {
                 writerQueueFile.get() == null ||
                 initialFile.equals(writerQueueFile.get()));
 
-        int actual = System.currentTimeMillis() < start0 + (timeoutMS - 50) ? 0:written.get();
-
-
-
-        assertEquals("Nothing should have been written until timeout", 0, actual);
+        assertEquals("Nothing should have been written until timeout", 0, written.get());
 
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() < start + TIMEOUT_MS) {
