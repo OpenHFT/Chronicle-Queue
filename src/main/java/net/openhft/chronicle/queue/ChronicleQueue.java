@@ -16,6 +16,9 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.util.ObjectUtils;
+import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
+import net.openhft.chronicle.wire.MethodWriterBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,6 +26,7 @@ import java.io.File;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -128,4 +132,20 @@ public interface ChronicleQueue extends Closeable {
     }
 
     int sourceId();
+
+
+    default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
+        Class[] interfaces = ObjectUtils.addAll(tClass, additional);
+
+        //noinspection unchecked
+        return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces,
+                new BinaryMethodWriterInvocationHandler(this::acquireAppender));
+    }
+
+    @NotNull
+    default <T> MethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
+        return new MethodWriterBuilder<>(tClass,
+                new BinaryMethodWriterInvocationHandler(this::acquireAppender));
+    }
+
 }
