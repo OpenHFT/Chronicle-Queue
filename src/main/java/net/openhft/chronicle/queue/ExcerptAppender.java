@@ -17,12 +17,12 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MarshallableOut;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.core.util.ObjectUtils;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.StreamCorruptedException;
+import java.lang.reflect.Proxy;
 
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
@@ -112,9 +112,28 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
 
     /**
      * A task that will be run if a WeakReference referring this appender is registered with a clean-up task.
+     *
      * @return Task to release any associated resources
      */
     default Runnable getCloserJob() {
-        return () -> {};
+        return () -> {
+        };
     }
+
+    default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
+        Class[] interfaces = ObjectUtils.addAll(tClass, additional);
+
+        ChronicleQueue queue = queue();
+        //noinspection unchecked
+        return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces,
+                new BinaryMethodWriterInvocationHandler(queue::acquireAppender));
+    }
+
+    @NotNull
+    default <T> MethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
+        ChronicleQueue queue = queue();
+        return new MethodWriterBuilder<>(tClass,
+                new BinaryMethodWriterInvocationHandler(queue::acquireAppender));
+    }
+
 }

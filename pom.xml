@@ -48,7 +48,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.14.101</version>
+                <version>1.14.102-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

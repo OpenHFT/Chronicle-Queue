@@ -128,6 +128,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 .write(IndexingFields.indexSpacing).int64(indexSpacing)
                 .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
                 .write(IndexingFields.lastIndex).int64forBinding(0L, nextEntryToBeIndexed);
+        // todo add later.
+//                .writeComment("the NEXT number to be indexed");
     }
 
     /**
@@ -681,8 +683,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     enum IndexingFields implements WireKey {
         indexCount, indexSpacing, index2Index,
-        // nextEntryToBeIndexed
-        lastIndex
+        lastIndex // NOTE: the nextEntryToBeIndexed
     }
 
     static class LongArrayValuesHolder {
