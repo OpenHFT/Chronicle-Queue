@@ -1,12 +1,10 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -41,18 +39,6 @@ public class RollCyclesTest {
 
     public RollCyclesTest(final String cycleName, final RollCycles cycle) {
         this.cycle = cycle;
-    }
-
-    @Test
-    public void name() throws Exception {
-        final long index = 0x443c006e543fL;
-        System.out.println(index);
-        final int cycle = RollCycles.DAILY.toCycle(index);
-        System.out.println(cycle);
-        final long sequenceNumber = RollCycles.DAILY.toSequenceNumber(index);
-        System.out.println(sequenceNumber);
-        System.out.println(new RollingResourcesCache(RollCycles.DAILY, 0, File::new, File::getName).resourceFor(cycle).text);
-        System.out.println(560995692/sequenceNumber);
     }
 
     @Test

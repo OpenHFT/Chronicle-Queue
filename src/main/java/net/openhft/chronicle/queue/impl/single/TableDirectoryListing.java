@@ -27,7 +27,7 @@ final class TableDirectoryListing implements DirectoryListing {
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     // visible for testing
     static final String LOCK = "listing.exclusiveLock";
-    static final String MOD_COUNT = "listing.modCount";
+    private static final String MOD_COUNT = "listing.modCount";
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
@@ -94,21 +94,12 @@ final class TableDirectoryListing implements DirectoryListing {
             LOGGER.warn("DirectoryListing is read-only, not updating listing");
             return;
         }
-        final long newModCount = modCount.addAtomicValue(1);
-//        final long start = System.nanoTime();
-//        new RuntimeException(System.currentTimeMillis() + "/new modCount: " + newModCount + "/" + file.getName()).printStackTrace(System.out);
-//        System.out.println(file.getParentFile().listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
+        modCount.addAtomicValue(1);
         tryWithLock(() -> {
             maxCycleValue.setMaxValue(cycle);
             minCycleValue.setMinValue(cycle);
             return 0;
         });
-//
-//        System.out.printf("%s/path %s created for cycle %d, took %dns in %s%n",
-//                Thread.currentThread().getName(),
-//                file.getName(), cycle,
-//                System.nanoTime() - start, tableStore.file().getAbsolutePath());
-
     }
 
     @Override

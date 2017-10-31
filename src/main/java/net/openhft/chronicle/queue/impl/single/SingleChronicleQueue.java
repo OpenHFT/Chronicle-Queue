@@ -722,11 +722,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     private class StoreSupplier implements WireStoreSupplier {
         private boolean queuePathExists;
-        private final AtomicLong cachedHighestCycleNumber = new AtomicLong(Long.MIN_VALUE);
-        private volatile long directoryModCount = 0L;
-
-        private volatile NavigableMap<Long, File> cachedCycleTree;
-
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
         private AtomicLong lastModCount = new AtomicLong();
 

@@ -390,41 +390,23 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
         bytes.readPositionUnlimited(knownAddress);
 
-        if (toIndex == 751) {
-            System.out.println("linearScan to 751");
-        }
-
         for (long i = fromKnownIndex; ; i++) {
             try {
                 if (wire.readDataHeader()) {
                     if (i == toIndex) {
-                        if (toIndex == 751) {
-                            System.out.println("linearScan to 751 - found");
-                        }
                         return ScanResult.FOUND;
                     }
                     int header = bytes.readInt();
                     if (Wires.isNotComplete(header)) { // or isEndOfFile
-                        if (toIndex == 751) {
-                            System.out.println("linearScan to 751 - header not complete");
-                        }
                         return ScanResult.NOT_REACHED;
                     }
                     bytes.readSkip(Wires.lengthOf(header));
                     continue;
                 }
             } catch (EOFException fallback) {
-                if (toIndex == 751) {
-                    System.out.println("linearScan to 751 - reached EOF");
-                }
-
                 // reached the end of the file.
             }
-            final ScanResult result = i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
-            if (toIndex == 751) {
-                System.out.println("linearScan to 751 - result: " + result);
-            }
-            return result;
+            return i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
         }
     }
 
