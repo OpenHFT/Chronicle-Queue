@@ -32,12 +32,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WireStorePool {
     private static final Logger LOGGER = LoggerFactory.getLogger(WireStorePool.class);
+    // must be power-of-two
+    private static final int ROLL_CYCLE_CACHE_SIZE = 64;
     @NotNull
     private final WireStoreSupplier supplier;
     @NotNull
     private final Map<RollDetails, WeakReference<WireStore>> stores;
     private final StoreFileListener storeFileListener;
     private boolean isClosed = false;
+    // protected by synchronized on acquire()
+    private final RollDetails[] cache = new RollDetails[ROLL_CYCLE_CACHE_SIZE];
+
 
     private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
@@ -64,7 +69,14 @@ public class WireStorePool {
     @org.jetbrains.annotations.Nullable
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
-        RollDetails rollDetails = new RollDetails(cycle, epoch);
+        final int cacheIndex = cycle & (ROLL_CYCLE_CACHE_SIZE - 1);
+        RollDetails rollDetails;
+        rollDetails = cache[cacheIndex];
+        if (rollDetails == null || rollDetails.cycle() != cycle) {
+            rollDetails = new RollDetails(cycle, epoch);
+            cache[cacheIndex] = rollDetails;
+        }
+
         WeakReference<WireStore> reference = stores.get(rollDetails);
         WireStore store;
         if (reference != null) {
