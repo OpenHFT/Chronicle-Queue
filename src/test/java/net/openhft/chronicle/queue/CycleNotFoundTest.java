@@ -42,7 +42,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final long NUMBER_OF_MSG = 100_000; // this is working this  1_000_000 but
     // reduced so that it runs quicker for the continuous integration (CI)
 
-    @Test
+    @Test(timeout = 50_000L)
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
         File path = DirectoryUtils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make
 
