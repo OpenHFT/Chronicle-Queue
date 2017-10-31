@@ -74,6 +74,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
@@ -2897,6 +2898,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore
     @Test
     public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() throws Exception {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -2924,8 +2926,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final long startCollectionCount = GcControls.getGcCount();
 
-            for (int i = 0; i < 10_000; i++) {
+            for (int i = 0; i < 1_000_000; i++) {
                 Assert.assertEquals(null, tailer.readText());
+                if (i % 10_000 == 0) {
+                    LockSupport.parkNanos(1_000_000_000);
+                }
             }
 
             // allow one GC due to possible side-effect

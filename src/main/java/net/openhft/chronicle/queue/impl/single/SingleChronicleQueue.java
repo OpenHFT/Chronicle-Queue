@@ -728,6 +728,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         private volatile NavigableMap<Long, File> cachedCycleTree;
 
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
+        private AtomicLong lastModCount = new AtomicLong();
 
         @Override
         public WireStore acquire(int cycle, boolean createIfAbsent) {
@@ -737,10 +738,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     .dateCache.resourceFor(cycle);
             try {
                 File path = dateValue.path;
+                boolean changed = (directoryListing.modCount() > lastModCount.get());
+                lastModCount.lazySet(directoryListing.modCount());
 
-                if ((cycle > directoryListing.getMaxCreatedCycle() ||
+                if ((
+                        // SCQT tests all pass, CycleNotFoundTest hangs
+                        cycle > directoryListing.getMaxCreatedCycle() ||
+                        // other SCQT tests fail
+//                        !changed ||
                         !path.exists()) &&
                         !createIfAbsent) {
+                    System.out.printf("%s/path %s for cycle %d does not exist, maxCreatedCycle: %d, dir changed: %s%n",
+                            Thread.currentThread().getName(), path.getName(), cycle, directoryListing.getMaxCreatedCycle(), changed);
                     return null;
                 }
 
@@ -803,7 +812,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
-        private static final boolean NO_CACHING = true;
+        private static final boolean NO_CACHING = false;
 
         /**
          * @return cycleTree for the current directory / parentFile
@@ -828,8 +837,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 final NavigableMap<Long, File> tree = new TreeMap<>();
 
                 final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
-                System.out.printf("%d/Updating at %d, files: %s%n",
-                        System.currentTimeMillis(), directoryModCount, Arrays.toString(files));
+//                System.out.printf("%d/Updating at %d, files: %s%n",
+//                        System.currentTimeMillis(), directoryModCount, Arrays.toString(files));
 
                 for (File file : files) {
                     tree.put(dateCache.toLong(file), file);
@@ -890,8 +899,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             assert currentCycle >= 0 : "currentCycle=" + Integer.toHexString(currentCycle);
             NavigableMap<Long, File> tree = cycleTree(false);
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
+            boolean changed = (directoryListing.modCount() > lastModCount.get());
+            lastModCount.lazySet(directoryListing.modCount());
 
-            if (!currentCycleFile.exists())
+            // TODO 10:53
+            if (
+                    currentCycle > directoryListing.getMaxCreatedCycle() ||
+                    !currentCycleFile.exists())
                 throw new IllegalStateException("file not exists, currentCycle, " + "file=" + currentCycleFile);
 
             Long key = dateCache.toLong(currentCycleFile);

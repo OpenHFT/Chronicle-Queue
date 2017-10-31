@@ -95,13 +95,20 @@ final class TableDirectoryListing implements DirectoryListing {
             return;
         }
         final long newModCount = modCount.addAtomicValue(1);
-        new RuntimeException(System.currentTimeMillis() + "/new modCount: " + newModCount + "/" + file.getName()).printStackTrace(System.out);
-        System.out.println(file.getParentFile().listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
+//        final long start = System.nanoTime();
+//        new RuntimeException(System.currentTimeMillis() + "/new modCount: " + newModCount + "/" + file.getName()).printStackTrace(System.out);
+//        System.out.println(file.getParentFile().listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
         tryWithLock(() -> {
             maxCycleValue.setMaxValue(cycle);
             minCycleValue.setMinValue(cycle);
             return 0;
         });
+//
+//        System.out.printf("%s/path %s created for cycle %d, took %dns in %s%n",
+//                Thread.currentThread().getName(),
+//                file.getName(), cycle,
+//                System.nanoTime() - start, tableStore.file().getAbsolutePath());
+
     }
 
     @Override
