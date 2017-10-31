@@ -16,4 +16,6 @@ public interface DirectoryListing {
     int getMaxCreatedCycle();
 
     int getMinCreatedCycle();
+
+    long modCount();
 }

@@ -393,11 +393,13 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         for (long i = fromKnownIndex; ; i++) {
             try {
                 if (wire.readDataHeader()) {
-                    if (i == toIndex)
+                    if (i == toIndex) {
                         return ScanResult.FOUND;
+                    }
                     int header = bytes.readInt();
-                    if (Wires.isNotComplete(header)) // or isEndOfFile
+                    if (Wires.isNotComplete(header)) { // or isEndOfFile
                         return ScanResult.NOT_REACHED;
+                    }
                     bytes.readSkip(Wires.lengthOf(header));
                     continue;
                 }
