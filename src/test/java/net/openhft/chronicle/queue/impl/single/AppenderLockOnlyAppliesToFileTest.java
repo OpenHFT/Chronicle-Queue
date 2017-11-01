@@ -20,8 +20,8 @@ import static org.junit.Assert.*;
 public class AppenderLockOnlyAppliesToFileTest {
 
     private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
-    private static final int TIMEOUT_MS = 2_000;
-    private static final int WAIT_FOR_ROLL_MS = 1_200;
+    private static final int TIMEOUT_MS = 1_500;
+    private static final int WAIT_FOR_ROLL_MS = 1_100;
 
     @Test
     public void concurrentLockItUp() throws InterruptedException {
@@ -57,7 +57,7 @@ public class AppenderLockOnlyAppliesToFileTest {
                 writerStarted.await(1, TimeUnit.SECONDS));
 
         assertTrue("Writer thread completed before timeout",
-                writerFinished.await(WAIT_FOR_ROLL_MS + 100, TimeUnit.MILLISECONDS));
+                writerFinished.await(WAIT_FOR_ROLL_MS + 50, TimeUnit.MILLISECONDS));
 
         assertFalse("Threads wrote to different queue cycles, so no locking occurred",
                 initialFile.equals(writerQueueFile.get()));
