@@ -106,11 +106,24 @@ public enum QueueFiles {
         if (Files.exists(queuePath) && hasQueueFiles(queuePath))
             getLastQueueFileButNotTheNew(queuePath, newFilePath).ifPresent(f ->
                     processQueueFile(f, wireType, blockSize, false, (w, qs) -> {
-                        long l = qs.writePosition();
                         Bytes<?> bytes = w.bytes();
-                        long len = Wires.lengthOf(bytes.readVolatileInt(l));
-                        long eofOffset = l + len + 4L;
-                        if (0 == bytes.readVolatileInt(eofOffset)) {
+                        long writePosition = qs.writePosition();
+                        if (writePosition == 0) {
+                            // nothing has been written to the file, let the StoreTailer fix it up
+                            return null;
+                        }
+
+                        final int recordHeader = bytes.readVolatileInt(writePosition);
+                        if (Wires.isNotComplete(recordHeader)) {
+                            // can't determine the length, so don't try to write anything
+                            return null;
+                        }
+
+                        long recordLength = Wires.lengthOf(recordHeader);
+                        long eofOffset = writePosition + recordLength + 4L;
+
+                        final int existingValue = bytes.readVolatileInt(eofOffset);
+                        if (0 == existingValue) {
                             // no EOF found - write EOF
                             try {
                                 bytes.writePosition(eofOffset);
