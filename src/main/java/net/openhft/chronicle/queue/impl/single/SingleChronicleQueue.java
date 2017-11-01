@@ -742,9 +742,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
 
-                if (createIfAbsent && !path.exists()) {
+                if (createIfAbsent && !path.exists() && pool.isEmpty()) {
                     parentFile.mkdirs();
                     // before we create a new file, we need to ensure previous file has got EOF mark
+                    // but only if we are not in the process of normal rolling
                     QueueFiles.writeEOFIfNeeded(path.toPath(), wireType(), blockSize(), timeoutMS);
                 }
 

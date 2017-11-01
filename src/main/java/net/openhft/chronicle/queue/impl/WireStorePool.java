@@ -132,4 +132,8 @@ public class WireStorePool {
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
         return supplier.cycles(lowerCycle, upperCycle);
     }
+
+    public boolean isEmpty() {
+        return stores.isEmpty();
+    }
 }
