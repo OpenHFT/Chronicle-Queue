@@ -143,7 +143,9 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         long offset = bytes.writePosition();
         int num = bytes.readVolatileInt(offset);
 
-        String msgStart = "Unable to write a header at header number: " + Long.toHexString(wire.headerNumber()) + " position: " + offset;
+        // header number is only updated after successful write
+        final long targetHeaderNumber = wire.headerNumber() + 1;
+        String msgStart = "Unable to write a header at header number: 0x" + Long.toHexString(targetHeaderNumber) + " position: " + offset;
         if (Wires.isNotComplete(num)) {
             // TODO Determine what the safe size should be.
             int sizeToSkip = 32 << 10;
