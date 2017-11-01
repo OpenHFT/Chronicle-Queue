@@ -2,11 +2,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
@@ -16,70 +13,75 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.Assert.*;
 
-public class RollingNotCompleteTest {
+public class AppenderLockOnlyAppliesToFileTest {
 
     private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
-    private static final int TIMEOUT_MS = 1_000;
+    private static final int TIMEOUT_MS = 2_000;
+    private static final int WAIT_FOR_ROLL_MS = 1_200;
 
     @Test
     public void concurrentLockItUp() throws InterruptedException {
-        final AtomicInteger written = new AtomicInteger();
         final AtomicReference<String> writerQueueFile = new AtomicReference<>();
         final File path = DirectoryUtils.tempDir(this.getClass().getSimpleName());
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder.single(path).
                 sourceId(1).rollCycle(ROLL_CYCLE).timeoutMS(TIMEOUT_MS);
         final String initialFile;
         final DocumentContext initialContext = builder.build().acquireAppender().writingDocument();
-        initialContext.wire().write("abcd");
+        initialContext.wire().writeText("abcd");
         initialFile = getFilename(initialContext);
-        // don't close context. We should not be able to write to this queue until timeout
+        // don't close context
 
         final long afterInitialWrite = System.currentTimeMillis();
         final CountDownLatch writerStarted = new CountDownLatch(1);
+        final CountDownLatch writerFinished = new CountDownLatch(1);
 
         Thread writerThread = new Thread(() -> {
             ExcerptAppender appender = builder.build().acquireAppender();
             writerStarted.countDown();
+            // wait for less than timeout and more than roll
+            Jvm.pause(WAIT_FOR_ROLL_MS);
             try (@NotNull DocumentContext context = appender.writingDocument()) {
-                // only get in here after unlocked
-                written.incrementAndGet();
+                // should not have been held up by locking
                 writerQueueFile.set(getFilename(context));
                 Wire wire = context.wire();
-                wire.write("hello");
-                wire.padToCacheAlign();
+                wire.writeText("hello");
+                writerFinished.countDown();
             }
         });
         writerThread.start();
         assertTrue("Writer thread not started",
                 writerStarted.await(1, TimeUnit.SECONDS));
 
-        while (System.currentTimeMillis() < afterInitialWrite + (TIMEOUT_MS - 50)) {
-            Thread.sleep(10);
-        }
+        assertTrue("Writer thread completed before timeout",
+                writerFinished.await(WAIT_FOR_ROLL_MS + 100, TimeUnit.MILLISECONDS));
 
-        final long elapsedMillis = System.currentTimeMillis() - afterInitialWrite;
-
-        assertTrue("Test is duff", elapsedMillis < TIMEOUT_MS);
-
-        assumeTrue("Threads wrote to different queue cycles, so no locking occurred",
-                writerQueueFile.get() == null ||
+        assertFalse("Threads wrote to different queue cycles, so no locking occurred",
                 initialFile.equals(writerQueueFile.get()));
 
-        assertEquals("Nothing should have been written until timeout", 0, written.get());
+        assertTrue("We are within timeout", System.currentTimeMillis() < afterInitialWrite + TIMEOUT_MS);
 
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() < start + TIMEOUT_MS) {
-            if (written.get() > 0)
-                break;
+        ExcerptTailer tailer = builder.build().createTailer();
+        // this call to readingDocument waits for timeout and logs out ".... resetting header after timeout ...."
+        try (DocumentContext rd = tailer.readingDocument()) {
+            assertFalse("We are outside timeout", System.currentTimeMillis() < afterInitialWrite + TIMEOUT_MS);
+            assertTrue("Something was written", rd.isPresent());
+            String value = rd.wire().readText();
+            assertEquals("the first (locked) write is lost", "hello", value);
         }
-        assertTrue("Nothing was written after header was repaired", written.get() > 0);
+        try (DocumentContext rd = tailer.readingDocument()) {
+            assertFalse("Should be only one message in the queue", rd.isPresent());
+        }
+
+        try {
+            initialContext.close();
+            fail("close should have thrown");
+        } catch (IllegalStateException e) {
+            // expected for close to throw
+        }
     }
 
     @NotNull

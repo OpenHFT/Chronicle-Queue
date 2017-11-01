@@ -823,6 +823,19 @@ public class SingleChronicleQueueExcerpts {
                 throw new UnsupportedOperationException();
             }
         }
+
+        @Override
+        public String toString() {
+            return "StoreAppender{" +
+                    "queue=" + queue +
+                    ", cycle=" + cycle +
+                    ", position=" + position +
+                    ", lastIndex=" + lastIndex +
+                    ", lazyIndexing=" + lazyIndexing +
+                    ", lastPosition=" + lastPosition +
+                    ", lastCycle=" + lastCycle +
+                    '}';
+        }
     }
 
     private static final class ClosableResources {
