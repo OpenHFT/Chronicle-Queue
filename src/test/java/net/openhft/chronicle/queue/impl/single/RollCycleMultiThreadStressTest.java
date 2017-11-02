@@ -1,10 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.Ignore;
@@ -15,12 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
@@ -29,19 +20,19 @@ import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
-    private static final long SLEEP_PER_WRITE_NANOS = 50_000;
+    private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
 
     @Ignore("long running")
     @Test
     public void stress() throws Exception {
         final File path = DirectoryUtils.tempDir("rollCycleStress");
         LOG.warn("using path {}", path);
-        final int numWriters = 1;
-        final int numThreads = Runtime.getRuntime().availableProcessors() * 2;
+        final int numThreads = Runtime.getRuntime().availableProcessors();
+        final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
         final AtomicInteger wrote = new AtomicInteger();
-        final int expectedNumberOfMessages = 1_000_000;
+        final int expectedNumberOfMessages = (int) (90 * 1e9 / SLEEP_PER_WRITE_NANOS);
 
         System.out.printf("Running test with %d writers and %d readers%n",
                 numWriters, numThreads - numWriters);
@@ -183,6 +174,7 @@ public class RollCycleMultiThreadStressTest {
                     .rollCycle(RollCycles.TEST_SECONDLY)
                     .build()) {
                 final ExcerptAppender appender = queue.acquireAppender();
+                long nextTime = System.nanoTime();
                 while (true) {
                     final int value;
 
@@ -190,7 +182,12 @@ public class RollCycleMultiThreadStressTest {
                         value = wrote.getAndIncrement();
                         ValueOut valueOut = writingDocument.wire().getValueOut();
                         valueOut.int32(value);
-                        LockSupport.parkNanos(SLEEP_PER_WRITE_NANOS);
+                        writingDocument.wire().addPadding(60); // make the message longer
+                        long delay = nextTime - System.nanoTime();
+                        if (delay > 0) {
+                            LockSupport.parkNanos(delay);
+                        }
+                        nextTime += SLEEP_PER_WRITE_NANOS * 0.99;
                     }
                     if (value >= expectedNumberOfMessages) {
                         return null;
