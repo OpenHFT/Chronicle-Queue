@@ -25,6 +25,7 @@ public enum RollCycles implements RollCycle {
     TEST_HOURLY("yyyyMMdd-HH", 60 * 60 * 1000, 16, 4), // 512 entries per hour.
     HOURLY("yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16), // 256 million entries per hour.
     LARGE_HOURLY("yyyyMMdd-HH", 60 * 60 * 1000, 16 << 10, 16), // 2 billion entries per hour.
+    LARGE_HOURLY_SPARSE("yyyyMMdd-HH", 60 * 60 * 1000, 16 << 10, 1024), // 2 billion entries per hour.
     TEST_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 8, 1), // Only good for testing - 63 entries per day
     TEST2_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 16, 2), // Only good for testing
     TEST4_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 32, 4), // Only good for testing
