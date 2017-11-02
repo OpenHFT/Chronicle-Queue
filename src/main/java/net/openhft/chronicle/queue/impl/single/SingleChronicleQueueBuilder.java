@@ -345,4 +345,22 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         }
         return super.rollTime(time, ZoneId.of("UTC"));
     }
+
+    protected QueueLock queueLock() {
+        return isQueueReplicationAvailable() && !readOnly() ? createTableStoreLock() : new NoopQueueLock();
+    }
+
+    @NotNull
+    private TSQueueLock createTableStoreLock() {
+        return new TSQueueLock(path(), pauserSupplier());
+    }
+
+    private static boolean isQueueReplicationAvailable() {
+        try {
+            Class.forName("software.chronicle.enterprise.queue.QueueSyncReplicationHandler");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 }
