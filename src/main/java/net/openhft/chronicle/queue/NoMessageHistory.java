@@ -54,6 +54,10 @@ public enum NoMessageHistory implements MessageHistory {
         // ignored
     }
 
+    public void reset() {
+        // no-op
+    }
+
     @Override
     public int lastSourceId() {
         return -1;
