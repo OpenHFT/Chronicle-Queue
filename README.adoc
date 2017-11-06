@@ -8,11 +8,9 @@ image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px
 
 == Download
 
-As a software company we are maturing and as such want to offer a more commercial supported service, to companies who use our libraries. Maven central is a fantastic location for downloading artifacts, but because our software is downloaded anonymously it offers little opportunity for us to  build up a working relationship with your organisation, we feel such a relationship will be beneficial to both parties. With our advice we can help your company get the most out of chronicle technology, in perhaps ways that you did not even realise exist, this can both save you time and money. We have pondered on how to build up this working relationship but at the same time not to alienate our existing user base. So to this end, we have decided to make the following changes,
-
--  Our libraries will continue to be open source and available on GitHub. You will continue to get access to all the source code and release tags for free and anonymously, and you are able to create the builds yourself off the latest tags.
-
--  In order to more closely engage with our users, we are no longer releasing to Maven Central. Future releases will be moved onto our own Chronicle nexus server. if you want access to this nexus server, to download the latest release artifacts, please contact mailto:sales@chronicle.software[sales@chronicle.software]
+Chronicle Software is a fast expanding company and we are offering a more commercially supported service to companies who use our libraries. Maven central is a fantastic location for downloading artifacts.  However, because our software is downloaded anonymously, it offers little opportunity for us to build a working relationship with your organisation.  Such an association would be beneficial to both parties. With our creative advice we can help your company get the most out of chronicle technology and also benefit from options you may not have considered.  We can save you both time and money. After much consideration, as to how we manage a balance with our existing user base and building up client contacts, we have decided to make the following changes:
+-	Our libraries will continue to be open source and available on GitHub. You will continue to get access to all the source code and release tags for free and anonymously, and you are able to create the builds yourself off the latest tags.
+-	In order to more closely engage with our users, we are no longer releasing to Maven Central. Future releases will be moved onto our own Chronicle nexus server. if you want access to this nexus server, to download the latest release artifacts, please contact sales@chronicle.software
 
 == Chronicle Queue
 
