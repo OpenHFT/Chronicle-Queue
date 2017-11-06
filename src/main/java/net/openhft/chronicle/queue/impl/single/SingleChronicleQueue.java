@@ -363,6 +363,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
     }
 
+    @Override
+    @NotNull
     public QueueLock queueLock() {
         return queueLock;
     }

@@ -17,22 +17,27 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.Pauser;
+import net.openhft.lang.Jvm;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+/**
+ * Implements queue lock via TableStore mechanism.
+ */
 public class TSQueueLock implements QueueLock {
 
+    private static final String QUEUE_LOCK_FILE = "queue-lock" + SingleTableBuilder.SUFFIX;
     private static final String LOCK_KEY = "chronicle.queue.lock";
     private static final long LOCK_WAIT_TIMEOUT = Long.getLong("chronicle.queue.lock.timeoutMS", 30_000);
-    private static final long UNLOCKED = 0L;
+    private static final long UNLOCKED = Long.MIN_VALUE;
+    private static final long PID = Jvm.getProcessId();
     private final LongValue lock;
     private final Pauser pauser;
     private final ThreadLocal<Long> lockHolderTidTL = new ThreadLocal<>();
@@ -40,9 +45,9 @@ public class TSQueueLock implements QueueLock {
     public TSQueueLock(File queueDirectoryPath, Supplier<Pauser> pauser) {
         final File storeFilePath;
         if ("".equals(queueDirectoryPath.getPath())) {
-            storeFilePath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
+            storeFilePath = new File(QUEUE_LOCK_FILE);
         } else {
-            storeFilePath = new File(queueDirectoryPath, DirectoryListing.DIRECTORY_LISTING_FILE);
+            storeFilePath = new File(queueDirectoryPath, QUEUE_LOCK_FILE);
             queueDirectoryPath.mkdirs();
         }
         TableStore tableStore = SingleTableBuilder.binary(storeFilePath).build();
@@ -50,6 +55,36 @@ public class TSQueueLock implements QueueLock {
         this.pauser = pauser.get();
     }
 
+    /**
+     * Stores current PID to table store, and any other process trying to acquire lock will wait for
+     * <code>chronicle.queue.lock.timeoutMS</code> millis (default is 30000) for the lock to be released, and if it is not
+     * after timeout, throws {@link IllegalStateException}. Also the locking thread ID is stored in threadLocal field, so
+     * that only locking thread is allowed to {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender} while the queue is locked.
+     */
+    @Override
+    public void acquireLock() {
+        long tid = Thread.currentThread().getId();
+        try {
+            while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
+                if (Thread.interrupted())
+                    throw new IllegalStateException("Interrupted");
+                pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+            }
+
+            // success
+            lockHolderTidTL.set(tid);
+        } catch (TimeoutException e) {
+            throw new IllegalStateException("Couldn't acquire lock after " + LOCK_WAIT_TIMEOUT
+                    + "ms. Lock is held by PID " + lock.getVolatileValue());
+        } finally {
+            pauser.reset();
+        }
+    }
+
+    /**
+     * checks if current thread holds lock. If not, it will wait for <code>chronicle.queue.lock.timeoutMS</code> millis
+     * for the lock to be released, and if it is not after timeout, throws {@link IllegalStateException}.
+     */
     @Override
     public void checkLock() {
         if (isLockHeldByCurrentThread())
@@ -57,37 +92,31 @@ public class TSQueueLock implements QueueLock {
 
         try {
             while (lock.getVolatileValue() != UNLOCKED) {
+                if (Thread.interrupted())
+                    throw new IllegalStateException("Interrupted");
                 pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
             }
         } catch (TimeoutException e) {
-            throw new IllegalStateException("Queue lock is still held after " + LOCK_WAIT_TIMEOUT + "ms. Unlock manually");
+            throw new IllegalStateException("Queue lock is still held after " + LOCK_WAIT_TIMEOUT
+                    + "ms. Lock is held by PID " + lock.getVolatileValue() + ". Unlock manually");
         } finally {
             pauser.reset();
         }
     }
 
-    @Override
-    public void acquireLock() {
-        long tid = Thread.currentThread().getId();
-        try {
-            while (!lock.compareAndSwapValue(UNLOCKED, tid)) {
-                pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
-            }
-        } catch (TimeoutException e) {
-            throw new IllegalStateException("Couldn't acquire lock after " + LOCK_WAIT_TIMEOUT + "ms.");
-        } finally {
-            pauser.reset();
-        }
-    }
-
+    /**
+     * Checks if the lock is held by current thread and if so, releases it, removing entry from TableStore and clearing
+     * ThreadLocal state, allowing anyone to proceed with {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender}.
+     */
     @Override
     public void unlock() {
         if (!isLockHeldByCurrentThread())
             throw new IllegalStateException("Can't unlock when lock is not held by this thread");
 
-        if (!lock.compareAndSwapValue(lockHolderTidTL.get(), UNLOCKED)) {
-            Jvm.warn().on(getClass(), "Queue lock was unlocked by someone else!");
+        if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
+            net.openhft.chronicle.core.Jvm.warn().on(getClass(), "Queue lock was unlocked by someone else!");
         }
+
         lockHolderTidTL.remove();
     }
 
