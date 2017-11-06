@@ -15,7 +15,6 @@
  */
 package net.openhft.chronicle.queue.impl.table;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -28,25 +27,22 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataField;
 import net.openhft.chronicle.queue.impl.single.SimpleStoreRecovery;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.StoreRecovery;
-import net.openhft.chronicle.wire.Demarshallable;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.File;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
+import java.nio.file.StandardOpenOption;
+import java.util.function.Function;
 
 public class SingleTableStore implements TableStore {
+    private static final long timeoutMS = Long.getLong("chronicle.table.store.timeoutMS", 10_000);
     @NotNull
     private final WireType wireType;
     @NotNull
@@ -57,7 +53,7 @@ public class SingleTableStore implements TableStore {
     private final Wire mappedWire;
     @NotNull
     private final ReferenceCounter refCount;
-    @Nullable
+    @NotNull
     private final StoreRecovery recovery;
 
     /**
@@ -65,6 +61,7 @@ public class SingleTableStore implements TableStore {
      *
      * @param wire a wire
      */
+    @SuppressWarnings("unused")
     @UsedViaReflection
     private SingleTableStore(@NotNull WireIn wire) {
         assert wire.startUse();
@@ -77,8 +74,7 @@ public class SingleTableStore implements TableStore {
             this.refCount = ReferenceCounter.onReleased(this::onCleanup);
 
             if (wire.bytes().readRemaining() > 0) {
-                this.recovery = wire.read(MetaDataField.recovery)
-                        .typedMarshallable();
+                this.recovery = wire.read(MetaDataField.recovery).typedMarshallable();
             } else {
                 this.recovery = new SimpleStoreRecovery(); // disabled.
             }
@@ -91,29 +87,17 @@ public class SingleTableStore implements TableStore {
     /**
      * @param wireType    the wire type that is being used
      * @param mappedBytes used to mapped the data store file
-     * @param recovery
+     * @param recovery    used to recover from concurrent modifications
      */
     public SingleTableStore(@NotNull final WireType wireType,
                             @NotNull MappedBytes mappedBytes,
-                            StoreRecovery recovery) {
+                            @NotNull StoreRecovery recovery) {
         this.recovery = recovery;
         this.wireType = wireType;
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
         this.refCount = ReferenceCounter.onReleased(this::onCleanup);
         mappedWire = wireType.apply(mappedBytes);
-    }
-
-    public static void dumpStore(@NotNull Wire wire) {
-        Bytes<?> bytes = wire.bytes();
-        bytes.readPositionUnlimited(0);
-        Jvm.debug().on(SingleTableStore.class, Wires.fromSizePrefixedBlobs(wire));
-    }
-
-    @NotNull
-    public static String dump(@NotNull String directoryFilePath) {
-        SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directoryFilePath).build();
-        return q.dump();
     }
 
     /**
@@ -125,10 +109,10 @@ public class SingleTableStore implements TableStore {
         return wireType;
     }
 
-    @Nullable
+    @NotNull
     @Override
     public File file() {
-        return mappedFile == null ? null : mappedFile.file();
+        return mappedFile.file();
     }
 
     @NotNull
@@ -207,10 +191,11 @@ public class SingleTableStore implements TableStore {
         return recovery.writeHeader(wire, length, safeLength, timeoutMS, null);
     }
 
-
-    // TODO Change to ThreadLocal values if performance is a problem.
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public synchronized LongValue acquireValueFor(CharSequence key) {
+    public synchronized LongValue acquireValueFor(CharSequence key) { // TODO Change to ThreadLocal values if performance is a problem.
         StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve();
         try {
@@ -232,7 +217,7 @@ public class SingleTableStore implements TableStore {
             int safeLength = Maths.toUInt31(mappedBytes.realCapacity() - mappedBytes.readPosition());
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             mappedBytes.writePosition(mappedBytes.readPosition());
-            long pos = recovery.writeHeader(mappedWire, Wires.UNKNOWN_LENGTH, safeLength, 10_000, null);
+            long pos = recovery.writeHeader(mappedWire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS, null);
             LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(Long.MIN_VALUE, longValue);
             mappedWire.updateHeader(pos, false);
@@ -244,6 +229,35 @@ public class SingleTableStore implements TableStore {
         } finally {
             mappedBytes.release();
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <R> R doWithExclusiveLock(Function<TableStore, ? extends R> code) {
+        final long timeoutAt = System.currentTimeMillis() + 2 * timeoutMS;
+        boolean warnedOnFailure = false;
+        try (final FileChannel channel = FileChannel.open(file().toPath(), StandardOpenOption.WRITE)) {
+            while (System.currentTimeMillis() < timeoutAt) {
+                try {
+                    FileLock fileLock = channel.tryLock();
+                    if (fileLock != null) {
+                        return code.apply(this);
+                    }
+                } catch (IOException | OverlappingFileLockException e) {
+                    // failed to acquire the lock, wait until other operation completes
+                    if (!warnedOnFailure) {
+                        Jvm.warn().on(getClass(), "Failed to acquire a lock on the table store file. Retrying", e);
+                        warnedOnFailure = true;
+                    }
+                }
+                Jvm.pause(50L);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Couldn't open table store file for writing", e);
+        }
+        throw new IllegalStateException("Unable to claim exclusive lock on file " + file());
     }
 }
 

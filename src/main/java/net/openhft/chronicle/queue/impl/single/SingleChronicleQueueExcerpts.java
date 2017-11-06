@@ -68,9 +68,6 @@ public class SingleChronicleQueueExcerpts {
         void writeBytes(long index, BytesStore bytes);
     }
 
-    /**
-     * // StoreAppender
-     */
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
         @NotNull
         private final SingleChronicleQueue queue;
@@ -139,7 +136,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeText(CharSequence text) throws UnrecoverableTimeoutException {
+        public void writeText(@NotNull CharSequence text) throws UnrecoverableTimeoutException {
             try (DocumentContext dc = writingDocument()) {
                 dc.wire().bytes()
                         .append8bit(text);
@@ -168,7 +165,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void pretouch() {
-            setCycle(queue.cycle(), true);
+            setCycle(queue.cycle());
             if (pretoucher == null)
                 pretoucher = new PretoucherState(() -> this.store.writePosition());
             Wire wire = this.wire;
@@ -219,9 +216,9 @@ public class SingleChronicleQueueExcerpts {
             return sourceId() != 0;
         }
 
-        private void setCycle(int cycle, boolean createIfAbsent) {
+        private void setCycle(int cycle) {
             if (cycle != this.cycle)
-                setCycle2(cycle, createIfAbsent);
+                setCycle2(cycle, true);
         }
 
         private void setCycle2(int cycle, boolean createIfAbsent) {
@@ -652,7 +649,7 @@ public class SingleChronicleQueueExcerpts {
 
         <T> void append2(int length, @NotNull WireWriter<T> wireWriter, T writer) throws
                 UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
-            setCycle(Math.max(queue.cycle(), cycle + 1), true);
+            setCycle(Math.max(queue.cycle(), cycle + 1));
             position(store.writeHeader(wire, length, length, timeoutMS()));
             beforeAppend(wire, wire.headerNumber() + 1);
             wireWriter.write(writer, wire);
@@ -736,7 +733,7 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             }
 
-            @Nullable
+            @NotNull
             @Override
             public Wire wire() {
                 return wire;
