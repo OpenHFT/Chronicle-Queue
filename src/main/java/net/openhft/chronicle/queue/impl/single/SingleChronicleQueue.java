@@ -60,6 +60,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -865,8 +866,27 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
             if (currentCycle > directoryListing.getMaxCreatedCycle() ||
-                    currentCycle < directoryListing.getMinCreatedCycle())
-                throw new IllegalStateException("file not exists, currentCycle, " + "file=" + currentCycleFile);
+                    currentCycle < directoryListing.getMinCreatedCycle()) {
+                boolean fileFound = false;
+                for (int i = 0; i < 20; i++) {
+                    Jvm.pause(10);
+                    if ((fileFound = (
+                            currentCycle <= directoryListing.getMaxCreatedCycle() &&
+                            currentCycle >= directoryListing.getMinCreatedCycle()))) {
+                        break;
+                    }
+                }
+                fileFound |= currentCycleFile.exists();
+
+                if (!fileFound) {
+                    throw new IllegalStateException(
+                            String.format("Expected file to exist for cycle: %d, file: %s.%nminCycle: %d, maxCycle: %d%n" +
+                                            "Available files: %s",
+                                    currentCycle, currentCycleFile,
+                                    directoryListing.getMinCreatedCycle(), directoryListing.getMaxCreatedCycle(),
+                                    Arrays.toString(path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)))));
+                }
+            }
 
             Long key = dateCache.toLong(currentCycleFile);
             File file = tree.get(key);
