@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
+import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -142,6 +143,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @After
     public void after() {
         threadDump.assertNoNewThreads();
+        // warnings are often expected
+        exceptionKeyIntegerMap.entrySet().removeIf(entry -> entry.getKey().level.equals(LogLevel.WARN));
         if (Jvm.hasException(exceptionKeyIntegerMap)) {
             Jvm.dumpException(exceptionKeyIntegerMap);
             Assert.fail();
