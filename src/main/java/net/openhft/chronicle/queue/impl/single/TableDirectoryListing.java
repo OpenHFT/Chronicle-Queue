@@ -1,17 +1,12 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
@@ -49,35 +44,19 @@ final class TableDirectoryListing implements DirectoryListing {
 
     @Override
     public void init() {
-        final long timeoutAt = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(20L);
-        boolean warnedOnFailure = false;
-        while (System.currentTimeMillis() < timeoutAt) {
-            try (final FileChannel channel = FileChannel.open(tableStore.file().toPath(),
-                    StandardOpenOption.WRITE);
-                 final FileLock fileLock = channel.tryLock()) {
-                maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
-                minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
-                lock = tableStore.acquireValueFor(LOCK);
-                modCount = tableStore.acquireValueFor(MOD_COUNT);
-                if (lock.getVolatileValue() == Long.MIN_VALUE) {
-                    lock.compareAndSwapValue(Long.MIN_VALUE, 0);
-                }
-                if (modCount.getVolatileValue() == Long.MIN_VALUE) {
-                    modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
-                }
-                return;
-            } catch (IOException | RuntimeException e) {
-                // failed to acquire the lock, wait until other operation completes
-                if (!warnedOnFailure) {
-                    LOGGER.warn("Failed to acquire a lock on the directory-listing file: {}:{}. Retrying.",
-                            e.getClass().getSimpleName(), e.getMessage());
-                    warnedOnFailure = true;
-                }
-                Jvm.pause(50L);
+        tableStore.doWithExclusiveLock(ts -> {
+            maxCycleValue = ts.acquireValueFor(HIGHEST_CREATED_CYCLE);
+            minCycleValue = ts.acquireValueFor(LOWEST_CREATED_CYCLE);
+            lock = ts.acquireValueFor(LOCK);
+            modCount = ts.acquireValueFor(MOD_COUNT);
+            if (lock.getVolatileValue() == Long.MIN_VALUE) {
+                lock.compareAndSwapValue(Long.MIN_VALUE, 0);
             }
-        }
-
-        throw new IllegalStateException("Unable to claim exclusive lock on file " + tableStore.file());
+            if (modCount.getVolatileValue() == Long.MIN_VALUE) {
+                modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
+            }
+            return this;
+        });
     }
 
     @Override
