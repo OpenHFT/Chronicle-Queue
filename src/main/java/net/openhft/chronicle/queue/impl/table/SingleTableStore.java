@@ -191,10 +191,11 @@ public class SingleTableStore implements TableStore {
         return recovery.writeHeader(wire, length, safeLength, timeoutMS, null);
     }
 
-
-    // TODO Change to ThreadLocal values if performance is a problem.
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public synchronized LongValue acquireValueFor(CharSequence key) {
+    public synchronized LongValue acquireValueFor(CharSequence key) { // TODO Change to ThreadLocal values if performance is a problem.
         StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve();
         try {
@@ -230,6 +231,9 @@ public class SingleTableStore implements TableStore {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <R> R doWithExclusiveLock(Function<TableStore, ? extends R> code) {
         final long timeoutAt = System.currentTimeMillis() + 2 * timeoutMS;
