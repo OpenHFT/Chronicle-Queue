@@ -51,7 +51,7 @@ public class TSQueueLock implements QueueLock {
             queueDirectoryPath.mkdirs();
         }
         TableStore tableStore = SingleTableBuilder.binary(storeFilePath).build();
-        this.lock = tableStore.acquireValueFor(LOCK_KEY);
+        this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(LOCK_KEY));
         this.pauser = pauser.get();
     }
 
