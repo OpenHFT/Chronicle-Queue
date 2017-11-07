@@ -18,7 +18,10 @@ Chronicle Queue replication works by replicating all messages from the `PRIMARY`
 
 image::Chronicle-Queue-Replication_diagram_02.jpg[Replication]
 
-IMPORTANT: Chronicle requires exclusive write access to the `SECONDARY`. You should treat the `SECONDARY` as read-only, and not attempt to manually write messages.
+At startup, replication locks `PRIMARY` queue and waits for `SECONDARY` to report the number of records it has, and if `SECONDARY` has more records, they are replayed back to `PRIMARY` before it is unlocked and usable again. This is done to provide
+automatic data re-sync after failover to `SECONDARY`.
+
+IMPORTANT: Chronicle requires exclusive write access to the `SECONDARY`. You should treat the `SECONDARY` as read-only, and not attempt to manually write messages. If you do so, it will break replication.
 
 == Queue header
 The Chronicle Queue header is structured as follows:
@@ -242,8 +245,8 @@ public interface QueueView<T, M> extends TopicPublisher<T, M>, KeyedView {
 
 |=======
 |`Excerpt`| In Chronicle we refer to messages as excerpts.
-|`PRIMARY`   | The master of the messages; messages are replicated from the PRIMARY to the SECONDARY.
-|`SECONDARY`    | The receiver of the messages; holds an real-time up-to-date copy of the PRIMARY's data.
+|`PRIMARY`   | The master of the messages aka `source`; messages are replicated from the PRIMARY to the SECONDARY.
+|`SECONDARY`    | The receiver of the messages aka `sink`; holds an real-time up-to-date copy of the PRIMARY's data.
 |=======
 
 '''

@@ -66,6 +66,11 @@
 
         <dependency>
             <groupId>net.openhft</groupId>
+            <artifactId>lang</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
             <artifactId>chronicle-bytes</artifactId>
         </dependency>
 

@@ -126,6 +126,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final DirectoryListing directoryListing;
     @NotNull
+    private final QueueLock queueLock;
+    @NotNull
     private RollCycle rollCycle;
     @NotNull
     private RollingResourcesCache dateCache;
@@ -170,6 +172,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         this.directoryListing.refresh();
+
+        this.queueLock = builder.queueLock();
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
             try {
@@ -349,6 +353,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             throw new IllegalStateException("Can't append to a read-only chronicle");
         }
 
+        queueLock.checkLock();
+
         if (SHOULD_RELEASE_RESOURCES) {
             return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
                     StoreComponentReferenceHandler.appenderQueue(),
@@ -356,6 +362,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
+    }
+
+    @Override
+    @NotNull
+    public QueueLock queueLock() {
+        return queueLock;
     }
 
     @NotNull

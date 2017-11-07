@@ -19,6 +19,7 @@ import net.openhft.chronicle.core.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.impl.single.QueueLock;
 import net.openhft.chronicle.queue.impl.single.StoreRecovery;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -111,4 +112,6 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the checkpointInterval used by delta wire
      */
     int deltaCheckpointInterval();
+
+    QueueLock queueLock();
 }
