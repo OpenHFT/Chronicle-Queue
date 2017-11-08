@@ -58,6 +58,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
@@ -73,6 +74,7 @@ import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
+    private static final long RELEASE_WARNING_THRESHOLD_NS = TimeUnit.MILLISECONDS.toNanos(300L);
 
     @FunctionalInterface
     interface WireWriter<T> {
@@ -277,16 +279,18 @@ public class SingleChronicleQueueExcerpts {
                 this.wire = wireType.apply(store.bytes());
                 closableResources.wireReference = this.wire.bytes();
 
-                if (oldw != null)
-                    oldw.bytes().release();
+                if (oldw != null) {
+                    releaseWireResources("StoreAppender.resetWires", "wire", oldw, queue);
+                }
             }
             {
                 Wire old = this.wireForIndex;
                 this.wireForIndex = wireType.apply(store.bytes());
                 closableResources.wireForIndexReference = wireForIndex.bytes();
 
-                if (old != null)
-                    old.bytes().release();
+                if (old != null) {
+                    releaseWireResources("StoreAppender.resetWires", "wireForIndex", old, queue);
+                }
             }
 
         }
@@ -1504,8 +1508,9 @@ public class SingleChronicleQueueExcerpts {
             closableResources.wireReference = wire.bytes();
             assert headerNumberCheck((AbstractWire) wireForIndex);
 
-            if (wireForIndexOld != null)
-                wireForIndexOld.bytes().release();
+            if (wireForIndexOld != null) {
+                releaseWireResources("StoreTailer.resetWires", "wireForIndex", wireForIndexOld, queue);
+            }
 
         }
 
@@ -1848,8 +1853,9 @@ public class SingleChronicleQueueExcerpts {
                 AbstractWire oldWire = this.wire;
                 this.wire = wire;
 
-                if (oldWire != null)
-                    oldWire.bytes().release();
+                if (oldWire != null) {
+                    releaseWireResources("StoreTailerContext.wire", "wire", oldWire, queue);
+                }
             }
         }
 
@@ -1906,6 +1912,18 @@ public class SingleChronicleQueueExcerpts {
                         direction == directionAtLastMoveTo &&
                         queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
             }
+        }
+    }
+
+    private static void releaseWireResources(final String source, final String wireType,
+                                             final Wire wire, final SingleChronicleQueue queue) {
+        final long start = System.nanoTime();
+        final long capacity = wire.bytes().realCapacity();
+        wire.bytes().release();
+        final long releaseTimeNanos = System.nanoTime() - start;
+        if (releaseTimeNanos > RELEASE_WARNING_THRESHOLD_NS) {
+            LOG.warn(String.format("Releasing resources for wire \"%s\" of capacity %dB in %s took %dms in queue at %s",
+                    wireType, capacity, source, TimeUnit.NANOSECONDS.toMillis(releaseTimeNanos), queue.path.getAbsolutePath()));
         }
     }
 }
