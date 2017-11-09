@@ -26,6 +26,9 @@ final class TableDirectoryListing implements DirectoryListing {
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
+    private final IntSupplier getMaxCycleValueMethodRef = this::getMaxCycleValue;
+    private final IntSupplier getMinCycleValueMethodRef = this::getMinCycleValue;
+    private final IntSupplier refreshIndexMethodRef = this::refreshIndex;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue lock;
@@ -64,7 +67,7 @@ final class TableDirectoryListing implements DirectoryListing {
         if (readOnly) {
             return;
         }
-        tryWithLock(this::refreshIndex);
+        tryWithLock(refreshIndexMethodRef);
     }
 
     @Override
@@ -86,7 +89,7 @@ final class TableDirectoryListing implements DirectoryListing {
         if (readOnly) {
             return getMaxCycleValue();
         }
-        return tryWithLock(this::getMaxCycleValue);
+        return tryWithLock(getMaxCycleValueMethodRef);
     }
 
     @Override
@@ -94,7 +97,7 @@ final class TableDirectoryListing implements DirectoryListing {
         if (readOnly) {
             return getMinCycleValue();
         }
-        return tryWithLock(this::getMinCycleValue);
+        return tryWithLock(getMinCycleValueMethodRef);
     }
 
     @Override
