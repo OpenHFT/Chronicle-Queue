@@ -1,12 +1,15 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.wire.Wire;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,6 +32,7 @@ public enum StoreComponentReferenceHandler {
                 thread.setName(THREAD_NAME);
                 return thread;
             });
+    private static final Queue<Wire> WIRES_TO_RELEASE = new ConcurrentLinkedQueue<>();
     private static final ConcurrentMap<Reference<?>, Runnable> CLOSE_ACTIONS = new ConcurrentHashMap<>();
     private static final boolean SHOULD_RELEASE_RESOURCES =
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
@@ -40,10 +44,11 @@ public enum StoreComponentReferenceHandler {
     static {
         THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
-                boolean referenceWasProcessed = processReferenceQueue(EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE);
-                referenceWasProcessed |= processReferenceQueue(EXPIRED_THREAD_LOCAL_TAILERS_QUEUE);
+                boolean workDone = processReferenceQueue(EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE);
+                workDone |= processReferenceQueue(EXPIRED_THREAD_LOCAL_TAILERS_QUEUE);
+                workDone |= processWireQueue();
 
-                if (!referenceWasProcessed) {
+                if (!workDone) {
                     LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(1L));
                 }
             }
@@ -60,6 +65,25 @@ public enum StoreComponentReferenceHandler {
 
     static <T> void register(final Reference<T> reference, final Runnable cleanupJob) {
         CLOSE_ACTIONS.put(reference, cleanupJob);
+    }
+
+    static void queueForRelease(final Wire wire) {
+        WIRES_TO_RELEASE.add(wire);
+    }
+
+    private static boolean processWireQueue() {
+        Wire wireToRelease;
+        boolean released = false;
+        while ((wireToRelease = WIRES_TO_RELEASE.poll()) != null) {
+            try {
+                released = true;
+                wireToRelease.bytes().release();
+            } catch (Throwable t) {
+                LOGGER.warn("Failed to release wire bytes", t);
+            }
+        }
+
+        return released;
     }
 
     private static boolean processReferenceQueue(final ReferenceQueue<?> referenceQueue) {

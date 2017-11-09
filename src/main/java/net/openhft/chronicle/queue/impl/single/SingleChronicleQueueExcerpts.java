@@ -280,7 +280,7 @@ public class SingleChronicleQueueExcerpts {
                 closableResources.wireReference = this.wire.bytes();
 
                 if (oldw != null) {
-                    releaseWireResources("StoreAppender.resetWires", "wire", oldw, queue);
+                    releaseWireResources(oldw);
                 }
             }
             {
@@ -289,7 +289,7 @@ public class SingleChronicleQueueExcerpts {
                 closableResources.wireForIndexReference = wireForIndex.bytes();
 
                 if (old != null) {
-                    releaseWireResources("StoreAppender.resetWires", "wireForIndex", old, queue);
+                    releaseWireResources(old);
                 }
             }
 
@@ -1509,7 +1509,7 @@ public class SingleChronicleQueueExcerpts {
             assert headerNumberCheck((AbstractWire) wireForIndex);
 
             if (wireForIndexOld != null) {
-                releaseWireResources("StoreTailer.resetWires", "wireForIndex", wireForIndexOld, queue);
+                releaseWireResources(wireForIndexOld);
             }
 
         }
@@ -1854,7 +1854,7 @@ public class SingleChronicleQueueExcerpts {
                 this.wire = wire;
 
                 if (oldWire != null) {
-                    releaseWireResources("StoreTailerContext.wire", "wire", oldWire, queue);
+                    releaseWireResources(oldWire);
                 }
             }
         }
@@ -1915,15 +1915,7 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
-    private static void releaseWireResources(final String source, final String wireType,
-                                             final Wire wire, final SingleChronicleQueue queue) {
-        final long start = System.nanoTime();
-        final long capacity = wire.bytes().realCapacity();
-        wire.bytes().release();
-        final long releaseTimeNanos = System.nanoTime() - start;
-        if (releaseTimeNanos > RELEASE_WARNING_THRESHOLD_NS) {
-            LOG.warn(String.format("Releasing resources for wire \"%s\" of capacity %dB in %s took %dms in queue at %s",
-                    wireType, capacity, source, TimeUnit.NANOSECONDS.toMillis(releaseTimeNanos), queue.path.getAbsolutePath()));
-        }
+    private static void releaseWireResources(final Wire wire) {
+        StoreComponentReferenceHandler.queueForRelease(wire);
     }
 }

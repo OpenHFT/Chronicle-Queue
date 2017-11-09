@@ -77,6 +77,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -3621,7 +3622,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             }
 
-            assert mappedFile.isClosed();
+            waitFor(mappedFile::isClosed, "mappedFile is not closed");
 
             // this used to fail on windows
             Assert.assertTrue(mappedFile.file().delete());
@@ -3665,8 +3666,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
-            Assert.assertTrue(mappedFile1.isClosed());
-            Assert.assertTrue(mappedFile2.isClosed());
+            waitFor(mappedFile1::isClosed, "mappedFile1 is not closed");
+            waitFor(mappedFile2::isClosed, "mappedFile2 is not closed");
             //      Assert.assertTrue(mappedFile1 == mappedFile3); //  todo fix
             Assert.assertTrue(mappedFile2 == mappedFile4);
 
@@ -3814,5 +3815,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
         return entryCount;
+    }
+
+    private static void waitFor(final Supplier<Boolean> condition, final String message) {
+        final long timeoutAt = System.currentTimeMillis() + 10_000L;
+        while (System.currentTimeMillis() < timeoutAt) {
+            if (condition.get()) {
+                return;
+            }
+        }
+
+        fail(message);
     }
 }
