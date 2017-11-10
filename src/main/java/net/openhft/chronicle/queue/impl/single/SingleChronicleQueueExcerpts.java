@@ -337,8 +337,9 @@ public class SingleChronicleQueueExcerpts {
 
                 if (wire == null)
                     setCycle2(cycle, true);
-                else if (this.cycle != cycle)
-                    rollCycleTo(cycle);
+                else
+                    if (this.cycle != cycle)
+                        rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
                 for (int i = 0; i < 128; i++) {
@@ -369,21 +370,22 @@ public class SingleChronicleQueueExcerpts {
             int qCycle = queue.cycle();
             if (cycle < queue.cycle()) {
                 setCycle2(cycle = qCycle, true);
-            } else if (cycle == qCycle) {
-                // for the rare case where the qCycle has just changed in the last
-                // few milliseconds since
-                setCycle2(++cycle, true);
-            } else {
-                throw new IllegalStateException("Found an EOF on the next cycle file," +
-                        " this next file, should not have an EOF as its cycle " +
-                        "number is greater than the current cycle (based on the " +
-                        "current time), this should only happen " +
-                        "if it was written by a different appender set with a different " +
-                        "EPOCH or different roll cycle." +
-                        "All your appenders ( that write to a given directory ) " +
-                        "should have the same EPOCH and roll cycle" +
-                        " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.file().getAbsolutePath());
-            }
+            } else
+                if (cycle == qCycle) {
+                    // for the rare case where the qCycle has just changed in the last
+                    // few milliseconds since
+                    setCycle2(++cycle, true);
+                } else {
+                    throw new IllegalStateException("Found an EOF on the next cycle file," +
+                            " this next file, should not have an EOF as its cycle " +
+                            "number is greater than the current cycle (based on the " +
+                            "current time), this should only happen " +
+                            "if it was written by a different appender set with a different " +
+                            "EPOCH or different roll cycle." +
+                            "All your appenders ( that write to a given directory ) " +
+                            "should have the same EPOCH and roll cycle" +
+                            " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.file().getAbsolutePath());
+                }
             return cycle;
         }
 
@@ -812,12 +814,13 @@ public class SingleChronicleQueueExcerpts {
                                 assert lazyIndexing || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
                         }
                         assert checkWritePositionHeaderNumber();
-                    } else if (wire != null) {
-                        isClosed = true;
-                        assert resetAppendingThread();
-                        writeBytes(wire.headerNumber(), wire.bytes());
-                        wire = StoreAppender.this.wire;
-                    }
+                    } else
+                        if (wire != null) {
+                            isClosed = true;
+                            assert resetAppendingThread();
+                            writeBytes(wire.headerNumber(), wire.bytes());
+                            wire = StoreAppender.this.wire;
+                        }
                 } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
@@ -1024,11 +1027,12 @@ public class SingleChronicleQueueExcerpts {
                     int firstCycle = queue.firstCycle();
                     if (rollCycle.toCycle(index) < firstCycle)
                         toStart();
-                } else if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
-                    // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
-                    // since we can't find an entry at current index, indicate that we're at the end of a cycle
-                    state = TailerState.END_OF_CYCLE;
-                }
+                } else
+                    if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
+                        // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
+                        // since we can't find an entry at current index, indicate that we're at the end of a cycle
+                        state = TailerState.END_OF_CYCLE;
+                    }
             } catch (StreamCorruptedException e) {
                 throw new IllegalStateException(e);
             } catch (UnrecoverableTimeoutException notComplete) {
@@ -1355,23 +1359,18 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
-            final boolean canReuseLastIndexMove = moveToState.canReuseLastIndexMove(index, state, direction, queue, wire());
-            final boolean indexIsCloseToAndAheadOfLastIndexMove = moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue);
-            if (canReuseLastIndexMove) {
+            if (moveToState.canReuseLastIndexMove(index, state, direction, queue, wire())) {
                 return true;
-            } else {
-
-                if (indexIsCloseToAndAheadOfLastIndexMove) {
-                    final long knownIndex = moveToState.lastMovedToIndex;
-                    final boolean found =
-                            this.store.linearScanTo(index, knownIndex, this,
-                                    moveToState.readPositionAtLastMove) == ScanResult.FOUND;
-                    if (found) {
-                        index(index);
-                        moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
-                    }
-                    return found;
+            } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
+                final long knownIndex = moveToState.lastMovedToIndex;
+                final boolean found =
+                        this.store.linearScanTo(index, knownIndex, this,
+                                moveToState.readPositionAtLastMove) == ScanResult.FOUND;
+                if (found) {
+                    index(index);
+                    moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
                 }
+                return found;
             }
 
             return moveToIndexInternal(index);
