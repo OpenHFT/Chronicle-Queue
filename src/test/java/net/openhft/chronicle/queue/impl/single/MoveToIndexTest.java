@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -44,7 +43,6 @@ public final class MoveToIndexTest {
     }
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/401
-    @Ignore
     @Test
     public void testRandomMove() throws Exception {
         final Map<Long, String> messageByIndex = new HashMap<>();
@@ -56,7 +54,8 @@ public final class MoveToIndexTest {
             for (int i = 0; i < 10; i++) {
                 final String message = "msg" + i;
                 appender.writeDocument(w -> w.write("message").object(message));
-                messageByIndex.put(appender.lastIndexAppended(), message);
+                final long appendIndex = appender.lastIndexAppended();
+                messageByIndex.put(appendIndex, message);
             }
 
             final Random random = new Random(1510298038000L);

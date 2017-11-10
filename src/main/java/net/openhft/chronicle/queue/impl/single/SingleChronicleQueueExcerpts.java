@@ -1355,19 +1355,23 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
-            if (moveToState.canReuseLastIndexMove(index, state, direction, queue, wire())) {
+            final boolean canReuseLastIndexMove = moveToState.canReuseLastIndexMove(index, state, direction, queue, wire());
+            final boolean indexIsCloseToAndAheadOfLastIndexMove = moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue);
+            if (canReuseLastIndexMove) {
                 return true;
-            } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
-                final long knownIndex = moveToState.calculateKnownIndex(wire().bytes().readPosition());
-                final long knownPosition = wire().bytes().readPosition();
-                final boolean found =
-                        this.store.linearScanTo(index, knownIndex, this,
-                                knownPosition) == ScanResult.FOUND;
-                if (found) {
-                    index(index);
-                    moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
+            } else {
+
+                if (indexIsCloseToAndAheadOfLastIndexMove) {
+                    final long knownIndex = moveToState.lastMovedToIndex;
+                    final boolean found =
+                            this.store.linearScanTo(index, knownIndex, this,
+                                    moveToState.readPositionAtLastMove) == ScanResult.FOUND;
+                    if (found) {
+                        index(index);
+                        moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
+                    }
+                    return found;
                 }
-                return found;
             }
 
             return moveToIndexInternal(index);
@@ -1885,11 +1889,6 @@ public class SingleChronicleQueueExcerpts {
                 lastMovedToIndex = Long.MIN_VALUE;
                 directionAtLastMoveTo = TailerDirection.NONE;
                 readPositionAtLastMove = Long.MIN_VALUE;
-            }
-
-            private long calculateKnownIndex(final long readPosition) {
-                return readPositionAtLastMove != readPosition ?
-                        lastMovedToIndex + 1 : lastMovedToIndex;
             }
 
             private boolean indexIsCloseToAndAheadOfLastIndexMove(
