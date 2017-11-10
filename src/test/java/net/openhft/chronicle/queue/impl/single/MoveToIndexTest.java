@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -42,6 +43,7 @@ public final class MoveToIndexTest {
     }
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/401
+    @Ignore
     @Test
     public void testRandomMove() throws Exception {
         int nbMessages = 10;
