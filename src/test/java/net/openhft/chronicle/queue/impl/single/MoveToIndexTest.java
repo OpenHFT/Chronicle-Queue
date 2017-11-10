@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 
@@ -46,34 +47,28 @@ public final class MoveToIndexTest {
     @Ignore
     @Test
     public void testRandomMove() throws Exception {
-        int nbMessages = 10;
-        int nbTests = 100;
+        final Map<Long, String> messageByIndex = new HashMap<>();
 
-        Map<Long, String> messages = new HashMap<>(nbMessages);
-
-        File cqFolder = tmpFolder.newFolder("cq");
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(cqFolder).build()) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.
+                binary(tmpFolder.newFolder()).build()) {
             // create a queue and add some excerpts
-            ExcerptAppender app = queue.acquireAppender();
-            for (int i =0; i < nbMessages; i++) {
+            final ExcerptAppender appender = queue.acquireAppender();
+            for (int i = 0; i < 10; i++) {
                 final String message = "msg" + i;
-                app.writeDocument(w -> w.write("message").object(message));
-                if (i < nbMessages + 1) {
-                    messages.put(app.lastIndexAppended(), message);
-                }
+                appender.writeDocument(w -> w.write("message").object(message));
+                messageByIndex.put(appender.lastIndexAppended(), message);
             }
 
-            Random random = new Random(1510298038000L);
-            List<Long> offsets = new ArrayList<>(messages.keySet());
-            ExcerptTailer tailer = queue.createTailer().toStart();
-            String[] ret = new String[1];
-            for (int i=0; i < nbTests; i++) {
-                long offset = offsets.get(random.nextInt(messages.keySet().size()));
-                tailer.moveToIndex(offset);
-                tailer.readDocument(w -> ret[0] = (String) w.read("message").object());
-                assertEquals(messages.get(offset), ret[0]);
-                long index = tailer.index();
-                tailer.readDocument(w -> ret[0] = (String) w.read("message").object());
+            final Random random = new Random(1510298038000L);
+            final List<Long> indices = new ArrayList<>(messageByIndex.keySet());
+            final ExcerptTailer tailer = queue.createTailer();
+            final AtomicReference<String> capturedMessage = new AtomicReference<>();
+            for (int i = 0; i < 100; i++) {
+                final long randomIndex = indices.get(random.nextInt(messageByIndex.keySet().size()));
+                tailer.moveToIndex(randomIndex);
+                tailer.readDocument(w -> capturedMessage.set((String) w.read("message").object()));
+                assertEquals(messageByIndex.get(randomIndex), capturedMessage.get());
+                tailer.readDocument(w -> w.read("message").object());
             }
         }
     }
