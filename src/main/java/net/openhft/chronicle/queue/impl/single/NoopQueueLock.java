@@ -25,11 +25,11 @@ public class NoopQueueLock implements QueueLock {
 
     @Override
     public void acquireLock() {
-        throw new UnsupportedOperationException();
+
     }
 
     @Override
     public void unlock() {
-        throw new UnsupportedOperationException();
+
     }
 }
