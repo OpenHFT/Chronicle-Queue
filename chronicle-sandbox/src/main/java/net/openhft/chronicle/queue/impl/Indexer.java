@@ -46,7 +46,7 @@ public class Indexer {
     }
 
     /**
-     * Scans through every excerpts and records every 64th address in the index2index'
+     * Scans through every excerpts and records every 64th addressForRead in the index2index'
      *
      * @
      */
@@ -65,10 +65,10 @@ public class Indexer {
     }
 
     /**
-     * records every 64th address in the index2index
+     * records every 64th addressForRead in the index2index
      *
      * @param index   the index of the Excerpts which we are going to record
-     * @param address the address of the Excerpts which we are going to record
+     * @param address the addressForRead of the Excerpts which we are going to record
      */
     private void recordAddress(long index, long address) {
         if (index % 64 != 0)

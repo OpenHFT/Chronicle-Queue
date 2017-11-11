@@ -245,10 +245,10 @@ public class SingleChronicleQueue extends AbstractChronicle {
     /**
      * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is used for creating
      * both the primary and secondary indexes. Chronicle Queue uses a root primary index ( each entry in the primary
-     * index points to a unique a secondary index. The secondary index only records the address of every 64th except,
+     * index points to a unique a secondary index. The secondary index only records the addressForRead of every 64th except,
      * the except are linearly scanned from there on.
      *
-     * @return the address of the Excerpt containing the usable index, just after the header
+     * @return the addressForRead of the Excerpt containing the usable index, just after the header
      */
     long newIndex() {
         final ByteableLongArrayValues array = longArray.get();
@@ -268,7 +268,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
      * This method does not update the index, as indexes are not used for meta data
      *
      * @param buffer
-     * @return the address of the appended data
+     * @return the addressForRead of the appended data
      */
     private long appendMetaDataReturnAddress(@NotNull Bytes buffer) {
         long length = checkRemainingForAppend(buffer);
