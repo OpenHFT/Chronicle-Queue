@@ -158,7 +158,7 @@ public class WriteBytesTest {
                     "]\n" +
                     "# position: 960, header: 0\n" +
                     "--- !!data #binary\n" +
-                    "000003c0             80 7F 7F 7F  7F 7F 7F 7F                 ···· ····    \n" +
+                    "000003c0             80 7f 7f 7f  7f 7f 7f 7f                 ···· ····    \n" +
                     "# position: 972, header: 1\n" +
                     "--- !!data #binary\n" +
                     "000003d0 81 80 80 80 80 80 80 80                          ········         \n" +
@@ -227,14 +227,14 @@ public class WriteBytesTest {
                     "# # Unknown_0x8B\n" +
                     "# position: 1116, header: 13\n" +
                     "--- !!data #binary\n" +
-                    "00000460 8D 8C 8C 8C 8C 8C 8C 8C                          ········         \n" +
+                    "00000460 8d 8c 8c 8c 8c 8c 8c 8c                          ········         \n" +
                     "# position: 1128, header: 14\n" +
                     "--- !!data #binary\n" +
-                    "00000460                                      8E 8D 8D 8D              ····\n" +
-                    "00000470 8D 8D 8D 8D                                      ····             \n" +
+                    "00000460                                      8e 8d 8d 8d              ····\n" +
+                    "00000470 8d 8d 8d 8d                                      ····             \n" +
                     "# position: 1140, header: 15\n" +
                     "--- !!data #binary\n" +
-                    "00000470                          8F 8E 8E 8E 8E 8E 8E 8E          ········\n" +
+                    "00000470                          8f 8e 8e 8e 8e 8e 8e 8e          ········\n" +
                     "# position: 1152, header: 16\n" +
                     "--- !!data #binary\n" +
                     "-1.4156185439721035E-29\n" +
@@ -420,30 +420,30 @@ public class WriteBytesTest {
                     "false\n" +
                     "# position: 1560, header: 50\n" +
                     "--- !!data #binary\n" +
-                    "00000610                                      B2 B1 B1 B1              ····\n" +
-                    "00000620 B1 B1 B1 B1                                      ····             \n" +
+                    "00000610                                      b2 b1 b1 b1              ····\n" +
+                    "00000620 b1 b1 b1 b1                                      ····             \n" +
                     "# position: 1572, header: 51\n" +
                     "--- !!data #binary\n" +
-                    "00000620                          B3 B2 B2 B2 B2 B2 B2 B2          ········\n" +
+                    "00000620                          b3 b2 b2 b2 b2 b2 b2 b2          ········\n" +
                     "# position: 1584, header: 52\n" +
                     "--- !!data #binary\n" +
-                    "00000630             B4 B3 B3 B3  B3 B3 B3 B3                 ···· ····    \n" +
+                    "00000630             b4 b3 b3 b3  b3 b3 b3 b3                 ···· ····    \n" +
                     "# position: 1596, header: 53\n" +
                     "--- !!data #binary\n" +
-                    "00000640 B5 B4 B4 B4 B4 B4 B4 B4                          ········         \n" +
+                    "00000640 b5 b4 b4 b4 b4 b4 b4 b4                          ········         \n" +
                     "# position: 1608, header: 54\n" +
                     "--- !!data #binary\n" +
-                    "00000640                                      B6 B5 B5 B5              ····\n" +
-                    "00000650 B5 B5 B5 B5                                      ····             \n" +
+                    "00000640                                      b6 b5 b5 b5              ····\n" +
+                    "00000650 b5 b5 b5 b5                                      ····             \n" +
                     "# position: 1620, header: 55\n" +
                     "--- !!data #binary\n" +
-                    "00000650                          B7 B6 B6 B6 B6 B6 B6 B6          ········\n" +
+                    "00000650                          b7 b6 b6 b6 b6 b6 b6 b6          ········\n" +
                     "# position: 1632, header: 56\n" +
                     "--- !!data #binary\n" +
-                    "00000660             B8 B7 B7 B7  B7 B7 B7 B7                 ···· ····    \n" +
+                    "00000660             b8 b7 b7 b7  b7 b7 b7 b7                 ···· ····    \n" +
                     "# position: 1644, header: 57\n" +
                     "--- !!data #binary\n" +
-                    "00000670 B9 B8 B8 B8 B8 B8 B8 B8                          ········         \n" +
+                    "00000670 b9 b8 b8 b8 b8 b8 b8 b8                          ········         \n" +
                     "# position: 1656, header: 58\n" +
                     "--- !!data #binary\n" +
                     "\"-252662577519802\": \n" +
@@ -453,17 +453,17 @@ public class WriteBytesTest {
                     "\"-2008556674363\": \n" +
                     "# position: 1680, header: 60\n" +
                     "--- !!data #binary\n" +
-                    "00000690             BC BB BB BB  BB BB BB BB                 ···· ····    \n" +
+                    "00000690             bc bb bb bb  bb bb bb bb                 ···· ····    \n" +
                     "# position: 1692, header: 61\n" +
                     "--- !!data #binary\n" +
-                    "000006a0 BD BC BC BC BC BC BC BC                          ········         \n" +
+                    "000006a0 bd bc bc bc bc bc bc bc                          ········         \n" +
                     "# position: 1704, header: 62\n" +
                     "--- !!data #binary\n" +
-                    "000006a0                                      BE BD BD BD              ····\n" +
-                    "000006b0 BD BD BD BD                                      ····             \n" +
+                    "000006a0                                      be bd bd bd              ····\n" +
+                    "000006b0 bd bd bd bd                                      ····             \n" +
                     "# position: 1716, header: 63\n" +
                     "--- !!data #binary\n" +
-                    "000006b0                          BF BE BE BE BE BE BE BE          ········\n" +
+                    "000006b0                          bf be be be be be be be          ········\n" +
                     "# position: 1728, header: 64\n" +
                     "--- !!data #binary\n" +
                     "\"\": # # HINT\n" +
@@ -478,206 +478,206 @@ public class WriteBytesTest {
                     "\"\\xC0\": \"\": \"\": \"\": \"\": \"\": \"\": \n" +
                     "# position: 1752, header: 66\n" +
                     "--- !!data #binary\n" +
-                    "000006d0                                      C2 C1 C1 C1              ····\n" +
-                    "000006e0 C1 C1 C1 C1                                      ····             \n" +
+                    "000006d0                                      c2 c1 c1 c1              ····\n" +
+                    "000006e0 c1 c1 c1 c1                                      ····             \n" +
                     "# position: 1764, header: 67\n" +
                     "--- !!data #binary\n" +
-                    "000006e0                          C3 C2 C2 C2 C2 C2 C2 C2          ········\n" +
+                    "000006e0                          c3 c2 c2 c2 c2 c2 c2 c2          ········\n" +
                     "# position: 1776, header: 68\n" +
                     "--- !!data #binary\n" +
-                    "000006f0             C4 C3 C3 C3  C3 C3 C3 C3                 ···· ····    \n" +
+                    "000006f0             c4 c3 c3 c3  c3 c3 c3 c3                 ···· ····    \n" +
                     "# position: 1788, header: 69\n" +
                     "--- !!data #binary\n" +
-                    "00000700 C5 C4 C4 C4 C4 C4 C4 C4                          ········         \n" +
+                    "00000700 c5 c4 c4 c4 c4 c4 c4 c4                          ········         \n" +
                     "# position: 1800, header: 70\n" +
                     "--- !!data #binary\n" +
-                    "00000700                                      C6 C5 C5 C5              ····\n" +
-                    "00000710 C5 C5 C5 C5                                      ····             \n" +
+                    "00000700                                      c6 c5 c5 c5              ····\n" +
+                    "00000710 c5 c5 c5 c5                                      ····             \n" +
                     "# position: 1812, header: 71\n" +
                     "--- !!data #binary\n" +
                     "\"\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\": \n" +
                     "# position: 1824, header: 72\n" +
                     "--- !!data #binary\n" +
-                    "00000720             C8 C7 C7 C7  C7 C7 C7 C7                 ···· ····    \n" +
+                    "00000720             c8 c7 c7 c7  c7 c7 c7 c7                 ···· ····    \n" +
                     "# position: 1836, header: 73\n" +
                     "--- !!data #binary\n" +
-                    "00000730 C9 C8 C8 C8 C8 C8 C8 C8                          ········         \n" +
+                    "00000730 c9 c8 c8 c8 c8 c8 c8 c8                          ········         \n" +
                     "# position: 1848, header: 74\n" +
                     "--- !!data #binary\n" +
-                    "00000730                                      CA C9 C9 C9              ····\n" +
-                    "00000740 C9 C9 C9 C9                                      ····             \n" +
+                    "00000730                                      ca c9 c9 c9              ····\n" +
+                    "00000740 c9 c9 c9 c9                                      ····             \n" +
                     "# position: 1860, header: 75\n" +
                     "--- !!data #binary\n" +
-                    "00000740                          CB CA CA CA CA CA CA CA          ········\n" +
+                    "00000740                          cb ca ca ca ca ca ca ca          ········\n" +
                     "# position: 1872, header: 76\n" +
                     "--- !!data #binary\n" +
-                    "00000750             CC CB CB CB  CB CB CB CB                 ···· ····    \n" +
+                    "00000750             cc cb cb cb  cb cb cb cb                 ···· ····    \n" +
                     "# position: 1884, header: 77\n" +
                     "--- !!data #binary\n" +
-                    "00000760 CD CC CC CC CC CC CC CC                          ········         \n" +
+                    "00000760 cd cc cc cc cc cc cc cc                          ········         \n" +
                     "# position: 1896, header: 78\n" +
                     "--- !!data #binary\n" +
-                    "00000760                                      CE CD CD CD              ····\n" +
-                    "00000770 CD CD CD CD                                      ····             \n" +
+                    "00000760                                      ce cd cd cd              ····\n" +
+                    "00000770 cd cd cd cd                                      ····             \n" +
                     "# position: 1908, header: 79\n" +
                     "--- !!data #binary\n" +
-                    "00000770                          CF CE CE CE CE CE CE CE          ········\n" +
+                    "00000770                          cf ce ce ce ce ce ce ce          ········\n" +
                     "# position: 1920, header: 80\n" +
                     "--- !!data #binary\n" +
-                    "00000780             D0 CF CF CF  CF CF CF CF                 ···· ····    \n" +
+                    "00000780             d0 cf cf cf  cf cf cf cf                 ···· ····    \n" +
                     "# position: 1932, header: 81\n" +
                     "--- !!data #binary\n" +
-                    "00000790 D1 D0 D0 D0 D0 D0 D0 D0                          ········         \n" +
+                    "00000790 d1 d0 d0 d0 d0 d0 d0 d0                          ········         \n" +
                     "# position: 1944, header: 82\n" +
                     "--- !!data #binary\n" +
-                    "00000790                                      D2 D1 D1 D1              ····\n" +
-                    "000007a0 D1 D1 D1 D1                                      ····             \n" +
+                    "00000790                                      d2 d1 d1 d1              ····\n" +
+                    "000007a0 d1 d1 d1 d1                                      ····             \n" +
                     "# position: 1956, header: 83\n" +
                     "--- !!data #binary\n" +
-                    "000007a0                          D3 D2 D2 D2 D2 D2 D2 D2          ········\n" +
+                    "000007a0                          d3 d2 d2 d2 d2 d2 d2 d2          ········\n" +
                     "# position: 1968, header: 84\n" +
                     "--- !!data #binary\n" +
-                    "000007b0             D4 D3 D3 D3  D3 D3 D3 D3                 ···· ····    \n" +
+                    "000007b0             d4 d3 d3 d3  d3 d3 d3 d3                 ···· ····    \n" +
                     "# position: 1980, header: 85\n" +
                     "--- !!data #binary\n" +
-                    "000007c0 D5 D4 D4 D4 D4 D4 D4 D4                          ········         \n" +
+                    "000007c0 d5 d4 d4 d4 d4 d4 d4 d4                          ········         \n" +
                     "# position: 1992, header: 86\n" +
                     "--- !!data #binary\n" +
-                    "000007c0                                      D6 D5 D5 D5              ····\n" +
-                    "000007d0 D5 D5 D5 D5                                      ····             \n" +
+                    "000007c0                                      d6 d5 d5 d5              ····\n" +
+                    "000007d0 d5 d5 d5 d5                                      ····             \n" +
                     "# position: 2004, header: 87\n" +
                     "--- !!data #binary\n" +
-                    "000007d0                          D7 D6 D6 D6 D6 D6 D6 D6          ········\n" +
+                    "000007d0                          d7 d6 d6 d6 d6 d6 d6 d6          ········\n" +
                     "# position: 2016, header: 88\n" +
                     "--- !!data #binary\n" +
-                    "000007e0             D8 D7 D7 D7  D7 D7 D7 D7                 ···· ····    \n" +
+                    "000007e0             d8 d7 d7 d7  d7 d7 d7 d7                 ···· ····    \n" +
                     "# position: 2028, header: 89\n" +
                     "--- !!data #binary\n" +
-                    "000007f0 D9 D8 D8 D8 D8 D8 D8 D8                          ········         \n" +
+                    "000007f0 d9 d8 d8 d8 d8 d8 d8 d8                          ········         \n" +
                     "# position: 2040, header: 90\n" +
                     "--- !!data #binary\n" +
-                    "000007f0                                      DA D9 D9 D9              ····\n" +
-                    "00000800 D9 D9 D9 D9                                      ····             \n" +
+                    "000007f0                                      da d9 d9 d9              ····\n" +
+                    "00000800 d9 d9 d9 d9                                      ····             \n" +
                     "# position: 2052, header: 91\n" +
                     "--- !!data #binary\n" +
-                    "00000800                          DB DA DA DA DA DA DA DA          ········\n" +
+                    "00000800                          db da da da da da da da          ········\n" +
                     "# position: 2064, header: 92\n" +
                     "--- !!data #binary\n" +
-                    "00000810             DC DB DB DB  DB DB DB DB                 ···· ····    \n" +
+                    "00000810             dc db db db  db db db db                 ···· ····    \n" +
                     "# position: 2076, header: 93\n" +
                     "--- !!data #binary\n" +
-                    "00000820 DD DC DC DC DC DC DC DC                          ········         \n" +
+                    "00000820 dd dc dc dc dc dc dc dc                          ········         \n" +
                     "# position: 2088, header: 94\n" +
                     "--- !!data #binary\n" +
-                    "00000820                                      DE DD DD DD              ····\n" +
-                    "00000830 DD DD DD DD                                      ····             \n" +
+                    "00000820                                      de dd dd dd              ····\n" +
+                    "00000830 dd dd dd dd                                      ····             \n" +
                     "# position: 2100, header: 95\n" +
                     "--- !!data #binary\n" +
-                    "00000830                          DF DE DE DE DE DE DE DE          ········\n" +
+                    "00000830                          df de de de de de de de          ········\n" +
                     "# position: 2112, header: 96\n" +
                     "--- !!data #binary\n" +
-                    "00000840             E0 DF DF DF  DF DF DF DF                 ···· ····    \n" +
+                    "00000840             e0 df df df  df df df df                 ···· ····    \n" +
                     "# position: 2124, header: 97\n" +
                     "--- !!data #binary\n" +
-                    "00000850 E1 E0 E0 E0 E0 E0 E0 E0                          ········         \n" +
+                    "00000850 e1 e0 e0 e0 e0 e0 e0 e0                          ········         \n" +
                     "# position: 2136, header: 98\n" +
                     "--- !!data #binary\n" +
-                    "00000850                                      E2 E1 E1 E1              ····\n" +
-                    "00000860 E1 E1 E1 E1                                      ····             \n" +
+                    "00000850                                      e2 e1 e1 e1              ····\n" +
+                    "00000860 e1 e1 e1 e1                                      ····             \n" +
                     "# position: 2148, header: 99\n" +
                     "--- !!data #binary\n" +
-                    "00000860                          E3 E2 E2 E2 E2 E2 E2 E2          ········\n" +
+                    "00000860                          e3 e2 e2 e2 e2 e2 e2 e2          ········\n" +
                     "# position: 2160, header: 100\n" +
                     "--- !!data #binary\n" +
-                    "00000870             E4 E3 E3 E3  E3 E3 E3 E3                 ···· ····    \n" +
+                    "00000870             e4 e3 e3 e3  e3 e3 e3 e3                 ···· ····    \n" +
                     "# position: 2172, header: 101\n" +
                     "--- !!data #binary\n" +
-                    "00000880 E5 E4 E4 E4 E4 E4 E4 E4                          ········         \n" +
+                    "00000880 e5 e4 e4 e4 e4 e4 e4 e4                          ········         \n" +
                     "# position: 2184, header: 102\n" +
                     "--- !!data #binary\n" +
-                    "00000880                                      E6 E5 E5 E5              ····\n" +
-                    "00000890 E5 E5 E5 E5                                      ····             \n" +
+                    "00000880                                      e6 e5 e5 e5              ····\n" +
+                    "00000890 e5 e5 e5 e5                                      ····             \n" +
                     "# position: 2196, header: 103\n" +
                     "--- !!data #binary\n" +
-                    "00000890                          E7 E6 E6 E6 E6 E6 E6 E6          ········\n" +
+                    "00000890                          e7 e6 e6 e6 e6 e6 e6 e6          ········\n" +
                     "# position: 2208, header: 104\n" +
                     "--- !!data #binary\n" +
-                    "000008a0             E8 E7 E7 E7  E7 E7 E7 E7                 ···· ····    \n" +
+                    "000008a0             e8 e7 e7 e7  e7 e7 e7 e7                 ···· ····    \n" +
                     "# position: 2220, header: 105\n" +
                     "--- !!data #binary\n" +
-                    "000008b0 E9 E8 E8 E8 E8 E8 E8 E8                          ········         \n" +
+                    "000008b0 e9 e8 e8 e8 e8 e8 e8 e8                          ········         \n" +
                     "# position: 2232, header: 106\n" +
                     "--- !!data #binary\n" +
-                    "000008b0                                      EA E9 E9 E9              ····\n" +
-                    "000008c0 E9 E9 E9 E9                                      ····             \n" +
+                    "000008b0                                      ea e9 e9 e9              ····\n" +
+                    "000008c0 e9 e9 e9 e9                                      ····             \n" +
                     "# position: 2244, header: 107\n" +
                     "--- !!data #binary\n" +
-                    "000008c0                          EB EA EA EA EA EA EA EA          ········\n" +
+                    "000008c0                          eb ea ea ea ea ea ea ea          ········\n" +
                     "# position: 2256, header: 108\n" +
                     "--- !!data #binary\n" +
-                    "000008d0             EC EB EB EB  EB EB EB EB                 ···· ····    \n" +
+                    "000008d0             ec eb eb eb  eb eb eb eb                 ···· ····    \n" +
                     "# position: 2268, header: 109\n" +
                     "--- !!data #binary\n" +
-                    "000008e0 ED EC EC EC EC EC EC EC                          ········         \n" +
+                    "000008e0 ed ec ec ec ec ec ec ec                          ········         \n" +
                     "# position: 2280, header: 110\n" +
                     "--- !!data #binary\n" +
-                    "000008e0                                      EE ED ED ED              ····\n" +
-                    "000008f0 ED ED ED ED                                      ····             \n" +
+                    "000008e0                                      ee ed ed ed              ····\n" +
+                    "000008f0 ed ed ed ed                                      ····             \n" +
                     "# position: 2292, header: 111\n" +
                     "--- !!data #binary\n" +
-                    "000008f0                          EF EE EE EE EE EE EE EE          ········\n" +
+                    "000008f0                          ef ee ee ee ee ee ee ee          ········\n" +
                     "# position: 2304, header: 112\n" +
                     "--- !!data #binary\n" +
-                    "00000900             F0 EF EF EF  EF EF EF EF                 ···· ····    \n" +
+                    "00000900             f0 ef ef ef  ef ef ef ef                 ···· ····    \n" +
                     "# position: 2316, header: 113\n" +
                     "--- !!data #binary\n" +
-                    "00000910 F1 F0 F0 F0 F0 F0 F0 F0                          ········         \n" +
+                    "00000910 f1 f0 f0 f0 f0 f0 f0 f0                          ········         \n" +
                     "# position: 2328, header: 114\n" +
                     "--- !!data #binary\n" +
-                    "00000910                                      F2 F1 F1 F1              ····\n" +
-                    "00000920 F1 F1 F1 F1                                      ····             \n" +
+                    "00000910                                      f2 f1 f1 f1              ····\n" +
+                    "00000920 f1 f1 f1 f1                                      ····             \n" +
                     "# position: 2340, header: 115\n" +
                     "--- !!data #binary\n" +
-                    "00000920                          F3 F2 F2 F2 F2 F2 F2 F2          ········\n" +
+                    "00000920                          f3 f2 f2 f2 f2 f2 f2 f2          ········\n" +
                     "# position: 2352, header: 116\n" +
                     "--- !!data #binary\n" +
-                    "00000930             F4 F3 F3 F3  F3 F3 F3 F3                 ···· ····    \n" +
+                    "00000930             f4 f3 f3 f3  f3 f3 f3 f3                 ···· ····    \n" +
                     "# position: 2364, header: 117\n" +
                     "--- !!data #binary\n" +
-                    "00000940 F5 F4 F4 F4 F4 F4 F4 F4                          ········         \n" +
+                    "00000940 f5 f4 f4 f4 f4 f4 f4 f4                          ········         \n" +
                     "# position: 2376, header: 118\n" +
                     "--- !!data #binary\n" +
-                    "00000940                                      F6 F5 F5 F5              ····\n" +
-                    "00000950 F5 F5 F5 F5                                      ····             \n" +
+                    "00000940                                      f6 f5 f5 f5              ····\n" +
+                    "00000950 f5 f5 f5 f5                                      ····             \n" +
                     "# position: 2388, header: 119\n" +
                     "--- !!data #binary\n" +
-                    "00000950                          F7 F6 F6 F6 F6 F6 F6 F6          ········\n" +
+                    "00000950                          f7 f6 f6 f6 f6 f6 f6 f6          ········\n" +
                     "# position: 2400, header: 120\n" +
                     "--- !!data #binary\n" +
-                    "00000960             F8 F7 F7 F7  F7 F7 F7 F7                 ···· ····    \n" +
+                    "00000960             f8 f7 f7 f7  f7 f7 f7 f7                 ···· ····    \n" +
                     "# position: 2412, header: 121\n" +
                     "--- !!data #binary\n" +
-                    "00000970 F9 F8 F8 F8 F8 F8 F8 F8                          ········         \n" +
+                    "00000970 f9 f8 f8 f8 f8 f8 f8 f8                          ········         \n" +
                     "# position: 2424, header: 122\n" +
                     "--- !!data #binary\n" +
-                    "00000970                                      FA F9 F9 F9              ····\n" +
-                    "00000980 F9 F9 F9 F9                                      ····             \n" +
+                    "00000970                                      fa f9 f9 f9              ····\n" +
+                    "00000980 f9 f9 f9 f9                                      ····             \n" +
                     "# position: 2436, header: 123\n" +
                     "--- !!data #binary\n" +
-                    "00000980                          FB FA FA FA FA FA FA FA          ········\n" +
+                    "00000980                          fb fa fa fa fa fa fa fa          ········\n" +
                     "# position: 2448, header: 124\n" +
                     "--- !!data #binary\n" +
-                    "00000990             FC FB FB FB  FB FB FB FB                 ···· ····    \n" +
+                    "00000990             fc fb fb fb  fb fb fb fb                 ···· ····    \n" +
                     "# position: 2460, header: 125\n" +
                     "--- !!data #binary\n" +
-                    "000009a0 FD FC FC FC FC FC FC FC                          ········         \n" +
+                    "000009a0 fd fc fc fc fc fc fc fc                          ········         \n" +
                     "# position: 2472, header: 126\n" +
                     "--- !!data #binary\n" +
-                    "000009a0                                      FE FD FD FD              ····\n" +
-                    "000009b0 FD FD FD FD                                      ····             \n" +
+                    "000009a0                                      fe fd fd fd              ····\n" +
+                    "000009b0 fd fd fd fd                                      ····             \n" +
                     "# position: 2484, header: 127\n" +
                     "--- !!data #binary\n" +
-                    "000009b0                          FF FE FE FE FE FE FE FE          ········\n" +
+                    "000009b0                          ff fe fe fe fe fe fe fe          ········\n" +
                     "# position: 2496, header: 128\n" +
                     "--- !!data #binary\n" +
                     "000009c0             00 00 00 00  00 00 00 00                 ···· ····    \n" +
@@ -760,20 +760,20 @@ public class WriteBytesTest {
                     "\n" +
                     "# position: 2912, header: 139\n" +
                     "--- !!data #binary\n" +
-                    "00000b60             0B 0B 0B 0B  0B 0B 0B 0B                 ···· ····    \n" +
+                    "00000b60             0b 0b 0b 0b  0b 0b 0b 0b                 ···· ····    \n" +
                     "# position: 2924, header: 140\n" +
                     "--- !!data #binary\n" +
-                    "00000b70 0C 0C 0C 0C 0C 0C 0C 0C                          ········         \n" +
+                    "00000b70 0c 0c 0c 0c 0c 0c 0c 0c                          ········         \n" +
                     "# position: 2936, header: 141\n" +
                     "--- !!data #binary\n" +
-                    "00000b70                                      0D 0D 0D 0D              ····\n" +
-                    "00000b80 0D 0D 0D 0D                                      ····             \n" +
+                    "00000b70                                      0d 0d 0d 0d              ····\n" +
+                    "00000b80 0d 0d 0d 0d                                      ····             \n" +
                     "# position: 2948, header: 142\n" +
                     "--- !!data #binary\n" +
-                    "00000b80                          0E 0E 0E 0E 0E 0E 0E 0E          ········\n" +
+                    "00000b80                          0e 0e 0e 0e 0e 0e 0e 0e          ········\n" +
                     "# position: 2960, header: 143\n" +
                     "--- !!data #binary\n" +
-                    "00000b90             0F 0F 0F 0F  0F 0F 0F 0F                 ···· ····    \n" +
+                    "00000b90             0f 0f 0f 0f  0f 0f 0f 0f                 ···· ····    \n" +
                     "# position: 2972, header: 144\n" +
                     "--- !!data #binary\n" +
                     "00000ba0 10 10 10 10 10 10 10 10                          ········         \n" +
@@ -809,23 +809,23 @@ public class WriteBytesTest {
                     "00000c10 19 19 19 19                                      ····             \n" +
                     "# position: 3092, header: 154\n" +
                     "--- !!data #binary\n" +
-                    "00000c10                          1A 1A 1A 1A 1A 1A 1A 1A          ········\n" +
+                    "00000c10                          1a 1a 1a 1a 1a 1a 1a 1a          ········\n" +
                     "# position: 3104, header: 155\n" +
                     "--- !!data #binary\n" +
-                    "00000c20             1B 1B 1B 1B  1B 1B 1B 1B                 ···· ····    \n" +
+                    "00000c20             1b 1b 1b 1b  1b 1b 1b 1b                 ···· ····    \n" +
                     "# position: 3116, header: 156\n" +
                     "--- !!data #binary\n" +
-                    "00000c30 1C 1C 1C 1C 1C 1C 1C 1C                          ········         \n" +
+                    "00000c30 1c 1c 1c 1c 1c 1c 1c 1c                          ········         \n" +
                     "# position: 3128, header: 157\n" +
                     "--- !!data #binary\n" +
-                    "00000c30                                      1D 1D 1D 1D              ····\n" +
-                    "00000c40 1D 1D 1D 1D                                      ····             \n" +
+                    "00000c30                                      1d 1d 1d 1d              ····\n" +
+                    "00000c40 1d 1d 1d 1d                                      ····             \n" +
                     "# position: 3140, header: 158\n" +
                     "--- !!data #binary\n" +
-                    "00000c40                          1E 1E 1E 1E 1E 1E 1E 1E          ········\n" +
+                    "00000c40                          1e 1e 1e 1e 1e 1e 1e 1e          ········\n" +
                     "# position: 3152, header: 159\n" +
                     "--- !!data #binary\n" +
-                    "00000c50             1F 1F 1F 1F  1F 1F 1F 1F                 ···· ····    \n" +
+                    "00000c50             1f 1f 1f 1f  1f 1f 1f 1f                 ···· ····    \n" +
                     "# position: 3164, header: 160\n" +
                     "--- !!data\n" +
                     "        \n" +
