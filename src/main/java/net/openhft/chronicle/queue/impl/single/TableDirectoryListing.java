@@ -23,6 +23,8 @@ final class TableDirectoryListing implements DirectoryListing {
     // visible for testing
     static final String LOCK = "listing.exclusiveLock";
     private static final String MOD_COUNT = "listing.modCount";
+    private static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
+    private static final int UNSET_MIN_CYCLE = Integer.MAX_VALUE;
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
@@ -86,16 +88,26 @@ final class TableDirectoryListing implements DirectoryListing {
 
     @Override
     public int getMaxCreatedCycle() {
+        final int maxCycleValue = getMaxCycleValue();
         if (readOnly) {
-            return getMaxCycleValue();
+            return maxCycleValue;
+        }
+
+        if (maxCycleValue != UNSET_MAX_CYCLE) {
+            return maxCycleValue;
         }
         return tryWithLock(getMaxCycleValueMethodRef);
     }
 
     @Override
     public int getMinCreatedCycle() {
+        final int minCycleValue = getMinCycleValue();
         if (readOnly) {
-            return getMinCycleValue();
+            return minCycleValue;
+        }
+
+        if (minCycleValue != UNSET_MIN_CYCLE) {
+            return minCycleValue;
         }
         return tryWithLock(getMinCycleValueMethodRef);
     }
@@ -156,8 +168,8 @@ final class TableDirectoryListing implements DirectoryListing {
     }
 
     private int refreshIndex() {
-        maxCycleValue.setOrderedValue(Integer.MIN_VALUE);
-        minCycleValue.setOrderedValue(Integer.MAX_VALUE);
+        maxCycleValue.setOrderedValue(UNSET_MAX_CYCLE);
+        minCycleValue.setOrderedValue(UNSET_MIN_CYCLE);
         final File[] queueFiles = queuePath.toFile().
                 listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
         if (queueFiles != null) {
