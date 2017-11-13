@@ -347,7 +347,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     protected QueueLock queueLock() {
-        return new NoopQueueLock(); // isQueueReplicationAvailable() && !readOnly() ? createTableStoreLock() : new NoopQueueLock();
+        return isQueueReplicationAvailable() && !readOnly() ? createTableStoreLock() : new NoopQueueLock();
     }
 
     @NotNull
