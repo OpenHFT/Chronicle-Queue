@@ -7,17 +7,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
-import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
 
 final class TableDirectoryListing implements DirectoryListing {
     private static final Logger LOGGER = LoggerFactory.getLogger(TableDirectoryListing.class);
-    private static final long LOCK_ACQUISITION_TIMEOUT_MILLIS =
-            Long.getLong("chronicle.listing.lock.timeout", TimeUnit.SECONDS.toMillis(20L));
-    private static final long LOCK_MAX_AGE_MILLIS =
-            Long.getLong("chronicle.listing.lock.maxAge", TimeUnit.SECONDS.toMillis(10L));
-
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     // visible for testing
@@ -28,9 +21,6 @@ final class TableDirectoryListing implements DirectoryListing {
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
-    private final IntSupplier getMaxCycleValueMethodRef = this::getMaxCycleValue;
-    private final IntSupplier getMinCycleValueMethodRef = this::getMinCycleValue;
-    private final IntSupplier refreshIndexMethodRef = this::refreshIndex;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue lock;
@@ -52,6 +42,7 @@ final class TableDirectoryListing implements DirectoryListing {
         tableStore.doWithExclusiveLock(ts -> {
             maxCycleValue = ts.acquireValueFor(HIGHEST_CREATED_CYCLE);
             minCycleValue = ts.acquireValueFor(LOWEST_CREATED_CYCLE);
+            minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
             lock = ts.acquireValueFor(LOCK);
             modCount = ts.acquireValueFor(MOD_COUNT);
             if (lock.getVolatileValue() == Long.MIN_VALUE) {
@@ -69,7 +60,7 @@ final class TableDirectoryListing implements DirectoryListing {
         if (readOnly) {
             return;
         }
-        tryWithLock(refreshIndexMethodRef);
+        refreshIndex();
     }
 
     @Override
@@ -79,37 +70,22 @@ final class TableDirectoryListing implements DirectoryListing {
             return;
         }
         modCount.addAtomicValue(1);
-        tryWithLock(() -> {
-            maxCycleValue.setMaxValue(cycle);
-            minCycleValue.setMinValue(cycle);
-            return 0;
-        });
+        if (cycle > getMaxCreatedCycle()) {
+            maxCycleValue.setOrderedValue(cycle);
+        }
+        if (cycle < getMinCycleValue()) {
+            minCycleValue.setOrderedValue(cycle);
+        }
     }
 
     @Override
     public int getMaxCreatedCycle() {
-        final int maxCycleValue = getMaxCycleValue();
-        if (readOnly) {
-            return maxCycleValue;
-        }
-
-        if (maxCycleValue != UNSET_MAX_CYCLE) {
-            return maxCycleValue;
-        }
-        return tryWithLock(getMaxCycleValueMethodRef);
+        return getMaxCycleValue();
     }
 
     @Override
     public int getMinCreatedCycle() {
-        final int minCycleValue = getMinCycleValue();
-        if (readOnly) {
-            return minCycleValue;
-        }
-
-        if (minCycleValue != UNSET_MIN_CYCLE) {
-            return minCycleValue;
-        }
-        return tryWithLock(getMinCycleValueMethodRef);
+        return getMinCycleValue();
     }
 
     @Override
@@ -130,56 +106,19 @@ final class TableDirectoryListing implements DirectoryListing {
         return (int) minCycleValue.getVolatileValue();
     }
 
-    private int tryWithLock(final IntSupplier function) {
-        final long lockAcquisitionTimeout = System.currentTimeMillis() + LOCK_ACQUISITION_TIMEOUT_MILLIS;
-        long currentTime;
-        while ((currentTime = System.currentTimeMillis()) < lockAcquisitionTimeout) {
-            if (lock.compareAndSwapValue(0, currentTime)) {
-                try {
-                    return function.getAsInt();
-                } finally {
-                    if (!lock.compareAndSwapValue(currentTime, 0)) {
-                        throw new IllegalStateException("Unable to reset lock state");
-                    }
-                }
-
-            } else  {
-                final long lastLockTime = lock.getValue();
-                if (lastLockTime != 0 && lastLockTime < currentTime - LOCK_MAX_AGE_MILLIS) {
-                    // assume that previous lock holder has died
-                    if (lock.compareAndSwapValue(lastLockTime, currentTime)) {
-                        LOGGER.warn("Forcing lock on directory listing as it is {}sec old",
-                                (currentTime - lastLockTime) / 1000);
-                        try {
-                            return function.getAsInt();
-                        } finally {
-                            if (!lock.compareAndSwapValue(currentTime, 0)) {
-                                throw new IllegalStateException("Unable to reset lock state");
-                            }
-                        }
-                    }
-                }
-                Thread.yield();
-            }
-        }
-
-        throw new IllegalStateException("Unable to acquire exclusive lock on directory listing.\n" +
-                "Consider changing system properties chronicle.listing.lock.timeout/chronicle.listing.lock.maxAge");
-    }
-
-    private int refreshIndex() {
-        maxCycleValue.setOrderedValue(UNSET_MAX_CYCLE);
-        minCycleValue.setOrderedValue(UNSET_MIN_CYCLE);
+    private void refreshIndex() {
         final File[] queueFiles = queuePath.toFile().
                 listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
+        int min = UNSET_MIN_CYCLE;
+        int max = UNSET_MAX_CYCLE;
         if (queueFiles != null) {
             for (File queueFile : queueFiles) {
-                maxCycleValue.setMaxValue(fileToCycleFunction.applyAsInt(queueFile));
-                minCycleValue.setMinValue(fileToCycleFunction.applyAsInt(queueFile));
-
+                min = Math.min(fileToCycleFunction.applyAsInt(queueFile), min);
+                max = Math.max(fileToCycleFunction.applyAsInt(queueFile), max);
             }
+            maxCycleValue.setOrderedValue(max);
+            minCycleValue.setOrderedValue(min);
         }
-        return 0;
     }
 
     void close() {
