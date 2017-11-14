@@ -41,6 +41,7 @@ public class TSQueueLock implements QueueLock {
     private final LongValue lock;
     private final Pauser pauser;
     private final ThreadLocal<Long> lockHolderTidTL = new ThreadLocal<>();
+    private final String path;
 
     public TSQueueLock(File queueDirectoryPath, Supplier<Pauser> pauser) {
         final File storeFilePath;
@@ -53,6 +54,7 @@ public class TSQueueLock implements QueueLock {
         TableStore tableStore = SingleTableBuilder.binary(storeFilePath).build();
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(LOCK_KEY));
         this.pauser = pauser.get();
+        this.path = storeFilePath.getPath();
     }
 
     /**
@@ -75,7 +77,7 @@ public class TSQueueLock implements QueueLock {
             lockHolderTidTL.set(tid);
         } catch (TimeoutException e) {
             throw new IllegalStateException("Couldn't acquire lock after " + LOCK_WAIT_TIMEOUT
-                    + "ms. Lock is held by PID " + lock.getVolatileValue());
+                    + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue());
         } finally {
             pauser.reset();
         }
@@ -98,7 +100,7 @@ public class TSQueueLock implements QueueLock {
             }
         } catch (TimeoutException e) {
             throw new IllegalStateException("Queue lock is still held after " + LOCK_WAIT_TIMEOUT
-                    + "ms. Lock is held by PID " + lock.getVolatileValue() + ". Unlock manually");
+                    + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlock manually");
         } finally {
             pauser.reset();
         }
