@@ -5,23 +5,13 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.Sequence;
 
 
-class SequenceImpl implements Sequence {
+class RollCycleEncodeSequence implements Sequence {
     private final LongValue sequenceValue;
-    private final LongValue writePosition;
-
-    //  final String format;
-    private int length = 0;
     private int cycleShift = 0;
-    private int indexCount = 0;
-    private int indexSpacing = 0;
     private long sequenceMask = 0;
 
-    SequenceImpl(LongValue sequenceValue, LongValue writePosition, int length, int indexCount, int indexSpacing) {
+    RollCycleEncodeSequence(LongValue sequenceValue, int indexCount, int indexSpacing) {
         this.sequenceValue = sequenceValue;
-        this.writePosition = writePosition;
-        this.length = length;
-        this.indexCount = Maths.nextPower2(indexCount, 8);
-        this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
         cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
         sequenceMask = (1L << cycleShift) - 1;
     }
@@ -41,7 +31,7 @@ class SequenceImpl implements Sequence {
      */
     public long sequence(long writePosition) {
 
-        // todo optomize the maths in the method below
+        // todo optimize the maths in the method below
         final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) writePosition, 0));
         final long sequenceValue = this.sequenceValue.getVolatileValue();
 

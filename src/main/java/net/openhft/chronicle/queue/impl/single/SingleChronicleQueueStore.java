@@ -91,7 +91,7 @@ public class SingleChronicleQueueStore implements WireStore {
             assert indexing != null;
             this.indexing.writePosition = writePosition;
 
-            this.sequence = new SequenceImpl(writePosition, seqAndPosition, rollCycleLength(), rollIndexCount(), rollIndexSpacing());
+            this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
 
 
             if (wire.bytes().readRemaining() > 0) {
@@ -153,7 +153,7 @@ public class SingleChronicleQueueStore implements WireStore {
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newLongReference().get();
         this.seqAndPosition = wireType.newLongReference().get();
-        this.indexing.sequence = this.sequence = new SequenceImpl(this.seqAndPosition, this.writePosition, rollCycle.length(),rollCycle.defaultIndexCount(),rollCycle.defaultIndexSpacing());
+        this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(this.seqAndPosition, rollCycle.defaultIndexCount(),rollCycle.defaultIndexSpacing());
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
         this.deltaCheckpointInterval = deltaCheckpointInterval;
     }
