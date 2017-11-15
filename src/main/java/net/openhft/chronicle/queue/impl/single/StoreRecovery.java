@@ -42,13 +42,14 @@ public interface StoreRecovery extends WriteMarshallable {
                              int length,
                              int safeLength,
                              long timeoutMS,
-                             @Nullable final LongValue lastPosition) throws EOFException, UnrecoverableTimeoutException {
+                             @Nullable final LongValue lastPosition,
+                             LongValue seqAndPosition) throws EOFException, UnrecoverableTimeoutException {
         try {
-            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
+            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, seqAndPosition);
         } catch (TimeoutException e) {
-            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
+            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, seqAndPosition);
         }
     }
 
-    long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException;
+    long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition, LongValue seqAndPosition) throws UnrecoverableTimeoutException, EOFException;
 }

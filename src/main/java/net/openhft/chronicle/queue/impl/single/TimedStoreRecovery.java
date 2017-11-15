@@ -57,11 +57,12 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
                             int length,
                             int safeLength,
                             long timeoutMS,
-                            @Nullable final LongValue lastPosition) throws EOFException, UnrecoverableTimeoutException {
+                            @Nullable final LongValue lastPosition,
+                            @Nullable LongValue seqAndPosition) throws EOFException, UnrecoverableTimeoutException {
         try {
-            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
+            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, seqAndPosition);
         } catch (TimeoutException e) {
-            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
+            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, seqAndPosition);
         }
     }
 
@@ -137,7 +138,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverAndWriteHeader(@NotNull Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverAndWriteHeader(@NotNull Wire wire, int length, long timeoutMS, final LongValue lastPosition, LongValue seqAndPosition) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
 
         long offset = bytes.writePosition();
@@ -181,12 +182,12 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         }
 
         try {
-            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
+            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, seqAndPosition);
 
         } catch (TimeoutException e) {
             warn().on(getClass(), e);
             // Could happen if another thread recovers, writes 2 messages but the second one is corrupt.
-            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
+            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, seqAndPosition);
 
         } catch (EOFException e) {
             throw new AssertionError(e);

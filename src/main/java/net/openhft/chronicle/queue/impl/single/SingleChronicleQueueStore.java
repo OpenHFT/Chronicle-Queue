@@ -52,6 +52,8 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     private final LongValue writePosition;
     @NotNull
+    private final LongValue seqAndPosition;
+    @NotNull
     private final MappedBytes mappedBytes;
     @NotNull
     private final MappedFile mappedFile;
@@ -76,6 +78,7 @@ public class SingleChronicleQueueStore implements WireStore {
             this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
             assert wireType != null;
             this.writePosition = wire.newLongReference();
+            this.seqAndPosition = wire.newLongReference();
             wire.read(MetaDataField.writePosition).int64(writePosition);
             this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
@@ -105,7 +108,9 @@ public class SingleChronicleQueueStore implements WireStore {
             } else {
                 this.deltaCheckpointInterval = -1; // disabled.
             }
-
+            if (wire.bytes().readRemaining() > 0) {
+                wire.read(MetaDataField.seqAndPosition).int64(seqAndPosition);
+            }
         } finally {
             assert wire.endUse();
         }
@@ -142,8 +147,10 @@ public class SingleChronicleQueueStore implements WireStore {
 
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newLongReference().get();
+        this.indexing.seqAndPosition = this.seqAndPosition = wireType.newLongReference().get();
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
         this.deltaCheckpointInterval = deltaCheckpointInterval;
+
     }
 
     public static void dumpStore(@NotNull Wire wire) {
@@ -214,8 +221,7 @@ public class SingleChronicleQueueStore implements WireStore {
         int header = mappedBytes.readVolatileInt(position);
         if (Wires.isReadyData(header)) {
             writePosition.setMaxValue(position);
-        }
-        else
+        } else
             throw new AssertionError();
         return this;
     }
@@ -357,7 +363,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long writeHeader(@NotNull Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
-        return recovery.writeHeader(wire, length, safeLength, timeoutMS, writePosition);
+        return recovery.writeHeader(wire, length, safeLength, timeoutMS, writePosition, seqAndPosition);
     }
 
     @Override

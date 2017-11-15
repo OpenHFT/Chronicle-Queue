@@ -125,7 +125,7 @@ public class SingleTableBuilder {
                 return tableStore;
 
             } catch (TimeoutException e) {
-                recovery.recoverAndWriteHeader(wire, Wires.UNKNOWN_LENGTH, 10_000, null);
+                recovery.recoverAndWriteHeader(wire, Wires.UNKNOWN_LENGTH, 10_000, null, null);
                 return writeTableStore(bytes, wire, recovery);
             }
         } catch (IOException e) {
