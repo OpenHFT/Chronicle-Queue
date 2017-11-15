@@ -18,7 +18,7 @@ class RollCycleEncodeSequence implements Sequence {
 
     @Override
     public void sequence(long sequence, long position) {
-        sequenceValue.setOrderedValue(toLongValue((int) sequence, position));
+//        sequenceValue.setOrderedValue(toLongValue((int) sequence, position));
     }
 
     /**
