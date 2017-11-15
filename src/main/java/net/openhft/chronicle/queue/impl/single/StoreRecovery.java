@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.wire.Sequence;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
@@ -43,13 +44,13 @@ public interface StoreRecovery extends WriteMarshallable {
                              int safeLength,
                              long timeoutMS,
                              @Nullable final LongValue lastPosition,
-                             LongValue seqAndPosition) throws EOFException, UnrecoverableTimeoutException {
+                             Sequence sequence) throws EOFException, UnrecoverableTimeoutException {
         try {
-            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, seqAndPosition);
+            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
         } catch (TimeoutException e) {
-            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, seqAndPosition);
+            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, sequence);
         }
     }
 
-    long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition, LongValue seqAndPosition) throws UnrecoverableTimeoutException, EOFException;
+    long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException;
 }

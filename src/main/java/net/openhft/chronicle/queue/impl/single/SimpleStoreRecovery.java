@@ -21,6 +21,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.Sequence;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
@@ -68,12 +69,13 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     public long recoverAndWriteHeader(@NotNull Wire wire,
                                       int length,
                                       long timeoutMS,
-                                      @NotNull final LongValue lastPosition, LongValue seqAndPosition) throws UnrecoverableTimeoutException {
+                                      @NotNull final LongValue lastPosition,
+                                      Sequence  sequence) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Clearing an incomplete header so a header can be written");
         wire.bytes().writeInt(0);
         wire.pauser().reset();
         try {
-            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, seqAndPosition);
+            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
         } catch (@NotNull TimeoutException | EOFException e) {
             throw new UnrecoverableTimeoutException(e);
         }

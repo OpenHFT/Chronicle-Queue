@@ -12,7 +12,7 @@ public enum MetaDataField implements WireKey {
     lastAcknowledgedIndexReplicated,
     recovery,
     deltaCheckpointInterval,
-    seqAndPosition;
+    sequence;
 
     @Nullable
     @Override
