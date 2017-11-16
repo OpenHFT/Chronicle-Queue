@@ -15,7 +15,7 @@
  *
  */
 
-package net.openhft.chronicle.queue.micros;
+package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
