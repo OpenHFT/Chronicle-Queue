@@ -246,7 +246,8 @@ public class SingleCQFormatTest {
                 "  recovery: !TimedStoreRecovery {\n" +
                 "    timeStamp: 0\n" +
                 "  },\n" +
-                "  deltaCheckpointInterval: !byte -1\n" +
+                "  deltaCheckpointInterval: !byte -1,\n" +
+                "  encodedSequence: 0\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
@@ -338,12 +339,13 @@ public class SingleCQFormatTest {
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: !byte -1\n" +
+                    "  deltaCheckpointInterval: !byte -1,\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
-                    "# position: 370, header: 0\n" +
+                    "# position: 400, header: 0\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello world\n" +
-                    "# position: 391, header: 1\n" +
+                    "# position: 421, header: 1\n" +
                     "--- !!data #binary\n" +
                     "msg: Also hello world\n", Wires.fromSizePrefixedBlobs(mappedBytes
                     .readPosition(0)));

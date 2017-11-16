@@ -67,7 +67,7 @@ public class RollingChronicleQueueTest {
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 742,\n" +
+                    "  writePosition: 774,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -76,47 +76,48 @@ public class RollingChronicleQueueTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 377,\n" +
+                    "    index2Index: 408,\n" +
                     "    lastIndex: 4\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
+                    "  deltaCheckpointInterval: 0,\n" +
+                    "  encodedSequence: 73014444806\n" +
                     "}\n" +
-                    "# position: 377, header: -1\n" +
+                    "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  544,\n" +
+                    "  576,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544, header: -1\n" +
+                    "# position: 576, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 2\n" +
-                    "  704,\n" +
-                    "  742,\n" +
+                    "  736,\n" +
+                    "  774,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 704, header: 0\n" +
+                    "# position: 736, header: 0\n" +
                     "--- !!data\n" +
                     "1. some  text\n" +
-                    "# position: 721, header: 1\n" +
+                    "# position: 753, header: 1\n" +
                     "--- !!data\n" +
                     "2. some more text\n" +
-                    "# position: 742, header: 2\n" +
+                    "# position: 774, header: 2\n" +
                     "--- !!data\n" +
                     "3. some more text\n" +
-                    "# position: 763, header: 2 EOF\n" +
+                    "# position: 795, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130305 bytes remaining\n" +
+                    "# 130273 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 704,\n" +
+                    "  writePosition: 736,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -125,40 +126,41 @@ public class RollingChronicleQueueTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 377,\n" +
+                    "    index2Index: 408,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
+                    "  deltaCheckpointInterval: 0,\n" +
+                    "  encodedSequence: 111669150432\n" +
                     "}\n" +
-                    "# position: 377, header: -1\n" +
+                    "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  544,\n" +
+                    "  576,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544, header: -1\n" +
+                    "# position: 576, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  704,\n" +
+                    "  736,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 704, header: 0\n" +
+                    "# position: 736, header: 0\n" +
                     "--- !!data\n" +
                     "4. some text - first cycle\n" +
-                    "# position: 734, header: 0 EOF\n" +
+                    "# position: 766, header: 0 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130334 bytes remaining\n" +
+                    "# 130302 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 735,\n" +
+                    "  writePosition: 767,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -167,41 +169,42 @@ public class RollingChronicleQueueTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 377,\n" +
+                    "    index2Index: 408,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
+                    "  deltaCheckpointInterval: 0,\n" +
+                    "  encodedSequence: 60129542911\n" +
                     "}\n" +
-                    "# position: 377, header: -1\n" +
+                    "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  544,\n" +
+                    "  576,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544, header: -1\n" +
+                    "# position: 576, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  704,\n" +
+                    "  736,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 704, header: 0\n" +
+                    "# position: 736, header: 0\n" +
                     "--- !!data\n" +
                     "5. some text - second cycle\n" +
-                    "# position: 735, header: 1\n" +
+                    "# position: 767, header: 1\n" +
                     "--- !!data\n" +
                     "some more text\n" +
                     "...\n" +
-                    "# 130315 bytes remaining\n";
+                    "# 130283 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 741,\n" +
+                    "  writePosition: 773,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -210,45 +213,46 @@ public class RollingChronicleQueueTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 394,\n" +
+                    "    index2Index: 425,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
+                    "  deltaCheckpointInterval: 0,\n" +
+                    "  encodedSequence: 73014444805\n" +
                     "}\n" +
-                    "# position: 377, header: 0\n" +
+                    "# position: 408, header: 0\n" +
                     "--- !!data\n" +
                     "1. some  text\n" +
-                    "# position: 394, header: 0\n" +
+                    "# position: 425, header: 0\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  560,\n" +
+                    "  592,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 560, header: 0\n" +
+                    "# position: 592, header: 0\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 0\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 720, header: 1\n" +
+                    "# position: 752, header: 1\n" +
                     "--- !!data\n" +
                     "2. some more text\n" +
-                    "# position: 741, header: 2\n" +
+                    "# position: 773, header: 2\n" +
                     "--- !!data\n" +
                     "3. some more text\n" +
-                    "# position: 762, header: 2 EOF\n" +
+                    "# position: 794, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130306 bytes remaining\n" +
+                    "# 130274 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 377,\n" +
+                    "  writePosition: 408,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -264,19 +268,20 @@ public class RollingChronicleQueueTest {
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
+                    "  deltaCheckpointInterval: 0,\n" +
+                    "  encodedSequence: 111669150104\n" +
                     "}\n" +
-                    "# position: 377, header: 0\n" +
+                    "# position: 408, header: 0\n" +
                     "--- !!data\n" +
                     "4. some text - first cycle\n" +
-                    "# position: 407, header: 0 EOF\n" +
+                    "# position: 438, header: 0 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 130630 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 408,\n" +
+                    "  writePosition: 439,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -285,36 +290,37 @@ public class RollingChronicleQueueTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 426,\n" +
+                    "    index2Index: 457,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
+                    "  deltaCheckpointInterval: 0,\n" +
+                    "  encodedSequence: 60129542583\n" +
                     "}\n" +
-                    "# position: 377, header: 0\n" +
+                    "# position: 408, header: 0\n" +
                     "--- !!data\n" +
                     "5. some text - second cycle\n" +
-                    "# position: 408, header: 1\n" +
+                    "# position: 439, header: 1\n" +
                     "--- !!data\n" +
                     "some more text\n" +
-                    "# position: 426, header: 1\n" +
+                    "# position: 457, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  592,\n" +
+                    "  624,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 592, header: 1\n" +
+                    "# position: 624, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 0\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
-                    "# 130316 bytes remaining\n";
+                    "# 130284 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, q.dump());
 
             assertEquals(5, q.countExcerpts(start, end));
