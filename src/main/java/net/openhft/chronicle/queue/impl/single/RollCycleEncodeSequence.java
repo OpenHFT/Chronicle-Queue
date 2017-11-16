@@ -18,7 +18,8 @@ class RollCycleEncodeSequence implements Sequence {
 
     @Override
     public void sequence(long sequence, long position) {
-//        sequenceValue.setOrderedValue(toLongValue((int) sequence, position));
+        if (sequenceValue != null)
+            sequenceValue.setOrderedValue(toLongValue((int) sequence, position));
     }
 
     /**
@@ -30,6 +31,8 @@ class RollCycleEncodeSequence implements Sequence {
      * @return -1 if the sequence for this write position can not be found
      */
     public long sequence(long writePosition) {
+        if (sequenceValue == null)
+            return -1;
 
         // todo optimize the maths in the method below
         final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) writePosition, 0));

@@ -52,10 +52,6 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     private final LongValue writePosition;
     @NotNull
-
-    private final LongValue seqAndPosition;
-    private Sequence sequence;
-    @NotNull
     private final MappedBytes mappedBytes;
     @NotNull
     private final MappedFile mappedFile;
@@ -67,6 +63,11 @@ public class SingleChronicleQueueStore implements WireStore {
     private int deltaCheckpointInterval;
     @Nullable
     private LongValue lastAcknowledgedIndexReplicated;
+
+    @NotNull
+    private final LongValue encodedSequence;
+
+    private transient Sequence sequence;
 
     /**
      * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -80,7 +81,7 @@ public class SingleChronicleQueueStore implements WireStore {
             this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
             assert wireType != null;
             this.writePosition = wire.newLongReference();
-            this.seqAndPosition = wire.newLongReference();
+
             wire.read(MetaDataField.writePosition).int64(writePosition);
             this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
@@ -90,9 +91,7 @@ public class SingleChronicleQueueStore implements WireStore {
             this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
             assert indexing != null;
             this.indexing.writePosition = writePosition;
-
-            this.sequence = new RollCycleEncodeSequence(seqAndPosition, rollIndexCount(), rollIndexSpacing());
-
+            this.encodedSequence = wire.newLongReference();
 
             if (wire.bytes().readRemaining() > 0) {
                 this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
@@ -113,9 +112,16 @@ public class SingleChronicleQueueStore implements WireStore {
             } else {
                 this.deltaCheckpointInterval = -1; // disabled.
             }
+
+
             if (wire.bytes().readRemaining() > 0) {
-                wire.read(MetaDataField.sequence).int64(seqAndPosition);
+                wire.read(MetaDataField.encodedSequence).int64(encodedSequence);
+                this.sequence = new RollCycleEncodeSequence(encodedSequence, rollIndexCount(), rollIndexSpacing());
+            } else {
+                this.sequence = new RollCycleEncodeSequence(null, rollIndexCount(), rollIndexSpacing());
             }
+
+
         } finally {
             assert wire.endUse();
         }
@@ -152,10 +158,8 @@ public class SingleChronicleQueueStore implements WireStore {
 
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newLongReference().get();
-        this.seqAndPosition = wireType.newLongReference().get();
-
-
-        this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(this.seqAndPosition, rollCycle.defaultIndexCount(), rollCycle.defaultIndexSpacing());
+        this.encodedSequence = wireType.newLongReference().get();
+        this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(this.encodedSequence, rollCycle.defaultIndexCount(), rollCycle.defaultIndexSpacing());
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
         this.deltaCheckpointInterval = deltaCheckpointInterval;
     }
@@ -339,6 +343,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 .int64forBinding(-1L, lastAcknowledgedIndexReplicated);
         wire.write(MetaDataField.recovery).typedMarshallable(recovery);
         wire.write(MetaDataField.deltaCheckpointInterval).int32(this.deltaCheckpointInterval);
+        wire.write(MetaDataField.encodedSequence).int64forBinding(0L, encodedSequence);
         wire.padToCacheAlign();
     }
 
