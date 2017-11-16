@@ -98,6 +98,8 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final StoreAppenderContext context;
         private final ClosableResources closableResources;
+        @NotNull
+        private final HeaderWriteStrategy headerWriteStrategy;
         @Nullable
         WireStore store;
         private int cycle = Integer.MIN_VALUE;
@@ -125,6 +127,10 @@ public class SingleChronicleQueueExcerpts {
 
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
+            // will work well when both threads writing heavy objects. Will work badly for small objects e.g. periodicUpdates
+            headerWriteStrategy = Boolean.getBoolean("header.write.defer") ?
+                    new HeaderWriteStrategyDefer() :
+                    new HeaderWriteStrategyOriginal();
         }
 
         @Override
@@ -342,23 +348,9 @@ public class SingleChronicleQueueExcerpts {
                         rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
-                for (int i = 0; i < 128; i++) {
-                    try {
-                        assert wire != null;
-                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
-                        position(pos);
-                        context.isClosed = false;
-                        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
-                        context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
-                        context.metaData(metaData);
-                        ok = true;
-                        return context;
-
-                    } catch (EOFException theySeeMeRolling) {
-                        cycle = handleRoll(cycle);
-                    }
-                }
-                throw new IllegalStateException("Unable to roll to the current cycle");
+//System.out.println("calling onOpen");
+                ok = headerWriteStrategy.onOpen(metaData, safeLength);
+                return context;
 
             } finally {
                 assert ok || resetAppendingThread();
@@ -746,6 +738,7 @@ public class SingleChronicleQueueExcerpts {
         class StoreAppenderContext implements DocumentContext {
 
             boolean isClosed;
+            boolean deferredHeader;
             boolean padToCacheAlign = true;
             private boolean metaData = false;
             @Nullable
@@ -796,6 +789,9 @@ public class SingleChronicleQueueExcerpts {
                 }
 
                 try {
+//System.out.println("calling onClose");
+                    headerWriteStrategy.onClose();
+
                     if (wire == StoreAppender.this.wire) {
                         if (padToCacheAlign)
                             wire.padToCacheAlign();
@@ -861,6 +857,87 @@ public class SingleChronicleQueueExcerpts {
                     ", lastPosition=" + lastPosition +
                     ", lastCycle=" + lastCycle +
                     '}';
+        }
+
+        private interface HeaderWriteStrategy {
+            void onClose();
+            boolean onOpen(boolean metaData, int safeLength);
+        }
+
+        /**
+         * Strategise previous behaviour
+         */
+        private class HeaderWriteStrategyOriginal implements HeaderWriteStrategy {
+            @Override
+            public boolean onOpen(boolean metaData, int safeLength) {
+                for (int i = 0; i < 128; i++) {
+                    try {
+                        assert wire != null;
+                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
+                        position(pos);
+                        context.isClosed = false;
+                        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+                        context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
+                        context.metaData(metaData);
+                        return true;
+
+                    } catch (EOFException theySeeMeRolling) {
+                        cycle = handleRoll(cycle);
+                    }
+                }
+                throw new IllegalStateException("Unable to roll to the current cycle");
+            }
+
+            @Override
+            public void onClose() {
+                // do nothing
+            }
+        }
+
+        /**
+         * Buffered writes while awaiting for other appenders to release the header #403
+         */
+        private class HeaderWriteStrategyDefer implements HeaderWriteStrategy {
+            @Override
+            public boolean onOpen(boolean metaData, int safeLength) {
+                assert wire != null;
+                long pos = store.tryWriteHeader(wire, Wires.UNKNOWN_LENGTH, safeLength);
+                if (pos != WireOut.TRY_WRITE_HEADER_FAILED) {
+                    position(pos);
+                    context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+                    context.deferredHeader = false;
+                } else {
+                    context.wire = acquireBufferWire();
+                    context.deferredHeader = true;
+                }
+
+                context.isClosed = false;
+                context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
+                context.metaData(metaData);
+                return true;
+            }
+
+            public void onClose() {
+                if (context.deferredHeader) {
+                    int safeLength = (int) queue.overlapSize();
+                    assert wire != null;
+                    assert wire != context.wire;
+                    for (int i = 0; i < 128; i++) {
+                        try {
+                            // TODO: we should be able to write and update the header in one go
+                            long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
+                            position(pos);
+                            long length = context.wire.bytes().copyTo(wire.bytes());
+                            wire.bytes().writePosition(length + wire.bytes().writePosition());
+                            context.wire = wire;
+                            return;
+                        } catch (EOFException theySeeMeRolling) {
+                            cycle = handleRoll(cycle);
+                        }
+                    }
+                    throw new IllegalStateException("Unable to roll to the current cycle");
+                }
+            }
         }
     }
 
@@ -1028,11 +1105,11 @@ public class SingleChronicleQueueExcerpts {
                     if (rollCycle.toCycle(index) < firstCycle)
                         toStart();
                 } else
-                    if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
-                        // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
-                        // since we can't find an entry at current index, indicate that we're at the end of a cycle
-                        state = TailerState.END_OF_CYCLE;
-                    }
+                if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
+                    // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
+                    // since we can't find an entry at current index, indicate that we're at the end of a cycle
+                    state = TailerState.END_OF_CYCLE;
+                }
             } catch (StreamCorruptedException e) {
                 throw new IllegalStateException(e);
             } catch (UnrecoverableTimeoutException notComplete) {
