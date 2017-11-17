@@ -7,7 +7,6 @@ import net.openhft.chronicle.core.OS;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.Optional;
 import java.util.function.LongSupplier;
 
 /*
@@ -33,10 +32,17 @@ class PretoucherState {
     }
 
     static File getFile(MappedBytes bytes) {
-        return Optional.ofNullable(bytes)
-                .map(MappedBytes::mappedFile)
-                .map(MappedFile::file)
-                .orElse(new File("none"));
+        if (bytes == null)
+            return new File("none");
+
+        MappedFile mappedFile = bytes.mappedFile();
+        if (mappedFile == null)
+            return new File("none");
+
+        File file = mappedFile.file();
+        if (file == null)
+            return new File("none");
+        return file;
     }
 
     // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null
