@@ -38,10 +38,10 @@ class RollCycleEncodeSequence implements Sequence {
      * Long.MIN_VALUE will be return if a sequence number can not be found  ( so can retry )
      * or -1 when you should not retry
      *
-     * @param writePosition the last write position, expected to be the end of queue
+     * @param forWritePosition the last write position, expected to be the end of queue
      * @return Long.MIN_VALUE if the sequence for this write position can not be found, or -1 if  sequenceValue==null or the sequence for this {@code writePosition}
      */
-    public long getSequence(long writePosition) {
+    public long getSequence(long forWritePosition) {
 
         if (sequenceValue == null)
             return -1;
@@ -52,7 +52,7 @@ class RollCycleEncodeSequence implements Sequence {
         if (sequenceValue == 0)
             return -1;
 
-        final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) writePosition, 0));
+        final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) forWritePosition, 0));
         final int toLowerBitsWritePosition = toLowerBitsWritePosition(sequenceValue);
 
         if (lowerBitsOfWp == toLowerBitsWritePosition)
