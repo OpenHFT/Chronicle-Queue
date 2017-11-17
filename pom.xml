@@ -137,6 +137,7 @@
             <artifactId>snappy-java</artifactId>
             <scope>test</scope>
         </dependency>
+     
 
         <!-- for benchmarks -->
 
