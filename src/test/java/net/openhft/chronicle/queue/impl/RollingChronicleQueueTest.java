@@ -84,7 +84,7 @@ public class RollingChronicleQueueTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 73014444806\n" +
+                    "  encodedSequence: 3324304687106\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -134,7 +134,7 @@ public class RollingChronicleQueueTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 111669150432\n" +
+                    "  encodedSequence: 3161095929856\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -177,7 +177,7 @@ public class RollingChronicleQueueTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 60129542911\n" +
+                    "  encodedSequence: 3294239916033\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -221,7 +221,7 @@ public class RollingChronicleQueueTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 73014444805\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data\n" +
@@ -269,7 +269,7 @@ public class RollingChronicleQueueTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 111669150104\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data\n" +
@@ -298,7 +298,7 @@ public class RollingChronicleQueueTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 60129542583\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data\n" +

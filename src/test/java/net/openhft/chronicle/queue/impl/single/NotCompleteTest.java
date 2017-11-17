@@ -258,7 +258,7 @@ public class NotCompleteTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 42949706340\n" +
+                    "  encodedSequence: 143366008340480\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -302,7 +302,7 @@ public class NotCompleteTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 42949706336\n" +
+                    "  encodedSequence: 143348828471296\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +

@@ -98,7 +98,7 @@ public class RollingCycleTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 176093659834\n" +
+                    "  encodedSequence: 2997887172610\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -156,7 +156,7 @@ public class RollingCycleTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 176093659834\n" +
+                    "  encodedSequence: 2997887172610\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -214,7 +214,7 @@ public class RollingCycleTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 176093659834\n" +
+                    "  encodedSequence: 2997887172610\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -270,7 +270,7 @@ public class RollingCycleTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 176093659634\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -313,7 +313,7 @@ public class RollingCycleTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 176093659634\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -356,7 +356,7 @@ public class RollingCycleTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 176093659634\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +

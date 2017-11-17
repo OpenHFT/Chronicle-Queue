@@ -509,7 +509,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706274\n" +
+                    "  encodedSequence: 2619930050561\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -556,7 +556,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706274\n" +
+                    "  encodedSequence: 2619930050561\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -603,7 +603,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706274\n" +
+                    "  encodedSequence: 2619930050561\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -650,7 +650,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706274\n" +
+                    "  encodedSequence: 2619930050561\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -697,7 +697,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706274\n" +
+                    "  encodedSequence: 2619930050561\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -744,7 +744,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706274\n" +
+                    "  encodedSequence: 2619930050561\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -791,7 +791,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706282\n" +
+                    "  encodedSequence: 2654289788929\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -838,7 +838,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706282\n" +
+                    "  encodedSequence: 2654289788929\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -885,7 +885,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706282\n" +
+                    "  encodedSequence: 2654289788929\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -932,7 +932,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706282\n" +
+                    "  encodedSequence: 2654289788929\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -979,7 +979,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706282\n" +
+                    "  encodedSequence: 2654289788929\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -1026,7 +1026,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 38654706282\n" +
+                    "  encodedSequence: 2654289788929\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -2277,7 +2277,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477488\n" +
+                    "  encodedSequence: 3229815406592\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -2327,7 +2327,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "    timeStamp: 0\n" +
                         "  },\n" +
                         "  deltaCheckpointInterval: 0,\n" +
-                        "  encodedSequence: 68719477496\n" +
+                        "  encodedSequence: 3264175144960\n" +
                         "}\n" +
                         "# position: 408, header: -1\n" +
                         "--- !!meta-data #binary\n" +
@@ -2376,7 +2376,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "    timeStamp: 0\n" +
                         "  },\n" +
                         "  deltaCheckpointInterval: 0,\n" +
-                        "  encodedSequence: 68719477496\n" +
+                        "  encodedSequence: 3264175144960\n" +
                         "}\n" +
                         "# position: 408, header: -1\n" +
                         "--- !!meta-data #binary\n" +
@@ -3023,7 +3023,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 34359739060\n" +
+                    "  encodedSequence: 2972117368837\n" +
                     "}\n" +
                     "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -3095,7 +3095,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 34359739068\n" +
+                    "  encodedSequence: 3006477107205\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +

@@ -50,7 +50,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     private final int indexCount, indexCountBits;
     private final int indexSpacing, indexSpacingBits;
     private final LongValue index2Index;
-    private final LongValue nextEntryToBeIndexed;
+    final LongValue nextEntryToBeIndexed;
     private final Supplier<LongArrayValues> longArraySupplier;
     @NotNull
     private final ThreadLocal<WeakReference<LongArrayValuesHolder>> index2indexArray;

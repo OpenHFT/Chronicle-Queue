@@ -113,7 +113,6 @@ public class SingleChronicleQueueStore implements WireStore {
                 this.deltaCheckpointInterval = -1; // disabled.
             }
 
-
             if (wire.bytes().readRemaining() > 0) {
                 wire.read(MetaDataField.encodedSequence).int64(encodedSequence);
                 this.sequence = new RollCycleEncodeSequence(encodedSequence, rollIndexCount(), rollIndexSpacing());
@@ -232,7 +231,6 @@ public class SingleChronicleQueueStore implements WireStore {
         int header = mappedBytes.readVolatileInt(position);
         if (Wires.isReadyData(header)) {
             writePosition.setMaxValue(position);
-            sequence.sequence(header, position);
         } else
             throw new AssertionError();
         return this;
@@ -356,6 +354,9 @@ public class SingleChronicleQueueStore implements WireStore {
     public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec, long sequenceNumber,
                                              long position)
             throws UnrecoverableTimeoutException, StreamCorruptedException {
+
+        sequence.setSequence(sequenceNumber, position);
+
         long nextSequence = indexing.nextEntryToBeIndexed();
         if (nextSequence > sequenceNumber)
             return;

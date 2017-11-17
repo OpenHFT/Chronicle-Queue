@@ -148,7 +148,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477344\n" +
+                    "  encodedSequence: 2611340115968\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -189,7 +189,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477144\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -232,7 +232,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 103079215732\n" +
+                    "  encodedSequence: 2697239461889\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -277,7 +277,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 103079215728\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -324,7 +324,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477392\n" +
+                    "  encodedSequence: 2817498546178\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -373,7 +373,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477388\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -453,7 +453,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477344\n" +
+                    "  encodedSequence: 2611340115968\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -494,7 +494,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477144\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -551,7 +551,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719478111\n" +
+                    "  encodedSequence: 5905580032019\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -677,10 +677,12 @@ public class SingleCQFormat2Test {
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
+                    "    timeStamp: 0\n"
+
+                    +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719478016\n" +
+                    "  encodedSequence: 5497558138899\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -793,7 +795,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477919\n" +
+                    "  encodedSequence: 5080946311187\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -895,7 +897,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477919\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -992,7 +994,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477919\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -1089,7 +1091,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 68719477919\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -1276,7 +1278,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 274877907612\n" +
+                    "  encodedSequence: 2869038153729\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -1327,7 +1329,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 274877907412\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -1385,7 +1387,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 322122547863\n" +
+                    "  encodedSequence: 2847563317249\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -1438,7 +1440,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 322122547663\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data #binary\n" +
@@ -1490,7 +1492,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 21474837088\n" +
+                    "  encodedSequence: 2611340115968\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -1531,7 +1533,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 21474836888\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data\n" +
@@ -1561,7 +1563,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 25769804629\n" +
+                    "  encodedSequence: 3663607103504\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +
@@ -1678,7 +1680,7 @@ public class SingleCQFormat2Test {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 25769804334\n" +
+                    "  encodedSequence: 0\n" +
                     "}\n" +
                     "# position: 408, header: 0\n" +
                     "--- !!data\n" +

@@ -110,7 +110,7 @@ public class WriteBytesTest {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 34359742704\n" +
+                    "  encodedSequence: 18622978195711\n" +
                     "}\n" +
                     "# position: 408, header: -1\n" +
                     "--- !!meta-data #binary\n" +

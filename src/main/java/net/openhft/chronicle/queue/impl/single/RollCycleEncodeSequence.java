@@ -17,31 +17,48 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     @Override
-    public void sequence(long sequence, long position) {
-        if (sequenceValue != null)
-            sequenceValue.setOrderedValue(toLongValue((int) sequence, position));
+    public void setSequence(long sequence, long position) {
+        if (sequenceValue == null)
+            return;
+        long value = toLongValue((int) position, sequence);
+        sequenceValue.setValue(value);
+    }
+
+    @Override
+    public long toIndex(long headerNumber, long sequence) {
+        int cycle = Maths.toUInt31(headerNumber >> cycleShift);
+        return toLongValue(cycle, sequence);
     }
 
     /**
-     * This method will only return a valid sequence number of the write position id the write position is the
+     * gets the sequence for a writePosition
+     * <p>
+     * This method will only return a valid sequence number of the write position if the write position is the
      * last write position in the queue. YOU CAN NOT USE THIS METHOD TO LOOK UP RANDOM SEQUENCES FOR ANY WRITE POSITION.
-     * -1 will be return if a sequence number can not be found
+     * Long.MIN_VALUE will be return if a sequence number can not be found  ( so can retry )
+     * or -1 when you should not retry
      *
      * @param writePosition the last write position, expected to be the end of queue
-     * @return -1 if the sequence for this write position can not be found
+     * @return Long.MIN_VALUE if the sequence for this write position can not be found, or -1 if  sequenceValue==null or the sequence for this {@code writePosition}
      */
-    public long sequence(long writePosition) {
+    public long getSequence(long writePosition) {
+
         if (sequenceValue == null)
             return -1;
 
         // todo optimize the maths in the method below
-        final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) writePosition, 0));
-        final long sequenceValue = this.sequenceValue.getVolatileValue();
 
-        if (lowerBitsOfWp == toLowerBitsWritePosition(sequenceValue))
+        final long sequenceValue = this.sequenceValue.getVolatileValue();
+        if (sequenceValue == 0)
+            return -1;
+
+        final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) writePosition, 0));
+        final int toLowerBitsWritePosition = toLowerBitsWritePosition(sequenceValue);
+
+        if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
 
-        return -1;
+        return Long.MIN_VALUE;
     }
 
     private long toLongValue(int cycle, long sequenceNumber) {
