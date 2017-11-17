@@ -51,8 +51,10 @@ class PretoucherState {
             lastBytesHashcode = System.identityHashCode(bytes);
             averageMove = OS.pageSize();
             lastPos = pos;
-            String message = getFile(bytes) + " - Reset pretoucher to pos " + pos + " as the underlying MappedBytes changed.";
-            debug(message);
+            if (Jvm.isDebugEnabled(getClass())) {
+                String message = getFile(bytes) + " - Reset pretoucher to pos " + pos + " as the underlying MappedBytes changed.";
+                debug(message);
+            }
 
         } else {
             long moved = pos - lastPos;
@@ -72,7 +74,8 @@ class PretoucherState {
                 onTouched(count);
                 if (pretouch < count) {
                     minHeadRoom += 256 << 10;
-                    debug("pretouch for only " + pretouch + " of " + count + " min: " + (minHeadRoom >> 20) + " MB.");
+                    if (Jvm.isDebugEnabled(getClass()))
+                        debug("pretouch for only " + pretouch + " of " + count + " min: " + (minHeadRoom >> 20) + " MB.");
                 }
 
                 long pos2 = posSupplier.getAsLong();
