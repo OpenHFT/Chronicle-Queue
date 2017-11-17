@@ -2259,8 +2259,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         if (wireType == WireType.BINARY)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 760,\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 752,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -2269,7 +2269,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 408,\n" +
+                    "    index2Index: 400,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -2277,36 +2277,33 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 3264175144960\n" +
+                    "  encodedSequence: 3229815406592\n" +
                     "}\n" +
-                    "# position: 408, header: -1\n" +
+                    "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  576,\n" +
+                    "  568,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 576, header: -1\n" +
+                    "# position: 568, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  760,\n" +
+                    "  752,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 736, header: -1\n" +
+                    "# position: 728, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Quartilla\n" +
-                    "# position: 760, header: 0\n" +
+                    "# position: 752, header: 0\n" +
                     "--- !!data #binary\n" +
-                    "000002f0                                      3f 5b 8c c9              ?[··\n" +
-                    "00000300 ea 85 5a 0a fa 73 47 d2  3e 8d 66 4e 68 21 89 90 ··Z··sG· >·fNh!··\n" +
-                    "00000310 92 80 71 34 5c cc 42 d7  bc 8f c5 c7 01 43 db 63 ··q4\\·B· ·····C·c\n" +
-                    "00000320 ee 66 b0 cd ff 9f 69 91  76 80 15 1e             ·f····i· v···    \n" +
-                    "# position: 812, header: 0\n" +
+                    "FirstName: Helen\n" +
+                    "# position: 772, header: 0\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Steve\n" +
                     "...\n" +
-                    "# 130236 bytes remaining\n";
+                    "# 130276 bytes remaining\n";
 
         if (wireType == WireType.BINARY_LIGHT) {
             if (encryption)
@@ -3008,8 +3005,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         if (wireType == WireType.BINARY)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 820,\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 692,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -3018,7 +3015,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 408,\n" +
+                    "    index2Index: 400,\n" +
                     "    lastIndex: 6\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -3026,67 +3023,56 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 3521873182725\n" +
+                    "  encodedSequence: 2972117368837\n" +
                     "}\n" +
-                    "# position: 408, header: -1\n" +
+                    "# position: 400, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  512,\n" +
+                    "  504,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 512, header: -1\n" +
+                    "# position: 504, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
-                    "  608,\n" +
-                    "  644,\n" +
-                    "  696,\n" +
-                    "  732,\n" +
-                    "  784,\n" +
-                    "  820,\n" +
+                    "  600,\n" +
+                    "  612,\n" +
+                    "  640,\n" +
+                    "  652,\n" +
+                    "  680,\n" +
+                    "  692,\n" +
                     "  0, 0\n" +
                     "]\n" +
-                    "# position: 608, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "00000260             3f 5b 8c c9  ea 85 5a 0a fa 73 47 d2     ?[·· ··Z··sG·\n" +
-                    "00000270 3e 8d 66 4e 2b 53 d4 c9  c3 1c 88 28 1f f4 08 dc >·fN+S·· ···(····\n" +
-                    "00000280 b8 d0 cc 81                                      ····             \n" +
-                    "# position: 644, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "00000280                          3f 5b 8c c9 ea 85 5a 0a          ?[····Z·\n" +
-                    "00000290 fa 73 47 d2 3e 8d 66 4e  02 7b 19 9f 01 5d 63 02 ·sG·>·fN ·{···]c·\n" +
-                    "000002a0 56 69 3d c2 e0 1f 85 10                          Vi=·····         \n" +
-                    "# position: 680, header: 1\n" +
+                    "# position: 600, header: 0\n" +
+                    "--- !!data\n" +
+                    "hello A0\n" +
+                    "# position: 612, header: 1\n" +
+                    "--- !!data\n" +
+                    "hello B0\n" +
+                    "# position: 624, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 696, header: 2\n" +
-                    "--- !!data #binary\n" +
-                    "000002b0                                      3f 5b 8c c9              ?[··\n" +
-                    "000002c0 ea 85 5a 0a fa 73 47 d2  3e 8d 66 4e 82 16 28 4f ··Z··sG· >·fN··(O\n" +
-                    "000002d0 ba eb 3b 4b 18 a7 27 a9  7d d2 5a 74             ··;K··'· }·Zt    \n" +
-                    "# position: 732, header: 3\n" +
-                    "--- !!data #binary\n" +
-                    "000002e0 3f 5b 8c c9 ea 85 5a 0a  fa 73 47 d2 3e 8d 66 4e ?[····Z· ·sG·>·fN\n" +
-                    "000002f0 3b ce e0 e4 9d cf 08 cf  f0 a7 02 05 1e af bb 58 ;······· ·······X\n" +
-                    "# position: 768, header: 3\n" +
+                    "# position: 640, header: 2\n" +
+                    "--- !!data\n" +
+                    "hello A1\n" +
+                    "# position: 652, header: 3\n" +
+                    "--- !!data\n" +
+                    "hello B1\n" +
+                    "# position: 664, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 784, header: 4\n" +
-                    "--- !!data #binary\n" +
-                    "00000310             3f 5b 8c c9  ea 85 5a 0a fa 73 47 d2     ?[·· ··Z··sG·\n" +
-                    "00000320 3e 8d 66 4e 93 4c 60 3a  41 31 7c c1 58 bc 67 4d >·fN·L`: A1|·X·gM\n" +
-                    "00000330 51 a2 31 e3                                      Q·1·             \n" +
-                    "# position: 820, header: 5\n" +
-                    "--- !!data #binary\n" +
-                    "00000330                          3f 5b 8c c9 ea 85 5a 0a          ?[····Z·\n" +
-                    "00000340 fa 73 47 d2 3e 8d 66 4e  2d b1 66 14 74 da 38 d9 ·sG·>·fN -·f·t·8·\n" +
-                    "00000350 c7 bc 33 e2 30 dc 20 28                          ··3·0· (         \n" +
-                    "# position: 856, header: 5\n" +
+                    "# position: 680, header: 4\n" +
+                    "--- !!data\n" +
+                    "hello A2\n" +
+                    "# position: 692, header: 5\n" +
+                    "--- !!data\n" +
+                    "hello B2\n" +
+                    "# position: 704, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 130196 bytes remaining\n";
+                    "# 130348 bytes remaining\n";
 
         if (wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
