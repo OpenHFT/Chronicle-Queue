@@ -35,22 +35,22 @@ class RollCycleEncodeSequence implements Sequence {
      * <p>
      * This method will only return a valid sequence number of the write position if the write position is the
      * last write position in the queue. YOU CAN NOT USE THIS METHOD TO LOOK UP RANDOM SEQUENCES FOR ANY WRITE POSITION.
-     * Long.MIN_VALUE will be return if a sequence number can not be found  ( so can retry )
-     * or -1 when you should not retry
+     * NOT_FOUND_RETRY will be return if a sequence number can not be found  ( so can retry )
+     * or NOT_FOUND when you should not retry
      *
      * @param forWritePosition the last write position, expected to be the end of queue
-     * @return Long.MIN_VALUE if the sequence for this write position can not be found, or -1 if  sequenceValue==null or the sequence for this {@code writePosition}
+     * @return NOT_FOUND_RETRY if the sequence for this write position can not be found, or NOT_FOUND if sequenceValue==null or the sequence for this {@code writePosition}
      */
     public long getSequence(long forWritePosition) {
 
         if (sequenceValue == null)
-            return -1;
+            return Sequence.NOT_FOUND;
 
         // todo optimize the maths in the method below
 
         final long sequenceValue = this.sequenceValue.getVolatileValue();
         if (sequenceValue == 0)
-            return -1;
+            return Sequence.NOT_FOUND;
 
         final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) forWritePosition, 0));
         final int toLowerBitsWritePosition = toLowerBitsWritePosition(sequenceValue);
@@ -58,7 +58,7 @@ class RollCycleEncodeSequence implements Sequence {
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
 
-        return Long.MIN_VALUE;
+        return Sequence.NOT_FOUND_RETRY;
     }
 
     private long toLongValue(int cycle, long sequenceNumber) {
