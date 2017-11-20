@@ -23,7 +23,9 @@ public interface CommonStore extends ReferenceCounted, Demarshallable, WriteMars
     @NotNull
     String dump();
 
-    long writeHeader(Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
+    long writeHeader(@NotNull Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
+
+    long tryWriteHeader(@NotNull Wire wire, int length, int safeLength);
 
     /**
      * @return the type of wire used

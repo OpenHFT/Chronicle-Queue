@@ -346,6 +346,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return super.rollTime(time, ZoneId.of("UTC"));
     }
 
+    @Override
+    public SingleChronicleQueueBuilder<S> progressOnContention(boolean progressOnContention) {
+        return super.progressOnContention(progressOnContention);
+    }
+
     protected QueueLock queueLock() {
         return isQueueReplicationAvailable() && !readOnly() ? createTableStoreLock() : new NoopQueueLock();
     }

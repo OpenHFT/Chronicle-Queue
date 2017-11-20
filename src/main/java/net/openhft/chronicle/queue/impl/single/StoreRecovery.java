@@ -52,5 +52,9 @@ public interface StoreRecovery extends WriteMarshallable {
         }
     }
 
+    default long tryWriteHeader(@NotNull Wire wire, int length, int safeLength) {
+        return wire.tryWriteHeader(length, safeLength);
+    }
+
     long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException;
 }
