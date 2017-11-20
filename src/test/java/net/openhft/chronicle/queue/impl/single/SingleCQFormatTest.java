@@ -230,7 +230,10 @@ public class SingleCQFormatTest {
         assertEquals("--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  wireType: !WireType BINARY,\n" +
-                "  writePosition: 0,\n" +
+                "  writePosition: [\n" +
+                "    0,\n" +
+                "    0\n" +
+                "  ],\n" +
                 "  roll: !SCQSRoll {\n" +
                 "    length: !int 3600000,\n" +
                 "    format: yyyyMMdd-HH,\n" +
@@ -246,8 +249,7 @@ public class SingleCQFormatTest {
                 "  recovery: !TimedStoreRecovery {\n" +
                 "    timeStamp: 0\n" +
                 "  },\n" +
-                "  deltaCheckpointInterval: !byte -1,\n" +
-                "  encodedSequence: 0\n" +
+                "  deltaCheckpointInterval: !byte -1\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
@@ -323,7 +325,10 @@ public class SingleCQFormatTest {
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 0,\n" +
+                    "  writePosition: [\n" +
+                    "    0,\n" +
+                    "    0\n" +
+                    "  ],\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -339,13 +344,12 @@ public class SingleCQFormatTest {
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: !byte -1,\n" +
-                    "  encodedSequence: 0\n" +
+                    "  deltaCheckpointInterval: !byte -1\n" +
                     "}\n" +
-                    "# position: 400, header: 0\n" +
+                    "# position: 402, header: 0\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello world\n" +
-                    "# position: 421, header: 1\n" +
+                    "# position: 423, header: 1\n" +
                     "--- !!data #binary\n" +
                     "msg: Also hello world\n", Wires.fromSizePrefixedBlobs(mappedBytes
                     .readPosition(0)));

@@ -35,9 +35,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
                 }
             };
             AtomicLong time = new AtomicLong(1000l);
-            TimeProvider tp = () -> {
-                return time.getAndAccumulate(1000, (x, y) -> x + y);
-            };
+            TimeProvider tp = () -> time.getAndAccumulate(1000, (x, y) -> x + y);
             ChronicleQueue queue = SingleChronicleQueueBuilder
                     .binary(dir)
                     .testBlockSize()

@@ -166,7 +166,10 @@ public class NotCompleteTest {
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 0,\n" +
+                    "  writePosition: [\n" +
+                    "    0,\n" +
+                    "    0\n" +
+                    "  ],\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -175,37 +178,39 @@ public class NotCompleteTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 408,\n" +
+                    "    index2Index: 401,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 0\n" +
+                    "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 408, header: -1\n" +
+                    "# position: 401, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  512,\n" +
+                    "  504,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 512, header: -1\n" +
+                    "# position: 504, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 0\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 608, header: -1 or 0\n" +
+                    "# position: 600, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 130460 bytes remaining\n";
+                    "# 130468 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 0,\n" +
+                    "  writePosition: [\n" +
+                    "    0,\n" +
+                    "    0\n" +
+                    "  ],\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -221,13 +226,12 @@ public class NotCompleteTest {
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 0\n" +
+                    "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 408, header: -1 or 0\n" +
+                    "# position: 401, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 130660 bytes remaining\n";
+                    "# 130667 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
         }
 
@@ -241,7 +245,10 @@ public class NotCompleteTest {
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 33380,\n" +
+                    "  writePosition: [\n" +
+                    "    33372,\n" +
+                    "    143331648602112\n" +
+                    "  ],\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -250,42 +257,44 @@ public class NotCompleteTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 408,\n" +
+                    "    index2Index: 401,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 143366008340480\n" +
+                    "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 408, header: -1\n" +
+                    "# position: 401, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  512,\n" +
+                    "  504,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 512, header: -1\n" +
+                    "# position: 504, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  33380,\n" +
+                    "  33372,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 608, header: -1\n" +
+                    "# position: 600, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "\"!! Skipped due to recovery of locked header !!\"\n" +
-                    "# position: 33380, header: 0\n" +
+                    "# position: 33372, header: 0\n" +
                     "--- !!data #binary\n" +
                     "some: data\n" +
                     "...\n" +
-                    "# 97674 bytes remaining\n";
+                    "# 97682 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 33376,\n" +
+                    "  writePosition: [\n" +
+                    "    33368,\n" +
+                    "    143314468732928\n" +
+                    "  ],\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -294,38 +303,37 @@ public class NotCompleteTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 33180,\n" +
+                    "    index2Index: 33172,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  encodedSequence: 143348828471296\n" +
+                    "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 408, header: -1\n" +
+                    "# position: 401, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "\"!! Skipped due to recovery of locked header !!\"\n" +
-                    "# position: 33180, header: -1\n" +
+                    "# position: 33172, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  33280,\n" +
+                    "  33272,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 33280, header: -1\n" +
+                    "# position: 33272, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  33376,\n" +
+                    "  33368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 33376, header: 0\n" +
+                    "# position: 33368, header: 0\n" +
                     "--- !!data #binary\n" +
                     "some: data\n" +
                     "...\n" +
-                    "# 97678 bytes remaining\n";
+                    "# 97686 bytes remaining\n";
             assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
         }
     }

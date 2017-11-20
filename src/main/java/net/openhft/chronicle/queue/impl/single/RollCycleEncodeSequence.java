@@ -2,26 +2,29 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.wire.Sequence;
 
 
 class RollCycleEncodeSequence implements Sequence {
-    private final LongValue sequenceValue;
-    private int cycleShift = 0;
-    private long sequenceMask = 0;
+    private final TwoLongValue writePositionAndSequence;
+    private final int cycleShift;
+    private final long sequenceMask;
 
-    RollCycleEncodeSequence(LongValue sequenceValue, int indexCount, int indexSpacing) {
-        this.sequenceValue = sequenceValue;
-        cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
-        sequenceMask = (1L << cycleShift) - 1;
+    RollCycleEncodeSequence(LongValue writePositionAndSequence, int indexCount, int indexSpacing) {
+        this.cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
+        this.sequenceMask = (1L << cycleShift) - 1;
+        this.writePositionAndSequence = writePositionAndSequence instanceof TwoLongValue ?
+                (TwoLongValue) writePositionAndSequence : null;
+
     }
 
     @Override
     public void setSequence(long sequence, long position) {
-        if (sequenceValue == null)
+        if (writePositionAndSequence == null)
             return;
         long value = toLongValue((int) position, sequence);
-        sequenceValue.setOrderedValue(value);
+        writePositionAndSequence.setOrderedValue2(value);
     }
 
     @Override
@@ -43,12 +46,12 @@ class RollCycleEncodeSequence implements Sequence {
      */
     public long getSequence(long forWritePosition) {
 
-        if (sequenceValue == null)
+        if (writePositionAndSequence == null)
             return Sequence.NOT_FOUND;
 
         // todo optimize the maths in the method below
 
-        final long sequenceValue = this.sequenceValue.getVolatileValue();
+        final long sequenceValue = this.writePositionAndSequence.getVolatileValue2();
         if (sequenceValue == 0)
             return Sequence.NOT_FOUND;
 

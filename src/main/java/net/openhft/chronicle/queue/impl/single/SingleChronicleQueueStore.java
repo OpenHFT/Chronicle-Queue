@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -60,13 +61,11 @@ public class SingleChronicleQueueStore implements WireStore {
     @Nullable
     private final StoreRecovery recovery;
 
-    private int deltaCheckpointInterval;
+    private int deltaCheckpointInterval = -1;
     @Nullable
     private LongValue lastAcknowledgedIndexReplicated;
 
     @NotNull
-    private final LongValue encodedSequence;
-
     private transient Sequence sequence;
 
     /**
@@ -80,18 +79,15 @@ public class SingleChronicleQueueStore implements WireStore {
         try {
             this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
             assert wireType != null;
-            this.writePosition = wire.newLongReference();
 
-            wire.read(MetaDataField.writePosition).int64(writePosition);
+            writePosition = loadWritePosition(wire);
             this.roll = wire.read(MetaDataField.roll).typedMarshallable();
-
             this.mappedBytes = (MappedBytes) (wire.bytes());
             this.mappedFile = mappedBytes.mappedFile();
             this.refCount = ReferenceCounter.onReleased(this::onCleanup);
             this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
             assert indexing != null;
             this.indexing.writePosition = writePosition;
-            this.encodedSequence = wire.newLongReference();
 
             if (wire.bytes().readRemaining() > 0) {
                 this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
@@ -113,17 +109,40 @@ public class SingleChronicleQueueStore implements WireStore {
                 this.deltaCheckpointInterval = -1; // disabled.
             }
 
-            if (wire.bytes().readRemaining() > 0) {
-                wire.read(MetaDataField.encodedSequence).int64(encodedSequence);
-                this.sequence = new RollCycleEncodeSequence(encodedSequence, rollIndexCount(), rollIndexSpacing());
-            } else {
-                this.sequence = new RollCycleEncodeSequence(null, rollIndexCount(), rollIndexSpacing());
-            }
 
+            this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
 
         } finally {
             assert wire.endUse();
         }
+    }
+
+    private LongValue loadWritePosition(@NotNull WireIn wire) {
+
+        final ValueIn read = wire.read(MetaDataField.writePosition);
+
+        final int code;
+        final long start = wire.bytes().readPosition();
+
+        try {
+            wire.consumePadding();
+            code = wire.bytes().uncheckedReadUnsignedByte();
+        } finally {
+            wire.bytes().readPosition(start);
+        }
+
+        if (code == BinaryWireCode.I64_ARRAY) {
+            TwoLongValue result = wire.newTwoLongReference();
+            // when the write position is and array it also encodes the sequence number in the write position as the second long value
+            read.int128(result);
+            return result;
+        }
+
+
+        final LongValue result = wire.newLongReference();
+        read.int64(result);
+        return result;
+
     }
 
     /**
@@ -156,9 +175,11 @@ public class SingleChronicleQueueStore implements WireStore {
         indexSpacing = Maths.nextPower2(indexSpacing, 1);
 
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
-        this.indexing.writePosition = this.writePosition = wireType.newLongReference().get();
-        this.encodedSequence = wireType.newLongReference().get();
-        this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(this.encodedSequence, rollCycle.defaultIndexCount(), rollCycle.defaultIndexSpacing());
+        this.indexing.writePosition = this.writePosition = wireType.newTwoLongReference().get();
+        this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(writePosition,
+                rollCycle.defaultIndexCount(),
+                rollCycle.defaultIndexSpacing());
+
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
         this.deltaCheckpointInterval = deltaCheckpointInterval;
     }
@@ -308,16 +329,19 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     @Override
     public String toString() {
-        return "SingleChronicleQueueStore{" +
-                "indexing=" + indexing +
-                ", wireType=" + wireType +
-                ", checkpointInterval=" + this.deltaCheckpointInterval +
-                ", roll=" + roll +
-                ", writePosition=" + writePosition +
-                ", mappedFile=" + mappedFile +
-                ", refCount=" + refCount +
-                ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
-                '}';
+        final StringBuilder sb = Wires.acquireStringBuilder();
+        sb.append("SingleChronicleQueueStore{" + "indexing=").append(indexing).
+                append(", wireType=").append(wireType).
+                append(", checkpointInterval=").append(this.deltaCheckpointInterval).
+                append(", roll=").append(roll).
+                append(", writePosition=").append(writePosition.getValue());
+
+        sb.append(", lastSequence=").append(Long.toHexString(((TwoLongValue) writePosition).getValue2()));
+        sb.append(", mappedFile=").append(mappedFile).
+                append(", refCount=").append(refCount).
+                append(", lastAcknowledgedIndexReplicated=").append(lastAcknowledgedIndexReplicated).
+                append('}');
+        return sb.toString();
     }
 
     private void onCleanup() {
@@ -333,16 +357,21 @@ public class SingleChronicleQueueStore implements WireStore {
         if (lastAcknowledgedIndexReplicated == null)
             lastAcknowledgedIndexReplicated = wire.newLongReference();
 
-        wire.write(MetaDataField.wireType).object(wireType)
-                .writeAlignTo(8, 0).write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
-                .write(MetaDataField.roll).typedMarshallable(this.roll)
+        ValueOut wireOut = wire.write(MetaDataField.wireType).object(wireType).writeAlignTo(16, 0).write(MetaDataField.writePosition);
+        intForBinding(wireOut, writePosition).write(MetaDataField.roll).typedMarshallable(this.roll)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
                 .write(MetaDataField.lastAcknowledgedIndexReplicated)
                 .int64forBinding(-1L, lastAcknowledgedIndexReplicated);
         wire.write(MetaDataField.recovery).typedMarshallable(recovery);
         wire.write(MetaDataField.deltaCheckpointInterval).int32(this.deltaCheckpointInterval);
-        wire.write(MetaDataField.encodedSequence).int64forBinding(0L, encodedSequence);
         wire.padToCacheAlign();
+    }
+
+    private static WireOut intForBinding(ValueOut wireOut, final LongValue value) {
+        return value instanceof TwoLongValue ?
+                wireOut.int128forBinding(0L, 0L, (TwoLongValue) value) :
+                wireOut.int64forBinding(0L, value);
+
     }
 
     @Override
