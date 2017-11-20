@@ -24,7 +24,7 @@ class RollCycleEncodeSequence implements Sequence {
         if (writePositionAndSequence == null)
             return;
         long value = toLongValue((int) position, sequence);
-        writePositionAndSequence.setValue2(value);
+        writePositionAndSequence.setOrderedValue2(value);
     }
 
     @Override
