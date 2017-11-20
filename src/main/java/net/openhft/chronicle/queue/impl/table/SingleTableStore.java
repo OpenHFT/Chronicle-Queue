@@ -191,6 +191,11 @@ public class SingleTableStore implements TableStore {
         return recovery.writeHeader(wire, length, safeLength, timeoutMS, null, null);
     }
 
+    @Override
+    public long tryWriteHeader(@NotNull Wire wire, int length, int safeLength) {
+        return recovery.tryWriteHeader(wire, length, safeLength);
+    }
+
     /**
      * {@inheritDoc}
      */
