@@ -93,6 +93,7 @@ public class SingleChronicleQueueExcerpts {
     }
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
+        public static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -120,17 +121,14 @@ public class SingleChronicleQueueExcerpts {
         private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
-        StoreAppender(@NotNull SingleChronicleQueue queue) {
+        StoreAppender(@NotNull SingleChronicleQueue queue, boolean progressOnContention) {
             this.queue = queue;
             queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
 
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
-            // will work well when both threads writing heavy objects. Will work badly for small objects e.g. periodicUpdates
-            headerWriteStrategy = Boolean.getBoolean("header.write.defer") ?
-                    new HeaderWriteStrategyDefer() :
-                    new HeaderWriteStrategyOriginal();
+            headerWriteStrategy = progressOnContention ? new HeaderWriteStrategyDefer() : new HeaderWriteStrategyOriginal();
         }
 
         @Override
@@ -348,8 +346,7 @@ public class SingleChronicleQueueExcerpts {
                         rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
-//System.out.println("calling onOpen");
-                ok = headerWriteStrategy.onOpen(metaData, safeLength);
+                ok = headerWriteStrategy.onContextOpen(metaData, safeLength);
                 return context;
 
             } finally {
@@ -789,8 +786,7 @@ public class SingleChronicleQueueExcerpts {
                 }
 
                 try {
-//System.out.println("calling onClose");
-                    headerWriteStrategy.onClose();
+                    headerWriteStrategy.onContextClose();
 
                     if (wire == StoreAppender.this.wire) {
                         if (padToCacheAlign)
@@ -860,8 +856,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private interface HeaderWriteStrategy {
-            void onClose();
-            boolean onOpen(boolean metaData, int safeLength);
+            void onContextClose();
+            boolean onContextOpen(boolean metaData, int safeLength);
         }
 
         /**
@@ -869,8 +865,8 @@ public class SingleChronicleQueueExcerpts {
          */
         private class HeaderWriteStrategyOriginal implements HeaderWriteStrategy {
             @Override
-            public boolean onOpen(boolean metaData, int safeLength) {
-                for (int i = 0; i < 128; i++) {
+            public boolean onContextOpen(boolean metaData, int safeLength) {
+                for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
                     try {
                         assert wire != null;
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
@@ -889,7 +885,7 @@ public class SingleChronicleQueueExcerpts {
             }
 
             @Override
-            public void onClose() {
+            public void onContextClose() {
                 // do nothing
             }
         }
@@ -899,12 +895,12 @@ public class SingleChronicleQueueExcerpts {
          */
         private class HeaderWriteStrategyDefer implements HeaderWriteStrategy {
             @Override
-            public boolean onOpen(boolean metaData, int safeLength) {
+            public boolean onContextOpen(boolean metaData, int safeLength) {
                 assert wire != null;
                 long pos = store.tryWriteHeader(wire, Wires.UNKNOWN_LENGTH, safeLength);
                 if (pos != WireOut.TRY_WRITE_HEADER_FAILED) {
                     position(pos);
-                    context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+                    context.wire = wire;
                     context.deferredHeader = false;
                 } else {
                     context.wire = acquireBufferWire();
@@ -917,12 +913,12 @@ public class SingleChronicleQueueExcerpts {
                 return true;
             }
 
-            public void onClose() {
+            public void onContextClose() {
                 if (context.deferredHeader) {
                     int safeLength = (int) queue.overlapSize();
                     assert wire != null;
                     assert wire != context.wire;
-                    for (int i = 0; i < 128; i++) {
+                    for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
                         try {
                             // TODO: we should be able to write and update the header in one go
                             long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
@@ -1105,11 +1101,11 @@ public class SingleChronicleQueueExcerpts {
                     if (rollCycle.toCycle(index) < firstCycle)
                         toStart();
                 } else
-                if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
-                    // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
-                    // since we can't find an entry at current index, indicate that we're at the end of a cycle
-                    state = TailerState.END_OF_CYCLE;
-                }
+                    if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
+                        // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
+                        // since we can't find an entry at current index, indicate that we're at the end of a cycle
+                        state = TailerState.END_OF_CYCLE;
+                    }
             } catch (StreamCorruptedException e) {
                 throw new IllegalStateException(e);
             } catch (UnrecoverableTimeoutException notComplete) {

@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.util.Histogram;
@@ -25,10 +26,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 
 import java.io.File;
@@ -39,10 +37,10 @@ import static org.junit.Assert.assertEquals;
 /*
  * Created by Jerry Shea 16/11/17
  */
+@Ignore("long running")
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ContendedWriterTest {
-    final String STRATEGY = Boolean.getBoolean("header.write.defer") ? "DEFFERED " : "ORIGINAL ";
-    final AtomicBoolean running = new AtomicBoolean(true);
+    private final AtomicBoolean running = new AtomicBoolean(true);
     private static final long NUMBER_OF_LONGS = 3;
 
     private ThreadDump threadDump;
@@ -60,62 +58,83 @@ public class ContendedWriterTest {
 
     @Test
     public void oneThread() {
-        System.out.println("oneThread");
-        File path1 = DirectoryUtils.tempDir("testContended");
+        test("oneThread", new Config(false, 1, 0));
+    }
 
-        try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder
-                .binary(path1)
-                .testBlockSize()
-                .build()) {
+    @Test
+    public void oneThreadDeferred() {
+        test("oneThreadDeferred", new Config(true, 1, 0));
+    }
 
-            new StartAndMonitor(queue1, "1", 1, 0);
+    @Test
+    public void sixThreads() {
+        Config config15 = new Config(false, 1, 5);
+        test("sixThreads", config15, config15, config15, config15, config15, config15);
+    }
 
-            //warmup
-            Jvm.pause(5_000);
-            running.set(false);
-            Jvm.pause(50);
-
-            running.set(true);
-            StartAndMonitor s1 = new StartAndMonitor(queue1, "1", 1, 0);
-
-            Jvm.pause(Jvm.isDebug() ? 30_000 : 5_000);
-            running.set(false);
-            Jvm.pause(50);
-
-            System.out.println(STRATEGY + s1.histo.toMicrosFormat());
-        }
+    @Test
+    public void sixThreadsDeferred() {
+        Config config15 = new Config(true, 1, 5);
+        test("sixThreadsDeferred", config15, config15, config15, config15, config15, config15);
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesAtSameSlowRate() {
-        testContended("twoThreadsWritingLargeMessagesAtSameSlowRate", 1, 5, 1, 5);
+        test("twoThreadsWritingLargeMessagesAtSameSlowRate", 
+                new Config(false, 1, 5), 
+                new Config(false,1, 5));
+    }
+
+    @Test
+    public void twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred() {
+        test("twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred", 
+                new Config(true, 1, 5), 
+                new Config(true,1, 5));
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesOneFastOneSlow() {
-        testContended("twoThreadsWritingLargeMessagesOneFastOneSlow", 1, 0, 1, 5);
+        test("twoThreadsWritingLargeMessagesOneFastOneSlow", 
+                new Config(false,1, 0), 
+                new Config(false, 1, 5));
+    }
+
+    @Test
+    public void twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred() {
+        test("twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred", 
+                new Config(false,1, 0), 
+                new Config(true, 1, 5));
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow() {
-        testContended("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow", 1, 0, 0, 5);
+        test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow", 
+                new Config(false, 1, 0), 
+                new Config(false,0, 5));
     }
 
-    private void testContended(String name, int wp1, int sbm1, int wp2, int sbm2) {
+    @Test
+    public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred() {
+        test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred", 
+                new Config(false, 1, 0), 
+                new Config(true,0, 5));
+    }
+
+    private void test(String name, Config... configs) {
         System.out.println(name);
-        File path1 = DirectoryUtils.tempDir(name);
+        File path = DirectoryUtils.tempDir(name);
+        SingleChronicleQueue[] queues = new SingleChronicleQueue[configs.length];
+        StartAndMonitor[] startAndMonitors = new StartAndMonitor[configs.length];
 
-        try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder
-                .binary(path1)
-                .testBlockSize()
-                .build();
-             SingleChronicleQueue queue2 = SingleChronicleQueueBuilder
-                     .binary(path1)
-                     .testBlockSize()
-                     .build()) {
-
-            new StartAndMonitor(queue1, "1", wp1, sbm1);
-            new StartAndMonitor(queue2, "2", wp2, sbm2);
+        try {
+            for (int i=0; i<configs.length; i++) {
+                queues[i] = SingleChronicleQueueBuilder
+                        .binary(path)
+                        .testBlockSize()
+                        .progressOnContention(configs[i].progressOnContention)
+                        .build();
+                startAndMonitors[i] = new StartAndMonitor(queues[i], Integer.toString(i), configs[i].writePause, configs[i].pauseBetweenWrites);
+            }
 
             //warmup
             Jvm.pause(5_000);
@@ -123,15 +142,33 @@ public class ContendedWriterTest {
             Jvm.pause(50);
 
             running.set(true);
-            StartAndMonitor s1 = new StartAndMonitor(queue1, "1", wp1, sbm1);
-            StartAndMonitor s2 = new StartAndMonitor(queue2, "2", wp2, sbm2);
+            for (int i=0; i<configs.length; i++) {
+                startAndMonitors[i] = new StartAndMonitor(queues[i], Integer.toString(i), configs[i].writePause, configs[i].pauseBetweenWrites);
+            }
 
-            Jvm.pause(Jvm.isDebug() ? 30_000 : 5_000);
+            Jvm.pause(Jvm.isDebug() ? 30_000 : 15_000);
             running.set(false);
             Jvm.pause(50);
 
-            System.out.println(STRATEGY + s1.histo.toMicrosFormat());
-            System.out.println(STRATEGY + s2.histo.toMicrosFormat());
+            for (int i=0; i<configs.length; i++) {
+                System.out.println("thread"+i+" progress=" + configs[i].progressOnContention + " writePause=" +
+                        configs[i].writePause + " between=" + configs[i].pauseBetweenWrites + ": " +
+                        startAndMonitors[i].histo.toMicrosFormat());
+            }
+        } finally {
+            Closeable.closeQuietly(queues);
+        }
+    }
+
+    private static class Config {
+        final boolean progressOnContention;
+        final int writePause; // how long to keep writingContext open
+        final int pauseBetweenWrites;
+
+        private Config(boolean progressOnContention, int writePause, int pauseBetweenWrites) {
+            this.progressOnContention = progressOnContention;
+            this.writePause = writePause;
+            this.pauseBetweenWrites = pauseBetweenWrites;
         }
     }
 

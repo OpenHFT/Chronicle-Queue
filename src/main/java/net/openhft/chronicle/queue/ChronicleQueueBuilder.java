@@ -188,5 +188,19 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
 
     B readOnly(boolean readOnly);
 
+    boolean progressOnContention();
+
+    /**
+     * Setting this true will likely improve throughput if
+     * <ul>
+     * <li>you have multiple appenders, and</li>
+     * <li>the appenders are holding the writingContext open for a long time (e.g. large objects
+     * that are slow to serialise)</li>
+     * </ul>
+     * @param progressOnContention leave false (default) for existing behaviour
+     * @return this
+     */
+    B progressOnContention(boolean progressOnContention);
+
     CycleCalculator cycleCalculator();
 }

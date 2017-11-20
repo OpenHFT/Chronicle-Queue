@@ -97,6 +97,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final DirectoryListing directoryListing;
     @NotNull
     private final QueueLock queueLock;
+    private final boolean progressOnContention;
     @NotNull
     private RollCycle rollCycle;
     @NotNull
@@ -158,6 +159,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
+        progressOnContention = builder.progressOnContention();
     }
 
     @Nullable
@@ -313,7 +315,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     protected ExcerptAppender newAppender() {
-        return new StoreAppender(this);
+        return new StoreAppender(this, progressOnContention);
     }
 
     @NotNull

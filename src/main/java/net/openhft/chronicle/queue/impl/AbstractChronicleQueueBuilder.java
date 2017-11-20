@@ -85,6 +85,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     private boolean readOnly = false;
     private boolean rollCycleSet = false;
+    private boolean progressOnContention = false;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -384,6 +385,16 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
+    @Override
+    public boolean progressOnContention() {
+        return progressOnContention;
+    }
+
+    @Override
+    public B progressOnContention(boolean progressOnContention) {
+        this.progressOnContention = progressOnContention;
+        return (B) this;
+    }
 
 
     @NotNull
