@@ -24,7 +24,7 @@ class RollCycleEncodeSequence implements Sequence {
         if (writePositionAndSequence == null)
             return;
         long value = toLongValue((int) position, sequence);
-        writePositionAndSequence.setOrderedValue2(value);
+        writePositionAndSequence.setValue2(value);
     }
 
     @Override
@@ -32,6 +32,8 @@ class RollCycleEncodeSequence implements Sequence {
         int cycle = Maths.toUInt31(headerNumber >> cycleShift);
         return toLongValue(cycle, sequence);
     }
+
+
 
     /**
      * gets the sequence for a writePosition
@@ -68,7 +70,7 @@ class RollCycleEncodeSequence implements Sequence {
         return ((long) cycle << cycleShift) + (sequenceNumber & sequenceMask);
     }
 
-    private long toSequenceNumber(long index) {
+    public long toSequenceNumber(long index) {
         return index & sequenceMask;
     }
 

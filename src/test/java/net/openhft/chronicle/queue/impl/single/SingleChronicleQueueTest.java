@@ -2780,7 +2780,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
-        try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
+        try (SingleChronicleQueue q = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
 
@@ -2793,11 +2793,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = q.createTailer();
             for (int i = 0; i < size; i++) {
                 try (DocumentContext dc = tailer.readingDocument(false)) {
-                    Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
+                    long index = dc.index();
+                    long actual = dc.wire().read(() -> "key").int64();
+
+                    Assert.assertEquals(toTextIndex(q, index), toTextIndex(q, actual));
                 }
             }
         }
 
+    }
+
+    @NotNull
+    private String toTextIndex(SingleChronicleQueue q, long index) {
+        return Long.toHexString(q.rollCycle().toCycle(index))+"_"+ Long.toHexString(q.rollCycle().toSequenceNumber(index));
     }
 
     @Ignore("Long Running Test")
