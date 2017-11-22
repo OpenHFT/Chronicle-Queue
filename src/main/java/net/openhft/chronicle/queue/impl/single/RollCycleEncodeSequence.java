@@ -59,7 +59,7 @@ class RollCycleEncodeSequence implements Sequence {
         // the below cast is safe as cycleMask always returns a number guaranteed within int range
         int writePositionCycle = (int) cycleMask(forWritePosition);
         final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue(writePositionCycle, 0));
-        final int toLowerBitsWritePosition = toLowerBitsWritePosition(sequenceValue);
+        final int toLowerBitsWritePosition = toLowerBitsWritePosition(cycleMask(sequenceValue));
 
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
@@ -80,7 +80,7 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     private int toLowerBitsWritePosition(long index) {
-        return toCycle(cycleMask(index));
+        return toCycle(index);
     }
 
     private int toCycle(long number) {

@@ -3716,9 +3716,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
         }
 
+        long timeout = 20_000 + System.currentTimeMillis();
         ExcerptTailer tailer = queue.createTailer();
         for (int expected = 0; expected < totalIterations; expected++) {
             for (; ; ) {
+                if (System.currentTimeMillis() > timeout)
+                    Assert.fail("Timed out");
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (!dc.isPresent()) {
                         Thread.yield();
