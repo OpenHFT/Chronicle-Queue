@@ -7,6 +7,7 @@ import net.openhft.chronicle.wire.Sequence;
 
 
 class RollCycleEncodeSequence implements Sequence {
+    private static final long THIRTY_ONE_BITS = (1 << 31) - 1;
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
     private final long sequenceMask;
@@ -29,11 +30,9 @@ class RollCycleEncodeSequence implements Sequence {
 
     @Override
     public long toIndex(long headerNumber, long sequence) {
-        int cycle = Maths.toUInt31(headerNumber >> cycleShift);
+        int cycle = toCycle(headerNumber);
         return toLongValue(cycle, sequence);
     }
-
-
 
     /**
      * gets the sequence for a writePosition
@@ -57,13 +56,19 @@ class RollCycleEncodeSequence implements Sequence {
         if (sequenceValue == 0)
             return Sequence.NOT_FOUND;
 
-        final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue((int) forWritePosition, 0));
+        // the below cast is safe as cycleMask always returns a number guaranteed within int range
+        int writePositionCycle = (int) cycleMask(forWritePosition);
+        final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue(writePositionCycle, 0));
         final int toLowerBitsWritePosition = toLowerBitsWritePosition(sequenceValue);
 
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
 
         return Sequence.NOT_FOUND_RETRY;
+    }
+
+    private long cycleMask(long number) {
+        return number & THIRTY_ONE_BITS;
     }
 
     private long toLongValue(int cycle, long sequenceNumber) {
@@ -75,6 +80,10 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     private int toLowerBitsWritePosition(long index) {
-        return Maths.toUInt31(index >> cycleShift);
+        return toCycle(cycleMask(index));
+    }
+
+    private int toCycle(long number) {
+        return Maths.toUInt31(number >> cycleShift);
     }
 }
