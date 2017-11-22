@@ -23,7 +23,7 @@ class RollCycleEncodeSequence implements Sequence {
     public void setSequence(long sequence, long position) {
         if (writePositionAndSequence == null)
             return;
-        long value = toLongValue((int) position, sequence);
+        long value = toLongValue(position, sequence);
         writePositionAndSequence.setOrderedValue2(value);
     }
 
