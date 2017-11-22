@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryTwoLongReference;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.Sequence;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -21,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 public class RollCycleEncodeSequenceTest {
     private final BinaryTwoLongReference longValue;
     private final RollCycleEncodeSequence rollCycleEncodeSequence;
+    private final Bytes<ByteBuffer> bytes;
 
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
@@ -34,13 +36,14 @@ public class RollCycleEncodeSequenceTest {
 
     public RollCycleEncodeSequenceTest(final RollCycles cycle) {
         longValue = new BinaryTwoLongReference();
-        Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
-        try {
-            longValue.bytesStore(bytes, 0, 16);
-            rollCycleEncodeSequence = new RollCycleEncodeSequence(longValue, cycle.defaultIndexCount(), cycle.defaultIndexSpacing());
-        } finally {
-            bytes.release();
-        }
+        bytes = Bytes.elasticByteBuffer();
+        longValue.bytesStore(bytes, 0, 16);
+        rollCycleEncodeSequence = new RollCycleEncodeSequence(longValue, cycle.defaultIndexCount(), cycle.defaultIndexSpacing());
+    }
+
+    @After
+    public void before() {
+        bytes.release();
     }
 
     @Test
