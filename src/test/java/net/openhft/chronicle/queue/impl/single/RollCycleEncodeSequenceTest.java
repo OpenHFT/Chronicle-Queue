@@ -27,7 +27,7 @@ public class RollCycleEncodeSequenceTest {
                 {RollCycles.DAILY},
                 {RollCycles.HOURLY},
                 {RollCycles.MINUTELY},
-                //{RollCycles.HUGE_DAILY} java.lang.IllegalArgumentException: Unsigned Int 31-bit -13228 out of range
+                {RollCycles.HUGE_DAILY}
         });
     }
 

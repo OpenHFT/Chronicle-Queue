@@ -17,7 +17,6 @@ class RollCycleEncodeSequence implements Sequence {
         this.sequenceMask = (1L << cycleShift) - 1;
         this.writePositionAndSequence = writePositionAndSequence instanceof TwoLongValue ?
                 (TwoLongValue) writePositionAndSequence : null;
-
     }
 
     @Override
@@ -58,8 +57,8 @@ class RollCycleEncodeSequence implements Sequence {
 
         // the below cast is safe as cycleMask always returns a number guaranteed within int range
         int writePositionCycle = (int) cycleMask(forWritePosition);
-        final int lowerBitsOfWp = toLowerBitsWritePosition(toLongValue(writePositionCycle, 0));
-        final int toLowerBitsWritePosition = toLowerBitsWritePosition(cycleMask(sequenceValue));
+        final long lowerBitsOfWp = toLowerBitsWritePosition(toLongValue(writePositionCycle, 0));
+        final long toLowerBitsWritePosition = toLowerBitsWritePosition(cycleMask(sequenceValue));
 
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
@@ -71,16 +70,16 @@ class RollCycleEncodeSequence implements Sequence {
         return number & THIRTY_ONE_BITS;
     }
 
-    private long toLongValue(int cycle, long sequenceNumber) {
-        return ((long) cycle << cycleShift) + (sequenceNumber & sequenceMask);
+    private long toLongValue(long cycle, long sequenceNumber) {
+        return (cycle << cycleShift) + (sequenceNumber & sequenceMask);
     }
 
     public long toSequenceNumber(long index) {
         return index & sequenceMask;
     }
 
-    private int toLowerBitsWritePosition(long index) {
-        return toCycle(index);
+    private long toLowerBitsWritePosition(long index) {
+        return index >> cycleShift;
     }
 
     private int toCycle(long number) {
