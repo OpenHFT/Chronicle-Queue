@@ -7,7 +7,7 @@ import net.openhft.chronicle.wire.Sequence;
 
 
 class RollCycleEncodeSequence implements Sequence {
-    private static final long THIRTY_ONE_BITS = (1 << 31) - 1;
+    private static final long THIRTY_ONE_BITS = (1L << 31) - 1;
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
     private final long sequenceMask;
