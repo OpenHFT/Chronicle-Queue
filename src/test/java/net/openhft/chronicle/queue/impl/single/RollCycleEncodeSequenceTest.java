@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -33,8 +34,13 @@ public class RollCycleEncodeSequenceTest {
 
     public RollCycleEncodeSequenceTest(final RollCycles cycle) {
         longValue = new BinaryTwoLongReference();
-        longValue.bytesStore(Bytes.elasticByteBuffer(),0, 16);
-        rollCycleEncodeSequence = new RollCycleEncodeSequence(longValue, cycle.defaultIndexCount(), cycle.defaultIndexSpacing());
+        Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
+        try {
+            longValue.bytesStore(bytes, 0, 16);
+            rollCycleEncodeSequence = new RollCycleEncodeSequence(longValue, cycle.defaultIndexCount(), cycle.defaultIndexSpacing());
+        } finally {
+            bytes.release();
+        }
     }
 
     @Test
