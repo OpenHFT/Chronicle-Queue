@@ -8,10 +8,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 /*
--Dtarget=/home/peter/tmp/
--Dthroughput=500
--Dorg.slf4j.simpleLogger.defaultLogLevel=info
--Druns=80
+-Dtarget=/home/peter/tmp/ -Dthroughput=1000 -Dorg.slf4j.simpleLogger.defaultLogLevel=info -Druns=40
  */
 
 public class MultiQueueStressMain {
@@ -22,7 +19,6 @@ public class MultiQueueStressMain {
 
     public static void main(String[] args) throws FileNotFoundException {
         for (int t = 0; t < runs; t++) {
-            System.out.print("Writing ... ");
             long start0 = System.currentTimeMillis();
             int count = 0;
             String baseDir = target + "/deleteme/" + System.nanoTime();
@@ -30,7 +26,12 @@ public class MultiQueueStressMain {
             MappedBytes[] queues = new MappedBytes[queueCount];
             int pagesPer10Second = (int) (10L * (throughput << 20) / queueCount / (4 << 10));
             for (int i = 0; i < queueCount; i++) {
-                queues[i] = MappedBytes.mappedBytes(baseDir + "/" + count++, pagesPer10Second * (4 << 10));
+                long start1 = System.currentTimeMillis();
+                String filename = baseDir + "/" + count++;
+                queues[i] = MappedBytes.mappedBytes(filename, pagesPer10Second * (4 << 10));
+                long time1 = System.currentTimeMillis() - start1;
+                if (time1 > 20)
+                    System.out.printf("Creating %s took %.3f seconds%n", filename, time1 / 1e3);
             }
             long mid1 = System.currentTimeMillis();
             for (int i = 0; i < pagesPer10Second; i++) {
