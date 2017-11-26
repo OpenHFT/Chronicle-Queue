@@ -55,9 +55,14 @@ public class ChronicleHistoryReaderMain {
                 withMessageSink(System.out::println).
                 withProgress(commandLine.hasOption('p')).
                 withHistosByMethod(commandLine.hasOption('m')).
+                withSummaryOutput(commandLine.hasOption('u')).
                 withBasePath(Paths.get(commandLine.getOptionValue('d')));
         if (commandLine.hasOption('t'))
             chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
+        if (commandLine.hasOption('i'))
+            chronicleHistoryReader.withIgnore(Long.parseLong(commandLine.getOptionValue('i')));
+        if (commandLine.hasOption('w'))
+            chronicleHistoryReader.withMeasurementWindow(Long.parseLong(commandLine.getOptionValue('w')));
     }
 
     @NotNull
@@ -96,8 +101,11 @@ public class ChronicleHistoryReaderMain {
         ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
         ChronicleReaderMain.addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
+        ChronicleReaderMain.addOption(options, "i", "ignore", true, "How many to ignore from start", false);
+        ChronicleReaderMain.addOption(options, "w", "window", true, "Window duration in time unit", false);
         options.addOption(new Option("p", false, "Show progress"));
         options.addOption(new Option("m", false, "By method"));
+        options.addOption(new Option("u", false, "Summary output"));
         return options;
     }
 }

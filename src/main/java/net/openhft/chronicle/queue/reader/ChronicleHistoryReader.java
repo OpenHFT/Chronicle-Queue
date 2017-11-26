@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Created by Jerry Shea on 29/09/17.
@@ -28,6 +29,13 @@ public class ChronicleHistoryReader {
     private TimeUnit timeUnit = TimeUnit.NANOSECONDS;
     protected boolean histosByMethod = false;
     protected Map<String, Histogram> histos = new LinkedHashMap<>();
+    private long ignore = 0;
+    private long counter = 0;
+    private long measurementWindowNanos = 0;
+    private long firstTimeStampNanos = 0;
+    private long lastWindowCount = 0;
+    private boolean summaryOutput = false;
+    private int lastHistosSize = 0;
 
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
@@ -54,6 +62,21 @@ public class ChronicleHistoryReader {
         return this;
     }
 
+    public ChronicleHistoryReader withIgnore(long ignore) {
+        this.ignore = ignore;
+        return this;
+    }
+
+    public ChronicleHistoryReader withMeasurementWindow(long measurementWindow) {
+        this.measurementWindowNanos = timeUnit.toNanos(measurementWindow);
+        return this;
+    }
+
+    public ChronicleHistoryReader withSummaryOutput(boolean b) {
+        this.summaryOutput = b;
+        return this;
+    }
+
     @NotNull
     private SingleChronicleQueue createQueue() {
         if (!Files.exists(basePath)) {
@@ -67,7 +90,8 @@ public class ChronicleHistoryReader {
 
     public void execute() {
         readChronicle();
-        printPercentilesSummary();
+        if (measurementWindowNanos == 0)
+            outputData();
     }
 
     public Map<String, Histogram> readChronicle() {
@@ -77,10 +101,9 @@ public class ChronicleHistoryReader {
         final MethodReader mr = new MethodReader(tailer, true, parselet, null, parselet);
 
         MessageHistory.set(new VanillaMessageHistory());
-        int counter = 0;
         while (! Thread.currentThread().isInterrupted() && mr.readOne()) {
             ++counter;
-            if (this.progress && counter % 1_000_000 == 0) {
+            if (this.progress && counter % 1_000_000L == 0) {
                 System.out.println("Progress: " + counter);
             }
         }
@@ -88,7 +111,14 @@ public class ChronicleHistoryReader {
         return histos;
     }
 
-    public void printPercentilesSummary() {
+    public void outputData() {
+        if (summaryOutput)
+            printSummary();
+        else
+            printPercentilesSummary();
+    }
+
+    private void printPercentilesSummary() {
         // we should also consider the case where >1 output messages are from 1 incoming
 
         if (histos.size() == 0) {
@@ -109,6 +139,23 @@ public class ChronicleHistoryReader {
         messageSink.accept("99.999: " + percentiles(counter++));
         messageSink.accept("99.9999:" + percentiles(counter++));
         messageSink.accept("worst:  " + percentiles(-1));
+    }
+
+    private void printSummary() {
+        if (histos.size() > lastHistosSize) {
+            messageSink.accept("relative_ts," + String.join(",", histos.keySet()));
+            lastHistosSize = histos.size();
+        }
+        long tsSinceStart = (lastWindowCount * measurementWindowNanos) - firstTimeStampNanos;
+        messageSink.accept(
+                Long.toString(timeUnit.convert(tsSinceStart, TimeUnit.NANOSECONDS)) + "," +
+                histos.values().stream().
+                map(h -> Long.toString(timeUnit.convert((long) last(h.getPercentiles()), TimeUnit.NANOSECONDS))).
+                collect(Collectors.joining(",")));
+    }
+
+    private double last(double[] percentiles) {
+        return percentiles[percentiles.length - 1];
     }
 
     private String count() {
@@ -136,36 +183,63 @@ public class ChronicleHistoryReader {
     protected WireParselet parselet() {
         return (methodName, v, $) -> {
             v.skipValue();
-            CharSequence extraHistoId = histosByMethod ? ("_"+methodName) : "";
-            final MessageHistory history = MessageHistory.get();
-            long lastTime = 0;
-            // if the tailer has recordHistory(true) then the MessageHistory will be
-            // written with a single timing and nothing else. This is then carried through
-            int firstWriteOffset = history.timings() - (history.sources() * 2);
-            if (! (firstWriteOffset == 0 || firstWriteOffset == 1))
-                // don't know how this can happen, but there is at least one CQ that exhibits it
+            if (counter < ignore)
                 return;
-            for (int sourceIndex=0; sourceIndex<history.sources(); sourceIndex++) {
-                String histoId = Integer.toString(history.sourceId(sourceIndex)) + extraHistoId;
-                Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
-                long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
-                long processedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset + 1);
-                histo.sample(processedByThisComponent - receivedByThisComponent);
-                if (lastTime == 0 && firstWriteOffset > 0) {
-                    Histogram histo1 = histos.computeIfAbsent("startTo" + histoId, s -> histogram());
-                    histo1.sample(receivedByThisComponent - history.timing(0));
-                } else if (lastTime != 0) {
-                    Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex-1)) + "to" + histoId, s -> histogram());
-                    // here we are comparing System.nanoTime across processes. YMMV
-                    histo1.sample(receivedByThisComponent - lastTime);
+            final MessageHistory history = MessageHistory.get();
+            if (history == null)
+                return;
+
+            processMessage(methodName, history);
+
+            if (history.timings() > 0) {
+                long firstTiming = history.timing(0);
+                if (measurementWindowNanos > 0) {
+                    long windowCount = firstTiming / measurementWindowNanos;
+                    if (windowCount > lastWindowCount) {
+                        windowPassed();
+                        lastWindowCount = windowCount;
+                    }
+                    if (firstTimeStampNanos == 0)
+                        firstTimeStampNanos = firstTiming;
                 }
-                lastTime = processedByThisComponent;
-            }
-            if (history.sources() > 1) {
-                Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> histogram());
-                histoE2E.sample(history.timing(history.timings() - 1) - history.timing(0));
             }
         };
+    }
+
+    protected void processMessage(CharSequence methodName, MessageHistory history) {
+        CharSequence extraHistoId = histosByMethod ? ("_"+methodName) : "";
+        long lastTime = 0;
+        // if the tailer has recordHistory(true) then the MessageHistory will be
+        // written with a single timing and nothing else. This is then carried through
+        int firstWriteOffset = history.timings() - (history.sources() * 2);
+        if (! (firstWriteOffset == 0 || firstWriteOffset == 1))
+            // don't know how this can happen, but there is at least one CQ that exhibits it
+            return;
+        for (int sourceIndex=0; sourceIndex<history.sources(); sourceIndex++) {
+            String histoId = Integer.toString(history.sourceId(sourceIndex)) + extraHistoId;
+            Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
+            long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
+            long processedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset + 1);
+            histo.sample(processedByThisComponent - receivedByThisComponent);
+            if (lastTime == 0 && firstWriteOffset > 0) {
+                Histogram histo1 = histos.computeIfAbsent("startTo" + histoId, s -> histogram());
+                histo1.sample(receivedByThisComponent - history.timing(0));
+            } else if (lastTime != 0) {
+                Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex-1)) + "to" + histoId, s -> histogram());
+                // here we are comparing System.nanoTime across processes. YMMV
+                histo1.sample(receivedByThisComponent - lastTime);
+            }
+            lastTime = processedByThisComponent;
+        }
+        if (history.sources() > 1) {
+            Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> histogram());
+            histoE2E.sample(history.timing(history.timings() - 1) - history.timing(0));
+        }
+    }
+
+    protected void windowPassed() {
+        outputData();
+        histos.values().forEach(Histogram::reset);
     }
 
     @NotNull

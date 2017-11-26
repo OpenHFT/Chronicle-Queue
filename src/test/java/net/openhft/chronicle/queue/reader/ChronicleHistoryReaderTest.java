@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.MethodReader;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
@@ -114,7 +113,7 @@ public class ChronicleHistoryReaderTest {
             Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
 
             chronicleHistoryReader.withMessageSink(System.out::println);
-            chronicleHistoryReader.printPercentilesSummary();
+            chronicleHistoryReader.outputData();
 
             if (recordHistoryFirst) {
                 Assert.assertEquals(5, histos.size());
