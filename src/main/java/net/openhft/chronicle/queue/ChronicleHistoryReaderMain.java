@@ -101,11 +101,11 @@ public class ChronicleHistoryReaderMain {
         ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
         ChronicleReaderMain.addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
-        ChronicleReaderMain.addOption(options, "i", "ignore", true, "How many to ignore from start", false);
-        ChronicleReaderMain.addOption(options, "w", "window", true, "Window duration in time unit", false);
+        ChronicleReaderMain.addOption(options, "i", "ignore", true, "How many items to ignore from start", false);
+        ChronicleReaderMain.addOption(options, "w", "window", true, "Window duration in time unit. Instead of one output at the end, will output every window period", false);
         options.addOption(new Option("p", false, "Show progress"));
         options.addOption(new Option("m", false, "By method"));
-        options.addOption(new Option("u", false, "Summary output"));
+        options.addOption(new Option("u", false, "Summary output. Instead of histograms, will show max only, in CSV format"));
         return options;
     }
 }
