@@ -55,7 +55,6 @@ public class ChronicleHistoryReaderMain {
                 withMessageSink(System.out::println).
                 withProgress(commandLine.hasOption('p')).
                 withHistosByMethod(commandLine.hasOption('m')).
-                withSummaryOutput(commandLine.hasOption('u')).
                 withBasePath(Paths.get(commandLine.getOptionValue('d')));
         if (commandLine.hasOption('t'))
             chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
@@ -63,6 +62,8 @@ public class ChronicleHistoryReaderMain {
             chronicleHistoryReader.withIgnore(Long.parseLong(commandLine.getOptionValue('i')));
         if (commandLine.hasOption('w'))
             chronicleHistoryReader.withMeasurementWindow(Long.parseLong(commandLine.getOptionValue('w')));
+        if (commandLine.hasOption('u'))
+            chronicleHistoryReader.withSummaryOutput(Integer.parseInt(commandLine.getOptionValue('u')));
     }
 
     @NotNull
@@ -103,9 +104,9 @@ public class ChronicleHistoryReaderMain {
         ChronicleReaderMain.addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
         ChronicleReaderMain.addOption(options, "i", "ignore", true, "How many items to ignore from start", false);
         ChronicleReaderMain.addOption(options, "w", "window", true, "Window duration in time unit. Instead of one output at the end, will output every window period", false);
+        ChronicleReaderMain.addOption(options, "u", "histo offset", true, "Summary output. Instead of histograms, will show one value only, in CSV format. Set this to 0 for 50th, 1 for 90th etc., -1 for worst", false);
         options.addOption(new Option("p", false, "Show progress"));
         options.addOption(new Option("m", false, "By method"));
-        options.addOption(new Option("u", false, "Summary output. Instead of histograms, will show max only, in CSV format"));
         return options;
     }
 }

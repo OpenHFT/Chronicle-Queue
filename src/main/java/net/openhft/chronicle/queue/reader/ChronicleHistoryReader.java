@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
  */
 public class ChronicleHistoryReader {
 
+    private static final int SUMMART_OUTPUT_UNSET = -999;
     private Path basePath;
     private Consumer<String> messageSink;
     private boolean progress = false;
@@ -34,7 +35,7 @@ public class ChronicleHistoryReader {
     private long measurementWindowNanos = 0;
     private long firstTimeStampNanos = 0;
     private long lastWindowCount = 0;
-    private boolean summaryOutput = false;
+    private int summaryOutputOffset = SUMMART_OUTPUT_UNSET;
     private int lastHistosSize = 0;
 
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
@@ -72,8 +73,8 @@ public class ChronicleHistoryReader {
         return this;
     }
 
-    public ChronicleHistoryReader withSummaryOutput(boolean b) {
-        this.summaryOutput = b;
+    public ChronicleHistoryReader withSummaryOutput(int offset) {
+        this.summaryOutputOffset = offset;
         return this;
     }
 
@@ -112,7 +113,7 @@ public class ChronicleHistoryReader {
     }
 
     public void outputData() {
-        if (summaryOutput)
+        if (summaryOutputOffset != SUMMART_OUTPUT_UNSET)
             printSummary();
         else
             printPercentilesSummary();
@@ -150,12 +151,12 @@ public class ChronicleHistoryReader {
         messageSink.accept(
                 Long.toString(timeUnit.convert(tsSinceStart, TimeUnit.NANOSECONDS)) + "," +
                 histos.values().stream().
-                map(h -> Long.toString(timeUnit.convert((long) last(h.getPercentiles()), TimeUnit.NANOSECONDS))).
+                map(h -> Long.toString(timeUnit.convert((long) offset(h.getPercentiles(), summaryOutputOffset), TimeUnit.NANOSECONDS))).
                 collect(Collectors.joining(",")));
     }
 
-    private double last(double[] percentiles) {
-        return percentiles[percentiles.length - 1];
+    private double offset(double[] percentiles, int offset) {
+        return offset >=0 ? percentiles[offset] : percentiles[percentiles.length + offset];
     }
 
     private String count() {
