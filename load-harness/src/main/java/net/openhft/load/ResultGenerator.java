@@ -1,5 +1,8 @@
 package net.openhft.load;
 
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.onoes.ExceptionHandler;
+import net.openhft.chronicle.core.onoes.ThreadLocalisedExceptionHandler;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -13,6 +16,7 @@ import net.openhft.load.messages.EightyByteMessage;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -31,6 +35,9 @@ public final class ResultGenerator {
         final List<StageConfig> allStageConfigs = configParser.getAllStageConfigs();
         final StageConfig lastStageConfig = allStageConfigs.
                 get(allStageConfigs.size() - 1);
+        Jvm.setExceptionHandlers((c, m, t) -> {
+            System.out.println(m);
+        }, (c, m, t) -> {System.out.println(m); t.printStackTrace();}, (c, m, t) -> System.out.println(m));
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(lastStageConfig.getOutputPath()).build();
              final Writer resultsWriter = new FileWriter("results.txt", false)) {
@@ -43,9 +50,10 @@ public final class ResultGenerator {
 
     private static final class CapturingReceiver implements MethodDefinition {
         private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
+        private static final DateTimeFormatter NANOS_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.nnnnnnnnn");
         private final Writer writer;
 
-        private long currentSecond = 0L;
+        private long currentSecond = -1L;
         private long messagesInThisSecond = 0L;
         private long maxTotalLatencyInThisSecond = 0L;
         private long minTotalLatencyInThisSecond = Long.MAX_VALUE;
@@ -53,6 +61,7 @@ public final class ResultGenerator {
         private Histogram latencyHistogram = new Histogram();
         private String worstMessage = null;
         private long[] maxQueueDeltas = new long[0];
+        private EightyByteMessage worstCopy = new EightyByteMessage();
 
         private CapturingReceiver(final Writer writer) {
             this.writer = writer;
@@ -71,7 +80,7 @@ public final class ResultGenerator {
                         maxQueueDeltas[i]);
             }
 
-            if (currentSecond == 0L) {
+            if (currentSecond == -1L) {
                 currentSecond = batchStartEpochSeconds;
                 writeToResults("time msg/sec min max avg 50% 99% 99.99% batch_time");
                 for (int i = 0; i < maxQueueDeltas.length; i++) {
@@ -100,7 +109,22 @@ public final class ResultGenerator {
                     writeToResults(" " + TimeUnit.NANOSECONDS.toMicros(maxQueueDeltas[i]));
                 }
                 writeToResults("\n");
+                System.out.println("Worst in second");
+                System.out.println(FORMATTER.format(LocalDateTime.ofEpochSecond(worstCopy.batchStartMillis/1000, 0, ZoneOffset.UTC)));
+                System.out.println("publish to first stage");
+                if (worstCopy.stagesToPublishBitMask == 5) {
+                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t0 - worstCopy.publishNanos));
+                } else {
+                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t1 - worstCopy.publishNanos));
+                }
+                System.out.println("first to second stage");
+                if (worstCopy.stagesToPublishBitMask == 5) {
+                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t2 - worstCopy.t0));
+                } else {
+                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t2 - worstCopy.t1));
+                }
                 System.out.println(worstMessage);
+
 
                 messagesInThisSecond = 0L;
                 maxTotalLatencyInThisSecond = 0L;
@@ -117,6 +141,7 @@ public final class ResultGenerator {
                     totalMessageLatency);
             if (maxTotalLatencyInThisSecond == totalMessageLatency) {
                 worstMessage = Marshallable.$toString(message);
+                message.copyTo(worstCopy);
             }
             minTotalLatencyInThisSecond = Math.min(minTotalLatencyInThisSecond, totalMessageLatency);
             totalLatencyInThisSecond += totalMessageLatency;

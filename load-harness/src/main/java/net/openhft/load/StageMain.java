@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.ZoneId;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,8 +33,20 @@ public final class StageMain {
             service.submit(() -> {
                 final Stage stage = new Stage(createOutput(stageConfig.getOutputPath(), index + 1), index);
                 final MethodReader reader = createReader(stageConfig.getInputPath(), stage);
+                Thread.currentThread().setName("load.stage-consumer-" + index);
+                boolean warnOnce = false;
                 while (!Thread.currentThread().isInterrupted()) {
-                    reader.readOne();
+                    try {
+                        reader.readOne();
+                    }
+                    catch (Exception e)
+                    {
+                        if (!warnOnce)
+                        {
+                            e.printStackTrace();
+                            warnOnce = true;
+                        }
+                    }
                 }
             });
         }
@@ -52,6 +65,7 @@ public final class StageMain {
     @NotNull
     private static SingleChronicleQueue outputQueue(final Path path, final int index) {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(path);
+        builder.rollTime(RollTimeCalculator.getNextRollWindow(), ZoneId.of("UTC"));
         if (index != UNSET_SOURCE) {
             builder.sourceId(index);
         }

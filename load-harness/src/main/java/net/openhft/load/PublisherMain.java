@@ -9,7 +9,11 @@ import net.openhft.load.config.PublisherConfig;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public final class PublisherMain {
     public static void main(String[] args) throws Exception {
@@ -19,9 +23,12 @@ public final class PublisherMain {
         final ConfigParser configParser = new ConfigParser(args[0]);
 
         final PublisherConfig publisherConfig = configParser.getPublisherConfig();
-        Executors.newSingleThreadExecutor().submit(
+        final ExecutorService executorService = Executors.newFixedThreadPool(2);
+        executorService.submit(
                 new PretoucherTask(outputQueue(publisherConfig.outputDir()),
                         configParser.getPretouchIntervalMillis()));
+
+        executorService.submit(new HiccupReporter()::start);
 
         final Publisher publisher = new Publisher(publisherConfig, createOutput(publisherConfig.outputDir()),
                 configParser.getAllStageConfigs());
@@ -39,6 +46,26 @@ public final class PublisherMain {
     @NotNull
     private static SingleChronicleQueue outputQueue(final Path path) {
         return SingleChronicleQueueBuilder.binary(path).sourceId(0).
+                rollTime(RollTimeCalculator.getNextRollWindow(), ZoneId.of("UTC")).
                 rollCycle(RollCycles.HOURLY).build();
+    }
+
+    private static class HiccupReporter {
+
+        void start() {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    final long start = System.nanoTime();
+                    Thread.sleep(1);
+                    final long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+                    if (durationMillis > 50L) {
+                        System.out.println("Schedule jitter: " + durationMillis + "ms at " + Instant.now());
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
     }
 }
