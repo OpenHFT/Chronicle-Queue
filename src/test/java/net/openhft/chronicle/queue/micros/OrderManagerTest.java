@@ -17,6 +17,7 @@
 
 package net.openhft.chronicle.queue.micros;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -25,7 +26,6 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.MethodReader;
 import org.junit.Ignore;
 import org.junit.Test;
 

@@ -17,11 +17,11 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.MethodReader;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
