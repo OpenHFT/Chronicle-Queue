@@ -18,7 +18,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
-import net.openhft.chronicle.wire.MethodWriterBuilder;
+import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -143,8 +143,8 @@ public interface ChronicleQueue extends Closeable {
     }
 
     @NotNull
-    default <T> MethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
-        return new MethodWriterBuilder<>(tClass,
+    default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
+        return new VanillaMethodWriterBuilder<>(tClass,
                 new BinaryMethodWriterInvocationHandler(this::acquireAppender));
     }
 

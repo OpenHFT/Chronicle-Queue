@@ -1,12 +1,13 @@
 package net.openhft.chronicle.queue.reader;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.MethodReader;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.VanillaMethodReader;
 import net.openhft.chronicle.wire.WireParselet;
 import org.jetbrains.annotations.NotNull;
 
@@ -99,7 +100,7 @@ public class ChronicleHistoryReader {
         final SingleChronicleQueue q = createQueue();
         final ExcerptTailer tailer = q.createTailer();
         final WireParselet parselet = parselet();
-        final MethodReader mr = new MethodReader(tailer, true, parselet, null, parselet);
+        final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, null, parselet);
 
         MessageHistory.set(new VanillaMessageHistory());
         while (! Thread.currentThread().isInterrupted() && mr.readOne()) {

@@ -17,12 +17,12 @@
 
 package net.openhft.chronicle.queue.service;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.EventGroup;
-import net.openhft.chronicle.wire.MethodReader;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;

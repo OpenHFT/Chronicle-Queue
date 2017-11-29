@@ -1,10 +1,10 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.wire.AbstractMarshallable;
-import net.openhft.chronicle.wire.MethodReader;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

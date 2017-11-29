@@ -19,8 +19,8 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
-import net.openhft.chronicle.wire.MethodWriterBuilder;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.StreamCorruptedException;
@@ -127,7 +127,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     @NotNull
-    default <T> MethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
+    default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
         return queue().methodWriterBuilder(tClass);
     }
 

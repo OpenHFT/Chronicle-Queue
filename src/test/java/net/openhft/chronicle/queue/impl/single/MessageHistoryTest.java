@@ -1,10 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.MethodReader;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.junit.Before;
 import org.junit.Rule;

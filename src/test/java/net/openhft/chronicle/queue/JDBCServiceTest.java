@@ -18,11 +18,11 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.MethodReader;
 import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;

@@ -1,12 +1,12 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.service.HelloWorld;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MethodReader;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Test;
