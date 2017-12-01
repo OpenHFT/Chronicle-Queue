@@ -150,7 +150,8 @@ public final class ChronicleReader {
     }
 
     private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex) {
-        return getCurrentTailIndex() != lastObservedTailIndex;
+        long currentTailIndex = getCurrentTailIndex();
+        return currentTailIndex > lastObservedTailIndex;
     }
 
     private void moveToSpecifiedPosition(final ChronicleQueue ic, final ExcerptTailer tailer, final boolean isFirstIteration) {
