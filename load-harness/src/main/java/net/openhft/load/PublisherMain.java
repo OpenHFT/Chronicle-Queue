@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public final class PublisherMain {
     public static void main(String[] args) throws Exception {
+        MlockAll.doMlockall();
         if (args.length != 1) {
             throw new IllegalArgumentException("Usage: <program> [resource-name]");
         }
