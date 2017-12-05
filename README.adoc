@@ -1,5 +1,5 @@
 = Chronicle Queue
-Peter Lawrey, Rob Austin, Neil Clifford
+Peter Lawrey, Rob Austin
 :toc: manual
 :css-signature: demo
 :toc-placement: preamble
