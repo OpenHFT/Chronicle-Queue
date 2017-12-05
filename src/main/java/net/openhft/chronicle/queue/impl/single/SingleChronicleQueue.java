@@ -767,7 +767,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         private void checkDiskSpace(@NotNull final File filePath) throws IOException {
-            Path path = filePath.toPath();
+            Path path = filePath.getAbsoluteFile().toPath();
             if (path.getFileSystem() != null) {
                 // The returned number of unallocated bytes is a hint, but not a guarantee
                 long unallocatedBytes = Files.getFileStore(path).getUnallocatedSpace();
