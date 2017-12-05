@@ -1,9 +1,9 @@
 package net.openhft.load;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.MethodReader;
 import net.openhft.load.config.ConfigParser;
 import net.openhft.load.config.StageConfig;
 import net.openhft.load.messages.EightyByteMessage;
@@ -11,13 +11,13 @@ import net.openhft.load.messages.EightyByteMessage;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToLongFunction;
+
 
 public final class PublishDeltaGenerator {
     public static void main(String[] args) throws IOException {

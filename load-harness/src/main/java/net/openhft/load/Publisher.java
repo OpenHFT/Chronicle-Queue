@@ -1,6 +1,5 @@
 package net.openhft.load;
 
-import net.openhft.chronicle.queue.impl.single.DebugTimestamps;
 import net.openhft.load.config.PublisherConfig;
 import net.openhft.load.config.StageConfig;
 import net.openhft.load.messages.EightyByteMessage;
@@ -53,20 +52,20 @@ public final class Publisher {
                     message.stagesToPublishBitMask = stagePublishBitmasks[(int) (publishMaskCount & 15)];
                     message.publishNanos = System.nanoTime();
                     publishMaskCount++;
-                    DebugTimestamps.clearAll();
-                    DebugTimestamps.operationStart(DebugTimestamps.Operation.OUTER_WRITE);
+//                    DebugTimestamps.clearAll();
+//                    DebugTimestamps.operationStart(DebugTimestamps.Operation.OUTER_WRITE);
                     methodDefinition.onEightyByteMessage(message);
-                    DebugTimestamps.operationEnd(DebugTimestamps.Operation.OUTER_WRITE);
-                    final long outerNanos = DebugTimestamps.getDurationNanos(DebugTimestamps.Operation.OUTER_WRITE);
-                    if (outerNanos >
-                            TimeUnit.MILLISECONDS.toNanos(100L)) {
-                        System.out.println("Total publish time us: " + nanosToMicros(outerNanos) + " at " + Instant.now());
-                        final DebugTimestamps.Operation[] operations = DebugTimestamps.Operation.values();
-                        for (DebugTimestamps.Operation operation : operations) {
-                            System.out.printf("%25s %9dus%n", operation.name(),
-                                    nanosToMicros(DebugTimestamps.getDurationNanos(operation)));
-                        }
-                    }
+//                    DebugTimestamps.operationEnd(DebugTimestamps.Operation.OUTER_WRITE);
+//                    final long outerNanos = DebugTimestamps.getDurationNanos(DebugTimestamps.Operation.OUTER_WRITE);
+//                    if (outerNanos >
+//                            TimeUnit.MILLISECONDS.toNanos(100L)) {
+//                        System.out.println("Total publish time us: " + nanosToMicros(outerNanos) + " at " + Instant.now());
+//                        final DebugTimestamps.Operation[] operations = DebugTimestamps.Operation.values();
+//                        for (DebugTimestamps.Operation operation : operations) {
+//                            System.out.printf("%25s %9dus%n", operation.name(),
+//                                    nanosToMicros(DebugTimestamps.getDurationNanos(operation)));
+//                        }
+//                    }
 
                 }
 

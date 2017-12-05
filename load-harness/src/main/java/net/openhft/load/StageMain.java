@@ -1,9 +1,9 @@
 package net.openhft.load;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.MethodReader;
 import net.openhft.load.config.ConfigParser;
 import net.openhft.load.config.StageConfig;
 import org.jetbrains.annotations.NotNull;
