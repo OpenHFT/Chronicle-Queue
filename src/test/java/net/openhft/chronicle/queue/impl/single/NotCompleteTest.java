@@ -26,7 +26,7 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.Ignore;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -37,8 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class NotCompleteTest {
@@ -338,60 +337,82 @@ public class NotCompleteTest {
         }
     }
 
-    @Ignore("test fails intermittently")
     @Test
     public void testInterruptedDuringSerialisation()
             throws TimeoutException, ExecutionException, InterruptedException {
 
-        final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
+        final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation_"+(lazyIndexing?"lazy":"eager"));
         DirectoryUtils.deleteDir(tmpDir);
         tmpDir.mkdirs();
 
         final List<String> names = Collections.synchronizedList(new ArrayList<>());
         final Person person1 = new Person(40, "Terry");
         final Person person2 = new Person(50, Person.INTERRUPT);
+        final Person person3 = new Person(60, "June");
+        final Person person4 = new Person(70, "Percy");
 
-        Thread readerThread = new Thread(() -> {
-            try (final ChronicleQueue queue = binary(tmpDir)
-                    .testBlockSize()
-                    .timeoutMS(500)
-                    .build()) {
+        try (final ChronicleQueue queueReader = binary(tmpDir)
+                .testBlockSize()
+                .timeoutMS(500)
+                .build()) {
 
-                ExcerptTailer tailer = queue.createTailer();
-                MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
+            ExcerptTailer tailer = queueReader.createTailer();
+            MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
 
-                long start = System.currentTimeMillis();
-                while (names.size() < 1) {
-                    reader.readOne();
-                    if (System.currentTimeMillis() > (start + 500)) {
-                        break;
+            final StringBuilder queueDumpBeforeInterruptedWrite = new StringBuilder();
+
+            // start up writer thread
+            Thread writerThread = new Thread(() -> {
+                try (final ChronicleQueue queue = binary(tmpDir)
+                        .testBlockSize()
+                        .rollCycle(RollCycles.TEST_DAILY)
+                        .build()) {
+
+                    ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
+                    PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
+                    proxy.accept(person1);
+                    queueDumpBeforeInterruptedWrite.append(queue.dump());
+                    // thread is interrupted during this
+                    proxy.accept(person2);
+                    try {
+                        proxy.accept(person3);
+                        Assert.fail("should not have accepted another write");
+                    } catch (IllegalStateException expected) {
+                        // ok
                     }
                 }
-            }
-        });
+            });
+            writerThread.start();
+            writerThread.join();
 
-        Thread writerThread = new Thread(() -> {
             try (final ChronicleQueue queue = binary(tmpDir)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
+                assertEquals(queueDumpBeforeInterruptedWrite.toString(), queue.dump());
+            }
 
+            // check only 1 written
+            assertTrue(reader.readOne());
+            assertEquals(1, names.size());
+            assertEquals(person1.name, names.get(0));
+            assertFalse(reader.readOne());
+
+            // write another person to same queue in this thread
+            try (final ChronicleQueue queue = binary(tmpDir)
+                    .testBlockSize()
+                    .rollCycle(RollCycles.TEST_DAILY)
+                    .build()) {
                 ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
                 PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
-                proxy.accept(person1);
-                // thread is interrupted during this
-                proxy.accept(person2);
+                proxy.accept(person4);
             }
-        });
 
-        writerThread.start();
-        readerThread.start();
-
-        writerThread.join();
-        readerThread.join();
-
-        assertEquals(1, names.size());
-        assertEquals(person1.name, names.get(0));
+            assertTrue(reader.readOne());
+            assertEquals(2, names.size());
+            assertEquals(person4.name, names.get(1));
+            assertFalse(reader.readOne());
+        }
     }
 
     @After
@@ -416,6 +437,7 @@ public class NotCompleteTest {
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write("age").int32(age);
+            // interrupt half way through writing
             if (INTERRUPT.equals(name)) {
                 Thread.currentThread().interrupt();
             } else {

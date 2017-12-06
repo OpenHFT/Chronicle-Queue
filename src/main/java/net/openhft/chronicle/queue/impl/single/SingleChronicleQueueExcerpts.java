@@ -436,7 +436,7 @@ public class SingleChronicleQueueExcerpts {
             append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
         }
 
-        @Nullable
+        @NotNull
         Wire acquireBufferWire() {
             if (bufferWire == null) {
                 bufferWire = queue.wireType().apply(Bytes.elasticByteBuffer());
@@ -782,6 +782,10 @@ public class SingleChronicleQueueExcerpts {
 
                 if (Thread.currentThread().isInterrupted()) {
                     LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
+                    // zero out the header and all contents, as if we had never been here
+                    for (long i=position; i<=wire.bytes().writePosition(); i++)
+                        wire.bytes().writeByte(i, (byte) 0);
+                    wire.bytes().writePosition(position);
                     return;
                 }
 
