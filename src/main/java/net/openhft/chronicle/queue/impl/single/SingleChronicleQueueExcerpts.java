@@ -782,9 +782,11 @@ public class SingleChronicleQueueExcerpts {
 
                 if (Thread.currentThread().isInterrupted()) {
                     LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
-                    // zero out the header and all contents, as if we had never been here
-                    for (long i=position; i<=wire.bytes().writePosition(); i++)
+                    // zero out all contents...
+                    for (long i=position + Wires.SPB_HEADER_SIZE; i<=wire.bytes().writePosition(); i++)
                         wire.bytes().writeByte(i, (byte) 0);
+                    // ...and then the header, as if we had never been here
+                    wire.bytes().writeVolatileInt(position, 0);
                     wire.bytes().writePosition(position);
                     return;
                 }
