@@ -738,7 +738,7 @@ public class SingleChronicleQueueExcerpts {
             boolean deferredHeader;
             boolean padToCacheAlign = true;
             private boolean metaData = false;
-            private boolean shouldRollback = false;
+            private boolean rollbackOnClose = false;
             @Nullable
             private Wire wire;
 
@@ -778,8 +778,8 @@ public class SingleChronicleQueueExcerpts {
              * rolled back when it is closed, rather than committed
              */
             //@Override - uncomment when Wire released
-            public void setRollback() {
-                this.shouldRollback = true;
+            public void rollbackOnClose() {
+                this.rollbackOnClose = true;
             }
 
             @Override
@@ -791,7 +791,7 @@ public class SingleChronicleQueueExcerpts {
                 }
 
                 final boolean interrupted = Thread.currentThread().isInterrupted();
-                if (shouldRollback || interrupted) {
+                if (rollbackOnClose || interrupted) {
                     if (interrupted)
                         LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
                     // zero out all contents...
