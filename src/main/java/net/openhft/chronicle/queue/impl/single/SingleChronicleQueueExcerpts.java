@@ -738,6 +738,7 @@ public class SingleChronicleQueueExcerpts {
             boolean deferredHeader;
             boolean padToCacheAlign = true;
             private boolean metaData = false;
+            private boolean shouldRollback = false;
             @Nullable
             private Wire wire;
 
@@ -772,6 +773,15 @@ public class SingleChronicleQueueExcerpts {
                 return isClosed;
             }
 
+            /**
+             * Call this if you have detected an error condition and you want the context
+             * rolled back when it is closed, rather than committed
+             */
+            //@Override - uncomment when Wire released
+            public void setRollback() {
+                this.shouldRollback = true;
+            }
+
             @Override
             public void close() {
 
@@ -780,8 +790,10 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
-                if (Thread.currentThread().isInterrupted()) {
-                    LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
+                final boolean interrupted = Thread.currentThread().isInterrupted();
+                if (shouldRollback || interrupted) {
+                    if (interrupted)
+                        LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
                     // zero out all contents...
                     for (long i=position + Wires.SPB_HEADER_SIZE; i<=wire.bytes().writePosition(); i++)
                         wire.bytes().writeByte(i, (byte) 0);
