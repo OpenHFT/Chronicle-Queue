@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
     private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
+    static final int NUMBER_OF_INTS = 8;//1060 / 4;
 
     @Ignore("long running")
     @Test
@@ -106,10 +107,12 @@ public class RollCycleMultiThreadStressTest {
     private boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
         boolean allReadersComplete = true;
 
+        int count=0;
         for (Reader reader : readers) {
+            ++count;
             if (reader.lastRead < expectedNumberOfMessages - 1) {
                 allReadersComplete = false;
-                System.out.printf("Reader last read: %d%n", reader.lastRead);
+                System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
             }
         }
         return allReadersComplete;
@@ -138,9 +141,11 @@ public class RollCycleMultiThreadStressTest {
                 while (lastRead != expectedNumberOfMessages - 1) {
                     try (DocumentContext rd = tailer.readingDocument()) {
                         if (rd.isPresent()) {
-                            int v = rd.wire().getValueIn().int32();
-
-                            assertEquals(lastRead + 1, v);
+                            int v = -1;
+                            for (int i = 0; i< NUMBER_OF_INTS; i++) {
+                                v = rd.wire().getValueIn().int32();
+                                assertEquals(lastRead + 1, v);
+                            }
                             lastRead = v;
                         }
                     }
@@ -181,8 +186,10 @@ public class RollCycleMultiThreadStressTest {
                     try (DocumentContext writingDocument = appender.writingDocument()) {
                         value = wrote.getAndIncrement();
                         ValueOut valueOut = writingDocument.wire().getValueOut();
-                        valueOut.int32(value);
-                        writingDocument.wire().addPadding(60); // make the message longer
+                        // make the message longer
+                        for (int i = 0; i< NUMBER_OF_INTS; i++) {
+                            valueOut.int32(value);
+                        }
                         long delay = nextTime - System.nanoTime();
                         if (delay > 0) {
                             LockSupport.parkNanos(delay);
