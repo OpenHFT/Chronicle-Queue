@@ -9,11 +9,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -21,22 +23,23 @@ import static org.junit.Assert.assertTrue;
 public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
     private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
+    private static final int TEST_TIME = Integer.getInteger("testTime", 90);
     static final int NUMBER_OF_INTS = 8;//1060 / 4;
 
     @Ignore("long running")
     @Test
     public void stress() throws Exception {
         final File path = DirectoryUtils.tempDir("rollCycleStress");
-        LOG.warn("using path {}", path);
+        LOG.warn("using path {} now is {}", path, LocalDateTime.now());
         final int numThreads = Runtime.getRuntime().availableProcessors();
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
         final AtomicInteger wrote = new AtomicInteger();
-        final int expectedNumberOfMessages = (int) (90 * 1e9 / SLEEP_PER_WRITE_NANOS);
+        final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS);
 
-        System.out.printf("Running test with %d writers and %d readers%n",
-                numWriters, numThreads - numWriters);
+        System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
+                numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
         System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
                 SLEEP_PER_WRITE_NANOS);
         System.out.printf("Should take ~%dsec%n",
@@ -55,14 +58,19 @@ public class RollCycleMultiThreadStressTest {
         }
 
 
-        final long maxWritingTime = TimeUnit.MINUTES.toMillis(3);
+        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME);
         final long giveUpWritingAt = System.currentTimeMillis() + maxWritingTime;
         int i = 0;
         while (System.currentTimeMillis() < giveUpWritingAt) {
             if (wrote.get() < expectedNumberOfMessages) {
-                System.out.printf("Writer has written %d of %d messages after %ds. Waiting...%n",
+                String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
+                System.out.printf("Writer has written %d of %d messages after %ds. Readers at %s. Waiting...%n",
                         wrote.get() + 1, expectedNumberOfMessages,
-                        i * 10);
+                        i * 10, readersLastRead);
+                readers.forEach(reader -> {
+                    if ((wrote.get() - reader.lastRead) > 1_000_000)
+                        throw new AssertionError("Reader is stuck");
+                });
                 LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10L));
             } else {
                 break;

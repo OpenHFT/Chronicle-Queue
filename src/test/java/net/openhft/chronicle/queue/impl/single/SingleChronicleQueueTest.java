@@ -424,10 +424,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final int n = i;
 
                 writeTo.accept(appender, n);
+                assertEquals(cycle + i, appender.cycle());
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     long index = tailer.index();
                     System.out.println(i + " index: " + Long.toHexString(index));
+                    assertEquals(appender.cycle(), tailer.cycle());
                     assertEquals(cycle + i, DAILY.toCycle(index));
                 }
                 stp.currentTimeMillis(stp.currentTimeMillis() + 86400_000L);
