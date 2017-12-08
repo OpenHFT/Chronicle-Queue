@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,9 +25,9 @@ public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
     private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
     private static final int TEST_TIME = Integer.getInteger("testTime", 90);
-    static final int NUMBER_OF_INTS = 8;//1060 / 4;
+    static final int NUMBER_OF_INTS = 18;//1060 / 4;
 
-    @Ignore("long running")
+    @Ignore
     @Test
     public void stress() throws Exception {
         final File path = DirectoryUtils.tempDir("rollCycleStress");
@@ -82,6 +83,7 @@ public class RollCycleMultiThreadStressTest {
                 wrote.get() >= expectedNumberOfMessages);
 
         final long giveUpReadingAt = System.currentTimeMillis() + 60_000L;
+        final long dumpThreadsAt = giveUpReadingAt - 15_000L;
         while (System.currentTimeMillis() < giveUpReadingAt) {
             boolean allReadersComplete = areAllReadersComplete(expectedNumberOfMessages, readers);
 
@@ -89,8 +91,15 @@ public class RollCycleMultiThreadStressTest {
                 break;
             }
 
+            if (dumpThreadsAt < System.currentTimeMillis()) {
+                Thread.getAllStackTraces().forEach((n, st) -> {
+                    System.out.println("\n\n" + n + "\n\n");
+                    Arrays.stream(st).forEach(System.out::println);
+                });
+            }
+
             System.out.printf("Not all readers are complete. Waiting...%n");
-            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10L));
+            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(1L));
         }
         assertTrue("Readers did not catch up",
                 areAllReadersComplete(expectedNumberOfMessages, readers));

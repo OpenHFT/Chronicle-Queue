@@ -71,10 +71,10 @@ final class TableDirectoryListing implements DirectoryListing {
         }
         modCount.addAtomicValue(1);
         if (cycle > getMaxCreatedCycle()) {
-            maxCycleValue.setOrderedValue(cycle);
+            maxCycleValue.setMaxValue(cycle);
         }
         if (cycle < getMinCycleValue()) {
-            minCycleValue.setOrderedValue(cycle);
+            minCycleValue.setMinValue(cycle);
         }
     }
 
