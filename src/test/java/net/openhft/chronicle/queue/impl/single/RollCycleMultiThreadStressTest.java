@@ -1,6 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.Ignore;
@@ -13,7 +17,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
@@ -27,7 +36,7 @@ public class RollCycleMultiThreadStressTest {
     private static final int TEST_TIME = Integer.getInteger("testTime", 90);
     static final int NUMBER_OF_INTS = 18;//1060 / 4;
 
-    @Ignore
+    @Ignore("long running")
     @Test
     public void stress() throws Exception {
         final File path = DirectoryUtils.tempDir("rollCycleStress");

@@ -408,6 +408,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 }
             } catch (EOFException fallback) {
                 // reached the end of the file.
+                if (i == toIndex) {
+                    return ScanResult.END_OF_FILE;
+                }
             }
             return i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
         }

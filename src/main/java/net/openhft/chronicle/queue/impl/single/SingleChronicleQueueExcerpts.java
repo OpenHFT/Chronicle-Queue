@@ -69,6 +69,7 @@ import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
 import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
 import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
 import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
@@ -522,7 +523,10 @@ public class SingleChronicleQueueExcerpts {
                 case NOT_REACHED:
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
                 case NOT_FOUND:
+                case END_OF_FILE:
                     break;
+                default:
+                    throw new IllegalStateException("Unknown ScanResult: " + scanResult);
             }
         }
 
@@ -795,7 +799,7 @@ public class SingleChronicleQueueExcerpts {
                     if (interrupted)
                         LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
                     // zero out all contents...
-                    for (long i=position + Wires.SPB_HEADER_SIZE; i<=wire.bytes().writePosition(); i++)
+                    for (long i = position + Wires.SPB_HEADER_SIZE; i <= wire.bytes().writePosition(); i++)
                         wire.bytes().writeByte(i, (byte) 0);
                     // ...and then the header, as if we had never been here
                     wire.bytes().writeVolatileInt(position, 0);
@@ -875,6 +879,7 @@ public class SingleChronicleQueueExcerpts {
 
         private interface HeaderWriteStrategy {
             void onContextClose();
+
             boolean onContextOpen(boolean metaData, int safeLength);
         }
 
@@ -1452,17 +1457,18 @@ public class SingleChronicleQueueExcerpts {
         public boolean moveToIndex(final long index) {
             if (moveToState.canReuseLastIndexMove(index, state, direction, queue, wire())) {
                 return true;
-            } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
-                final long knownIndex = moveToState.lastMovedToIndex;
-                final boolean found =
-                        this.store.linearScanTo(index, knownIndex, this,
-                                moveToState.readPositionAtLastMove) == ScanResult.FOUND;
-                if (found) {
-                    index(index);
-                    moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
+            } else
+                if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
+                    final long knownIndex = moveToState.lastMovedToIndex;
+                    final boolean found =
+                            this.store.linearScanTo(index, knownIndex, this,
+                                    moveToState.readPositionAtLastMove) == ScanResult.FOUND;
+                    if (found) {
+                        index(index);
+                        moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
+                    }
+                    return found;
                 }
-                return found;
-            }
 
             return moveToIndexInternal(index);
         }
@@ -1487,7 +1493,11 @@ public class SingleChronicleQueueExcerpts {
                 state = FOUND_CYCLE;
                 moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
                 return scanResult;
-            }
+            } else
+                if (scanResult == END_OF_FILE) {
+                    state = END_OF_CYCLE;
+                    return scanResult;
+                }
 
             bytes.readLimit(bytes.readPosition());
             return scanResult;
@@ -1634,7 +1644,8 @@ public class SingleChronicleQueueExcerpts {
 
                 case FOUND:
                     if (direction == FORWARD) {
-                        switch (moveToIndexResult(++index)) {
+                        final ScanResult result = moveToIndexResult(++index);
+                        switch (result) {
                             case FOUND:
                                 // the end moved!!
                                 state = FOUND_CYCLE;
@@ -1644,12 +1655,23 @@ public class SingleChronicleQueueExcerpts {
                             case NOT_FOUND:
                                 state = FOUND_CYCLE;
                                 break;
+                            case END_OF_FILE:
+                                state = END_OF_CYCLE;
+                                break;
+                            default:
+                                throw new IllegalStateException("Unknown ScanResult: " + result);
                         }
                     }
                     break;
                 case NOT_REACHED:
                     approximateLastIndex();
                     throw new IllegalStateException("NOT_REACHED index: " + Long.toHexString(index));
+                case END_OF_FILE:
+                    state = END_OF_CYCLE;
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown ScanResult: " + scanResult);
+
             }
 
             return this;
