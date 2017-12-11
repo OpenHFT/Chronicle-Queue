@@ -105,6 +105,11 @@ public class RollCycleMultiThreadStressTest {
         assertTrue("Did not write " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
                 wrote.get() >= expectedNumberOfMessages);
 
+        readers.stream().filter(r -> r.exception != null).findAny().ifPresent(reader -> {
+            throw new AssertionError("Reader encountered exception, so stopped reading messages",
+                    reader.exception);
+        });
+
         final long giveUpReadingAt = System.currentTimeMillis() + 60_000L;
         final long dumpThreadsAt = giveUpReadingAt - 15_000L;
         while (System.currentTimeMillis() < giveUpReadingAt) {
@@ -200,7 +205,8 @@ public class RollCycleMultiThreadStressTest {
                                 v = rd.wire().getValueIn().int32();
                                 if (lastRead + 1 != v) {
                                     String failureMessage = "Expected: " + (lastRead + 1) +
-                                            ", actual: " + v;
+                                            ", actual: " + v + ", pos: " + i + ", index: " + rd.index() +
+                                            ", cycle: " + tailer.cycle();
                                     if (lastTailerCycle != -1) {
                                         failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
                                                 " (current: " + (tailer.cycle()) +
