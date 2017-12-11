@@ -260,7 +260,7 @@ public class RollCycleMultiThreadStressTest {
                             valueOut.int32(value);
                         }
                         while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
-                            Thread.yield();
+                            // spin
                         }
                     }
                     loopIteration++;
