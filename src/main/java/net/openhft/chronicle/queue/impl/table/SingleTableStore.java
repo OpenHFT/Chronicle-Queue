@@ -253,7 +253,7 @@ public class SingleTableStore implements TableStore {
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
                     if (!warnedOnFailure) {
-                        Jvm.warn().on(getClass(), "Failed to acquire a lock on the table store file. Retrying", e);
+                        Jvm.debug().on(getClass(), "Failed to acquire a lock on the table store file. Retrying");
                         warnedOnFailure = true;
                     }
                 }
