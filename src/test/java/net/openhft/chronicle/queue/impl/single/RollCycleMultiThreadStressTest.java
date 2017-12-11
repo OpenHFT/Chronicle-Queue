@@ -57,9 +57,12 @@ public class RollCycleMultiThreadStressTest {
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
+        final List<Writer> writers = new ArrayList<>();
 
         for (int i = 0; i < numWriters; i++) {
-            results.add(executorService.submit(new Writer(path, wrote, expectedNumberOfMessages)));
+            final Writer writer = new Writer(path, wrote, expectedNumberOfMessages);
+            writers.add(writer);
+            results.add(executorService.submit(writer));
         }
         for (int i = 0; i < numThreads - numWriters; i++) {
             final Reader reader = new Reader(path, expectedNumberOfMessages);
@@ -78,8 +81,13 @@ public class RollCycleMultiThreadStressTest {
                         wrote.get() + 1, expectedNumberOfMessages,
                         i * 10, readersLastRead);
                 readers.forEach(reader -> {
-                    if ((wrote.get() - reader.lastRead) > 1_000_000)
+                    if ((wrote.get() - reader.lastRead) > 1_000_000) {
+                        if (reader.exception != null) {
+                            throw new AssertionError("Reader encountered exception, so stopped reading messages",
+                                    reader.exception);
+                        }
                         throw new AssertionError("Reader is stuck");
+                    }
                 });
                 LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10L));
             } else {
@@ -88,7 +96,12 @@ public class RollCycleMultiThreadStressTest {
             i++;
         }
 
-        assertTrue("Did not write " + expectedNumberOfMessages + " within timeout",
+        final StringBuilder writerExceptions = new StringBuilder();
+        writers.stream().filter(w -> w.exception != null).forEach(w -> {
+            writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n");
+        });
+
+        assertTrue("Did not write " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
                 wrote.get() >= expectedNumberOfMessages);
 
         final long giveUpReadingAt = System.currentTimeMillis() + 60_000L;
@@ -148,6 +161,7 @@ public class RollCycleMultiThreadStressTest {
         private final File path;
         private final int expectedNumberOfMessages;
         private volatile int lastRead = -1;
+        private volatile Throwable exception;
 
         Reader(final File path, final int expectedNumberOfMessages) {
             this.path = path;
@@ -178,6 +192,7 @@ public class RollCycleMultiThreadStressTest {
                 }
             } catch (Throwable e) {
                 e.printStackTrace();
+                exception = e;
                 return e;
             }
 
@@ -190,6 +205,7 @@ public class RollCycleMultiThreadStressTest {
         private final File path;
         private final AtomicInteger wrote;
         private final int expectedNumberOfMessages;
+        private volatile Throwable exception;
 
         private Writer(final File path, final AtomicInteger wrote,
                        final int expectedNumberOfMessages) {
@@ -227,6 +243,7 @@ public class RollCycleMultiThreadStressTest {
                     }
                 }
             } catch (Exception e) {
+                exception = e;
                 return e;
             }
         }
