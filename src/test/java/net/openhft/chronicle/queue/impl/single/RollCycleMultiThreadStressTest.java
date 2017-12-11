@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
@@ -40,7 +39,7 @@ public class RollCycleMultiThreadStressTest {
     @Test
     public void stress() throws Exception {
         final File path = DirectoryUtils.tempDir("rollCycleStress");
-        LOG.warn("using path {} now is {}", path, LocalDateTime.now());
+        LOG.warn("Using path: {}, current time is: {}", path, LocalDateTime.now());
         final int numThreads = Runtime.getRuntime().availableProcessors();
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
@@ -80,16 +79,18 @@ public class RollCycleMultiThreadStressTest {
                 System.out.printf("Writer has written %d of %d messages after %ds. Readers at %s. Waiting...%n",
                         wrote.get() + 1, expectedNumberOfMessages,
                         i * 10, readersLastRead);
-                readers.forEach(reader -> {
-                    if ((wrote.get() - reader.lastRead) > 1_000_000) {
-                        if (reader.exception != null) {
-                            throw new AssertionError("Reader encountered exception, so stopped reading messages",
-                                    reader.exception);
-                        }
-                        throw new AssertionError("Reader is stuck");
+                readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
+                    if (reader.exception != null) {
+                        throw new AssertionError("Reader encountered exception, so stopped reading messages",
+                                reader.exception);
                     }
+                    throw new AssertionError("Reader is stuck");
+
                 });
-                LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10L));
+                final long waitUntil = System.currentTimeMillis() + 10_000L;
+                while (wrote.get() < expectedNumberOfMessages && System.currentTimeMillis() < waitUntil) {
+                    LockSupport.parkNanos(1L);
+                }
             } else {
                 break;
             }
@@ -146,7 +147,7 @@ public class RollCycleMultiThreadStressTest {
     private boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
         boolean allReadersComplete = true;
 
-        int count=0;
+        int count = 0;
         for (Reader reader : readers) {
             ++count;
             if (reader.lastRead < expectedNumberOfMessages - 1) {
@@ -162,31 +163,56 @@ public class RollCycleMultiThreadStressTest {
         private final int expectedNumberOfMessages;
         private volatile int lastRead = -1;
         private volatile Throwable exception;
+        private int readSequenceAtLastProgressCheck = -1;
 
         Reader(final File path, final int expectedNumberOfMessages) {
             this.path = path;
             this.expectedNumberOfMessages = expectedNumberOfMessages;
         }
 
+        boolean isMakingProgress() {
+            if (readSequenceAtLastProgressCheck == -1) {
+                return true;
+            }
+
+            final boolean makingProgress = lastRead > readSequenceAtLastProgressCheck;
+            readSequenceAtLastProgressCheck = lastRead;
+
+            return makingProgress;
+        }
+
         @Override
         public Throwable call() {
 
-            try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+            try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY)
                     .build()) {
 
                 final ExcerptTailer tailer = queue.createTailer();
-
+                int lastTailerCycle = -1;
+                int lastQueueCycle = -1;
                 while (lastRead != expectedNumberOfMessages - 1) {
                     try (DocumentContext rd = tailer.readingDocument()) {
                         if (rd.isPresent()) {
                             int v = -1;
-                            for (int i = 0; i< NUMBER_OF_INTS; i++) {
+                            for (int i = 0; i < NUMBER_OF_INTS; i++) {
                                 v = rd.wire().getValueIn().int32();
-                                assertEquals(lastRead + 1, v);
+                                if (lastRead + 1 != v) {
+                                    String failureMessage = "Expected: " + (lastRead + 1) +
+                                            ", actual: " + v;
+                                    if (lastTailerCycle != -1) {
+                                        failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
+                                                " (current: " + (tailer.cycle()) +
+                                                "), queue cycle at last read: " + lastQueueCycle +
+                                                " (current: " + queue.cycle() + ")";
+                                    }
+                                    throw new AssertionError(failureMessage);
+                                }
                             }
                             lastRead = v;
+                            lastTailerCycle = tailer.cycle();
+                            lastQueueCycle = queue.cycle();
                         }
                     }
                 }
@@ -221,7 +247,8 @@ public class RollCycleMultiThreadStressTest {
                     .rollCycle(RollCycles.TEST_SECONDLY)
                     .build()) {
                 final ExcerptAppender appender = queue.acquireAppender();
-                long nextTime = System.nanoTime();
+                final long startTime = System.nanoTime();
+                int loopIteration = 0;
                 while (true) {
                     final int value;
 
@@ -229,15 +256,15 @@ public class RollCycleMultiThreadStressTest {
                         value = wrote.getAndIncrement();
                         ValueOut valueOut = writingDocument.wire().getValueOut();
                         // make the message longer
-                        for (int i = 0; i< NUMBER_OF_INTS; i++) {
+                        for (int i = 0; i < NUMBER_OF_INTS; i++) {
                             valueOut.int32(value);
                         }
-                        long delay = nextTime - System.nanoTime();
-                        if (delay > 0) {
-                            LockSupport.parkNanos(delay);
+                        while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
+                            Thread.yield();
                         }
-                        nextTime += SLEEP_PER_WRITE_NANOS * 0.99;
                     }
+                    loopIteration++;
+
                     if (value >= expectedNumberOfMessages) {
                         return null;
                     }
