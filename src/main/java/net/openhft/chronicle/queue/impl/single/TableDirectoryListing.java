@@ -121,7 +121,7 @@ final class TableDirectoryListing implements DirectoryListing {
         }
     }
 
-    void close() {
+    public void close() {
         tableStore.close();
     }
 }

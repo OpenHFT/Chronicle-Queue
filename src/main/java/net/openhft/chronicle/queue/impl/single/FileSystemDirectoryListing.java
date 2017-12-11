@@ -58,4 +58,9 @@ final class FileSystemDirectoryListing implements DirectoryListing {
     public long modCount() {
         return modCount.get();
     }
+
+    @Override
+    public void close() {
+        // no-op
+    }
 }

@@ -39,6 +39,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
@@ -3768,6 +3769,24 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
+        final File dir = DirectoryUtils.tempDir("to-be-deleted");
+        try (final SingleChronicleQueue queue =
+                     builder(dir, wireType).
+                             testBlockSize().build()) {
+
+        }
+
+        Files.walk(dir.toPath()).forEach(p -> {
+            if (!Files.isDirectory(p)) {
+                assertTrue(p.toString(), p.toFile().delete());
+            }
+        });
+
+        assertTrue(dir.delete());
+    }
+
+    @Test
     public void shouldCreateQueueInCurrentDirectory() throws Exception {
         try (final SingleChronicleQueue queue =
                      builder(new File(""), wireType).
@@ -3775,7 +3794,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
 
-        new File("directory-listing.cq4t").delete();
+        assertThat(new File("directory-listing.cq4t").delete(), is(true));
     }
 
     @NotNull
