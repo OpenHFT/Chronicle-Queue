@@ -1057,11 +1057,11 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void close() {
-            context.wire(null);
             final Wire wire = context.wire();
             if (wire != null) {
                 wire.bytes().release();
             }
+            context.wire(null);
             Wire w0 = wireForIndex;
             if (w0 != null)
                 w0.bytes().release();
