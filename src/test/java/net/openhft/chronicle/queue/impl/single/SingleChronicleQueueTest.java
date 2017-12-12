@@ -3774,6 +3774,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final SingleChronicleQueue queue =
                      builder(dir, wireType).
                              testBlockSize().build()) {
+            try(final DocumentContext dc = queue.acquireAppender().writingDocument()){
+                dc.wire().write().text("foo");
+            }
+            try(final DocumentContext dc = queue.acquireTailer().readingDocument()){
+                assertEquals("foo", dc.wire().read().text());
+            }
 
         }
 
