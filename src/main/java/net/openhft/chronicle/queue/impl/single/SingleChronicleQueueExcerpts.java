@@ -1065,6 +1065,7 @@ public class SingleChronicleQueueExcerpts {
             Wire w0 = wireForIndex;
             if (w0 != null)
                 w0.bytes().release();
+            wireForIndex = null;
             if (store != null)
                 queue.release(store);
             store = null;

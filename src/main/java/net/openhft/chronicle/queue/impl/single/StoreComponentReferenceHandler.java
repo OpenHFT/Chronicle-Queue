@@ -78,6 +78,8 @@ public enum StoreComponentReferenceHandler {
             try {
                 released = true;
                 wireToRelease.bytes().release();
+            } catch (IllegalStateException e) {
+                // ignore this - resource may have already been released by explicit close() operation
             } catch (Throwable t) {
                 LOGGER.warn("Failed to release wire bytes", t);
             }
