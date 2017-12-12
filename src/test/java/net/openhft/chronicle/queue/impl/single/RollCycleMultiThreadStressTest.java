@@ -13,10 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -38,8 +41,11 @@ public class RollCycleMultiThreadStressTest {
     @Ignore("long running")
     @Test
     public void stress() throws Exception {
-        final File path = DirectoryUtils.tempDir("rollCycleStress");
-        LOG.warn("Using path: {}, current time is: {}", path, LocalDateTime.now());
+        final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
+                map(s -> new File(s, UUID.randomUUID().toString())).
+                orElse(DirectoryUtils.tempDir("rollCycleStress"));
+
+        System.out.printf("Queue dir: %s at %s%n", path.getAbsolutePath(), Instant.now());
         final int numThreads = Runtime.getRuntime().availableProcessors();
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
@@ -147,6 +153,7 @@ public class RollCycleMultiThreadStressTest {
         });
 
         System.out.println("Test complete");
+        DirectoryUtils.deleteDir(path);
     }
 
     private boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
