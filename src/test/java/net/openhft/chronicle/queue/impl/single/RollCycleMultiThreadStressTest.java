@@ -210,11 +210,15 @@ public class RollCycleMultiThreadStressTest {
                         if (rd.isPresent()) {
                             int v = -1;
 
+                            final ValueIn valueIn = rd.wire().getValueIn();
+                            final long documentAcquireTimestamp = valueIn.int64();
+                            if (documentAcquireTimestamp == 0L) {
+                                throw new AssertionError("No timestamp");
+                            }
                             for (int i = 0; i < NUMBER_OF_INTS; i++) {
-                                final ValueIn valueIn = rd.wire().getValueIn();
-                                final long documentAcquireTimestamp = valueIn.int64();
                                 v = valueIn.int32();
                                 if (lastRead + 1 != v) {
+                                    System.out.println(rd.wire());
                                     String failureMessage = "Expected: " + (lastRead + 1) +
                                             ", actual: " + v + ", pos: " + i + ", index: " + rd.index() +
                                             ", cycle: " + tailer.cycle();
@@ -278,6 +282,7 @@ public class RollCycleMultiThreadStressTest {
                         for (int i = 0; i < NUMBER_OF_INTS; i++) {
                             valueOut.int32(value);
                         }
+                        writingDocument.wire().padToCacheAlign();
                     }
                     while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
                         // spin
