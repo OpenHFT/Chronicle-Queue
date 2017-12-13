@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
@@ -44,7 +45,7 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 
-public enum QueueFiles {
+enum QueueFiles {
     ;
     private static final Logger LOGGER = LoggerFactory.getLogger(RollCycleRetriever.class);
 
@@ -101,7 +102,8 @@ public enum QueueFiles {
         return Optional.empty();
     }
 
-    static void writeEOFIfNeeded(@NotNull Path newFilePath, @NotNull WireType wireType, long blockSize, long timeoutMS) {
+    static void writeEOFIfNeeded(@NotNull Path newFilePath, @NotNull WireType wireType, long blockSize,
+                                 long timeoutMS, final Pauser pauser) {
         Path queuePath = newFilePath.getParent();
         if (Files.exists(queuePath) && hasQueueFiles(queuePath))
             getLastQueueFileButNotTheNew(queuePath, newFilePath).ifPresent(f ->
@@ -122,6 +124,27 @@ public enum QueueFiles {
                         long recordLength = Wires.lengthOf(recordHeader);
                         long eofOffset = writePosition + recordLength + 4L;
 
+                        // check for incomplete header in progress
+                        final long nextHeaderPosition = writePosition + 4 + recordLength;
+                        final int possiblyIncompleteHeader = bytes.readVolatileInt(nextHeaderPosition);
+                        if (possiblyIncompleteHeader != 0 && Wires.isNotComplete(possiblyIncompleteHeader) &&
+                                !Wires.isEndOfFile(possiblyIncompleteHeader)) {
+                            final long timeoutAt = System.currentTimeMillis() + timeoutMS;
+
+                            while (Wires.isNotComplete(bytes.readVolatileInt(nextHeaderPosition)) &&
+                                    System.currentTimeMillis() < timeoutAt) {
+                                pauser.pause();
+                            }
+
+                            if (Wires.isNotComplete(bytes.readVolatileInt(nextHeaderPosition))) {
+                                Jvm.warn().on(QueueFiles.class,
+                                        "Timed out waiting for incomplete message at " + nextHeaderPosition +
+                                                " in " + f + ". Not writing EOF marker.");
+                            } else {
+                                eofOffset += Wires.lengthOf(bytes.readVolatileInt(nextHeaderPosition)) + 4;
+                            }
+                        }
+
                         final int existingValue = bytes.readVolatileInt(eofOffset);
                         if (0 == existingValue) {
                             // no EOF found - write EOF
@@ -134,6 +157,8 @@ public enum QueueFiles {
                         }
                         return null;
                     }));
+
+        pauser.reset();
     }
 
     private static Optional<Path> getLastQueueFileButNotTheNew(final Path queuePath, final Path newFilePath) {

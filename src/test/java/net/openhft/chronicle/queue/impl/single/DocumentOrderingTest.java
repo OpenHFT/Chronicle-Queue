@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueOut;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -22,14 +23,14 @@ import java.util.concurrent.locks.LockSupport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Ignore("WIP")
 public final class DocumentOrderingTest {
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final AtomicInteger counter = new AtomicInteger(0);
 
+    @Ignore("WIP")
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocument() throws InterruptedException, ExecutionException, TimeoutException {
+    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
                              testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
@@ -54,6 +55,41 @@ public final class DocumentOrderingTest {
             assertTrue(otherDocumentWriter.get(5L, TimeUnit.SECONDS));
 
             final ExcerptTailer tailer = queue.createTailer();
+            expectValue(0, tailer);
+            expectValue(1, tailer);
+        }
+    }
+
+    @Test
+    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, ExecutionException, TimeoutException {
+        try (final SingleChronicleQueue queue =
+                     SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
+                             testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                             timeProvider(clock::get).timeoutMS(5_000L).build()) {
+
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            excerptAppender.writeDocument("foo", ValueOut::text);
+            final Future<Boolean> otherDocumentWriter;
+            try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
+
+                // move time to beyond the next cycle
+                clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
+
+                otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
+
+                // stall this thread, other thread should not be able to advance,
+                // since this DocumentContext is still open
+                LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(2L));
+
+                documentContext.wire().getValueOut().int32(counter.getAndIncrement());
+            }
+
+            assertTrue(otherDocumentWriter.get(5L, TimeUnit.SECONDS));
+
+            final ExcerptTailer tailer = queue.createTailer();
+            final DocumentContext documentContext = tailer.readingDocument();
+            assertTrue(documentContext.isPresent());
+            documentContext.close();
             expectValue(0, tailer);
             expectValue(1, tailer);
         }
