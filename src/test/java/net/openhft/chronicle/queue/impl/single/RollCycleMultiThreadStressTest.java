@@ -6,6 +6,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -208,8 +209,11 @@ public class RollCycleMultiThreadStressTest {
                     try (DocumentContext rd = tailer.readingDocument()) {
                         if (rd.isPresent()) {
                             int v = -1;
+
                             for (int i = 0; i < NUMBER_OF_INTS; i++) {
-                                v = rd.wire().getValueIn().int32();
+                                final ValueIn valueIn = rd.wire().getValueIn();
+                                final long documentAcquireTimestamp = valueIn.int64();
+                                v = valueIn.int32();
                                 if (lastRead + 1 != v) {
                                     String failureMessage = "Expected: " + (lastRead + 1) +
                                             ", actual: " + v + ", pos: " + i + ", index: " + rd.index() +
@@ -266,15 +270,17 @@ public class RollCycleMultiThreadStressTest {
                     final int value;
 
                     try (DocumentContext writingDocument = appender.writingDocument()) {
+                        final long documentAcquireTimestamp = System.nanoTime();
                         value = wrote.getAndIncrement();
                         ValueOut valueOut = writingDocument.wire().getValueOut();
                         // make the message longer
+                        valueOut.int64(documentAcquireTimestamp);
                         for (int i = 0; i < NUMBER_OF_INTS; i++) {
                             valueOut.int32(value);
                         }
-                        while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
-                            // spin
-                        }
+                    }
+                    while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
+                        // spin
                     }
                     loopIteration++;
 
