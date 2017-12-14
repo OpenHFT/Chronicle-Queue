@@ -52,7 +52,7 @@ public final class EofMarkerOnEmptyQueueTest {
                     nextCtx.wire().writeEventName("bar").int32(7);
                 }
 
-            }).get(1, TimeUnit.SECONDS);
+            }).get(3, TimeUnit.SECONDS);
 
             final WireStore firstCycleStore = queue.storeForCycle(startCycle, 0, false);
             final long firstCycleWritePosition = firstCycleStore.writePosition();

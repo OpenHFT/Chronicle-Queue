@@ -111,8 +111,19 @@ enum QueueFiles {
                         Bytes<?> bytes = w.bytes();
                         long writePosition = qs.writePosition();
                         if (writePosition == 0) {
-                            // nothing has been written to the file, let the StoreTailer fix it up
-                            return null;
+                            // need to wait until something has been written (or timeout)
+                            // to ensure atomicity of document context
+                            final long timeoutAt = System.currentTimeMillis() + timeoutMS;
+
+                            while (qs.writePosition() == 0 &&
+                                    System.currentTimeMillis() < timeoutAt) {
+                                pauser.pause();
+                            }
+                            pauser.reset();
+                            if (qs.writePosition() == 0) {
+                                // nothing has happened within queue timeout
+                                return null;
+                            }
                         }
 
                         final int recordHeader = bytes.readVolatileInt(writePosition);

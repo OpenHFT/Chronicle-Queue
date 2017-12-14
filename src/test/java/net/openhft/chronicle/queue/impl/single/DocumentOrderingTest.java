@@ -6,7 +6,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.Callable;
@@ -28,7 +27,6 @@ public final class DocumentOrderingTest {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final AtomicInteger counter = new AtomicInteger(0);
 
-    @Ignore("WIP")
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
         try (final SingleChronicleQueue queue =
