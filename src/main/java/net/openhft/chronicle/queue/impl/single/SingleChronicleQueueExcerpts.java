@@ -794,20 +794,20 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
-                final boolean interrupted = Thread.currentThread().isInterrupted();
-                if (rollbackOnClose || interrupted) {
-                    if (interrupted)
-                        LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
-                    // zero out all contents...
-                    for (long i = position + Wires.SPB_HEADER_SIZE; i <= wire.bytes().writePosition(); i++)
-                        wire.bytes().writeByte(i, (byte) 0);
-                    // ...and then the header, as if we had never been here
-                    wire.bytes().writeVolatileInt(position, 0);
-                    wire.bytes().writePosition(position);
-                    return;
-                }
-
                 try {
+                    final boolean interrupted = Thread.currentThread().isInterrupted();
+                    if (rollbackOnClose || interrupted) {
+                        if (interrupted)
+                            LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
+                        // zero out all contents...
+                        for (long i = position + Wires.SPB_HEADER_SIZE; i <= wire.bytes().writePosition(); i++)
+                            wire.bytes().writeByte(i, (byte) 0);
+                        // ...and then the header, as if we had never been here
+                        wire.bytes().writeVolatileInt(position, 0);
+                        wire.bytes().writePosition(position);
+                        return;
+                    }
+
                     headerWriteStrategy.onContextClose();
 
                     if (wire == StoreAppender.this.wire) {
@@ -895,6 +895,7 @@ public class SingleChronicleQueueExcerpts {
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
                         position(pos);
                         context.isClosed = false;
+                        context.rollbackOnClose = false;
                         context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
                         context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
                         context.metaData(metaData);
@@ -931,6 +932,7 @@ public class SingleChronicleQueueExcerpts {
                 }
 
                 context.isClosed = false;
+                context.rollbackOnClose = false;
                 context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
                 context.metaData(metaData);
                 return true;
