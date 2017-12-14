@@ -9,13 +9,12 @@ import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
@@ -31,7 +30,7 @@ public final class DocumentOrderingTest {
     private final AtomicInteger counter = new AtomicInteger(0);
 
     @Test
-    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, ExecutionException, TimeoutException {
+    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws Exception {
         // as below, but don't actually close the initial context
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
@@ -58,7 +57,63 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
+    public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws Exception {
+        final File dir = DirectoryUtils.tempDir("document-ordering");
+        // must be different instances of queue to work around synchronization on acquireStore()
+        try (final SingleChronicleQueue queue =
+                     SingleChronicleQueueBuilder.binary(dir).
+                             testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                             timeProvider(clock::get).timeoutMS(5_000L).build();
+             final SingleChronicleQueue queue2 =
+                     SingleChronicleQueueBuilder.binary(dir).
+                             testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                             timeProvider(clock::get).timeoutMS(5_000L).build();
+             final SingleChronicleQueue queue3 =
+                     SingleChronicleQueueBuilder.binary(dir).
+                             testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                             timeProvider(clock::get).timeoutMS(5_000L).build();
+             final SingleChronicleQueue queue4 =
+                     SingleChronicleQueueBuilder.binary(dir).
+                             testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                             timeProvider(clock::get).timeoutMS(5_000L).build();
+        ) {
+
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final Future<Boolean> firstWriter;
+            final Future<Boolean> secondWriter;
+            final Future<Boolean> thirdWriter;
+            try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
+
+                // move time to beyond the next cycle
+                clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
+                // add some jitter to allow threads to race
+                firstWriter = executorService.submit(attemptToWriteDocument(queue2));
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10L));
+                secondWriter = executorService.submit(attemptToWriteDocument(queue3));
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10L));
+                thirdWriter = executorService.submit(attemptToWriteDocument(queue4));
+
+                // stall this thread, other thread should not be able to advance,
+                // since this DocumentContext is still open
+                LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(2L));
+
+                documentContext.wire().getValueOut().int32(counter.getAndIncrement());
+            }
+
+            assertTrue(firstWriter.get(5L, TimeUnit.SECONDS));
+            assertTrue(secondWriter.get(5L, TimeUnit.SECONDS));
+            assertTrue(thirdWriter.get(5L, TimeUnit.SECONDS));
+
+            final ExcerptTailer tailer = queue.createTailer();
+            expectValue(0, tailer);
+            expectValue(1, tailer);
+            expectValue(2, tailer);
+            expectValue(3, tailer);
+        }
+    }
+
+    @Test
+    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws Exception {
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
                              testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
@@ -89,7 +144,7 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, ExecutionException, TimeoutException {
+    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws Exception {
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
                              testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
@@ -129,7 +184,7 @@ public final class DocumentOrderingTest {
     }
 
     private static void expectValue(final int expectedValue, final ExcerptTailer tailer) {
-        try( final DocumentContext documentContext = tailer.readingDocument()) {
+        try (final DocumentContext documentContext = tailer.readingDocument()) {
             assertTrue(documentContext.isPresent());
             assertEquals(expectedValue, documentContext.wire().getValueIn().int32());
         }
