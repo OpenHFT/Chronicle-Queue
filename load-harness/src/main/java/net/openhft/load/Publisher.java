@@ -5,7 +5,6 @@ import net.openhft.load.config.StageConfig;
 import net.openhft.load.messages.EightyByteMessage;
 import net.openhft.load.messages.Sizer;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;

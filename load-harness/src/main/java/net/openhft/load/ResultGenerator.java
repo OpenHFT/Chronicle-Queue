@@ -34,7 +34,7 @@ public final class ResultGenerator {
                 get(allStageConfigs.size() - 1);
         Jvm.setExceptionHandlers((c, m, t) -> {
             System.out.println(m);
-        }, (c, m, t) -> {System.out.println(m); t.printStackTrace();}, (c, m, t) -> System.out.println(m));
+        }, (c, m, t) -> {System.out.println(m); if (t != null) {t.printStackTrace();}}, (c, m, t) -> System.out.println(m));
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(lastStageConfig.getOutputPath()).build();
              final Writer resultsWriter = new FileWriter("results.txt", false)) {
