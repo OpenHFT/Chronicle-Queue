@@ -122,6 +122,9 @@ enum QueueFiles {
                             pauser.reset();
                             if (qs.writePosition() == 0) {
                                 // nothing has happened within queue timeout
+                                // nothing more can be done at this point
+                                Jvm.warn().on(QueueFiles.class, "Timed out waiting for first message in " +
+                                        f + ". Not writing EOF marker.");
                                 return null;
                             }
                         }

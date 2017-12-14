@@ -6,6 +6,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
+import org.junit.After;
 import org.junit.Test;
 
 import java.util.concurrent.Callable;
@@ -19,7 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public final class DocumentOrderingTest {
@@ -28,11 +31,38 @@ public final class DocumentOrderingTest {
     private final AtomicInteger counter = new AtomicInteger(0);
 
     @Test
+    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, ExecutionException, TimeoutException {
+        // as below, but don't actually close the initial context
+        try (final SingleChronicleQueue queue =
+                     SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
+                             testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                             timeProvider(clock::get).timeoutMS(1_000L).build()) {
+
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final Future<Boolean> otherDocumentWriter;
+            // begin a record in the first cycle file
+            final DocumentContext documentContext = excerptAppender.writingDocument();
+            documentContext.wire().getValueOut().int32(counter.getAndIncrement());
+
+            // move time to beyond the next cycle
+            clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
+
+            otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
+
+            assertTrue(otherDocumentWriter.get(5L, TimeUnit.SECONDS));
+
+            final ExcerptTailer tailer = queue.createTailer();
+            expectValue(1, tailer);
+            assertThat(tailer.readingDocument().isPresent(), is(false));
+        }
+    }
+
+    @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
                              testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
-                             timeProvider(clock::get).build()) {
+                             timeProvider(clock::get).timeoutMS(3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final Future<Boolean> otherDocumentWriter;
@@ -63,7 +93,7 @@ public final class DocumentOrderingTest {
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
                              testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
-                             timeProvider(clock::get).timeoutMS(5_000L).build()) {
+                             timeProvider(clock::get).timeoutMS(3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             excerptAppender.writeDocument("foo", ValueOut::text);
@@ -91,6 +121,11 @@ public final class DocumentOrderingTest {
             expectValue(0, tailer);
             expectValue(1, tailer);
         }
+    }
+
+    @After
+    public void tearDown() {
+        executorService.shutdownNow();
     }
 
     private static void expectValue(final int expectedValue, final ExcerptTailer tailer) {
