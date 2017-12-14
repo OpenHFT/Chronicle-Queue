@@ -3702,7 +3702,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final int threadCount = 8;
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).build();
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).
+                timeoutMS(3_000).
+                testBlockSize().build();
         final int iterationsPerThread = Short.MAX_VALUE / 8;
         final int totalIterations = iterationsPerThread * threadCount;
         final int[] nonAtomicCounter = new int[]{0};
