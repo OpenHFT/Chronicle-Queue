@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -29,6 +30,42 @@ public final class DocumentOrderingTest {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final AtomicInteger counter = new AtomicInteger(0);
 
+    @Ignore("WIP")
+    @Test
+    public void multipleQueuedOpenDocumentsInPreviousCycleFileShouldRemainOrdered() throws Exception {
+        try (final SingleChronicleQueue queue =
+                     SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("document-ordering")).
+                             testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                             timeProvider(clock::get).timeoutMS(1_000L).build()) {
+
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            // write initial document
+            excerptAppender.writeDocument("foo", ValueOut::text);
+
+            // begin a record in the first cycle file
+            final DocumentContext firstOpenDocument = excerptAppender.writingDocument();
+            firstOpenDocument.wire().getValueOut().int32(counter.getAndIncrement());
+
+            final Future<Integer> secondDocumentInFirstCycle = executorService.submit(attemptToWriteDocument(queue));
+
+            // move time to beyond the next cycle
+            clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
+
+            final Future<Integer> otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
+
+            firstOpenDocument.close();
+
+            assertEquals(1, secondDocumentInFirstCycle.get(5L, TimeUnit.SECONDS).intValue());
+            assertEquals(2, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
+
+            final ExcerptTailer tailer = queue.createTailer();
+            expectValue(0, tailer);
+            expectValue(1, tailer);
+            expectValue(2, tailer);
+            assertThat(tailer.readingDocument().isPresent(), is(false));
+        }
+    }
+
     @Test
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws Exception {
         // as below, but don't actually close the initial context
@@ -38,7 +75,7 @@ public final class DocumentOrderingTest {
                              timeProvider(clock::get).timeoutMS(1_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final Future<Boolean> otherDocumentWriter;
+            final Future<Integer> otherDocumentWriter;
             // begin a record in the first cycle file
             final DocumentContext documentContext = excerptAppender.writingDocument();
             documentContext.wire().getValueOut().int32(counter.getAndIncrement());
@@ -48,7 +85,7 @@ public final class DocumentOrderingTest {
 
             otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
 
-            assertTrue(otherDocumentWriter.get(5L, TimeUnit.SECONDS));
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(1, tailer);
@@ -79,9 +116,9 @@ public final class DocumentOrderingTest {
         ) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final Future<Boolean> firstWriter;
-            final Future<Boolean> secondWriter;
-            final Future<Boolean> thirdWriter;
+            final Future<Integer> firstWriter;
+            final Future<Integer> secondWriter;
+            final Future<Integer> thirdWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
 
                 // move time to beyond the next cycle
@@ -100,9 +137,9 @@ public final class DocumentOrderingTest {
                 documentContext.wire().getValueOut().int32(counter.getAndIncrement());
             }
 
-            assertTrue(firstWriter.get(5L, TimeUnit.SECONDS));
-            assertTrue(secondWriter.get(5L, TimeUnit.SECONDS));
-            assertTrue(thirdWriter.get(5L, TimeUnit.SECONDS));
+            firstWriter.get(5L, TimeUnit.SECONDS);
+            secondWriter.get(5L, TimeUnit.SECONDS);
+            thirdWriter.get(5L, TimeUnit.SECONDS);
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(0, tailer);
@@ -120,7 +157,7 @@ public final class DocumentOrderingTest {
                              timeProvider(clock::get).timeoutMS(3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final Future<Boolean> otherDocumentWriter;
+            final Future<Integer> otherDocumentWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
 
                 // move time to beyond the next cycle
@@ -135,7 +172,7 @@ public final class DocumentOrderingTest {
                 documentContext.wire().getValueOut().int32(counter.getAndIncrement());
             }
 
-            assertTrue(otherDocumentWriter.get(5L, TimeUnit.SECONDS));
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(0, tailer);
@@ -152,7 +189,7 @@ public final class DocumentOrderingTest {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             excerptAppender.writeDocument("foo", ValueOut::text);
-            final Future<Boolean> otherDocumentWriter;
+            final Future<Integer> otherDocumentWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
 
                 // move time to beyond the next cycle
@@ -167,7 +204,7 @@ public final class DocumentOrderingTest {
                 documentContext.wire().getValueOut().int32(counter.getAndIncrement());
             }
 
-            assertTrue(otherDocumentWriter.get(5L, TimeUnit.SECONDS));
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
 
             final ExcerptTailer tailer = queue.createTailer();
             final DocumentContext documentContext = tailer.readingDocument();
@@ -190,12 +227,14 @@ public final class DocumentOrderingTest {
         }
     }
 
-    private Callable<Boolean> attemptToWriteDocument(final SingleChronicleQueue queue) {
+    private Callable<Integer> attemptToWriteDocument(final SingleChronicleQueue queue) {
         return () -> {
+            final int counterValue;
             try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
-                documentContext.wire().getValueOut().int32(counter.getAndIncrement());
+                counterValue = counter.getAndIncrement();
+                documentContext.wire().getValueOut().int32(counterValue);
             }
-            return true;
+            return counterValue;
         };
     }
 }
