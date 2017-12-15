@@ -15,10 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesUtil;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
@@ -39,12 +36,12 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
-import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -239,6 +236,98 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 Assert.assertEquals("somevalue", str);
             }
         }
+    }
+
+
+    @Ignore
+    @Test
+    public void testLastWritten() throws InterruptedException {
+        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
+        try {
+
+            final File tmpDir = getTmpDir();
+
+            try (SingleChronicleQueue outQueue = builder(tmpDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).build()) {
+                try (SingleChronicleQueue inQueue = builder(tmpDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).build()) {
+
+                    // write some initial data to the inqueue
+                    final Msg msg = inQueue.acquireAppender().methodWriterBuilder(Msg.class).recordHistory(true).build();
+
+                    msg.msg("somedata-0");
+
+                    Thread.sleep(1000);
+
+                    // write data into the inQueue
+                    msg.msg("somedata-1");
+
+                    // read a message on the in queue and write it to the out queue
+                    {
+                        Msg out = outQueue.acquireAppender().methodWriterBuilder(Msg.class).recordHistory(true).build();
+                        MethodReader methodReader = inQueue.createTailer().methodReader((Msg) out::msg);
+
+                        // reads the somedata-0
+                        methodReader.readOne();
+
+                        // reads the somedata-1
+                        methodReader.readOne();
+                    }
+
+                    // write data into the inQueue
+                    msg.msg("somedata-2");
+
+                    Thread.sleep(2000);
+
+                    msg.msg("somedata-3");
+                    msg.msg("somedata-4");
+
+                    AtomicReference<String> actualValue = new AtomicReference<>();
+
+                    // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
+                    {
+                        ExcerptTailer excerptTailer = inQueue.createTailer().afterLastWritten(outQueue);
+                        MethodReader methodReader = excerptTailer.methodReader((Msg) actualValue::set);
+
+                        methodReader.readOne();
+                        Assert.assertEquals("somedata-2", actualValue.get());
+
+                        methodReader.readOne();
+                        Assert.assertEquals("somedata-3", actualValue.get());
+
+                        methodReader.readOne();
+                        Assert.assertEquals("somedata-4", actualValue.get());
+                    }
+                }
+            }
+        } finally {
+            executorService.shutdown();
+            executorService.awaitTermination(1, TimeUnit.SECONDS);
+            executorService.shutdownNow();
+        }
+    }
+
+    @Test
+    public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
+        final File dir = DirectoryUtils.tempDir("to-be-deleted");
+        try (final SingleChronicleQueue queue =
+                     builder(dir, wireType).
+                             testBlockSize().build()) {
+            try (final DocumentContext dc = queue.acquireAppender().writingDocument()) {
+                dc.wire().write().text("foo");
+            }
+            try (final DocumentContext dc = queue.acquireTailer().readingDocument()) {
+                assertEquals("foo", dc.wire().read().text());
+            }
+
+        }
+
+        Files.walk(dir.toPath()).forEach(p -> {
+            if (!Files.isDirectory(p)) {
+                assertTrue(p.toString(), p.toFile().delete());
+            }
+        });
+
+        assertTrue(dir.delete());
     }
 
 
@@ -3770,28 +3859,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test
-    public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
-        final File dir = DirectoryUtils.tempDir("to-be-deleted");
-        try (final SingleChronicleQueue queue =
-                     builder(dir, wireType).
-                             testBlockSize().build()) {
-            try(final DocumentContext dc = queue.acquireAppender().writingDocument()){
-                dc.wire().write().text("foo");
-            }
-            try(final DocumentContext dc = queue.acquireTailer().readingDocument()){
-                assertEquals("foo", dc.wire().read().text());
-            }
-
-        }
-
-        Files.walk(dir.toPath()).forEach(p -> {
-            if (!Files.isDirectory(p)) {
-                assertTrue(p.toString(), p.toFile().delete());
-            }
-        });
-
-        assertTrue(dir.delete());
+    interface Msg {
+        void msg(String s);
     }
 
     @Test
@@ -3845,6 +3914,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         public MyMarshable() {
         }
+
     }
 
     private static long countEntries(final ChronicleQueue queue) {
