@@ -29,7 +29,6 @@ import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
 import java.util.concurrent.Callable;
@@ -50,20 +49,6 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
 
     public TimedStoreRecovery(@NotNull WireType wireType) {
         timeStamp = wireType.newLongReference().get();
-    }
-
-    @Override
-    public long writeHeader(@NotNull Wire wire,
-                            int length,
-                            int safeLength,
-                            long timeoutMS,
-                            @Nullable final LongValue lastPosition,
-                            @Nullable Sequence  sequence) throws EOFException, UnrecoverableTimeoutException {
-        try {
-            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
-        } catch (TimeoutException e) {
-            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, sequence);
-        }
     }
 
     @Override
