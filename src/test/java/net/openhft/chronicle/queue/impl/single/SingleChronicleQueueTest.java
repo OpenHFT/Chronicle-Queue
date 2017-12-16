@@ -239,17 +239,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
-    @Ignore
+
     @Test
     public void testLastWritten() throws InterruptedException {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
         try {
 
-            final File tmpDir = getTmpDir();
-
-            try (SingleChronicleQueue outQueue = builder(tmpDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).build()) {
-                try (SingleChronicleQueue inQueue = builder(tmpDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).build()) {
+            try (SingleChronicleQueue outQueue = builder(getTmpDir(), wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).build()) {
+                try (SingleChronicleQueue inQueue = builder(getTmpDir(), wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).build()) {
 
                     // write some initial data to the inqueue
                     final Msg msg = inQueue.acquireAppender().methodWriterBuilder(Msg.class).recordHistory(true).build();
