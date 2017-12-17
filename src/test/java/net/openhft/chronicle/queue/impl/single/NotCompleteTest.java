@@ -26,7 +26,6 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -35,6 +34,7 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
@@ -347,9 +347,9 @@ public class NotCompleteTest {
 
         final List<String> names = Collections.synchronizedList(new ArrayList<>());
         final Person person1 = new Person(40, "Terry");
-        final Person person2 = new Person(50, Person.INTERRUPT);
-        final Person person3 = new Person(60, "June");
-        final Person person4 = new Person(70, "Percy");
+        final Person interrupter = new Person(50, Person.INTERRUPT);
+        final Person thrower = new Person(80, Person.THROW);
+        final Person person2 = new Person(90, "Bert");
 
         try (final ChronicleQueue queueReader = binary(tmpDir)
                 .testBlockSize()
@@ -360,28 +360,18 @@ public class NotCompleteTest {
             MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
 
             final StringBuilder queueDumpBeforeInterruptedWrite = new StringBuilder();
+            // set up
+            doWrite(tmpDir, (proxy, queue) -> {
+                proxy.accept(person1);
+                queueDumpBeforeInterruptedWrite.append(queue.dump());
+            });
+            final String cleanedQueueDump = cleanQueueDump(queueDumpBeforeInterruptedWrite.toString());
 
             // start up writer thread
-            Thread writerThread = new Thread(() -> {
-                try (final ChronicleQueue queue = binary(tmpDir)
-                        .testBlockSize()
-                        .rollCycle(RollCycles.TEST_DAILY)
-                        .build()) {
-
-                    ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
-                    PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
-                    proxy.accept(person1);
-                    queueDumpBeforeInterruptedWrite.append(queue.dump());
-                    // thread is interrupted during this
-                    proxy.accept(person2);
-                    try {
-                        proxy.accept(person3);
-                        Assert.fail("should not have accepted another write");
-                    } catch (IllegalStateException expected) {
-                        // ok
-                    }
-                }
-            });
+            Thread writerThread = new Thread(() -> doWrite(tmpDir, (proxy, queue) -> {
+                // thread is interrupted during this
+                proxy.accept(interrupter);
+            }));
             writerThread.start();
             writerThread.join();
 
@@ -389,7 +379,8 @@ public class NotCompleteTest {
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
-                assertEquals(queueDumpBeforeInterruptedWrite.toString(), queue.dump());
+                String dump = cleanQueueDump(queue.dump());
+                assertEquals("queue should be unchanged by the interrupted write", cleanedQueueDump, dump);
             }
 
             // check only 1 written
@@ -398,20 +389,93 @@ public class NotCompleteTest {
             assertEquals(person1.name, names.get(0));
             assertFalse(reader.readOne());
 
-            // write another person to same queue in this thread
+            // do a write that throws an exception
+            doWrite(tmpDir, (proxy, queue) -> {
+                try {
+                    proxy.accept(thrower);
+                } catch (NullPointerException npe) {
+                    // ignore
+                }
+            });
+
             try (final ChronicleQueue queue = binary(tmpDir)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
-                ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
-                PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
-                proxy.accept(person4);
+                String dump = cleanQueueDump(queue.dump());
+                if (lazyIndexing) {
+                    // reading the queue creates the index, thus changing it, so do a text comparison here
+                    assertEquals("queue should be unchanged by the failed write",
+                            "--- !!meta-data #binary\n" +
+                            "header: !SCQStore {\n" +
+                            "  wireType: !WireType BINARY_LIGHT,\n" +
+                            "  writePosition: [\n" +
+                            "    401,\n" +
+                            "    0\n" +
+                            "  ],\n" +
+                            "  roll: !SCQSRoll {\n" +
+                            "    length: !int 86400000,\n" +
+                            "    format: yyyyMMdd,\n" +
+                            "    epoch: 0\n" +
+                            "  },\n" +
+                            "  indexing: !SCQSIndexing {\n" +
+                            "    indexCount: 8,\n" +
+                            "    indexSpacing: 1,\n" +
+                            "    index2Index: 434,\n" +
+                            "    lastIndex: 0\n" +
+                            "  },\n" +
+                            "  lastAcknowledgedIndexReplicated: -1,\n" +
+                            "  recovery: !TimedStoreRecovery {\n" +
+                            "    timeStamp: 0\n" +
+                            "  },\n" +
+                            "  deltaCheckpointInterval: 0\n" +
+                            "}\n" +
+                            "# position: 401, header: 0\n" +
+                            "--- !!data #binary\n" +
+                            "accept: {\n" +
+                            "  age: 40,\n" +
+                            "  name: Terry\n" +
+                            "}\n" +
+                            "# position: 434, header: 0\n" +
+                            "--- !!meta-data #binary\n" +
+                            "index2index: [\n" +
+                            "  # length: 8, used: 0\n" +
+                            "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                            "]\n" +
+                            "...\n" +
+                            "\n", dump);
+                }
+                else
+                    assertEquals("queue should be unchanged by the failed write", cleanedQueueDump, dump);
             }
+
+            // check nothing else written
+            assertFalse(reader.readOne());
+
+            // write another person to same queue in this thread
+            doWrite(tmpDir, (proxy, queue) -> proxy.accept(person2));
 
             assertTrue(reader.readOne());
             assertEquals(2, names.size());
-            assertEquals(person4.name, names.get(1));
+            assertEquals(person2.name, names.get(1));
             assertFalse(reader.readOne());
+        }
+    }
+
+    // the last line of the dump changes - haven't spent the time to get to the bottom of this
+    private String cleanQueueDump(String from) {
+        return from.replaceAll("# [0-9]+ bytes remaining$", "");
+    }
+
+    private void doWrite(File tmpDir, BiConsumer<PersonListener, ChronicleQueue> action) {
+        try (final ChronicleQueue queue = binary(tmpDir)
+                .testBlockSize()
+                .rollCycle(RollCycles.TEST_DAILY)
+                .build()) {
+
+            ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
+            PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
+            action.accept(proxy, queue);
         }
     }
 
@@ -426,6 +490,7 @@ public class NotCompleteTest {
 
     private class Person implements Marshallable {
         static final String INTERRUPT = "Arthur";
+        static final String THROW = "Thrower";
         final int age;
         final String name;
 
@@ -440,6 +505,8 @@ public class NotCompleteTest {
             // interrupt half way through writing
             if (INTERRUPT.equals(name)) {
                 Thread.currentThread().interrupt();
+            } else if (THROW.equals(name)) {
+                throw new NullPointerException();
             } else {
                 wire.write("name").text(name);
             }

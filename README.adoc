@@ -1082,6 +1082,27 @@ try (DocumentContext dc = appender.writingDocument()) {
 ----
 
 
+==== Exceptions thrown with a writingDocument()
+
+If an exception is thrown while you are holding the `writingDocument()`, then the `close()` method will be called on the
+`DocumentContext` which will release the lock, set the length in the header, and allow writing to continue. If the
+exception was thrown halfway through writing your data, then you will end up with your data half-written in the
+chronicle queue. If there is a possibility of an exception during writing, you should use something like the below.
+This calls the `DocumentContext.rollbackOnClose()` method to tell the `DocumentContext` to rollback the data.
+
+[source, Java]
+----
+@NotNull DocumentContext dc = writingDocument();
+try {
+    // perform the write which may throw
+} catch (Throwable t) {
+    dc.rollbackOnClose();
+    Jvm.rethrow(t);
+} finally {
+    dc.close();
+}
+----
+
 ==== How to Shutdown
 
 You should try to avoid abruptly killing Chronicle Queue, especially if its in the middle of writing a message.
