@@ -245,19 +245,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
         try {
-
-            try (SingleChronicleQueue outQueue = builder(getTmpDir(), wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).build()) {
-                try (SingleChronicleQueue inQueue = builder(getTmpDir(), wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).build()) {
+            final SetTimeProvider tp = new SetTimeProvider();
+            try (SingleChronicleQueue outQueue = builder(getTmpDir(), wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(tp).build()) {
+                File inQueueTmpDir = getTmpDir();
+                try (SingleChronicleQueue inQueue = builder(inQueueTmpDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(tp).build()) {
 
                     // write some initial data to the inqueue
                     final Msg msg = inQueue.acquireAppender().methodWriterBuilder(Msg.class).recordHistory(true).build();
 
                     msg.msg("somedata-0");
+                    assertEquals(1, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
-                    Thread.sleep(1000);
+                    tp.advanceMillis(1000);
 
                     // write data into the inQueue
                     msg.msg("somedata-1");
+                    assertEquals(2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     // read a message on the in queue and write it to the out queue
                     {
@@ -269,15 +272,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                         // reads the somedata-1
                         methodReader.readOne();
+
+                        Assert.assertFalse(methodReader.readOne());
                     }
 
                     // write data into the inQueue
                     msg.msg("somedata-2");
+                    assertEquals(2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
-                    Thread.sleep(2000);
+                    tp.advanceMillis(2000);
 
                     msg.msg("somedata-3");
                     msg.msg("somedata-4");
+                    assertEquals("Should be a missing cycle file", 3, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     AtomicReference<String> actualValue = new AtomicReference<>();
 
@@ -294,6 +301,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                         methodReader.readOne();
                         Assert.assertEquals("somedata-4", actualValue.get());
+
+                        Assert.assertFalse(methodReader.readOne());
                     }
                 }
             }
