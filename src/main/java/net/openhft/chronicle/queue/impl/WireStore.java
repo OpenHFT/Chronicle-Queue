@@ -22,7 +22,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.StreamCorruptedException;
-import java.util.concurrent.TimeoutException;
 
 public interface WireStore extends CommonStore {
 
@@ -66,7 +65,7 @@ public interface WireStore extends CommonStore {
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
-    void writeEOF(Wire wire, long timeoutMS) throws TimeoutException;
+    void writeEOF(Wire wire, long timeoutMS);
 
     int deltaCheckpointInterval();
 

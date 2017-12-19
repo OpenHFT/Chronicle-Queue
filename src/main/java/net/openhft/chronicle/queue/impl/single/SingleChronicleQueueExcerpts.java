@@ -59,7 +59,6 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
@@ -645,11 +644,7 @@ public class SingleChronicleQueueExcerpts {
                 // only a valid check if the wire was set.
                 if (this.cycle == cycle)
                     throw new AssertionError();
-                try {
-                    store.writeEOF(wire, timeoutMS());
-                } catch (TimeoutException e) {
-                    Jvm.warn().on(SingleChronicleQueueExcerpts.class, "Unable to terminate the previous cycle, continuing", e);
-                }
+                store.writeEOF(wire, timeoutMS());
             }
             setCycle2(cycle, true);
         }
@@ -660,11 +655,7 @@ public class SingleChronicleQueueExcerpts {
          */
         public void writeEndOfCycleIfRequired() {
             if (wire != null && queue.cycle() != cycle) {
-                try {
-                    store.writeEOF(wire, timeoutMS());
-                } catch (TimeoutException e) {
-                    Jvm.warn().on(SingleChronicleQueueExcerpts.class, "Unable to terminate the previous cycle, continuing", e);
-                }
+                store.writeEOF(wire, timeoutMS());
             }
         }
 
@@ -814,7 +805,18 @@ public class SingleChronicleQueueExcerpts {
                         if (padToCacheAlign)
                             wire.padToCacheAlign();
 
-                        wire.updateHeader(position, metaData);
+                        boolean updatedHeader = false;
+                        for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
+                            try {
+                                wire.updateHeader(position, metaData);
+                                updatedHeader = true;
+                                break;
+                            } catch (EOFException theySeeMeRolling) {
+                                cycle = handleRoll(cycle);
+                            }
+                        }
+                        if (!updatedHeader)
+                            throw new IllegalStateException("Unable to roll to the current cycle");
 
                         lastPosition = position;
                         lastCycle = cycle;
@@ -1344,8 +1346,6 @@ public class SingleChronicleQueueExcerpts {
                 try {
                     bytes.writePosition(pos);
                     store.writeEOF(wire(), timeoutMS());
-                } catch (TimeoutException e) {
-                    Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
                 } finally {
                     bytes.writeLimit(wlim);
                     bytes.readLimit(lim);
