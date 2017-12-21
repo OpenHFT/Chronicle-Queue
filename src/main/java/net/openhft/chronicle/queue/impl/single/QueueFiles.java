@@ -38,7 +38,6 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
