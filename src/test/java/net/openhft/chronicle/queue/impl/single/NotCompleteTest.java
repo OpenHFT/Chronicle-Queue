@@ -26,6 +26,7 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -477,6 +478,33 @@ public class NotCompleteTest {
             PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
             action.accept(proxy, queue);
         }
+    }
+
+    @Ignore("discuss with Rob")
+    @Test
+    public void testSkipSafeLengthOverBlock()
+            throws TimeoutException, ExecutionException, InterruptedException {
+
+        File tmpDir = DirectoryUtils.tempDir("testSkipSafeLengthOverBlock");
+        // 3rd time will do it
+        for (int i=0; i<8; i++) {
+            try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).timeoutMS(1).build()) {
+                ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
+                // start a message which won't be completed.
+                DocumentContext dc = appender.writingDocument();
+                // 2nd and subsequent times we call this will invoke recovery
+                dc.wire().write("some").text("data");
+                // don't call dc.close();
+            }
+        }
+
+        try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().build()) {
+            ExcerptTailer tailer = queue.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent());
+            }
+       }
     }
 
     @After
