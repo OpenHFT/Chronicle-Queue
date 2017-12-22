@@ -239,7 +239,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
-
     @Test
     public void testLastWritten() throws InterruptedException {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -3951,4 +3950,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         fail(message);
     }
+
+
 }
