@@ -10,6 +10,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -94,8 +95,9 @@ public class WriteBytesTest {
                 SingleChronicleQueueExcerpts.InternalAppender appender = (SingleChronicleQueueExcerpts.InternalAppender) queue.acquireAppender();
 
                 for (int i = 0; i < 5; i++) {
-                    final BytesWithIndex b = bytes(tailer);
-                    appender.writeBytes(b.index, b.bytes);
+                    try (final BytesWithIndex b = bytes(tailer)) {
+                        appender.writeBytes(b.index, b.bytes);
+                    }
                 }
 
                 Assert.assertTrue(queue.dump().contains("# position: 262616, header: 0\n" +
@@ -131,7 +133,7 @@ public class WriteBytesTest {
         }
     }
 
-    private static class BytesWithIndex {
+    private static class BytesWithIndex implements Closeable {
         private BytesStore bytes;
         private long index;
 
@@ -140,6 +142,10 @@ public class WriteBytesTest {
             this.index = index;
         }
 
+        @Override
+        public void close() throws IOException {
+            bytes.release();
+        }
     }
 
 

@@ -439,30 +439,38 @@ public class SingleChronicleQueueExcerpts {
 
             assert checkAppendingThread();
 
-
-            long pos = wire.bytes().writePosition();
-
-            headerWriteStrategy.onContextOpen(false, safeLength);
-
-            boolean rollbackDontClose = index != wire.headerNumber() + 1;
-            if (rollbackDontClose) {
-                wire.bytes().writeSkip(-4);
-                wire.bytes().writeVolatileInt(wire.bytes().writePosition(), 0);
-                wire.bytes().writeLimit(wire.bytes().capacity());
-                context.isClosed = false;
-                this.position = pos;
-                this.appendingThread = null;
-                ((AbstractWire) wire).forceNotInsideHeader();
-                if (index > wire.headerNumber() + 1)
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                return;
-            }
-
             try {
-                context.wire().bytes().write(bytes.bytesForRead());
+
+                long pos = wire.bytes().writePosition();
+
+                headerWriteStrategy.onContextOpen(false, safeLength);
+
+                boolean rollbackDontClose = index != wire.headerNumber() + 1;
+                if (rollbackDontClose) {
+                    wire.bytes().writeSkip(-4);
+                    wire.bytes().writeVolatileInt(wire.bytes().writePosition(), 0);
+                    wire.bytes().writeLimit(wire.bytes().capacity());
+                    context.isClosed = false;
+                    this.position = pos;
+                    ((AbstractWire) wire).forceNotInsideHeader();
+                    if (index > wire.headerNumber() + 1)
+                        throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
+                    return;
+                }
+
+                try {
+
+                    context.wire().bytes().write(bytes);
+
+                } finally {
+                    context.close();
+                }
+
+
             } finally {
-                context.close();
+                this.appendingThread = null;
             }
+
 
         }
 
