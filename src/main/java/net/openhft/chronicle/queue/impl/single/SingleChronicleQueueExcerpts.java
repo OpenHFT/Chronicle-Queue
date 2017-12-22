@@ -424,53 +424,52 @@ public class SingleChronicleQueueExcerpts {
 
 
         public void writeBytes(long index, @NotNull BytesStore bytes) {
+
+            if (queue.isClosed.get())
+                throw new IllegalStateException("Queue is closed");
+
+            int cycle = queue.rollCycle().toCycle(index);
+
+            if (wire == null)
+                setCycle2(cycle, true);
+            else if (this.cycle != cycle)
+                rollCycleTo(cycle);
+
+            int safeLength = (int) queue.overlapSize();
+
+            assert checkAppendingThread();
+
             try {
-                if (queue.isClosed.get())
-                    throw new IllegalStateException("Queue is closed");
 
-                int cycle = queue.rollCycle().toCycle(index);
+                long pos = wire.bytes().writePosition();
 
-                if (wire == null)
-                    setCycle2(cycle, true);
-                else if (this.cycle != cycle)
-                    rollCycleTo(cycle);
+                headerWriteStrategy.onContextOpen(false, safeLength);
 
-                int safeLength = (int) queue.overlapSize();
-
-                assert checkAppendingThread();
+                boolean rollbackDontClose = index != wire.headerNumber() + 1;
+                if (rollbackDontClose) {
+                    wire.bytes().writeSkip(-4);
+                    wire.bytes().writeVolatileInt(wire.bytes().writePosition(), 0);
+                    wire.bytes().writeLimit(wire.bytes().capacity());
+                    context.isClosed = false;
+                    this.position = pos;
+                    ((AbstractWire) wire).forceNotInsideHeader();
+                    if (index > wire.headerNumber() + 1)
+                        throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
+                    return;
+                }
 
                 try {
-
-                    long pos = wire.bytes().writePosition();
-
-                    headerWriteStrategy.onContextOpen(false, safeLength);
-
-                    boolean rollbackDontClose = index != wire.headerNumber() + 1;
-                    if (rollbackDontClose) {
-                        wire.bytes().writeSkip(-4);
-                        wire.bytes().writeVolatileInt(wire.bytes().writePosition(), 0);
-                        wire.bytes().writeLimit(wire.bytes().capacity());
-                        context.isClosed = false;
-                        this.position = pos;
-                        ((AbstractWire) wire).forceNotInsideHeader();
-                        return;
-                    }
-
-                    try {
-                        context.wire().bytes().write(bytes.bytesForRead());
-                    } finally {
-                        context.close();
-                    }
-                    assert checkAppendingThread();
-
+                    context.wire().bytes().write(bytes.bytesForRead());
                 } finally {
-                    this.appendingThread = null;
-
+                    context.close();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+                assert checkAppendingThread();
+
+            } finally {
+                this.appendingThread = null;
 
             }
+
 
         }
 
