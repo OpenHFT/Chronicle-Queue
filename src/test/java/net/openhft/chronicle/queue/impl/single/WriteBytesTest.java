@@ -47,24 +47,29 @@ public class WriteBytesTest {
                 SingleChronicleQueueExcerpts.InternalAppender appender = (SingleChronicleQueueExcerpts.InternalAppender) excerptAppender;
 
                 List<BytesWithIndex> bytesWithIndies = new ArrayList<>();
-                for (int i = 0; i < 5; i++) {
-                    bytesWithIndies.add(bytes(tailer));
-                }
+                try {
+                    for (int i = 0; i < 5; i++) {
+                        bytesWithIndies.add(bytes(tailer));
+                    }
 
-                for (int i = 0; i < 4; i++) {
-                    BytesWithIndex b = bytesWithIndies.get(i);
+                    for (int i = 0; i < 4; i++) {
+                        BytesWithIndex b = bytesWithIndies.get(i);
+                        appender.writeBytes(b.index, b.bytes);
+                    }
+
+                    for (int i = 0; i < 4; i++) {
+                        BytesWithIndex b = bytesWithIndies.get(i);
+                        appender.writeBytes(b.index, b.bytes);
+                    }
+
+                    BytesWithIndex b = bytesWithIndies.get(4);
                     appender.writeBytes(b.index, b.bytes);
+                    ((SingleChronicleQueueExcerpts.StoreAppender) appender).checkWritePositionHeaderNumber();
+                    excerptAppender.writeText("hello");
+                } finally {
+                    net.openhft.chronicle.core.io.Closeable.closeQuietly(bytesWithIndies);
                 }
 
-                for (int i = 0; i < 4; i++) {
-                    BytesWithIndex b = bytesWithIndies.get(i);
-                    appender.writeBytes(b.index, b.bytes);
-                }
-
-                BytesWithIndex b = bytesWithIndies.get(4);
-                appender.writeBytes(b.index, b.bytes);
-                ((SingleChronicleQueueExcerpts.StoreAppender) appender).checkWritePositionHeaderNumber();
-                excerptAppender.writeText("hello");
             }
 
         }
@@ -122,7 +127,6 @@ public class WriteBytesTest {
 
     private BytesWithIndex bytes(final ExcerptTailer tailer) {
         try (DocumentContext dc = tailer.readingDocument()) {
-
 
             if (!dc.isPresent())
                 return null;
