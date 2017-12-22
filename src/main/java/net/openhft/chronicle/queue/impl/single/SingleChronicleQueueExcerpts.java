@@ -447,8 +447,8 @@ public class SingleChronicleQueueExcerpts {
 
                     headerWriteStrategy.onContextOpen(false, safeLength);
 
-                    boolean rollbackOnClose = index != wire.headerNumber() + 1;
-                    if (rollbackOnClose) {
+                    boolean rollbackDontClose = index != wire.headerNumber() + 1;
+                    if (rollbackDontClose) {
                         wire.bytes().writeVolatileInt(wire.bytes().writePosition() - 4, 0);
                         wire.bytes().writeSkip(-4);
                         wire.bytes().writeLimit(wire.bytes().capacity());
