@@ -317,9 +317,8 @@ public class SingleChronicleQueueExcerpts {
 
                 if (wire == null)
                     setCycle2(cycle, true);
-                else
-                    if (this.cycle != cycle)
-                        rollCycleTo(cycle);
+                else if (this.cycle != cycle)
+                    rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
                 ok = headerWriteStrategy.onContextOpen(metaData, safeLength);
@@ -335,22 +334,21 @@ public class SingleChronicleQueueExcerpts {
             int qCycle = queue.cycle();
             if (cycle < queue.cycle()) {
                 setCycle2(cycle = qCycle, true);
-            } else
-                if (cycle == qCycle) {
-                    // for the rare case where the qCycle has just changed in the last
-                    // few milliseconds since
-                    setCycle2(++cycle, true);
-                } else {
-                    throw new IllegalStateException("Found an EOF on the next cycle file," +
-                            " this next file, should not have an EOF as its cycle " +
-                            "number is greater than the current cycle (based on the " +
-                            "current time), this should only happen " +
-                            "if it was written by a different appender set with a different " +
-                            "EPOCH or different roll cycle." +
-                            "All your appenders ( that write to a given directory ) " +
-                            "should have the same EPOCH and roll cycle" +
-                            " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.file().getAbsolutePath());
-                }
+            } else if (cycle == qCycle) {
+                // for the rare case where the qCycle has just changed in the last
+                // few milliseconds since
+                setCycle2(++cycle, true);
+            } else {
+                throw new IllegalStateException("Found an EOF on the next cycle file," +
+                        " this next file, should not have an EOF as its cycle " +
+                        "number is greater than the current cycle (based on the " +
+                        "current time), this should only happen " +
+                        "if it was written by a different appender set with a different " +
+                        "EPOCH or different roll cycle." +
+                        "All your appenders ( that write to a given directory ) " +
+                        "should have the same EPOCH and roll cycle" +
+                        " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.file().getAbsolutePath());
+            }
             return cycle;
         }
 
@@ -449,8 +447,8 @@ public class SingleChronicleQueueExcerpts {
 
                     boolean rollbackDontClose = index != wire.headerNumber() + 1;
                     if (rollbackDontClose) {
-                        wire.bytes().writeVolatileInt(wire.bytes().writePosition() - 4, 0);
                         wire.bytes().writeSkip(-4);
+                        wire.bytes().writeVolatileInt(wire.bytes().writePosition(), 0);
                         wire.bytes().writeLimit(wire.bytes().capacity());
                         context.isClosed = false;
                         this.position = pos;
@@ -806,13 +804,12 @@ public class SingleChronicleQueueExcerpts {
                                 assert lazyIndexing || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
                         }
                         assert checkWritePositionHeaderNumber();
-                    } else
-                        if (wire != null) {
-                            isClosed = true;
-                            assert resetAppendingThread();
-                            writeBytes(wire.headerNumber(), wire.bytes());
-                            wire = StoreAppender.this.wire;
-                        }
+                    } else if (wire != null) {
+                        isClosed = true;
+                        assert resetAppendingThread();
+                        writeBytes(wire.headerNumber(), wire.bytes());
+                        wire = StoreAppender.this.wire;
+                    }
                 } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
