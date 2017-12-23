@@ -86,7 +86,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return Arrays.asList(new Object[][]{
                 //  {WireType.TEXT},
                 {WireType.BINARY, false},
-                {WireType.BINARY_LIGHT, false},
+                //       {WireType.BINARY_LIGHT, false},
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
         });
@@ -314,6 +314,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
     @Test
     public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
         final File dir = DirectoryUtils.tempDir("to-be-deleted");
@@ -323,11 +324,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (final DocumentContext dc = queue.acquireAppender().writingDocument()) {
                 dc.wire().write().text("foo");
             }
-            try (final DocumentContext dc = queue.acquireTailer().readingDocument()) {
+            try (final DocumentContext dc = queue.createTailer().readingDocument()) {
                 assertEquals("foo", dc.wire().read().text());
             }
 
         }
+
 
         Files.walk(dir.toPath()).forEach(p -> {
             if (!Files.isDirectory(p)) {
@@ -3955,7 +3957,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void writeBytesAndIndexFiveTimesWithOverwriteTest() throws IOException {
 
-        WireType wireType = WireType.BINARY;
 
         try (final SingleChronicleQueue sourceQueue =
                      builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
@@ -3980,7 +3981,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     return;
                 SingleChronicleQueueExcerpts.InternalAppender appender = (SingleChronicleQueueExcerpts.InternalAppender) appender0;
 
-                if (!(appender instanceof SingleChronicleQueueExcerpts.InternalAppender))
+                if (!(appender instanceof SingleChronicleQueueExcerpts.StoreAppender))
                     return;
                 List<BytesWithIndex> bytesWithIndies = new ArrayList<>();
                 try {
@@ -4037,7 +4038,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void writeBytesAndIndexFiveTimesTest() throws IOException {
 
-        WireType wireType = WireType.BINARY;
 
         try (final SingleChronicleQueue sourceQueue =
                      builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
@@ -4058,7 +4058,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 ExcerptAppender appender = queue.acquireAppender();
 
-                if (!(appender instanceof SingleChronicleQueueExcerpts.InternalAppender))
+                if (!(appender instanceof SingleChronicleQueueExcerpts.StoreAppender))
                     return;
 
                 for (int i = 0; i < 5; i++) {
