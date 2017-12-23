@@ -3973,9 +3973,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (final SingleChronicleQueue queue =
                          builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
 
-                ExcerptAppender excerptAppender = queue.acquireAppender();
-                SingleChronicleQueueExcerpts.InternalAppender appender = (SingleChronicleQueueExcerpts.InternalAppender) excerptAppender;
 
+                ExcerptAppender appender0 = queue.acquireAppender();
+
+                if (!(appender0 instanceof SingleChronicleQueueExcerpts.InternalAppender))
+                    return;
+                SingleChronicleQueueExcerpts.InternalAppender appender = (SingleChronicleQueueExcerpts.InternalAppender) appender0;
+
+                if (!(appender instanceof SingleChronicleQueueExcerpts.InternalAppender))
+                    return;
                 List<BytesWithIndex> bytesWithIndies = new ArrayList<>();
                 try {
                     for (int i = 0; i < 5; i++) {
@@ -3994,8 +4000,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                     BytesWithIndex b = bytesWithIndies.get(4);
                     appender.writeBytes(b.index, b.bytes);
+
+
                     ((SingleChronicleQueueExcerpts.StoreAppender) appender).checkWritePositionHeaderNumber();
-                    excerptAppender.writeText("hello");
+                    appender0.writeText("hello");
                 } finally {
                     closeQuietly(bytesWithIndies);
                 }
@@ -4047,11 +4055,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (final SingleChronicleQueue queue =
                          builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
 
-                SingleChronicleQueueExcerpts.InternalAppender appender = (SingleChronicleQueueExcerpts.InternalAppender) queue.acquireAppender();
+
+                ExcerptAppender appender = queue.acquireAppender();
+
+                if (!(appender instanceof SingleChronicleQueueExcerpts.InternalAppender))
+                    return;
 
                 for (int i = 0; i < 5; i++) {
                     try (final BytesWithIndex b = bytes(tailer)) {
-                        appender.writeBytes(b.index, b.bytes);
+                        ((SingleChronicleQueueExcerpts.InternalAppender) appender).writeBytes(b.index, b.bytes);
                     }
                 }
 
