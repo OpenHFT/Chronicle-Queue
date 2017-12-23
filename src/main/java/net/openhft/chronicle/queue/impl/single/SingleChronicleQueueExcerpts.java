@@ -450,7 +450,7 @@ public class SingleChronicleQueueExcerpts {
                     wire.bytes().writeSkip(-4);
                     wire.bytes().writeVolatileInt(wire.bytes().writePosition(), 0);
                     wire.bytes().writeLimit(wire.bytes().capacity());
-                    context.isClosed = false;
+
                     this.position = pos;
                     ((AbstractWire) wire).forceNotInsideHeader();
                     if (index > wire.headerNumber() + 1)
@@ -459,9 +459,7 @@ public class SingleChronicleQueueExcerpts {
                 }
 
                 try {
-
                     context.wire().bytes().write(bytes);
-
                 } finally {
                     context.close();
                 }
@@ -469,6 +467,7 @@ public class SingleChronicleQueueExcerpts {
 
             } finally {
                 this.appendingThread = null;
+                context.isClosed = true;
             }
 
 
