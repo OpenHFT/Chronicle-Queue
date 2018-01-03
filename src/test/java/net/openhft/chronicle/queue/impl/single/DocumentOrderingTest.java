@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -110,9 +111,14 @@ public final class DocumentOrderingTest {
         }
     }
 
-    @Ignore("Fails intermittently when using progressOnContention")
     @Test
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws Exception {
+
+        Assume.assumeFalse(
+                "ordering/atomicity is not guaranteed when using progressOnContention = true," +
+                        "as multiple threads can be concurrently executing within a queue's " +
+                        "document context when the queue head is contented",
+                progressOnContention);
         final File dir = DirectoryUtils.tempDir("document-ordering");
         // must be different instances of queue to work around synchronization on acquireStore()
         try (final SingleChronicleQueue queue =
@@ -140,7 +146,7 @@ public final class DocumentOrderingTest {
                 LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10L));
                 thirdWriter = executorService.submit(attemptToWriteDocument(queue4));
 
-                // stall this thread, other thread should not be able to advance,
+                // stall this thread, other threads should not be able to advance,
                 // since this DocumentContext is still open
                 LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(2L));
 
