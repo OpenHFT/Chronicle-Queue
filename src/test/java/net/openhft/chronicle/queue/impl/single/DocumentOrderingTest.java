@@ -8,7 +8,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -47,9 +46,8 @@ public final class DocumentOrderingTest {
         this.progressOnContention = progressOnContention;
     }
 
-    @Ignore("WIP")
     @Test
-    public void queuedWriteInPreviousCycleShouldBeAppendedToNewCycle() throws Exception {
+    public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws Exception {
         try (final SingleChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
             Assume.assumeFalse(
@@ -67,8 +65,7 @@ public final class DocumentOrderingTest {
             firstOpenDocument.wire().getValueOut().int32(counter.getAndIncrement());
 
             // start another record in the first cycle file
-            // this will actually be written to the second cycle file, since it will wait for
-            // firstOpenDocument to be completed/timed out
+            // this may be written to either the first or the second cycle file
             final Future<RecordInfo> secondDocumentInFirstCycle = attemptToWriteDocument(queue);
 
             // move time to beyond the next cycle
@@ -77,17 +74,12 @@ public final class DocumentOrderingTest {
             final Future<RecordInfo> otherDocumentWriter = attemptToWriteDocument(queue);
 
             firstOpenDocument.close();
-
-            // assert that queued record (secondDocumentInFirstCycle) is actually written to the second cycle file
-            assertEquals(secondDocumentInFirstCycle.get(5L, TimeUnit.SECONDS).cycle,
-                    otherDocumentWriter.get(5L, TimeUnit.SECONDS).cycle);
-
+            secondDocumentInFirstCycle.get(5L, TimeUnit.SECONDS);
             final ExcerptTailer tailer = queue.createTailer();
             // discard first record
             tailer.readingDocument().close();
 
-            // intermittently fails - cannot rely on ordering, only exclusivity
-
+            // assert that records are committed in order
             expectValue(0, tailer);
             expectValue(1, tailer);
             expectValue(2, tailer);
@@ -253,15 +245,12 @@ public final class DocumentOrderingTest {
         final CountDownLatch startedLatch = new CountDownLatch(1);
         final Future<RecordInfo> future = executorService.submit(() -> {
             final int counterValue;
-            DocumentContext outer;
             startedLatch.countDown();
             try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
                 counterValue = counter.getAndIncrement();
                 documentContext.wire().getValueOut().int32(counterValue);
-                outer = documentContext;
             }
-            final long index = outer.index();
-            return new RecordInfo(counterValue, ROLL_CYCLE.toCycle(index));
+            return new RecordInfo(counterValue);
         });
         assertTrue("Task did not start", startedLatch.await(1, TimeUnit.MINUTES));
         return future;
@@ -276,11 +265,9 @@ public final class DocumentOrderingTest {
 
     private static final class RecordInfo {
         private final int counterValue;
-        private final int cycle;
 
-        RecordInfo(final int counterValue, final int cycle) {
+        RecordInfo(final int counterValue) {
             this.counterValue = counterValue;
-            this.cycle = cycle;
         }
     }
 }
