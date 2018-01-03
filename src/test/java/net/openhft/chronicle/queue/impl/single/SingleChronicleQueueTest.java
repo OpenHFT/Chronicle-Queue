@@ -33,6 +33,7 @@ import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
@@ -47,6 +48,7 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.hamcrest.CoreMatchers.is;
@@ -84,7 +86,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return Arrays.asList(new Object[][]{
                 //  {WireType.TEXT},
                 {WireType.BINARY, false},
-                {WireType.BINARY_LIGHT, false},
+                //       {WireType.BINARY_LIGHT, false},
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
         });
@@ -239,7 +241,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
-
     @Test
     public void testLastWritten() throws InterruptedException {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -313,6 +314,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
     @Test
     public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
         final File dir = DirectoryUtils.tempDir("to-be-deleted");
@@ -322,11 +324,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (final DocumentContext dc = queue.acquireAppender().writingDocument()) {
                 dc.wire().write().text("foo");
             }
-            try (final DocumentContext dc = queue.acquireTailer().readingDocument()) {
+            try (final DocumentContext dc = queue.createTailer().readingDocument()) {
                 assertEquals("foo", dc.wire().read().text());
             }
 
         }
+
 
         Files.walk(dir.toPath()).forEach(p -> {
             if (!Files.isDirectory(p)) {
@@ -3636,7 +3639,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                     }
                 }
-                System.out.println(s.dump());
             }
         }
     }
@@ -3951,4 +3953,167 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         fail(message);
     }
+
+    @Test
+    public void writeBytesAndIndexFiveTimesWithOverwriteTest() throws IOException {
+
+
+        try (final SingleChronicleQueue sourceQueue =
+                     builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
+                             testBlockSize().build()) {
+
+            for (int i = 0; i < 5; i++) {
+                ExcerptAppender excerptAppender = sourceQueue.acquireAppender();
+                try (DocumentContext dc = excerptAppender.writingDocument()) {
+                    dc.wire().write("hello").text("world" + i);
+                }
+            }
+
+            ExcerptTailer tailer = sourceQueue.createTailer();
+
+            try (final SingleChronicleQueue queue =
+                         builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
+
+
+                ExcerptAppender appender0 = queue.acquireAppender();
+
+                if (!(appender0 instanceof SingleChronicleQueueExcerpts.InternalAppender))
+                    return;
+                SingleChronicleQueueExcerpts.InternalAppender appender = (SingleChronicleQueueExcerpts.InternalAppender) appender0;
+
+                if (!(appender instanceof SingleChronicleQueueExcerpts.StoreAppender))
+                    return;
+                List<BytesWithIndex> bytesWithIndies = new ArrayList<>();
+                try {
+                    for (int i = 0; i < 5; i++) {
+                        bytesWithIndies.add(bytes(tailer));
+                    }
+
+                    for (int i = 0; i < 4; i++) {
+                        BytesWithIndex b = bytesWithIndies.get(i);
+                        appender.writeBytes(b.index, b.bytes);
+                    }
+
+                    for (int i = 0; i < 4; i++) {
+                        BytesWithIndex b = bytesWithIndies.get(i);
+                        appender.writeBytes(b.index, b.bytes);
+                    }
+
+                    BytesWithIndex b = bytesWithIndies.get(4);
+                    appender.writeBytes(b.index, b.bytes);
+
+
+                    ((SingleChronicleQueueExcerpts.StoreAppender) appender).checkWritePositionHeaderNumber();
+                    appender0.writeText("hello");
+                } finally {
+                    closeQuietly(bytesWithIndies);
+                }
+
+                System.out.println(queue.dump());
+                Assert.assertTrue(queue.dump().contains("# position: 984, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world0\n" +
+                        "# position: 1001, header: 1\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world1\n" +
+                        "# position: 1018, header: 2\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world2\n" +
+                        "# position: 1035, header: 3\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world3\n" +
+                        "# position: 1052, header: 4\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world4\n" +
+                        "# position: 1069, header: 5\n" +
+                        "--- !!data\n" +
+                        "hello\n"));
+
+            }
+
+        }
+    }
+
+
+    @Test
+    public void writeBytesAndIndexFiveTimesTest() throws IOException {
+
+
+        try (final SingleChronicleQueue sourceQueue =
+                     builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
+                             testBlockSize().build()) {
+
+            for (int i = 0; i < 5; i++) {
+                ExcerptAppender excerptAppender = sourceQueue.acquireAppender();
+                try (DocumentContext dc = excerptAppender.writingDocument()) {
+                    dc.wire().write("hello").text("world" + i);
+                }
+            }
+
+            ExcerptTailer tailer = sourceQueue.createTailer();
+
+            try (final SingleChronicleQueue queue =
+                         builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
+
+
+                ExcerptAppender appender = queue.acquireAppender();
+
+                if (!(appender instanceof SingleChronicleQueueExcerpts.StoreAppender))
+                    return;
+
+                for (int i = 0; i < 5; i++) {
+                    try (final BytesWithIndex b = bytes(tailer)) {
+                        ((SingleChronicleQueueExcerpts.InternalAppender) appender).writeBytes(b.index, b.bytes);
+                    }
+                }
+
+
+                Assert.assertTrue(queue.dump().contains("# position: 984, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world0\n" +
+                        "# position: 1001, header: 1\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world1\n" +
+                        "# position: 1018, header: 2\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world2\n" +
+                        "# position: 1035, header: 3\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world3\n" +
+                        "# position: 1052, header: 4\n" +
+                        "--- !!data #binary\n" +
+                        "hello: world4\n"));
+            }
+
+        }
+    }
+
+    private BytesWithIndex bytes(final ExcerptTailer tailer) {
+        try (DocumentContext dc = tailer.readingDocument()) {
+
+            if (!dc.isPresent())
+                return null;
+
+            Bytes<?> bytes = dc.wire().bytes();
+            long index = dc.index();
+            return new BytesWithIndex(bytes, index);
+        }
+    }
+
+    private static class BytesWithIndex implements Closeable {
+        private BytesStore bytes;
+        private long index;
+
+        public BytesWithIndex(Bytes<?> bytes, long index) {
+            this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
+            this.index = index;
+        }
+
+        @Override
+        public void close() throws IOException {
+            bytes.release();
+        }
+    }
+
+
 }

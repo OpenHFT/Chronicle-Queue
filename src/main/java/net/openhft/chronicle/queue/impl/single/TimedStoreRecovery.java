@@ -142,6 +142,16 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             // pad to a 4 byte word.
             sizeToSkip = (sizeToSkip + 3) & ~3;
             sizeToSkip -= (int) (offset & 3);
+
+//            if (bytes instanceof MappedBytes) {
+//                MappedBytes mb = (MappedBytes) bytes;
+//                // this is the same test as in net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender.position
+//                if (bytes.writePosition() + sizeToSkip > mb.mappedFile().chunkSize()) {
+//                    // TODO: this solves the problem by causing a cycle roll, but surely need to jump to next block?
+//                    throw new EOFException();
+//                }
+//            }
+
             // clearing the start of the data so the meta data will look like 4 zero values with no event names.
             long pos = bytes.writePosition();
             try {

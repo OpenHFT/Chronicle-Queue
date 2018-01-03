@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.Wire;
 import org.slf4j.Logger;
@@ -8,17 +9,12 @@ import org.slf4j.LoggerFactory;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
-public enum StoreComponentReferenceHandler {
-    ;
+public enum StoreComponentReferenceHandler implements Closeable {
+    INSTANCE;
     public static final String THREAD_NAME = "queue-thread-local-cleaner-daemon";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreComponentReferenceHandler.class);
@@ -113,5 +109,15 @@ public enum StoreComponentReferenceHandler {
             LOGGER.warn("Error occurred attempting to close ExcerptAppender.", e);
         }
         return processedCount != 0;
+    }
+
+    @Override
+    public void close() {
+        THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.shutdownNow();
+        try {
+            THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.awaitTermination(1, TimeUnit.SECONDS);
+        } catch (InterruptedException ignore) {
+
+        }
     }
 }
