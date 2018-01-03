@@ -62,6 +62,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     private final WriteMarshallable indexTemplate;
     LongValue writePosition;
     Sequence sequence;
+    // visible for testing
+    int linearScanCount;
 
     /**
      * used by {@link Demarshallable}
@@ -324,8 +326,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return ScanResult.NOT_FOUND;
     }
 
+    // visible for testing
     @Nullable
-    private ScanResult moveToIndex0(@NotNull StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    ScanResult moveToIndex0(@NotNull StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
         try {
             LongArrayValues index2index = getIndex2index(recovery, ec, ec.timeoutMS());
@@ -389,6 +392,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                                   final long toIndex,
                                   final long fromKnownIndex,
                                   final long knownAddress) {
+        this.linearScanCount++;
         @NotNull final Bytes<?> bytes = wire.bytes();
 
         bytes.readPositionUnlimited(knownAddress);
