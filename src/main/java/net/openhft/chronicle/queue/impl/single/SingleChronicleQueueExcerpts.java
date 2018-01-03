@@ -1026,7 +1026,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public DocumentContext readingDocument() {
             // trying to create an initial document without a direction should not consume a message
-            if (direction == NONE && index == indexAtCreation && !readingDocumentFound) {
+            if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
                 return NoDocumentContext.INSTANCE;
             }
             return readingDocument(false);
