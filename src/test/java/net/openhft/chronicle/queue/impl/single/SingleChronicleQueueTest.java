@@ -3012,7 +3012,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("failing test never completes")
+
     @Test
     public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() throws Exception {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
