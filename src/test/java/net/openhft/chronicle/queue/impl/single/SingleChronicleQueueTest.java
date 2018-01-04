@@ -3089,19 +3089,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = q.createTailer();
 
             Assert.assertEquals("first", tailer.readText());
-
+            GcControls.waitForGcCycle();
             final long startCollectionCount = GcControls.getGcCount();
 
             for (int i = 0; i < 100_000; i++) {
                 Assert.assertEquals(null, tailer.readText());
             }
 
-            // allow a few GCs due to possible side-effect
-            final long actualGcCount = GcControls.getGcCount();
-            final long maxAllowedGcCount = startCollectionCount + 2;
-            assertTrue(String.format("Too many GC cycles. Expected <= %d, but was %d, delta %d",
-                    maxAllowedGcCount, actualGcCount, actualGcCount - maxAllowedGcCount),
-                    actualGcCount <= maxAllowedGcCount);
+            // allow a few GCs due to possible side-effect or re-used JVM
+            final long maxAllowedGcCycles = 3;
+            final long endCollectionCount = GcControls.getGcCount();
+            final long actualGcCycles = endCollectionCount - startCollectionCount;
+
+            assertTrue(String.format("Too many GC cycles. Expected <= %d, but was %d",
+                    maxAllowedGcCycles, actualGcCycles),
+                    actualGcCycles <= maxAllowedGcCycles);
         }
     }
 
