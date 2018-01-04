@@ -30,8 +30,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /*
@@ -142,6 +144,27 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
         assertEquals("[Forward 2] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
 
         queue.close();
+    }
+
+    @Test
+    public void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        final ChronicleQueue queue = ChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
+                .rollCycle(RollCycles.TEST_SECONDLY).build();
+
+        final ExcerptTailer tailer = queue.createTailer();
+        tailer.direction(TailerDirection.NONE);
+
+        final ExcerptAppender excerptAppender = queue.acquireAppender();
+        for (int i = 0; i < 10; i++) {
+            excerptAppender.writeDocument(i, (out, value) -> {
+                out.int32(value);
+            });
+        }
+
+        DocumentContext document = tailer.readingDocument();
+        assertFalse(document.isPresent());
     }
 
     @Test

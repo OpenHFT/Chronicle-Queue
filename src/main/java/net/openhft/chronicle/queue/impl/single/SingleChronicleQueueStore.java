@@ -36,7 +36,6 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.StreamCorruptedException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class SingleChronicleQueueStore implements WireStore {
     static {
@@ -329,7 +328,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     @Override
     public String toString() {
-        final StringBuilder sb = Wires.acquireStringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append("SingleChronicleQueueStore{" + "indexing=").append(indexing).
                 append(", wireType=").append(wireType).
                 append(", checkpointInterval=").append(this.deltaCheckpointInterval).

@@ -22,16 +22,31 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.TailerState;
 import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.BinaryReadDocumentContext;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.SourceContext;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -44,9 +59,17 @@ import java.nio.BufferOverflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 
-import static net.openhft.chronicle.queue.TailerDirection.*;
-import static net.openhft.chronicle.queue.TailerState.*;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
+import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
+import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
+import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -406,8 +429,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void writeBytes(@NotNull BytesStore bytes) throws UnrecoverableTimeoutException {
-            // still uses append as it has a known length.
-            append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
+            append((m, w) -> w.bytes().write(m), bytes);
         }
 
         @NotNull
@@ -578,7 +600,7 @@ public class SingleChronicleQueueExcerpts {
         void beforeAppend(Wire wire, long index) {
         }
 
-        private <T> void append(int length, @NotNull WireWriter<T> wireWriter, T writer) throws
+        private <T> void append(@NotNull WireWriter<T> wireWriter, T writer) throws
                 UnrecoverableTimeoutException {
 
             assert checkAppendingThread();
@@ -588,11 +610,11 @@ public class SingleChronicleQueueExcerpts {
                     rollCycleTo(cycle);
 
                 try {
-                    position(store.writeHeader(wire, length, length, timeoutMS()));
+                    position(store.writeHeader(wire, Wires.UNKNOWN_LENGTH, (int) queue.overlapSize(), timeoutMS()));
                     assert ((AbstractWire) wire).isInsideHeader();
                     beforeAppend(wire, wire.headerNumber() + 1);
                     wireWriter.write(writer, wire);
-                    wire.updateHeader(length, position, false);
+                    wire.updateHeader(Wires.UNKNOWN_LENGTH, position, false);
                     lastIndex(wire.headerNumber());
                     lastPosition = position;
                     lastCycle = cycle;
@@ -600,7 +622,7 @@ public class SingleChronicleQueueExcerpts {
                     writeIndexForPosition(lastIndex, position);
                 } catch (EOFException theySeeMeRolling) {
                     try {
-                        append2(length, wireWriter, writer);
+                        append2(wireWriter, writer);
                     } catch (EOFException e) {
                         throw new AssertionError(e);
                     }
@@ -632,13 +654,13 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        <T> void append2(int length, @NotNull WireWriter<T> wireWriter, T writer) throws
+        <T> void append2(@NotNull WireWriter<T> wireWriter, T writer) throws
                 UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
             setCycle(Math.max(queue.cycle(), cycle + 1));
-            position(store.writeHeader(wire, length, length, timeoutMS()));
+            position(store.writeHeader(wire, Wires.UNKNOWN_LENGTH, (int) queue.overlapSize(), timeoutMS()));
             beforeAppend(wire, wire.headerNumber() + 1);
             wireWriter.write(writer, wire);
-            wire.updateHeader(length, position, false);
+            wire.updateHeader(Wires.UNKNOWN_LENGTH, position, false);
         }
 
         private boolean checkAppendingThread() {
@@ -745,7 +767,7 @@ public class SingleChronicleQueueExcerpts {
              * Call this if you have detected an error condition and you want the context
              * rolled back when it is closed, rather than committed
              */
-            //@Override - uncomment when Wire released
+            @Override
             public void rollbackOnClose() {
                 this.rollbackOnClose = true;
             }
@@ -769,6 +791,7 @@ public class SingleChronicleQueueExcerpts {
                         // ...and then the header, as if we had never been here
                         wire.bytes().writeVolatileInt(position, 0);
                         wire.bytes().writePosition(position);
+                        ((AbstractWire) wire).forceNotInsideHeader();
                         return;
                     }
 
@@ -1026,7 +1049,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public DocumentContext readingDocument() {
             // trying to create an initial document without a direction should not consume a message
-            if (direction == NONE && index == indexAtCreation && !readingDocumentFound) {
+            if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
                 return NoDocumentContext.INSTANCE;
             }
             return readingDocument(false);

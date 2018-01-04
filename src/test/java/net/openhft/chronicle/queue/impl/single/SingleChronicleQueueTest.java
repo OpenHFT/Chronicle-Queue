@@ -275,17 +275,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         methodReader.readOne();
 
                         Assert.assertFalse(methodReader.readOne());
+
+                        tp.advanceMillis(1000);
+                        Assert.assertFalse(methodReader.readOne());
                     }
+
+                    assertEquals("trying to read should not create a file",2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     // write data into the inQueue
                     msg.msg("somedata-2");
-                    assertEquals(2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals(3, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
+                    // advance 2 cycles - we will end up with a missing file
                     tp.advanceMillis(2000);
 
                     msg.msg("somedata-3");
                     msg.msg("somedata-4");
-                    assertEquals("Should be a missing cycle file", 3, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals("Should be a missing cycle file", 4, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     AtomicReference<String> actualValue = new AtomicReference<>();
 

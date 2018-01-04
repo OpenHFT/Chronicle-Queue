@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
-import org.junit.Ignore;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -15,7 +15,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public final class DocumentOrderingTest {
+    private static final RollCycles ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final AtomicInteger counter = new AtomicInteger(0);
@@ -45,11 +46,15 @@ public final class DocumentOrderingTest {
         this.progressOnContention = progressOnContention;
     }
 
-    @Ignore("WIP")
     @Test
-    public void multipleQueuedOpenDocumentsInPreviousCycleFileShouldRemainOrdered() throws Exception {
+    public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws Exception {
         try (final SingleChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
+            Assume.assumeFalse(
+                    "ordering/atomicity is not guaranteed when using progressOnContention = true," +
+                            "as multiple threads can be concurrently executing within a queue's " +
+                            "document context when the queue head is contented",
+                    progressOnContention);
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             // write initial document
@@ -59,24 +64,22 @@ public final class DocumentOrderingTest {
             final DocumentContext firstOpenDocument = excerptAppender.writingDocument();
             firstOpenDocument.wire().getValueOut().int32(counter.getAndIncrement());
 
-            final Future<Integer> secondDocumentInFirstCycle = executorService.submit(attemptToWriteDocument(queue));
+            // start another record in the first cycle file
+            // this may be written to either the first or the second cycle file
+            final Future<RecordInfo> secondDocumentInFirstCycle = attemptToWriteDocument(queue);
 
             // move time to beyond the next cycle
             clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
 
-            final Future<Integer> otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
+            final Future<RecordInfo> otherDocumentWriter = attemptToWriteDocument(queue);
 
             firstOpenDocument.close();
-
-            assertEquals(1, secondDocumentInFirstCycle.get(5L, TimeUnit.SECONDS).intValue());
-            assertEquals(2, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
-
+            secondDocumentInFirstCycle.get(5L, TimeUnit.SECONDS);
             final ExcerptTailer tailer = queue.createTailer();
             // discard first record
             tailer.readingDocument().close();
 
-            // intermittently fails - cannot rely on ordering, only exclusivity
-
+            // assert that records are committed in order
             expectValue(0, tailer);
             expectValue(1, tailer);
             expectValue(2, tailer);
@@ -92,7 +95,7 @@ public final class DocumentOrderingTest {
                              progressOnContention(progressOnContention).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final Future<Integer> otherDocumentWriter;
+            final Future<RecordInfo> otherDocumentWriter;
             // begin a record in the first cycle file
             final DocumentContext documentContext = excerptAppender.writingDocument();
             documentContext.wire().getValueOut().int32(counter.getAndIncrement());
@@ -100,9 +103,9 @@ public final class DocumentOrderingTest {
             // move time to beyond the next cycle
             clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
 
-            otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
+            otherDocumentWriter = attemptToWriteDocument(queue);
 
-            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(1, tailer);
@@ -110,9 +113,14 @@ public final class DocumentOrderingTest {
         }
     }
 
-    @Ignore("Fails intermittently when using progressOnContention")
     @Test
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws Exception {
+
+        Assume.assumeFalse(
+                "ordering/atomicity is not guaranteed when using progressOnContention = true," +
+                        "as multiple threads can be concurrently executing within a queue's " +
+                        "document context when the queue head is contented",
+                progressOnContention);
         final File dir = DirectoryUtils.tempDir("document-ordering");
         // must be different instances of queue to work around synchronization on acquireStore()
         try (final SingleChronicleQueue queue =
@@ -126,21 +134,21 @@ public final class DocumentOrderingTest {
         ) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final Future<Integer> firstWriter;
-            final Future<Integer> secondWriter;
-            final Future<Integer> thirdWriter;
+            final Future<RecordInfo> firstWriter;
+            final Future<RecordInfo> secondWriter;
+            final Future<RecordInfo> thirdWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
 
                 // move time to beyond the next cycle
                 clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
                 // add some jitter to allow threads to race
-                firstWriter = executorService.submit(attemptToWriteDocument(queue2));
+                firstWriter = attemptToWriteDocument(queue2);
                 LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10L));
-                secondWriter = executorService.submit(attemptToWriteDocument(queue3));
+                secondWriter = attemptToWriteDocument(queue3);
                 LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10L));
-                thirdWriter = executorService.submit(attemptToWriteDocument(queue4));
+                thirdWriter = attemptToWriteDocument(queue4);
 
-                // stall this thread, other thread should not be able to advance,
+                // stall this thread, other threads should not be able to advance,
                 // since this DocumentContext is still open
                 LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(2L));
 
@@ -165,13 +173,13 @@ public final class DocumentOrderingTest {
                      builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final Future<Integer> otherDocumentWriter;
+            final Future<RecordInfo> otherDocumentWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
 
                 // move time to beyond the next cycle
                 clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
 
-                otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
+                otherDocumentWriter = attemptToWriteDocument(queue);
 
                 // stall this thread, other thread should not be able to advance,
                 // since this DocumentContext is still open
@@ -180,7 +188,7 @@ public final class DocumentOrderingTest {
                 documentContext.wire().getValueOut().int32(counter.getAndIncrement());
             }
 
-            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(0, tailer);
@@ -195,13 +203,13 @@ public final class DocumentOrderingTest {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             excerptAppender.writeDocument("foo", ValueOut::text);
-            final Future<Integer> otherDocumentWriter;
+            final Future<RecordInfo> otherDocumentWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
 
                 // move time to beyond the next cycle
                 clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
 
-                otherDocumentWriter = executorService.submit(attemptToWriteDocument(queue));
+                otherDocumentWriter = attemptToWriteDocument(queue);
 
                 // stall this thread, other thread should not be able to advance,
                 // since this DocumentContext is still open
@@ -210,7 +218,7 @@ public final class DocumentOrderingTest {
                 documentContext.wire().getValueOut().int32(counter.getAndIncrement());
             }
 
-            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).intValue());
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
 
             final ExcerptTailer tailer = queue.createTailer();
             final DocumentContext documentContext = tailer.readingDocument();
@@ -233,21 +241,33 @@ public final class DocumentOrderingTest {
         }
     }
 
-    private Callable<Integer> attemptToWriteDocument(final SingleChronicleQueue queue) {
-        return () -> {
+    private Future<RecordInfo> attemptToWriteDocument(final SingleChronicleQueue queue) throws InterruptedException {
+        final CountDownLatch startedLatch = new CountDownLatch(1);
+        final Future<RecordInfo> future = executorService.submit(() -> {
             final int counterValue;
+            startedLatch.countDown();
             try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
                 counterValue = counter.getAndIncrement();
                 documentContext.wire().getValueOut().int32(counterValue);
             }
-            return counterValue;
-        };
+            return new RecordInfo(counterValue);
+        });
+        assertTrue("Task did not start", startedLatch.await(1, TimeUnit.MINUTES));
+        return future;
     }
 
     private SingleChronicleQueueBuilder builder(final File dir, final long timeoutMS) {
         return SingleChronicleQueueBuilder.binary(dir).
-                testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                testBlockSize().rollCycle(ROLL_CYCLE).
                 progressOnContention(progressOnContention).
                 timeProvider(clock::get).timeoutMS(timeoutMS);
+    }
+
+    private static final class RecordInfo {
+        private final int counterValue;
+
+        RecordInfo(final int counterValue) {
+            this.counterValue = counterValue;
+        }
     }
 }
