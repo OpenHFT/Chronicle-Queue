@@ -85,4 +85,13 @@ class RollCycleEncodeSequence implements Sequence {
     private int toCycle(long number) {
         return Maths.toUInt31(number >> cycleShift);
     }
+
+    @Override
+    public String toString() {
+        return "RollCycleEncodeSequence{" +
+                "writePositionAndSequence=" + writePositionAndSequence +
+                ", cycleShift=" + cycleShift +
+                ", sequenceMask=" + sequenceMask +
+                '}';
+    }
 }

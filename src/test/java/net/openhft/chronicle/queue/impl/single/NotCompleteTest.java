@@ -23,6 +23,7 @@ import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -354,22 +355,27 @@ public class NotCompleteTest {
 
         try (final ChronicleQueue queueReader = binary(tmpDir)
                 .testBlockSize()
+                .rollCycle(RollCycles.TEST_DAILY)
                 .timeoutMS(500)
-                .build()) {
+                .build();
+             final ChronicleQueue queueWriter = binary(tmpDir)
+                 .testBlockSize()
+                 .rollCycle(RollCycles.TEST_DAILY)
+                 .build()) {
 
             ExcerptTailer tailer = queueReader.createTailer();
             MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
 
             final StringBuilder queueDumpBeforeInterruptedWrite = new StringBuilder();
             // set up
-            doWrite(tmpDir, (proxy, queue) -> {
+            doWrite(tmpDir, queueWriter, (proxy, queue) -> {
                 proxy.accept(person1);
                 queueDumpBeforeInterruptedWrite.append(queue.dump());
             });
             final String cleanedQueueDump = cleanQueueDump(queueDumpBeforeInterruptedWrite.toString());
 
             // start up writer thread
-            Thread writerThread = new Thread(() -> doWrite(tmpDir, (proxy, queue) -> {
+            Thread writerThread = new Thread(() -> doWrite(tmpDir, queueWriter, (proxy, queue) -> {
                 // thread is interrupted during this
                 proxy.accept(interrupter);
             }));
@@ -391,7 +397,7 @@ public class NotCompleteTest {
             assertFalse(reader.readOne());
 
             // do a write that throws an exception
-            doWrite(tmpDir, (proxy, queue) -> {
+            doWrite(tmpDir, queueWriter, (proxy, queue) -> {
                 try {
                     proxy.accept(thrower);
                 } catch (NullPointerException npe) {
@@ -454,7 +460,7 @@ public class NotCompleteTest {
             assertFalse(reader.readOne());
 
             // write another person to same queue in this thread
-            doWrite(tmpDir, (proxy, queue) -> proxy.accept(person2));
+            doWrite(tmpDir, queueWriter, (proxy, queue) -> proxy.accept(person2));
 
             assertTrue(reader.readOne());
             assertEquals(2, names.size());
@@ -468,19 +474,13 @@ public class NotCompleteTest {
         return from.replaceAll("# [0-9]+ bytes remaining$", "");
     }
 
-    private void doWrite(File tmpDir, BiConsumer<PersonListener, ChronicleQueue> action) {
-        try (final ChronicleQueue queue = binary(tmpDir)
-                .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
-                .build()) {
-
-            ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
-            PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
-            action.accept(proxy, queue);
-        }
+    private void doWrite(File tmpDir, ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
+        ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
+        PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
+        action.accept(proxy, queue);
     }
 
-    @Ignore("discuss with Rob")
+    @Ignore("store.writePosition() not set after we recover, but not trivial to fix. Problem only occurs rarely")
     @Test
     public void testSkipSafeLengthOverBlock()
             throws TimeoutException, ExecutionException, InterruptedException {

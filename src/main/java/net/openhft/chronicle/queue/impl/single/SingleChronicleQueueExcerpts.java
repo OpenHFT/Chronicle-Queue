@@ -745,7 +745,7 @@ public class SingleChronicleQueueExcerpts {
              * Call this if you have detected an error condition and you want the context
              * rolled back when it is closed, rather than committed
              */
-            //@Override - uncomment when Wire released
+            @Override
             public void rollbackOnClose() {
                 this.rollbackOnClose = true;
             }
@@ -769,6 +769,7 @@ public class SingleChronicleQueueExcerpts {
                         // ...and then the header, as if we had never been here
                         wire.bytes().writeVolatileInt(position, 0);
                         wire.bytes().writePosition(position);
+                        ((AbstractWire) wire).forceNotInsideHeader();
                         return;
                     }
 
