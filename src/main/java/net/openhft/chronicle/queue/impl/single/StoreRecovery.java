@@ -40,21 +40,20 @@ public interface StoreRecovery extends WriteMarshallable {
     long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
 
     default long writeHeader(@NotNull Wire wire,
-                             int length,
                              int safeLength,
                              long timeoutMS,
                              @Nullable final LongValue lastPosition,
                              Sequence sequence) throws EOFException, UnrecoverableTimeoutException {
         try {
-            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
+            return wire.writeHeaderOfUnknownLength(safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
         } catch (TimeoutException e) {
-            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, sequence);
+            return recoverAndWriteHeader(wire, timeoutMS, lastPosition, sequence);
         }
     }
 
-    default long tryWriteHeader(@NotNull Wire wire, int length, int safeLength) {
-        return wire.tryWriteHeader(length, safeLength);
+    default long tryWriteHeader(@NotNull Wire wire, int safeLength) {
+        return wire.tryWriteHeader(safeLength);
     }
 
-    long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException;
+    long recoverAndWriteHeader(Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException;
 }

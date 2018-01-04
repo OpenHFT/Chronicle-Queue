@@ -27,7 +27,15 @@ import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.Demarshallable;
+import net.openhft.chronicle.wire.Sequence;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
@@ -123,7 +131,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverAndWriteHeader(@NotNull Wire wire, int length, long timeoutMS, final LongValue lastPosition, Sequence  sequence) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverAndWriteHeader(@NotNull Wire wire, long timeoutMS, final LongValue lastPosition, Sequence  sequence) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
 
         long offset = bytes.writePosition();
@@ -168,12 +176,12 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         }
 
         try {
-            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
+            return wire.writeHeaderOfUnknownLength(timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
 
         } catch (TimeoutException e) {
             warn().on(getClass(), e);
             // Could happen if another thread recovers, writes 2 messages but the second one is corrupt.
-            return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition, sequence);
+            return recoverAndWriteHeader(wire, timeoutMS, lastPosition, sequence);
 
         } catch (EOFException e) {
             throw new AssertionError(e);

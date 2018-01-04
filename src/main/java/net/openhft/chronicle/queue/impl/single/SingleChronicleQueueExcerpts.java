@@ -610,11 +610,11 @@ public class SingleChronicleQueueExcerpts {
                     rollCycleTo(cycle);
 
                 try {
-                    position(store.writeHeader(wire, Wires.UNKNOWN_LENGTH, (int) queue.overlapSize(), timeoutMS()));
+                    position(store.writeHeader(wire, (int) queue.overlapSize(), timeoutMS()));
                     assert ((AbstractWire) wire).isInsideHeader();
                     beforeAppend(wire, wire.headerNumber() + 1);
                     wireWriter.write(writer, wire);
-                    wire.updateHeader(Wires.UNKNOWN_LENGTH, position, false);
+                    wire.updateHeader(position, false);
                     lastIndex(wire.headerNumber());
                     lastPosition = position;
                     lastCycle = cycle;
@@ -657,10 +657,10 @@ public class SingleChronicleQueueExcerpts {
         <T> void append2(@NotNull WireWriter<T> wireWriter, T writer) throws
                 UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
             setCycle(Math.max(queue.cycle(), cycle + 1));
-            position(store.writeHeader(wire, Wires.UNKNOWN_LENGTH, (int) queue.overlapSize(), timeoutMS()));
+            position(store.writeHeader(wire, (int) queue.overlapSize(), timeoutMS()));
             beforeAppend(wire, wire.headerNumber() + 1);
             wireWriter.write(writer, wire);
-            wire.updateHeader(Wires.UNKNOWN_LENGTH, position, false);
+            wire.updateHeader(position, false);
         }
 
         private boolean checkAppendingThread() {
@@ -889,7 +889,7 @@ public class SingleChronicleQueueExcerpts {
                 for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
                     try {
                         assert wire != null;
-                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
+                        long pos = store.writeHeader(wire, safeLength, timeoutMS());
                         position(pos);
                         context.isClosed = false;
                         context.rollbackOnClose = false;
@@ -918,7 +918,7 @@ public class SingleChronicleQueueExcerpts {
             @Override
             public boolean onContextOpen(boolean metaData, int safeLength) {
                 assert wire != null;
-                long pos = store.tryWriteHeader(wire, Wires.UNKNOWN_LENGTH, safeLength);
+                long pos = store.tryWriteHeader(wire, safeLength);
                 if (pos != WireOut.TRY_WRITE_HEADER_FAILED) {
                     position(pos);
                     context.wire = wire;
@@ -943,7 +943,7 @@ public class SingleChronicleQueueExcerpts {
                     for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
                         try {
                             // TODO: we should be able to write and update the header in one go
-                            long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS());
+                            long pos = store.writeHeader(wire, safeLength, timeoutMS());
                             position(pos);
                             long length = context.wire.bytes().copyTo(wire.bytes());
                             wire.bytes().writePosition(length + wire.bytes().writePosition());

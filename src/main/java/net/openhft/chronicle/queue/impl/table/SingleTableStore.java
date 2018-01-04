@@ -187,13 +187,13 @@ public class SingleTableStore implements TableStore {
     }
 
     @Override
-    public long writeHeader(@NotNull Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
-        return recovery.writeHeader(wire, length, safeLength, timeoutMS, null, null);
+    public long writeHeader(@NotNull Wire wire, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
+        return recovery.writeHeader(wire, safeLength, timeoutMS, null, null);
     }
 
     @Override
-    public long tryWriteHeader(@NotNull Wire wire, int length, int safeLength) {
-        return recovery.tryWriteHeader(wire, length, safeLength);
+    public long tryWriteHeader(@NotNull Wire wire, int safeLength) {
+        return recovery.tryWriteHeader(wire, safeLength);
     }
 
     /**
@@ -222,7 +222,7 @@ public class SingleTableStore implements TableStore {
             int safeLength = Maths.toUInt31(mappedBytes.realCapacity() - mappedBytes.readPosition());
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             mappedBytes.writePosition(mappedBytes.readPosition());
-            long pos = recovery.writeHeader(mappedWire, Wires.UNKNOWN_LENGTH, safeLength, timeoutMS, null, null);
+            long pos = recovery.writeHeader(mappedWire, safeLength, timeoutMS, null, null);
             LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(Long.MIN_VALUE, longValue);
             mappedWire.updateHeader(pos, false);

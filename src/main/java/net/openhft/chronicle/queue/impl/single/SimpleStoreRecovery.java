@@ -67,7 +67,6 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
 
     @Override
     public long recoverAndWriteHeader(@NotNull Wire wire,
-                                      int length,
                                       long timeoutMS,
                                       @NotNull final LongValue lastPosition,
                                       Sequence  sequence) throws UnrecoverableTimeoutException {
@@ -75,7 +74,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
         wire.bytes().writeInt(0);
         wire.pauser().reset();
         try {
-            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
+            return wire.writeHeaderOfUnknownLength(timeoutMS, TimeUnit.MILLISECONDS, lastPosition, sequence);
         } catch (@NotNull TimeoutException | EOFException e) {
             throw new UnrecoverableTimeoutException(e);
         }

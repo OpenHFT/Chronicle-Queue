@@ -404,13 +404,13 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long writeHeader(@NotNull Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
-        return recovery.writeHeader(wire, length, safeLength, timeoutMS, writePosition, sequence);
+    public long writeHeader(@NotNull Wire wire, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
+        return recovery.writeHeader(wire, safeLength, timeoutMS, writePosition, sequence);
     }
 
     @Override
-    public long tryWriteHeader(Wire wire, int length, int safeLength) {
-        return recovery.tryWriteHeader(wire, length, safeLength);
+    public long tryWriteHeader(Wire wire, int safeLength) {
+        return recovery.tryWriteHeader(wire, safeLength);
     }
 
     @Override
