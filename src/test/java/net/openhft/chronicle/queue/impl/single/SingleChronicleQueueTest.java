@@ -3018,7 +3018,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
+    @Ignore("fails on TC, see https://github.com/OpenHFT/Chronicle-Queue/issues/407")
     @Test
     public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() throws Exception {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
