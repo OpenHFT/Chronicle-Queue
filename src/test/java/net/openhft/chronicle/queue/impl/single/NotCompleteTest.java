@@ -23,7 +23,6 @@ import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
-import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -368,14 +367,14 @@ public class NotCompleteTest {
 
             final StringBuilder queueDumpBeforeInterruptedWrite = new StringBuilder();
             // set up
-            doWrite(tmpDir, queueWriter, (proxy, queue) -> {
+            doWrite(queueWriter, (proxy, queue) -> {
                 proxy.accept(person1);
                 queueDumpBeforeInterruptedWrite.append(queue.dump());
             });
-            final String cleanedQueueDump = cleanQueueDump(queueDumpBeforeInterruptedWrite.toString());
+            String cleanedQueueDump = cleanQueueDump(queueDumpBeforeInterruptedWrite.toString());
 
             // start up writer thread
-            Thread writerThread = new Thread(() -> doWrite(tmpDir, queueWriter, (proxy, queue) -> {
+            Thread writerThread = new Thread(() -> doWrite(queueWriter, (proxy, queue) -> {
                 // thread is interrupted during this
                 proxy.accept(interrupter);
             }));
@@ -397,7 +396,7 @@ public class NotCompleteTest {
             assertFalse(reader.readOne());
 
             // do a write that throws an exception
-            doWrite(tmpDir, queueWriter, (proxy, queue) -> {
+            doWrite(queueWriter, (proxy, queue) -> {
                 try {
                     proxy.accept(thrower);
                 } catch (NullPointerException npe) {
@@ -412,7 +411,7 @@ public class NotCompleteTest {
                 String dump = cleanQueueDump(queue.dump());
                 if (lazyIndexing) {
                     // reading the queue creates the index, thus changing it, so do a text comparison here
-                    assertEquals("queue should be unchanged by the failed write",
+                    cleanedQueueDump =
                             "--- !!meta-data #binary\n" +
                             "header: !SCQStore {\n" +
                             "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -450,17 +449,28 @@ public class NotCompleteTest {
                             "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                             "]\n" +
                             "...\n" +
-                            "\n", dump);
+                            "\n";
                 }
-                else
-                    assertEquals("queue should be unchanged by the failed write", cleanedQueueDump, dump);
+
+                assertEquals("queue should be unchanged by the failed write", cleanedQueueDump, dump);
             }
 
             // check nothing else written
             assertFalse(reader.readOne());
 
+            // do an empty write
+            ExcerptAppender appender = queueWriter.acquireAppender().lazyIndexing(lazyIndexing);
+            DocumentContext wd = appender.writingDocument();
+            wd.rollbackOnClose();
+            wd.close();
+            // check queue unchanged
+            String dump = cleanQueueDump(queueWriter.dump());
+            assertEquals("queue should be unchanged by the failed write", cleanedQueueDump, dump);
+            // check nothing else written
+            assertFalse(reader.readOne());
+
             // write another person to same queue in this thread
-            doWrite(tmpDir, queueWriter, (proxy, queue) -> proxy.accept(person2));
+            doWrite(queueWriter, (proxy, queue) -> proxy.accept(person2));
 
             assertTrue(reader.readOne());
             assertEquals(2, names.size());
@@ -474,7 +484,7 @@ public class NotCompleteTest {
         return from.replaceAll("# [0-9]+ bytes remaining$", "");
     }
 
-    private void doWrite(File tmpDir, ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
+    private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
         ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
         PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
         action.accept(proxy, queue);

@@ -321,7 +321,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             if (wire.readDataHeader())
                 return linearScan(wire, index, 0, wire.bytes().readPosition());
         } catch (EOFException fallback) {
-            // fallback
+            return ScanResult.END_OF_FILE;
         }
         return ScanResult.NOT_FOUND;
     }
