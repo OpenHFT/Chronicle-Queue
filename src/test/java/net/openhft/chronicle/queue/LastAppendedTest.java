@@ -1,0 +1,81 @@
+package net.openhft.chronicle.queue;
+
+import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.concurrent.atomic.AtomicReference;
+
+import static net.openhft.chronicle.queue.ChronicleQueueBuilder.single;
+
+public class LastAppendedTest extends ChronicleQueueTestBase {
+    @Test
+    public void testLastWritten() throws InterruptedException {
+
+        try (SingleChronicleQueue outQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).build()) {
+            try (SingleChronicleQueue inQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).build()) {
+
+                // write some initial data to the inqueue
+                final Msg msg = inQueue.acquireAppender()
+                        .methodWriterBuilder(Msg.class)
+                        .recordHistory(true)
+                        .build();
+
+                msg.msg("somedata-0");
+
+                Thread.sleep(1000);
+
+                // write data into the inQueue
+                msg.msg("somedata-1");
+
+                // read a message on the in queue and write it to the out queue
+                {
+                    Msg out = outQueue.acquireAppender()
+                            .methodWriterBuilder(Msg.class)
+                            .recordHistory(true)
+                            .build();
+                    MethodReader methodReader = inQueue.createTailer().methodReader((Msg) out::msg);
+
+                    // reads the somedata-0
+                    methodReader.readOne();
+
+                    // reads the somedata-1
+                    methodReader.readOne();
+                }
+
+                // write data into the inQueue
+                msg.msg("somedata-2");
+
+                Thread.sleep(2000);
+
+                msg.msg("somedata-3");
+                msg.msg("somedata-4");
+
+                System.out.println(inQueue.dump());
+
+
+                AtomicReference<String> actualValue = new AtomicReference<>();
+
+                // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
+                {
+                    ExcerptTailer excerptTailer = inQueue.createTailer().afterLastWritten(outQueue);
+                    MethodReader methodReader = excerptTailer.methodReader((Msg) actualValue::set);
+
+                    methodReader.readOne();
+                    Assert.assertEquals("somedata-2", actualValue.get());
+
+                    methodReader.readOne();
+                    Assert.assertEquals("somedata-3", actualValue.get());
+
+                    methodReader.readOne();
+                    Assert.assertEquals("somedata-4", actualValue.get());
+                }
+            }
+        }
+    }
+
+    interface Msg {
+        void msg(String s);
+    }
+}
