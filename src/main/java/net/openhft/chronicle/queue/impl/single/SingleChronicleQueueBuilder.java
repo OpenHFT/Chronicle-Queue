@@ -244,7 +244,6 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     @Override
     public SingleChronicleQueueBuilder<S> sourceId(int sourceId) {
-        assert sourceId > 0;
         return super.sourceId(sourceId);
     }
 
