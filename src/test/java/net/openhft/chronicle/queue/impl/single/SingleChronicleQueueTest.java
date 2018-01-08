@@ -120,20 +120,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
     /**
+     * @param config test config
      * @param wireType   the type of wire
      * @param encryption
      */
-    public SingleChronicleQueueTest(@NotNull WireType wireType, boolean encryption) {
+    public SingleChronicleQueueTest(String config, @NotNull WireType wireType, boolean encryption) {
         this.wireType = wireType;
         this.encryption = encryption;
     }
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 //  {WireType.TEXT},
-                {WireType.BINARY, false},
-                //       {WireType.BINARY_LIGHT, false},
+                testConfiguration(WireType.BINARY, false),
+//                testConfiguration(WireType.BINARY_LIGHT, false),
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
         });
@@ -4173,5 +4174,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
+    @NotNull
+    private static Object[] testConfiguration(final WireType binary, final boolean encrypted) {
+        return new Object[]{binary.name() + " - " + (encrypted ? "" : "not ") + "encrypted" , binary, encrypted};
+    }
 }

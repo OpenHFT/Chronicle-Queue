@@ -94,7 +94,7 @@ public class ChronicleQueueTestBase {
 
     @NotNull
     protected File getTmpDir() {
-        return DirectoryUtils.tempDir(testName.getMethodName());
+        return DirectoryUtils.tempDir(testName.getMethodName().replaceAll("[\\[\\]\\s]+", "_"));
     }
 
     @After
