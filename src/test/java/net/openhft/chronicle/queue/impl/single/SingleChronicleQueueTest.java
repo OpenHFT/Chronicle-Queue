@@ -134,7 +134,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return Arrays.asList(new Object[][]{
                 //  {WireType.TEXT},
                 testConfiguration(WireType.BINARY, false),
-//                testConfiguration(WireType.BINARY_LIGHT, false),
+                testConfiguration(WireType.BINARY_LIGHT, false),
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
         });
