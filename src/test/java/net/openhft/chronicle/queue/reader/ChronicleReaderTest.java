@@ -237,7 +237,7 @@ public class ChronicleReaderTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() throws Exception {
+    public void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
         basicReader().withStartIndex(1L).execute();
     }
 

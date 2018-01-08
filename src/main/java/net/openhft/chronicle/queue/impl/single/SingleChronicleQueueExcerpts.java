@@ -25,28 +25,12 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.queue.TailerState;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.AbstractWire;
-import net.openhft.chronicle.wire.BinaryReadDocumentContext;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.SourceContext;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -59,17 +43,9 @@ import java.nio.BufferOverflowException;
 import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 
-import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
-import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
-import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
-import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
+import static net.openhft.chronicle.queue.TailerDirection.*;
+import static net.openhft.chronicle.queue.TailerState.*;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -1915,6 +1891,32 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
+        @UsedViaReflection
+        public void lasIndexReplicated(long lastIndexReplicated) {
+
+            Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().file().getAbsolutePath());
+
+            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            StoreTailer temp = queue.acquireTailer();
+            try {
+                RollCycle rollCycle = queue.rollCycle();
+                int cycle0 = rollCycle.toCycle(lastIndexReplicated);
+
+                if (!temp.cycle(cycle0, false)) {
+                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " for a cycle which could not found");
+                    return;
+                }
+
+                if (temp.store == null) {
+                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " discarded.");
+                    return;
+                }
+                temp.store.lastIndexReplicated(lastIndexReplicated);
+            } finally {
+                temp.release();
+            }
+        }
+
         public long lastAcknowledgedIndexReplicated() throws EOFException {
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
             final StoreTailer temp = (StoreTailer) queue.acquireTailer().toEnd();
@@ -1924,6 +1926,18 @@ public class SingleChronicleQueueExcerpts {
                 temp.release();
             }
         }
+
+        public  long lastIndexReplicated(final long index) {
+            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            final StoreTailer temp = (StoreTailer) queue.acquireTailer().toEnd();
+            try {
+                return temp.store.lastIndexReplicated();
+            } finally {
+                temp.release();
+            }
+        }
+
+
 
         public void setCycle(int cycle) {
             this.cycle = cycle;

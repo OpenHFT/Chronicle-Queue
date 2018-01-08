@@ -24,59 +24,29 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.CycleCalculator;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.queue.impl.CommonStore;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.RollingResourcesCache;
-import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.queue.impl.WireStorePool;
-import net.openhft.chronicle.queue.impl.WireStoreSupplier;
+import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.AbstractWire;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.TextWire;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StreamCorruptedException;
-import java.io.Writer;
+import java.io.*;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.Optional;
-import java.util.TreeMap;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.function.ToIntFunction;
+import java.util.function.*;
 
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
@@ -91,7 +61,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 8);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
-    protected final int sourceId;
+    protected int sourceId;
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
@@ -784,6 +754,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     ValueIn valueIn = wire.readEventName(name);
                     if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
                         wireStore = valueIn.typedMarshallable();
+                        int queueInstanceSourceId = SingleChronicleQueue.this.sourceId;
+                        int cq4FileSourceId = wireStore.sourceId();
+
+        
+                        assert queueInstanceSourceId == 0 || cq4FileSourceId == 0 || queueInstanceSourceId ==
+                                cq4FileSourceId : "the queueInstanceSourceId ==" +
+                                cq4FileSourceId + " the " +
+                                "queue-sourceId=" + queueInstanceSourceId + " != " +
+                                ".cq4-files-header-sourceId=" + cq4FileSourceId ;
+
+                        if (cq4FileSourceId != 0)
+                            SingleChronicleQueue.this.sourceId = cq4FileSourceId;
                     } else {
                         //noinspection unchecked
                         throw new StreamCorruptedException("The first message should be the header, was " + name);
