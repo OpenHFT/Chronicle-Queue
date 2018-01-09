@@ -3857,10 +3857,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testWritingDocumentIsAtomic() {
 
         final int threadCount = 8;
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        final ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        // remove change of cycle roll in test, cross-cycle atomicity is covered elsewhere
+        final AtomicLong fixedClock = new AtomicLong(System.currentTimeMillis());
 
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).
-                timeoutMS(3_000).
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
+                rollCycle(RollCycles.TEST_SECONDLY).
+                timeoutMS(3_000).timeProvider(fixedClock::get).
                 testBlockSize().build();
         final int iterationsPerThread = Short.MAX_VALUE / 8;
         final int totalIterations = iterationsPerThread * threadCount;
@@ -3883,7 +3886,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int expected = 0; expected < totalIterations; expected++) {
             for (; ; ) {
                 if (System.currentTimeMillis() > timeout)
-                    Assert.fail("Timed out");
+                    Assert.fail("Timed out, having read " + expected + " documents");
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (!dc.isPresent()) {
                         Thread.yield();
