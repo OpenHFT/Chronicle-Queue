@@ -3860,52 +3860,53 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         // remove change of cycle roll in test, cross-cycle atomicity is covered elsewhere
         final AtomicLong fixedClock = new AtomicLong(System.currentTimeMillis());
+        try {
+            SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
+                    rollCycle(RollCycles.TEST_SECONDLY).
+                    timeoutMS(3_000).timeProvider(fixedClock::get).
+                    testBlockSize().build();
+            final int iterationsPerThread = Short.MAX_VALUE / 8;
+            final int totalIterations = iterationsPerThread * threadCount;
+            final int[] nonAtomicCounter = new int[]{0};
+            for (int i = 0; i < threadCount; i++) {
+                executorService.submit(() -> {
+                    for (int j = 0; j < iterationsPerThread; j++) {
+                        ExcerptAppender excerptAppender = queue.acquireAppender();
 
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
-                rollCycle(RollCycles.TEST_SECONDLY).
-                timeoutMS(3_000).timeProvider(fixedClock::get).
-                testBlockSize().build();
-        final int iterationsPerThread = Short.MAX_VALUE / 8;
-        final int totalIterations = iterationsPerThread * threadCount;
-        final int[] nonAtomicCounter = new int[]{0};
-        for (int i = 0; i < threadCount; i++) {
-            executorService.submit(() -> {
-                for (int j = 0; j < iterationsPerThread; j++) {
-                    ExcerptAppender excerptAppender = queue.acquireAppender();
-
-                    try (DocumentContext dc = excerptAppender.writingDocument()) {
-                        int value = nonAtomicCounter[0]++;
-                        dc.wire().write("some key").int64(value);
+                        try (DocumentContext dc = excerptAppender.writingDocument()) {
+                            int value = nonAtomicCounter[0]++;
+                            dc.wire().write("some key").int64(value);
+                        }
                     }
-                }
-            });
-        }
+                });
+            }
 
-        long timeout = 20_000 + System.currentTimeMillis();
-        ExcerptTailer tailer = queue.createTailer();
-        for (int expected = 0; expected < totalIterations; expected++) {
-            for (; ; ) {
-                if (System.currentTimeMillis() > timeout)
-                    Assert.fail("Timed out, having read " + expected + " documents");
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent()) {
-                        Thread.yield();
-                        continue;
+            long timeout = 20_000 + System.currentTimeMillis();
+            ExcerptTailer tailer = queue.createTailer();
+            for (int expected = 0; expected < totalIterations; expected++) {
+                for (; ; ) {
+                    if (System.currentTimeMillis() > timeout)
+                        Assert.fail("Timed out, having read " + expected + " documents");
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent()) {
+                            Thread.yield();
+                            continue;
+                        }
+
+                        long justRead = dc.wire().read("some key").int64();
+                        Assert.assertEquals(expected, justRead);
+                        break;
                     }
-
-                    long justRead = dc.wire().read("some key").int64();
-                    Assert.assertEquals(expected, justRead);
-                    break;
                 }
             }
-        }
-
-        executorService.shutdownNow();
-
-        try {
-            executorService.awaitTermination(1, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
+        } finally {
             executorService.shutdownNow();
+
+            try {
+                executorService.awaitTermination(1, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+            }
         }
     }
 
