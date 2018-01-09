@@ -1155,14 +1155,13 @@ public class SingleChronicleQueueExcerpts {
                                 state = FOUND_CYCLE;
                                 continue;
                             }
-                            if (state == END_OF_CYCLE)
-                                // skip it
-                                continue;
-                            // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
-                            int nextCycle = queue.rollCycle().toCycle(nextIndex);
-                            cycle(nextCycle, false);
-                            state = CYCLE_NOT_FOUND;
-
+                            if (state != END_OF_CYCLE) {
+                                // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
+                                int nextCycle = queue.rollCycle().toCycle(nextIndex);
+                                cycle(nextCycle, false);
+                                state = END_OF_CYCLE;
+                            }
+                            continue;
                         } else {
                             state = END_OF_CYCLE;
                         }
