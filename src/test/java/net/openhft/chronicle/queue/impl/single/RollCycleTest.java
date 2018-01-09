@@ -83,7 +83,9 @@ public class RollCycleTest {
             appender.writeText("Day 3 data");
 
             // allow parallel tailer to finish iteration
-            Thread.sleep(2000);
+            for (int i = 0; i < 5_000 && observer.documentsRead != 2; i++) {
+                Thread.sleep(1);
+            }
 
             thread.interrupt();
         }
@@ -150,7 +152,7 @@ public class RollCycleTest {
     class ParallelQueueObserver implements Runnable, StoreFileListener {
         SingleChronicleQueue queue;
         CountDownLatch progressLatch;
-        int documentsRead;
+        volatile int documentsRead;
 
         public ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
             queue = SingleChronicleQueueBuilder.fieldlessBinary(path.toFile())

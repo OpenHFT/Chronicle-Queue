@@ -1,0 +1,25 @@
+package net.openhft.chronicle.queue.impl.single;
+
+import net.openhft.chronicle.core.Jvm;
+
+import java.io.File;
+
+public enum PrecreatedFiles {
+    ;
+
+    private static final String PRE_CREATED_FILE_SUFFIX = ".precreated";
+
+    public static void renamePreCreatedFileToRequiredFile(final File requiredQueueFile) {
+        final File preCreatedFile = preCreatedFile(requiredQueueFile);
+        if (preCreatedFile.exists()) {
+            if (!preCreatedFile.renameTo(requiredQueueFile)) {
+                Jvm.warn().on(PrecreatedFiles.class, "Failed to rename pre-created queue file");
+            }
+        }
+    }
+
+    public static File preCreatedFile(final File requiredQueueFile) {
+        return new File(requiredQueueFile.getParentFile(), requiredQueueFile.getName() +
+                PRE_CREATED_FILE_SUFFIX);
+    }
+}
