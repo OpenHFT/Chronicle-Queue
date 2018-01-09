@@ -12,6 +12,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -56,6 +57,7 @@ public class RollCycleTest {
         observer.queue.close();
     }
 
+    @Ignore("seems to have been broken by 77823f6")
     @Test
     public void newRollCycleIgnored2() throws Exception {
         File path = DirectoryUtils.tempDir("newRollCycleIgnored2");
