@@ -1952,6 +1952,14 @@ public class SingleChronicleQueueExcerpts {
         }
 
         class StoreTailerContext extends BinaryReadDocumentContext {
+
+            boolean rollbackOnClose = false;
+
+            @Override
+            public void rollbackOnClose() {
+                rollbackOnClose = true;
+            }
+
             StoreTailerContext() {
                 super(null);
             }
@@ -1968,11 +1976,18 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public void close() {
-                if (isPresent())
-                    incrementIndex();
 
-                super.close();
-                // assert wire == null || wire.endUse();
+                try {
+                    if (!rollbackOnClose && isPresent()) {
+                        incrementIndex();
+                        super.close();
+                        // assert wire == null || wire.endUse();
+                    } else
+                        wire.bytes().readPosition(start).readLimit(readLimit);
+
+                } finally {
+                    rollbackOnClose = false;
+                }
             }
 
             boolean present(boolean present) {
