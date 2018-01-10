@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -12,7 +13,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -21,12 +21,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class RollCycleTest {
     @Test
     public void newRollCycleIgnored() throws Exception {
         File path = DirectoryUtils.tempDir("newRollCycleIgnored");
-        TestTimeProvider timeProvider = new TestTimeProvider();
+        SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
@@ -43,12 +44,14 @@ public class RollCycleTest {
             observer.await();
 
             // two days pass
-            timeProvider.add(TimeUnit.DAYS.toMillis(2));
+            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
             appender.writeText("Day 3 data");
 
             // allow parallel tailer to finish iteration
-            Thread.sleep(2000);
+            for (int i = 0; i < 5_000 && observer.documentsRead != 1; i++) {
+                Thread.sleep(1);
+            }
 
             thread.interrupt();
         }
@@ -57,47 +60,47 @@ public class RollCycleTest {
         observer.queue.close();
     }
 
-    @Ignore("seems to have been broken by 77823f6")
     @Test
     public void newRollCycleIgnored2() throws Exception {
         File path = DirectoryUtils.tempDir("newRollCycleIgnored2");
 
-        TestTimeProvider timeProvider = new TestTimeProvider();
+        SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
+        int cyclesToWrite = 100;
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.DAILY)
                 .timeProvider(timeProvider)
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
-            // uncomment next line to make the test pass
-            appender.writeText("Day 1 data");
+            appender.writeText("0");
 
             Thread thread = new Thread(observer);
             thread.start();
 
             observer.await();
 
-            // two days pass
-            timeProvider.add(TimeUnit.DAYS.toMillis(2));
-
-            appender.writeText("Day 3 data");
+            for (int i=1; i<=cyclesToWrite; i++) {
+                // two days pass
+                timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
+                appender.writeText(Integer.toString(i));
+            }
 
             // allow parallel tailer to finish iteration
-            for (int i = 0; i < 5_000 && observer.documentsRead != 2; i++) {
+            for (int i = 0; i < 5_000 && observer.documentsRead != 1+cyclesToWrite; i++) {
                 Thread.sleep(1);
             }
 
             thread.interrupt();
         }
 
-        assertEquals(2, observer.documentsRead);
+        assertEquals(1+cyclesToWrite, observer.documentsRead);
         observer.queue.close();
     }
 
     @Test
-    public void testWriteToCorruptedFile() throws Exception {
+    public void testWriteToCorruptedFile() {
 
         File dir = DirectoryUtils.tempDir("testWriteToCorruptedFile");
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
@@ -136,21 +139,6 @@ public class RollCycleTest {
         MappedFile.checkMappedFiles();
     }
 
-    class TestTimeProvider implements TimeProvider {
-
-        volatile long add = 0;
-
-        @Override
-        public long currentTimeMillis() {
-            return System.currentTimeMillis() + add;
-        }
-
-        public void add(long addInMs) {
-            add += addInMs;
-        }
-
-    }
-
     class ParallelQueueObserver implements Runnable, StoreFileListener {
         SingleChronicleQueue queue;
         CountDownLatch progressLatch;
@@ -175,12 +163,16 @@ public class RollCycleTest {
 
             progressLatch.countDown();
 
+            int lastDocId = -1;
             while (!Thread.currentThread().isInterrupted()) {
 
                 String readText = tailer.readText();
                 if (readText != null) {
                     System.out.println("Read a document " + readText);
                     documentsRead++;
+                    int docId = Integer.parseInt(readText);
+                    assertTrue(docId == lastDocId + 1);
+                    lastDocId = docId;
                 }
             }
         }

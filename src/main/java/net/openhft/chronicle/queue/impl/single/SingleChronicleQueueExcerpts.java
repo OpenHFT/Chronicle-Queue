@@ -1155,13 +1155,19 @@ public class SingleChronicleQueueExcerpts {
                                 state = FOUND_CYCLE;
                                 continue;
                             }
-                            if (state != END_OF_CYCLE) {
-                                // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
-                                int nextCycle = queue.rollCycle().toCycle(nextIndex);
-                                cycle(nextCycle, false);
+                            if (state == END_OF_CYCLE)
+                                continue;
+                            if (cycle < queue.lastCycle()) {
+                                // we have encountered an empty file without an EOF marker
+                                // TODO: more work needed - I thought that the appender and/or tailer would write an EOF into this file
                                 state = END_OF_CYCLE;
+                                continue;
                             }
-                            continue;
+                            // We are here because we are waiting for an entry to be written to this file.
+                            // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
+                            int nextCycle = queue.rollCycle().toCycle(nextIndex);
+                            cycle(nextCycle, false);
+                            state = CYCLE_NOT_FOUND;
                         } else {
                             state = END_OF_CYCLE;
                         }

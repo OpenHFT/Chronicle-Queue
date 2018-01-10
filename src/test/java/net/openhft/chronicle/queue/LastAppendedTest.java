@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.junit.Assert;
 import org.junit.Test;
@@ -11,10 +12,11 @@ import static net.openhft.chronicle.queue.ChronicleQueueBuilder.single;
 
 public class LastAppendedTest extends ChronicleQueueTestBase {
     @Test
-    public void testLastWritten() throws InterruptedException {
+    public void testLastWritten() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
 
-        try (SingleChronicleQueue outQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).build()) {
-            try (SingleChronicleQueue inQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).build()) {
+        try (SingleChronicleQueue outQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build()) {
+            try (SingleChronicleQueue inQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
 
                 // write some initial data to the inqueue
                 final Msg msg = inQueue.acquireAppender()
@@ -24,7 +26,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
 
                 msg.msg("somedata-0");
 
-                Thread.sleep(1000);
+                timeProvider.advanceMillis(1000);
 
                 // write data into the inQueue
                 msg.msg("somedata-1");
@@ -47,7 +49,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 // write data into the inQueue
                 msg.msg("somedata-2");
 
-                Thread.sleep(2000);
+                timeProvider.advanceMillis(2000);
 
                 msg.msg("somedata-3");
                 msg.msg("somedata-4");
