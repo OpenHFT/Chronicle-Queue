@@ -45,7 +45,7 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testCountExcerptsWhenTheCycleIsRolled() throws Exception {
+    public void testCountExcerptsWhenTheCycleIsRolled() {
 
         final AtomicLong time = new AtomicLong();
 
@@ -347,12 +347,12 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testTailingWithEmptyCycles() throws Exception {
+    public void testTailingWithEmptyCycles() {
         testTailing(p -> { p.execute(); return 1; });
     }
 
     @Test
-    public void testTailingWithMissingCycles() throws Exception {
+    public void testTailingWithMissingCycles() {
         testTailing(p -> 0);
     }
 
