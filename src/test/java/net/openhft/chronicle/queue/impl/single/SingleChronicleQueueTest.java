@@ -325,10 +325,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         Assert.assertFalse(methodReader.readOne());
 
                         tp.advanceMillis(1000);
+                        // this writes the EOF marker but doesn't create a new file
                         Assert.assertFalse(methodReader.readOne());
                     }
 
-                    assertEquals("trying to read should not create a file",2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals("trying to read should not create a file", 2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     // write data into the inQueue
                     msg.msg("somedata-2");
@@ -3354,11 +3355,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("Long running")
-    public void testCountExceptsBetweenCycles() throws Exception {
+    public void testCountExceptsBetweenCycles() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
 
         final SingleChronicleQueueBuilder builder = binary(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY);
+                .rollCycle(RollCycles.TEST_SECONDLY).timeProvider(timeProvider);
         final RollingChronicleQueue queue = builder.build();
         final ExcerptAppender appender = queue.createAppender();
 
@@ -3373,9 +3374,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             // we add the pause times to vary the test, to ensure it can handle when cycles are
             // skipped
             if ((i + 1) % 5 == 0)
-                Thread.sleep(2000);
+                timeProvider.advanceMillis(2000);
             else if ((i + 1) % 3 == 0)
-                Thread.sleep(1000);
+                timeProvider.advanceMillis(1000);
         }
 
         for (int lower = 0; lower < indexs.length; lower++) {
@@ -3475,7 +3476,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             queue.acquireAppender().writeText("first message");
         }
 
-        //TODO: this test fails when converted to use a TimeProvider. Work outn why
+        //TODO: this test fails when converted to use a TimeProvider. Need to work out why
         Thread.sleep(2100);
 
         // write second message
