@@ -1988,8 +1988,12 @@ public class SingleChronicleQueueExcerpts {
                         incrementIndex();
                         super.close();
                         // assert wire == null || wire.endUse();
-                    } else
-                        wire.bytes().readPosition(start).readLimit(readLimit);
+                    } else {
+                        present = false;
+                        if (start != -1)
+                            wire.bytes().readPosition(start).readLimit(readLimit);
+                        start = -1;
+                    }
 
                 } finally {
                     rollbackOnClose = false;

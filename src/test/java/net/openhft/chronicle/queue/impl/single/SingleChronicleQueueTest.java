@@ -15,12 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.BytesUtil;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
@@ -29,29 +24,12 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
-import net.openhft.chronicle.wire.AbstractMarshallable;
-import net.openhft.chronicle.wire.Demarshallable;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -60,23 +38,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -86,20 +49,10 @@ import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
-import static net.openhft.chronicle.queue.RollCycles.DAILY;
-import static net.openhft.chronicle.queue.RollCycles.HOURLY;
-import static net.openhft.chronicle.queue.RollCycles.MINUTELY;
-import static net.openhft.chronicle.queue.RollCycles.TEST2_DAILY;
-import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
-import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
+import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
@@ -174,6 +127,42 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             assertThat(countEntries(queue), is(10L));
+        }
+    }
+
+    @Test
+    public void testRollbackOnAppend() {
+        try (final RollingChronicleQueue queue =
+                     builder(getTmpDir(), wireType)
+                             .build()) {
+
+            final ExcerptAppender appender = queue.acquireAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("hello").text("world");
+            }
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("hello").text("world2");
+
+            }
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                dc.wire().read("hello");
+                dc.rollbackOnClose();
+            }
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                Assert.assertEquals("world", dc.wire().read("hello").text());
+
+            }
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                Assert.assertEquals("world2", dc.wire().read("hello").text());
+            }
+
         }
     }
 
@@ -3663,7 +3652,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
-    //    @Ignore("fails - Nested blocks of writingDocument() not supported")
+    @Test
+    public void tailerRollBackTest() {
+        final File source = DirectoryUtils.tempDir("testCopyQueue-source");
+        try (final RollingChronicleQueue q = binary(source).build()) {
+
+            try (DocumentContext dc = q.acquireAppender().writingDocument()) {
+                dc.wire().write("hello").text("hello-world");
+            }
+
+            try (DocumentContext dc = q.acquireAppender().writingDocument()) {
+                dc.wire().write("hello2").text("hello-world-2");
+            }
+
+        }
+    }
+
+
     @Test
     public void testCopyQueue() throws Exception {
         final File source = DirectoryUtils.tempDir("testCopyQueue-source");

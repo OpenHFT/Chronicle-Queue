@@ -70,7 +70,7 @@ public class OvertakeTest {
     }
 
     @Test
-    public void appendAndTail() throws Exception {
+    public void appendAndTail() {
         SingleChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .buffered(false)
