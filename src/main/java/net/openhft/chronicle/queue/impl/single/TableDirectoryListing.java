@@ -27,6 +27,7 @@ final class TableDirectoryListing implements DirectoryListing {
     private volatile LongValue modCount;
     private final boolean readOnly;
 
+
     TableDirectoryListing(
             final TableStore tableStore, final Path queuePath,
             final ToIntFunction<File> fileToCycleFunction,
@@ -107,6 +108,8 @@ final class TableDirectoryListing implements DirectoryListing {
     }
 
     private void refreshIndex() {
+        if (tableStore.isClosed())
+            return;
         final File[] queueFiles = queuePath.toFile().
                 listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
         int min = UNSET_MIN_CYCLE;
