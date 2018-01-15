@@ -58,6 +58,7 @@ final class TableDirectoryListing implements DirectoryListing {
 
     @Override
     public void refresh() {
+        closeCheck();
         if (readOnly) {
             return;
         }
@@ -66,6 +67,7 @@ final class TableDirectoryListing implements DirectoryListing {
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
+        closeCheck();
         if (readOnly) {
             LOGGER.warn("DirectoryListing is read-only, not updating listing");
             return;
@@ -81,22 +83,35 @@ final class TableDirectoryListing implements DirectoryListing {
 
     @Override
     public int getMaxCreatedCycle() {
+        closeCheck();
         return getMaxCycleValue();
     }
 
     @Override
     public int getMinCreatedCycle() {
+        closeCheck();
         return getMinCycleValue();
     }
 
     @Override
     public long modCount() {
+        closeCheck();
         return modCount.getVolatileValue();
     }
 
     @Override
     public String toString() {
         return tableStore.dump();
+    }
+
+    public void close() {
+        tableStore.close();
+    }
+
+    private void closeCheck() {
+        if (tableStore.isClosed()) {
+            throw new IllegalStateException("Underlying TableStore is already closed - was the Queue closed?");
+        }
     }
 
     private int getMaxCycleValue() {
@@ -122,9 +137,5 @@ final class TableDirectoryListing implements DirectoryListing {
             maxCycleValue.setOrderedValue(max);
             minCycleValue.setOrderedValue(min);
         }
-    }
-
-    public void close() {
-        tableStore.close();
     }
 }
