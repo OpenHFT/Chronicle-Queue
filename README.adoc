@@ -52,6 +52,8 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 
 IMPORTANT: This performance is not achieved using a *large cluster of machines*. This is using one thread to publish, and one thread to consume.
 
+==== Wold Wide usage
+http://jrvis.com/red-dwarf/?user=openhft&repo=Chronicle-Queue)[Chronicle Queue Usage Heatmap]
 
 ==== More benchmarks
 
