@@ -8,7 +8,6 @@ Peter Lawrey, Rob Austin
 image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
 == Chronicle Queue
-
 ==== Version
 
 [#image-maven]
