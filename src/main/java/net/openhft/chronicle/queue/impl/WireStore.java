@@ -84,4 +84,21 @@ public interface WireStore extends CommonStore {
     boolean indexable(long index);
 
     ScanResult linearScanTo(long index, long knownIndex, ExcerptContext ec, long knownAddress);
+
+    boolean isSyncQueueConnectedViaTcpIp();
+
+    /**
+     * used only by the sync queue replicator
+     * @param isConnected {@code true} is a socket connect existing between the sync and the
+     *                                source hosts
+     */
+    void isSyncQueueConnectedViaTcpIp(boolean isConnected);
+
+    long timeLastMessageReceivedViaTcpIp();
+
+    /**
+     * used only by the sync queue replicator
+     * @param timeMs the last time a message ( including a heartbeat message ) is sent
+     */
+    void timeLastMessageReceivedViaTcpIp(long timeMs);
 }

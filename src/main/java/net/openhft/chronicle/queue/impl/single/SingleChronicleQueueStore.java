@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.core.values.BooleanValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.RollCycle;
@@ -68,6 +69,11 @@ public class SingleChronicleQueueStore implements WireStore {
     private LongValue lastIndexReplicated;
     private int sourceId;
 
+    //  used in sync replication
+    private BooleanValue isSyncQueueConnectedViaTcpIp;
+
+    // used in sync replication - time in milliseconds
+    private LongValue timeLastMessageReceivedViaTcpIp;
 
 
     @NotNull
@@ -126,6 +132,23 @@ public class SingleChronicleQueueStore implements WireStore {
             if (wire.bytes().readRemaining() > 0) {
                 sourceId = wire.read(MetaDataField.sourceId).int32();
             }
+
+            if (wire.bytes().readRemaining() > 0) {
+                this.isSyncQueueConnectedViaTcpIp = wire.read(MetaDataField.isSyncQueueConnectedViaTcpIp)
+                        .boolForBinding(null);
+            } else {
+                this.isSyncQueueConnectedViaTcpIp = null; // disabled.
+            }
+
+            if (wire.bytes().readRemaining() > 0) {
+                this.timeLastMessageReceivedViaTcpIp = wire.read(MetaDataField
+                        .timeLastMessageReceivedViaTcpIp)
+                        .int64ForBinding(null);
+            } else {
+                this.timeLastMessageReceivedViaTcpIp = null; // disabled.
+            }
+
+
 
         } finally {
             assert wire.endUse();
@@ -204,6 +227,8 @@ public class SingleChronicleQueueStore implements WireStore {
         this.deltaCheckpointInterval = deltaCheckpointInterval;
         this.lastIndexReplicated = wireType.newLongReference().get();
         this.sourceId = sourceId;
+        this.isSyncQueueConnectedViaTcpIp = wireType.newBooleanReference().get();
+        this.timeLastMessageReceivedViaTcpIp = wireType.newLongReference().get();
     }
 
     public static void dumpStore(@NotNull Wire wire) {
@@ -247,6 +272,29 @@ public class SingleChronicleQueueStore implements WireStore {
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
+
+    @Override
+    public boolean isSyncQueueConnectedViaTcpIp() {
+        return isSyncQueueConnectedViaTcpIp == null ? false : isSyncQueueConnectedViaTcpIp.getValue();
+    }
+
+    @Override
+    public void isSyncQueueConnectedViaTcpIp(boolean isConnected) {
+        if (isSyncQueueConnectedViaTcpIp != null)
+            isSyncQueueConnectedViaTcpIp.setValue(isConnected);
+    }
+
+    @Override
+    public long timeLastMessageReceivedViaTcpIp() {
+        return timeLastMessageReceivedViaTcpIp == null ? 0 : timeLastMessageReceivedViaTcpIp.getValue();
+    }
+
+    @Override
+    public void timeLastMessageReceivedViaTcpIp(long timeMs) {
+        if (timeLastMessageReceivedViaTcpIp != null)
+            timeLastMessageReceivedViaTcpIp.setValue(timeMs);
+    }
+    
 
     /**
      * when using replication to another host, this is the last index that has been sent to the remote host.
@@ -404,6 +452,9 @@ public class SingleChronicleQueueStore implements WireStore {
         if (Boolean.getBoolean("includeQueueHeaderField-lastIndexReplicated-and-sourceId")) {
             wire.write(MetaDataField.lastIndexReplicated).int64forBinding(-1L, lastIndexReplicated);
             wire.write(MetaDataField.sourceId).int32(sourceId);
+            wire.write(MetaDataField.isSyncQueueConnectedViaTcpIp).boolForBinding
+                    (false, isSyncQueueConnectedViaTcpIp);
+            wire.write(MetaDataField.timeLastMessageReceivedViaTcpIp).int64forBinding(0L, timeLastMessageReceivedViaTcpIp);
         }
 
         wire.padToCacheAlign();
