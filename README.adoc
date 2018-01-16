@@ -1,12 +1,5 @@
 
 = Chronicle Queue
-
-=== Version
-
-[#image-maven]
-[caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
-image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[]
-
 Peter Lawrey, Rob Austin
 :toc: manual
 :css-signature: demo
@@ -14,6 +7,9 @@ Peter Lawrey, Rob Austin
 
 image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
+[#image-maven]
+[caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
+image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[]
 
 == Chronicle Queue
 
