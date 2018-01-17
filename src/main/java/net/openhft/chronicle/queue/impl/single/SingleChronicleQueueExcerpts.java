@@ -41,15 +41,14 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
-import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
-    private static final long RELEASE_WARNING_THRESHOLD_NS = TimeUnit.MILLISECONDS.toNanos(300L);
 
     @FunctionalInterface
     interface WireWriter<T> {
@@ -62,13 +61,12 @@ public class SingleChronicleQueueExcerpts {
     //
     // *************************************************************************
 
-    @FunctionalInterface
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
     }
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
-        public static final int REPEAT_WHILE_ROLLING = 128;
+        static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -480,50 +478,6 @@ public class SingleChronicleQueueExcerpts {
             this.position = position;
         }
 
-        // only called for writeBytes(long index, BytesStore)
-        private void moveToIndexForWrite(long index) throws EOFException {
-            if (wire != null && wire.headerNumber() == index)
-                return;
-            int cycle = queue.rollCycle().toCycle(index);
-
-            ScanResult scanResult = moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index));
-            switch (scanResult) {
-                case FOUND:
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " as the index already exists");
-                case NOT_REACHED:
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                case NOT_FOUND:
-                case END_OF_FILE:
-                    break;
-                default:
-                    throw new IllegalStateException("Unknown ScanResult: " + scanResult);
-            }
-        }
-
-        ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException {
-            if (LOG.isDebugEnabled()) {
-                Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
-            }
-
-            if (this.cycle != cycle) {
-                if (cycle > this.cycle)
-                    rollCycleTo(cycle);
-                else
-                    setCycle2(cycle, true);
-            }
-
-            ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
-            Bytes<?> bytes = wire.bytes();
-            if (scanResult == NOT_FOUND) {
-                // so you won't read any if it ran out of data.
-                bytes.writePosition(bytes.readPosition());
-                return scanResult;
-            }
-
-            bytes.readLimit(bytes.readPosition());
-            return scanResult;
-        }
-
         @Override
         public long lastIndexAppended() {
 
@@ -531,7 +485,6 @@ public class SingleChronicleQueueExcerpts {
                 return lastIndex;
 
             if (lastPosition == Long.MIN_VALUE || wire == null) {
-
                 throw new IllegalStateException("nothing has been appended, so there is no last index");
             }
 
@@ -1886,11 +1839,12 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
-                if (temp.store == null) {
+                WireStore store = temp.store;
+                if (store == null) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " discarded.");
                     return;
                 }
-                temp.store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
+                store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
             } finally {
                 temp.release();
             }

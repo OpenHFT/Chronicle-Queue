@@ -14,11 +14,7 @@ public enum MetaDataField implements WireKey {
     deltaCheckpointInterval,
     encodedSequence,
     lastIndexReplicated,
-    sourceId,
-
-    // one used in replication for sync queues
-    isSyncQueueConnectedViaTcpIp,
-    timeLastMessageReceivedViaTcpIp;
+    sourceId;
 
     @Nullable
     @Override
