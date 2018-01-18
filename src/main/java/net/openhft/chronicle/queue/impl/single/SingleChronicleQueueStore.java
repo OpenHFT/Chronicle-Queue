@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.core.values.BooleanValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.RollCycle;
@@ -67,8 +68,6 @@ public class SingleChronicleQueueStore implements WireStore {
     // The last index that has been sent
     private LongValue lastIndexReplicated;
     private int sourceId;
-
-
 
     @NotNull
 
@@ -204,6 +203,7 @@ public class SingleChronicleQueueStore implements WireStore {
         this.deltaCheckpointInterval = deltaCheckpointInterval;
         this.lastIndexReplicated = wireType.newLongReference().get();
         this.sourceId = sourceId;
+
     }
 
     public static void dumpStore(@NotNull Wire wire) {
@@ -247,6 +247,7 @@ public class SingleChronicleQueueStore implements WireStore {
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
+
 
     /**
      * when using replication to another host, this is the last index that has been sent to the remote host.

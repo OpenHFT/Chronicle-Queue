@@ -139,13 +139,13 @@ public interface ChronicleQueue extends Closeable {
 
         //noinspection unchecked
         return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces,
-                new BinaryMethodWriterInvocationHandler(this::acquireAppender));
+                new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
     }
 
     @NotNull
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
         return new VanillaMethodWriterBuilder<>(tClass,
-                new BinaryMethodWriterInvocationHandler(this::acquireAppender));
+                new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
     }
 
 }
