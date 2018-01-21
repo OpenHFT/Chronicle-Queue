@@ -40,6 +40,16 @@ public interface WireStore extends CommonStore {
     long epoch();
 
     /**
+     * when using replication to another host, this is the last index that has been sent to the remote host.
+     */
+    long lastIndexReplicated();
+
+    /**
+     * @param lastIndex last index that has been sent to the remote host.
+     */
+    void lastIndexReplicated(long lastIndex);
+
+    /**
      * @return the start of the last written excerpt to this cycle/store
      */
     long writePosition();
@@ -61,6 +71,8 @@ public interface WireStore extends CommonStore {
 
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
+    int sourceId();
+
     long lastAcknowledgedIndexReplicated();
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
@@ -72,4 +84,5 @@ public interface WireStore extends CommonStore {
     boolean indexable(long index);
 
     ScanResult linearScanTo(long index, long knownIndex, ExcerptContext ec, long knownAddress);
+
 }

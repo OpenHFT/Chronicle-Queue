@@ -150,7 +150,8 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
                 queue.indexCount(),
                 queue.indexSpacing(),
                 queue.recoverySupplier().apply(queue.wireType()),
-                queue.deltaCheckpointInterval());
+                queue.deltaCheckpointInterval(),
+                queue.sourceId());
 
         wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
 

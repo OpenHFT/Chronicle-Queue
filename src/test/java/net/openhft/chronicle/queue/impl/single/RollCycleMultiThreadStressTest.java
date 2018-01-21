@@ -8,14 +8,12 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,12 +34,11 @@ import static org.junit.Assert.assertTrue;
 public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
     private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
-    private static final int TEST_TIME = Integer.getInteger("testTime", 90);
+    private static final int TEST_TIME = Integer.getInteger("testTime", 2);
     static final int NUMBER_OF_INTS = 18;//1060 / 4;
 
-    @Ignore("long running")
     @Test
-    public void stress() throws Exception {
+    public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
                 map(s -> new File(s, UUID.randomUUID().toString())).
                 orElse(DirectoryUtils.tempDir("rollCycleStress"));

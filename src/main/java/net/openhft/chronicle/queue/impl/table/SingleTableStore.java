@@ -56,6 +56,12 @@ public class SingleTableStore implements TableStore {
     @NotNull
     private final StoreRecovery recovery;
 
+    @Override
+    public boolean isClosed() {
+        return isClosed;
+    }
+
+    private volatile boolean isClosed;
     /**
      * used by {@link Demarshallable}
      *
@@ -145,9 +151,11 @@ public class SingleTableStore implements TableStore {
 
     @Override
     public void close() {
+
         while (refCount.get() > 0) {
             refCount.release();
         }
+        isClosed = true;
     }
 
     /**

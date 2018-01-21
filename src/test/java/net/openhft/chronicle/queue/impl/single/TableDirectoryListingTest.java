@@ -35,6 +35,12 @@ public class TableDirectoryListingTest {
         tempFile.deleteOnExit();
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void shouldBlowUpIfClosed() {
+        listing.close();
+        listing.getMaxCreatedCycle();
+    }
+
     @Test
     public void shouldTrackMaxValue() throws Exception {
         listing.refresh();

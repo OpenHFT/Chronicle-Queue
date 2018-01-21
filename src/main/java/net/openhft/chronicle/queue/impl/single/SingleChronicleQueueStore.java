@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.core.values.BooleanValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.RollCycle;
@@ -64,7 +65,12 @@ public class SingleChronicleQueueStore implements WireStore {
     @Nullable
     private LongValue lastAcknowledgedIndexReplicated;
 
+    // The last index that has been sent
+    private LongValue lastIndexReplicated;
+    private int sourceId;
+
     @NotNull
+
     private transient Sequence sequence;
 
     /**
@@ -108,12 +114,26 @@ public class SingleChronicleQueueStore implements WireStore {
                 this.deltaCheckpointInterval = -1; // disabled.
             }
 
-
             this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
+
+            if (wire.bytes().readRemaining() > 0) {
+                lastIndexReplicated = wire.read(MetaDataField.lastIndexReplicated).int64ForBinding(null);
+            } else {
+                this.lastIndexReplicated = null; // disabled.
+            }
+
+            if (wire.bytes().readRemaining() > 0) {
+                sourceId = wire.read(MetaDataField.sourceId).int32();
+            }
 
         } finally {
             assert wire.endUse();
         }
+    }
+
+    @Override
+    public int sourceId() {
+        return sourceId;
     }
 
     private LongValue loadWritePosition(@NotNull WireIn wire) {
@@ -162,7 +182,7 @@ public class SingleChronicleQueueStore implements WireStore {
                                      int indexCount,
                                      int indexSpacing,
                                      StoreRecovery recovery,
-                                     int deltaCheckpointInterval) {
+                                     int deltaCheckpointInterval, int sourceId) {
         this.recovery = recovery;
         this.roll = new SCQRoll(rollCycle, epoch);
         this.wireType = wireType;
@@ -181,6 +201,9 @@ public class SingleChronicleQueueStore implements WireStore {
 
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
         this.deltaCheckpointInterval = deltaCheckpointInterval;
+        this.lastIndexReplicated = wireType.newLongReference().get();
+        this.sourceId = sourceId;
+
     }
 
     public static void dumpStore(@NotNull Wire wire) {
@@ -223,6 +246,21 @@ public class SingleChronicleQueueStore implements WireStore {
     public void lastAcknowledgedIndexReplicated(long newValue) {
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
+    }
+
+
+    /**
+     * when using replication to another host, this is the last index that has been sent to the remote host.
+     */
+    @Override
+    public long lastIndexReplicated() {
+        return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue();
+    }
+
+    @Override
+    public void lastIndexReplicated(long indexReplicated) {
+        if (lastIndexReplicated != null)
+            lastIndexReplicated.setMaxValue(indexReplicated);
     }
 
     @NotNull
@@ -363,6 +401,12 @@ public class SingleChronicleQueueStore implements WireStore {
                 .int64forBinding(-1L, lastAcknowledgedIndexReplicated);
         wire.write(MetaDataField.recovery).typedMarshallable(recovery);
         wire.write(MetaDataField.deltaCheckpointInterval).int32(this.deltaCheckpointInterval);
+
+        if (Boolean.getBoolean("includeQueueHeaderField-lastIndexReplicated-and-sourceId")) {
+            wire.write(MetaDataField.lastIndexReplicated).int64forBinding(-1L, lastIndexReplicated);
+            wire.write(MetaDataField.sourceId).int32(sourceId);
+        }
+
         wire.padToCacheAlign();
     }
 

@@ -1,3 +1,4 @@
+
 = Chronicle Queue
 Peter Lawrey, Rob Austin
 :toc: manual
@@ -7,6 +8,11 @@ Peter Lawrey, Rob Austin
 image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
 == Chronicle Queue
+==== Version
+
+[#image-maven]
+[caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
+image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[]
 
 ==== About Chronicle Software
 
@@ -14,7 +20,9 @@ video::201989439[vimeo,width=640,height=360]
 
 https://player.vimeo.com/video/201989439
 
-http://jrvis.com/red-dwarf/?user=openhft&repo=chronicle-queue[Chronicle Queue usage heatmap]
+=== World Wire Adoption
+
+http://jrvis.com/red-dwarf/?user=openhft&repo=chronicle-queue[Chronicle Queue usage Heatmap]
 
 === What is Chronicle Queue
 
@@ -52,6 +60,8 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 
 IMPORTANT: This performance is not achieved using a *large cluster of machines*. This is using one thread to publish, and one thread to consume.
 
+==== Wold Wide usage
+http://jrvis.com/red-dwarf/?user=openhft&repo=Chronicle-Queue)[Chronicle Queue Usage Heatmap]
 
 ==== More benchmarks
 

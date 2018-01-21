@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.UUID;
 
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
@@ -94,7 +95,9 @@ public class ChronicleQueueTestBase {
 
     @NotNull
     protected File getTmpDir() {
-        return DirectoryUtils.tempDir(testName.getMethodName());
+        final String methodName = testName.getMethodName();
+        return DirectoryUtils.tempDir(methodName != null ?
+                methodName.replaceAll("[\\[\\]\\s]+", "_") : "NULL-" + UUID.randomUUID());
     }
 
     @After

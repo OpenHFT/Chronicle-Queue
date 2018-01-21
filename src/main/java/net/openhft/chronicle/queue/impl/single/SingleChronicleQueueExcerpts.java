@@ -25,28 +25,12 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.queue.TailerState;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.AbstractWire;
-import net.openhft.chronicle.wire.BinaryReadDocumentContext;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.SourceContext;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -57,23 +41,14 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
-import java.util.concurrent.TimeUnit;
 
-import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
-import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
-import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
-import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
+import static net.openhft.chronicle.queue.TailerDirection.*;
+import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
-    private static final long RELEASE_WARNING_THRESHOLD_NS = TimeUnit.MILLISECONDS.toNanos(300L);
 
     @FunctionalInterface
     interface WireWriter<T> {
@@ -86,13 +61,12 @@ public class SingleChronicleQueueExcerpts {
     //
     // *************************************************************************
 
-    @FunctionalInterface
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
     }
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
-        public static final int REPEAT_WHILE_ROLLING = 128;
+        static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -504,50 +478,6 @@ public class SingleChronicleQueueExcerpts {
             this.position = position;
         }
 
-        // only called for writeBytes(long index, BytesStore)
-        private void moveToIndexForWrite(long index) throws EOFException {
-            if (wire != null && wire.headerNumber() == index)
-                return;
-            int cycle = queue.rollCycle().toCycle(index);
-
-            ScanResult scanResult = moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index));
-            switch (scanResult) {
-                case FOUND:
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " as the index already exists");
-                case NOT_REACHED:
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                case NOT_FOUND:
-                case END_OF_FILE:
-                    break;
-                default:
-                    throw new IllegalStateException("Unknown ScanResult: " + scanResult);
-            }
-        }
-
-        ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException {
-            if (LOG.isDebugEnabled()) {
-                Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
-            }
-
-            if (this.cycle != cycle) {
-                if (cycle > this.cycle)
-                    rollCycleTo(cycle);
-                else
-                    setCycle2(cycle, true);
-            }
-
-            ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
-            Bytes<?> bytes = wire.bytes();
-            if (scanResult == NOT_FOUND) {
-                // so you won't read any if it ran out of data.
-                bytes.writePosition(bytes.readPosition());
-                return scanResult;
-            }
-
-            bytes.readLimit(bytes.readPosition());
-            return scanResult;
-        }
-
         @Override
         public long lastIndexAppended() {
 
@@ -555,7 +485,6 @@ public class SingleChronicleQueueExcerpts {
                 return lastIndex;
 
             if (lastPosition == Long.MIN_VALUE || wire == null) {
-
                 throw new IllegalStateException("nothing has been appended, so there is no last index");
             }
 
@@ -1180,13 +1109,18 @@ public class SingleChronicleQueueExcerpts {
                                 continue;
                             }
                             if (state == END_OF_CYCLE)
-                                // skip it
                                 continue;
+                            if (cycle < queue.lastCycle()) {
+                                // we have encountered an empty file without an EOF marker
+                                // TODO: more work needed - I thought that the appender and/or tailer would write an EOF into this file
+                                state = END_OF_CYCLE;
+                                continue;
+                            }
+                            // We are here because we are waiting for an entry to be written to this file.
                             // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
                             int nextCycle = queue.rollCycle().toCycle(nextIndex);
                             cycle(nextCycle, false);
                             state = CYCLE_NOT_FOUND;
-
                         } else {
                             state = END_OF_CYCLE;
                         }
@@ -1905,11 +1839,38 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
-                if (temp.store == null) {
+                WireStore store = temp.store;
+                if (store == null) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " discarded.");
                     return;
                 }
-                temp.store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
+                store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
+            } finally {
+                temp.release();
+            }
+        }
+
+        @UsedViaReflection
+        public void lasIndexReplicated(long lastIndexReplicated) {
+
+            Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().file().getAbsolutePath());
+
+            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            StoreTailer temp = queue.acquireTailer();
+            try {
+                RollCycle rollCycle = queue.rollCycle();
+                int cycle0 = rollCycle.toCycle(lastIndexReplicated);
+
+                if (!temp.cycle(cycle0, false)) {
+                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " for a cycle which could not found");
+                    return;
+                }
+
+                if (temp.store == null) {
+                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " discarded.");
+                    return;
+                }
+                temp.store.lastIndexReplicated(lastIndexReplicated);
             } finally {
                 temp.release();
             }
@@ -1925,6 +1886,18 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
+        public  long lastIndexReplicated(final long index) {
+            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            final StoreTailer temp = (StoreTailer) queue.acquireTailer().toEnd();
+            try {
+                return temp.store.lastIndexReplicated();
+            } finally {
+                temp.release();
+            }
+        }
+
+
+
         public void setCycle(int cycle) {
             this.cycle = cycle;
 
@@ -1939,6 +1912,14 @@ public class SingleChronicleQueueExcerpts {
         }
 
         class StoreTailerContext extends BinaryReadDocumentContext {
+
+            boolean rollbackOnClose = false;
+
+            @Override
+            public void rollbackOnClose() {
+                rollbackOnClose = true;
+            }
+
             StoreTailerContext() {
                 super(null);
             }
@@ -1955,11 +1936,22 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public void close() {
-                if (isPresent())
-                    incrementIndex();
 
-                super.close();
-                // assert wire == null || wire.endUse();
+                try {
+                    if (!rollbackOnClose && isPresent()) {
+                        incrementIndex();
+                        super.close();
+                        // assert wire == null || wire.endUse();
+                    } else {
+                        present = false;
+                        if (start != -1)
+                            wire.bytes().readPosition(start).readLimit(readLimit);
+                        start = -1;
+                    }
+
+                } finally {
+                    rollbackOnClose = false;
+                }
             }
 
             boolean present(boolean present) {
