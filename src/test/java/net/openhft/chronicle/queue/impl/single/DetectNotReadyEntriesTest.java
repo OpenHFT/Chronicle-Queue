@@ -21,7 +21,11 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import java.io.File;
@@ -64,8 +68,9 @@ public class DetectNotReadyEntriesTest {
             dc.wire().write("test").text("Hello World");
         }
         assertEquals(17, wire.bytes().readInt(pos));
-        // make it incomplete.
-        wire.bytes().writeInt(pos, Wires.NOT_COMPLETE | 17);
+        // make it incomplete, note that the length is removed,
+        // since writing a length into an incomplete excerpt is not allowed
+        wire.bytes().writeInt(pos, Wires.NOT_COMPLETE);
 
         assertEquals("--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -86,7 +91,8 @@ public class DetectNotReadyEntriesTest {
                 "}\n" +
                 "# position: 288, header: -1 or 0\n" +
                 "--- !!not-ready-data! #binary\n" +
-                "test: Hello World\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+                "...\n" +
+                "# 17 bytes remaining\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
 
         bytes.release();
 
