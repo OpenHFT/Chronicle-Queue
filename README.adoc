@@ -20,7 +20,7 @@ video::201989439[vimeo,width=640,height=360]
 
 https://player.vimeo.com/video/201989439
 
-=== World Wire Adoption
+=== World Wide Adoption
 
 http://jrvis.com/red-dwarf/?user=openhft&repo=chronicle-queue[Chronicle Queue usage Heatmap]
 
@@ -60,14 +60,11 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 
 IMPORTANT: This performance is not achieved using a *large cluster of machines*. This is using one thread to publish, and one thread to consume.
 
-==== Wold Wide usage
-http://jrvis.com/red-dwarf/?user=openhft&repo=Chronicle-Queue)[Chronicle Queue Usage Heatmap]
-
 ==== More benchmarks
 
 https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
 
-=== Downloading  Chronicle Queue
+=== Downloading Chronicle Queue
 
 Releases are available on Maven Central as:
 
@@ -144,7 +141,13 @@ At a high level:
 
 By using *Chronicle Engine*, a Java or C# client can publish to a *queue* to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
 
-=== Topics and Queue files.
+=== Important note
+
+Chronicle Queue does *not* support operating off any network file system, be it NFS, AFS, SAN-based storage or anything else. The reason for this is those file systems do not provide all the required primitives for memory-mapped files Chronicle Queue uses.
+
+If any networking is needed (e.g. to make the data accessible to multiple hosts), the only supported way is Chronicle Queue Replication (Enterprise feature).
+
+=== Topics and Queue files
 
 Each topic is a directory of queues.  There is a file for each roll cycle. If you have a topic called `mytopic`, the layout could look like this:
 
