@@ -4,7 +4,7 @@ import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.Wires;
 
 public final class QueueInspector {
-    private static final int LATEST_DOCUMENT_COMPLETE = Integer.MIN_VALUE;
+    private static final int NO_CURRENT_WRITER = Integer.MIN_VALUE;
 
     private final SingleChronicleQueue queue;
 
@@ -25,12 +25,11 @@ public final class QueueInspector {
                     return Wires.extractPidFromHeader(unfinishedHeader);
                 }
             }
-
         }
-        return LATEST_DOCUMENT_COMPLETE;
+        return NO_CURRENT_WRITER;
     }
 
     public static boolean isValidProcessId(final int writingProcessId) {
-        return writingProcessId != LATEST_DOCUMENT_COMPLETE;
+        return writingProcessId != NO_CURRENT_WRITER;
     }
 }

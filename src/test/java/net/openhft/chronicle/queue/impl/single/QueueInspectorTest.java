@@ -46,7 +46,9 @@ public final class QueueInspectorTest {
             appender.writeDocument(37L, ValueOut::int64);
             try (final DocumentContext ctx = appender.writingDocument()) {
                 ctx.wire().write("foo").int32(17L);
-                assertThat(inspector.getWritingProcessId(), is(OS.getProcessId()));
+                final int writingProcessId = inspector.getWritingProcessId();
+                assertThat(writingProcessId, is(OS.getProcessId()));
+                assertThat(QueueInspector.isValidProcessId(writingProcessId), is(true));
             }
         }
     }
