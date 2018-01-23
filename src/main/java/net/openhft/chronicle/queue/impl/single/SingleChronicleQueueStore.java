@@ -23,7 +23,6 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.core.values.BooleanValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.RollCycle;
@@ -401,12 +400,8 @@ public class SingleChronicleQueueStore implements WireStore {
                 .int64forBinding(-1L, lastAcknowledgedIndexReplicated);
         wire.write(MetaDataField.recovery).typedMarshallable(recovery);
         wire.write(MetaDataField.deltaCheckpointInterval).int32(this.deltaCheckpointInterval);
-
-        if (Boolean.getBoolean("includeQueueHeaderField-lastIndexReplicated-and-sourceId")) {
-            wire.write(MetaDataField.lastIndexReplicated).int64forBinding(-1L, lastIndexReplicated);
-            wire.write(MetaDataField.sourceId).int32(sourceId);
-        }
-
+        wire.write(MetaDataField.lastIndexReplicated).int64forBinding(-1L, lastIndexReplicated);
+        wire.write(MetaDataField.sourceId).int32(sourceId);
         wire.padToCacheAlign();
     }
 

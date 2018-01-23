@@ -1886,11 +1886,11 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        public  long lastIndexReplicated(final long index) {
+        public void lastIndexReplicated(final long index) {
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
             final StoreTailer temp = (StoreTailer) queue.acquireTailer().toEnd();
             try {
-                return temp.store.lastIndexReplicated();
+                temp.store.lastIndexReplicated(index);
             } finally {
                 temp.release();
             }
