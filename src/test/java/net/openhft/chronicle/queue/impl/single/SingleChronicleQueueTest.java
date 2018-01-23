@@ -3275,10 +3275,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         if (wireType == WireType.BINARY)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    852,\n" +
-                    "    3659312136197\n" +
+                    "    732,\n" +
+                    "    3143916060677\n" +
                     "  ],\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
@@ -3311,53 +3311,118 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
                     "  640,\n" +
-                    "  676,\n" +
-                    "  728,\n" +
-                    "  764,\n" +
-                    "  816,\n" +
-                    "  852,\n" +
+                    "  652,\n" +
+                    "  680,\n" +
+                    "  692,\n" +
+                    "  720,\n" +
+                    "  732,\n" +
                     "  0, 0\n" +
                     "]\n" +
                     "# position: 640, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "00000280             3f 5b 8c c9  ea 85 5a 0a fa 73 47 d2     ?[·· ··Z··sG·\n" +
-                    "00000290 3e 8d 66 4e 2b 53 d4 c9  c3 1c 88 28 1f f4 08 dc >·fN+S·· ···(····\n" +
-                    "000002a0 b8 d0 cc 81                                      ····             \n" +
-                    "# position: 676, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "000002a0                          3f 5b 8c c9 ea 85 5a 0a          ?[····Z·\n" +
-                    "000002b0 fa 73 47 d2 3e 8d 66 4e  02 7b 19 9f 01 5d 63 02 ·sG·>·fN ·{···]c·\n" +
-                    "000002c0 56 69 3d c2 e0 1f 85 10                          Vi=·····         \n" +
-                    "# position: 712, header: 1\n" +
+                    "--- !!data\n" +
+                    "hello A0\n" +
+                    "# position: 652, header: 1\n" +
+                    "--- !!data\n" +
+                    "hello B0\n" +
+                    "# position: 664, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 728, header: 2\n" +
-                    "--- !!data #binary\n" +
-                    "000002d0                                      3f 5b 8c c9              ?[··\n" +
-                    "000002e0 ea 85 5a 0a fa 73 47 d2  3e 8d 66 4e 82 16 28 4f ··Z··sG· >·fN··(O\n" +
-                    "000002f0 ba eb 3b 4b 18 a7 27 a9  7d d2 5a 74             ··;K··'· }·Zt    \n" +
-                    "# position: 764, header: 3\n" +
-                    "--- !!data #binary\n" +
-                    "00000300 3f 5b 8c c9 ea 85 5a 0a  fa 73 47 d2 3e 8d 66 4e ?[····Z· ·sG·>·fN\n" +
-                    "00000310 3b ce e0 e4 9d cf 08 cf  f0 a7 02 05 1e af bb 58 ;······· ·······X\n" +
-                    "# position: 800, header: 3\n" +
+                    "# position: 680, header: 2\n" +
+                    "--- !!data\n" +
+                    "hello A1\n" +
+                    "# position: 692, header: 3\n" +
+                    "--- !!data\n" +
+                    "hello B1\n" +
+                    "# position: 704, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 816, header: 4\n" +
-                    "--- !!data #binary\n" +
-                    "00000330             3f 5b 8c c9  ea 85 5a 0a fa 73 47 d2     ?[·· ··Z··sG·\n" +
-                    "00000340 3e 8d 66 4e 93 4c 60 3a  41 31 7c c1 58 bc 67 4d >·fN·L`: A1|·X·gM\n" +
-                    "00000350 51 a2 31 e3                                      Q·1·             \n" +
-                    "# position: 852, header: 5\n" +
-                    "--- !!data #binary\n" +
-                    "00000350                          3f 5b 8c c9 ea 85 5a 0a          ?[····Z·\n" +
-                    "00000360 fa 73 47 d2 3e 8d 66 4e  2d b1 66 14 74 da 38 d9 ·sG·>·fN -·f·t·8·\n" +
-                    "00000370 c7 bc 33 e2 30 dc 20 28                          ··3·0· (         \n" +
-                    "# position: 888, header: 5\n" +
+                    "# position: 720, header: 4\n" +
+                    "--- !!data\n" +
+                    "hello A2\n" +
+                    "# position: 732, header: 5\n" +
+                    "--- !!data\n" +
+                    "hello B2\n" +
+                    "# position: 744, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 130164 bytes remaining\n";
+                    "# 130308 bytes remaining\n";
+
+        if (wireType == WireType.BINARY_LIGHT)
+            return "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: [\n" +
+                    "    732,\n" +
+                    "    3143916060677\n" +
+                    "  ],\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 442,\n" +
+                    "    lastIndex: 6\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  },\n" +
+                    "  deltaCheckpointInterval: 0,\n" +
+                    "  lastIndexReplicated: -1,\n" +
+                    "  sourceId: 0\n" +
+                    "}\n" +
+                    "# position: 442, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  544,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 544, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 6\n" +
+                    "  640,\n" +
+                    "  652,\n" +
+                    "  680,\n" +
+                    "  692,\n" +
+                    "  720,\n" +
+                    "  732,\n" +
+                    "  0, 0\n" +
+                    "]\n" +
+                    "# position: 640, header: 0\n" +
+                    "--- !!data\n" +
+                    "hello A0\n" +
+                    "# position: 652, header: 1\n" +
+                    "--- !!data\n" +
+                    "hello B0\n" +
+                    "# position: 664, header: 1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "some meta 0\n" +
+                    "# position: 680, header: 2\n" +
+                    "--- !!data\n" +
+                    "hello A1\n" +
+                    "# position: 692, header: 3\n" +
+                    "--- !!data\n" +
+                    "hello B1\n" +
+                    "# position: 704, header: 3\n" +
+                    "--- !!meta-data #binary\n" +
+                    "some meta 1\n" +
+                    "# position: 720, header: 4\n" +
+                    "--- !!data\n" +
+                    "hello A2\n" +
+                    "# position: 732, header: 5\n" +
+                    "--- !!data\n" +
+                    "hello B2\n" +
+                    "# position: 744, header: 5\n" +
+                    "--- !!meta-data #binary\n" +
+                    "some meta 2\n" +
+                    "...\n" +
+                    "# 130308 bytes remaining\n";
         throw new IllegalStateException("unknown wiretype=" + wireType);
     }
 
