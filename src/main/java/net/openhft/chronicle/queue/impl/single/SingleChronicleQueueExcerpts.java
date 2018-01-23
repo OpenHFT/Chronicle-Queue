@@ -1823,7 +1823,6 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        @UsedViaReflection
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
 
             Jvm.debug().on(getClass(), "received lastAcknowledgedIndexReplicated=" + Long.toHexString(acknowledgeIndex) + " ,file=" + queue().file().getAbsolutePath());
@@ -1850,8 +1849,8 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        @UsedViaReflection
-        public void lasIndexReplicated(long lastIndexReplicated) {
+
+        public void lastIndexReplicated(long lastIndexReplicated) {
 
             Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().file().getAbsolutePath());
 
@@ -1876,27 +1875,14 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        public long lastAcknowledgedIndexReplicated() throws EOFException {
-            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
-            final StoreTailer temp = (StoreTailer) queue.acquireTailer().toEnd();
-            try {
-                return temp.store.lastAcknowledgedIndexReplicated();
-            } finally {
-                temp.release();
-            }
+
+        public long lastAcknowledgedIndexReplicated()  {
+            return ((StoreAppender) queue.acquireAppender()).store.lastAcknowledgedIndexReplicated();
         }
 
-        public void lastIndexReplicated(final long index) {
-            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
-            final StoreTailer temp = (StoreTailer) queue.acquireTailer().toEnd();
-            try {
-                temp.store.lastIndexReplicated(index);
-            } finally {
-                temp.release();
-            }
+        public long lastIndexReplicated() {
+            return ((StoreAppender) queue.acquireAppender()).store.lastIndexReplicated();
         }
-
-
 
         public void setCycle(int cycle) {
             this.cycle = cycle;
