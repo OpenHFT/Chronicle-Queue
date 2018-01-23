@@ -12,7 +12,7 @@ public final class QueueInspector {
         this.queue = queue;
     }
 
-    public int getWritingProcessId() {
+    public int getWritingThreadId() {
         final WireStore wireStore = queue.storeForCycle(queue.cycle(), queue.epoch(), false);
         if (wireStore != null) {
             final long position = wireStore.writePosition();
@@ -22,14 +22,14 @@ public final class QueueInspector {
                 final int unfinishedHeader = wireStore.bytes().
                         readVolatileInt(nextHeaderPosition);
                 if (Wires.isNotComplete(unfinishedHeader) && unfinishedHeader != 0) {
-                    return Wires.extractPidFromHeader(unfinishedHeader);
+                    return Wires.extractTidFromHeader(unfinishedHeader);
                 }
             }
         }
         return NO_CURRENT_WRITER;
     }
 
-    public static boolean isValidProcessId(final int writingProcessId) {
-        return writingProcessId != NO_CURRENT_WRITER;
+    public static boolean isValidThreadId(final int writingThreadId) {
+        return writingThreadId != NO_CURRENT_WRITER;
     }
 }
