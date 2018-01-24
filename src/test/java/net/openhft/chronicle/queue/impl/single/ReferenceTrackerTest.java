@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class ReferenceTrackerTest {
@@ -18,6 +19,7 @@ public class ReferenceTrackerTest {
     public final TemporaryFolder tmpDir = new TemporaryFolder();
     private TableStore tableStore;
     private ReferenceTracker tracker;
+    private final ReferenceTracker.ReverseCharSequenceIntegerEncoder encoder = new ReferenceTracker.ReverseCharSequenceIntegerEncoder();
 
     @Before
     public void setUp() throws Exception {
@@ -44,13 +46,19 @@ public class ReferenceTrackerTest {
 
     @Test
     public void shouldEncodeInteger() {
-        final ReferenceTracker.ReverseCharSequenceIntegerEncoder encoder =
-                new ReferenceTracker.ReverseCharSequenceIntegerEncoder();
         for (int i = 0; i < 1_000; i++) {
-            final int value = ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
-            encoder.encode(value);
-            assertThat(sequenceToString(encoder), is(Integer.toString(value)));
+            assertEncoding(ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
         }
+    }
+
+    @Test
+    public void shouldEncodeZero() {
+        assertEncoding(0);
+    }
+
+    private void assertEncoding(final int value) {
+        encoder.encode(value);
+        assertThat(sequenceToString(encoder), is(Integer.toString(value)));
     }
 
     private void assertReferenceCount(final int cycle, final long expectedCount) {

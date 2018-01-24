@@ -58,6 +58,14 @@ final class ReferenceTracker {
         private int length;
 
         void encode(int value) {
+            if (value < 0) {
+                throw new UnsupportedOperationException();
+            }
+            if (value == 0) {
+                length = 1;
+                data[0] = '0';
+                return;
+            }
             length = 0;
             while (value != 0) {
                 data[length++] = (char) ('0' + (value % 10));
