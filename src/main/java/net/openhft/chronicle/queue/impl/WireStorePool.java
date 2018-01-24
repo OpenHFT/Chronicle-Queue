@@ -34,6 +34,7 @@ public class WireStorePool {
     private static final Logger LOGGER = LoggerFactory.getLogger(WireStorePool.class);
     // must be power-of-two
     private static final int ROLL_CYCLE_CACHE_SIZE = 64;
+    private static final int INDEX_MASK = ROLL_CYCLE_CACHE_SIZE - 1;
     @NotNull
     private final WireStoreSupplier supplier;
     @NotNull
@@ -69,7 +70,7 @@ public class WireStorePool {
     @org.jetbrains.annotations.Nullable
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
-        final int cacheIndex = cycle & (ROLL_CYCLE_CACHE_SIZE - 1);
+        final int cacheIndex = cacheIndex(cycle);
         RollDetails rollDetails;
         rollDetails = cache[cacheIndex];
         if (rollDetails == null || rollDetails.cycle() != cycle) {
@@ -135,5 +136,9 @@ public class WireStorePool {
 
     public boolean isEmpty() {
         return stores.isEmpty();
+    }
+
+    private static int cacheIndex(final int cycle) {
+        return cycle & INDEX_MASK;
     }
 }

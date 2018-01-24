@@ -24,29 +24,59 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.CycleCalculator;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.impl.CommonStore;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.RollingResourcesCache;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.TextWire;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StreamCorruptedException;
+import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
@@ -554,12 +584,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private File createDirectoryListingFile() {
         final File listingPath;
-        if ("".equals(path.getPath())) {
-            listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
-        } else {
-            listingPath = new File(path, DirectoryListing.DIRECTORY_LISTING_FILE);
-            listingPath.getParentFile().mkdirs();
-        }
+        listingPath = directoryListingPath(this.path);
         try {
             if (!readOnly && listingPath.createNewFile()) {
                 if (!listingPath.canWrite()) {
@@ -594,6 +619,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public int lastCycle() {
         setFirstAndLastCycle();
         return lastCycle;
+    }
+
+    protected int fileToCycle(final File queueFile) {
+        return fileToCycleFunction().applyAsInt(queueFile);
     }
 
     @NotNull
@@ -920,5 +949,17 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
             return dateCache.toLong(file);
         }
+    }
+
+    @NotNull
+    public static File directoryListingPath(final File queueFolder) {
+        final File listingPath;
+        if ("".equals(queueFolder.getPath())) {
+            listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
+        } else {
+            listingPath = new File(queueFolder, DirectoryListing.DIRECTORY_LISTING_FILE);
+            listingPath.getParentFile().mkdirs();
+        }
+        return listingPath;
     }
 }

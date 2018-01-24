@@ -6,7 +6,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import java.util.Arrays;
 import java.util.function.Function;
 
-final class ReferenceTracker {
+public final class ReferenceTracker {
     private static final int CACHE_SIZE = 64;
     private static final int INDEX_MASK = CACHE_SIZE - 1;
     private final TableStore backingStore;
@@ -14,17 +14,21 @@ final class ReferenceTracker {
     private final CachedLongValue[] cache = new CachedLongValue[CACHE_SIZE];
     private final Function<TableStore, LongValue> safeAcquireFunction = this::safelyGetLongValue;
 
-    ReferenceTracker(final TableStore backingStore) {
+    public ReferenceTracker(final TableStore backingStore) {
         this.backingStore = backingStore;
         Arrays.setAll(cache, i -> new CachedLongValue());
     }
 
-    synchronized void acquired(final int cycle) {
+    public synchronized void acquired(final int cycle) {
         acquireLongValue(cycle).addAtomicValue(1);
     }
 
-    synchronized void released(final int cycle) {
+    public synchronized void released(final int cycle) {
         acquireLongValue(cycle).addAtomicValue(-1);
+    }
+
+    public long referenceCount(final int cycle) {
+        return acquireLongValue(cycle).getVolatileValue();
     }
 
     private LongValue acquireLongValue(final int cycle) {
