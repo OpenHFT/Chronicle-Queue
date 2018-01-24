@@ -58,18 +58,17 @@ final class ReferenceTracker {
         private int length;
 
         void encode(int value) {
-            if (value < 0) {
-                throw new UnsupportedOperationException();
-            }
-            if (value == 0) {
-                length = 1;
-                data[0] = '0';
-                return;
-            }
+            validate(value);
+
             length = 0;
             while (value != 0) {
                 data[length++] = (char) ('0' + (value % 10));
                 value /= 10;
+            }
+
+            if (length == 0) {
+                length = 1;
+                data[0] = '0';
             }
         }
 
@@ -86,6 +85,12 @@ final class ReferenceTracker {
         @Override
         public CharSequence subSequence(final int start, final int end) {
             throw new UnsupportedOperationException();
+        }
+
+        private static void validate(final int value) {
+            if (value < 0) {
+                throw new UnsupportedOperationException();
+            }
         }
     }
 }
