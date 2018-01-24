@@ -56,6 +56,7 @@ final class ReferenceTracker {
     static final class ReverseCharSequenceIntegerEncoder implements CharSequence {
         private final char[] data = new char[Integer.toString(Integer.MAX_VALUE).length()];
         private int length;
+        private int indexOffset;
 
         void encode(int value) {
             validate(value);
@@ -66,10 +67,8 @@ final class ReferenceTracker {
                 value /= 10;
             }
 
-            if (length == 0) {
-                length = 1;
-                data[0] = '0';
-            }
+            handleZero();
+            indexOffset = length - 1;
         }
 
         @Override
@@ -79,12 +78,19 @@ final class ReferenceTracker {
 
         @Override
         public char charAt(final int index) {
-            return data[length - 1 - index];
+            return data[indexOffset - index];
         }
 
         @Override
         public CharSequence subSequence(final int start, final int end) {
             throw new UnsupportedOperationException();
+        }
+
+        private void handleZero() {
+            if (length == 0) {
+                length = 1;
+                data[0] = '0';
+            }
         }
 
         private static void validate(final int value) {
