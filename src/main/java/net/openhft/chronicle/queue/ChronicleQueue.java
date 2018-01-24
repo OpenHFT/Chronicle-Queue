@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
@@ -148,4 +149,9 @@ public interface ChronicleQueue extends Closeable {
                 new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
     }
 
+    default int numberOfReferences(final File queueFile) {
+        Jvm.warn().on(ChronicleQueue.class, "File-reference counting is only supported in Chronicle Queue Enterprise. " +
+                "If you would like to use this feature, please contact sales@chronicle.software for more information.");
+        return 0;
+    }
 }
