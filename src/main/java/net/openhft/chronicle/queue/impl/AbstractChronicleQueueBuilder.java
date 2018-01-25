@@ -23,7 +23,12 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.BufferMode;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.CycleCalculator;
+import net.openhft.chronicle.queue.DefaultCycleCalculator;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.RollCycleRetriever;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
@@ -381,7 +386,13 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public B readOnly(boolean readOnly) {
-        this.readOnly = readOnly;
+        if (OS.isWindows() && readOnly) {
+            Jvm.warn().on(AbstractChronicleQueueBuilder.class,
+                    "Read-only mode is not supported on Windows® platforms, defaulting to read/write.");
+            this.readOnly = false;
+        } else {
+            this.readOnly = readOnly;
+        }
         return (B) this;
     }
 
