@@ -634,8 +634,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
         // only say for example index every 0,15,31st entry
-        if ((sequenceNumber & (indexSpacing - 1)) != 0)
+        if (!indexable(sequenceNumber)) {
             return;
+        }
 
 //        System.err.println(Thread.currentThread().getName()+": "+sequenceNumber+" "+position);
         Wire wire = ec.wireForIndex();
@@ -673,7 +674,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     public boolean indexable(long index) {
-        return (index & (indexSpacing - 1)) != 0;
+        return (index & (indexSpacing - 1)) == 0;
     }
 
     public long lastSequenceNumber(@NotNull StoreRecovery recovery, @NotNull ExcerptContext ec)

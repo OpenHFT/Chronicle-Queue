@@ -22,15 +22,30 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.TailerState;
 import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.BinaryReadDocumentContext;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.SourceContext;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -42,8 +57,14 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
-import static net.openhft.chronicle.queue.TailerDirection.*;
-import static net.openhft.chronicle.queue.TailerState.*;
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
+import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
+import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
+import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
+import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 
@@ -932,7 +953,6 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
-        private final int indexSpacingMask;
         private final ClosableResources closableResources;
         long index; // index of the next read.
         @Nullable
@@ -940,7 +960,6 @@ public class SingleChronicleQueueExcerpts {
         private int cycle;
         private long timeForNextCycle = Long.MAX_VALUE;
         private TailerDirection direction = TailerDirection.FORWARD;
-        private boolean lazyIndexing = false;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
         @NotNull
@@ -955,7 +974,6 @@ public class SingleChronicleQueueExcerpts {
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
-            indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
         }
@@ -1237,8 +1255,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void inACycleFound(Bytes<?> bytes) throws StreamCorruptedException {
-            if ((index & indexSpacingMask) == 0)
-                indexEntry(bytes);
+            indexEntry(bytes);
 
             context.closeReadLimit(bytes.capacity());
             wire().readAndSetLength(bytes.readPosition());
@@ -1261,7 +1278,7 @@ public class SingleChronicleQueueExcerpts {
 
         private void indexEntry(@NotNull Bytes<?> bytes) throws StreamCorruptedException {
             if (store.indexable(index)
-                    && !lazyIndexing
+                    && shouldUpdateIndex
                     && direction == TailerDirection.FORWARD
                     && !context.isMetaData())
                 store.setPositionForSequenceNumber(this,

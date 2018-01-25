@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -36,12 +37,13 @@ public class SingleChronicleQueueStoreTest {
         });
     }
 
+    @Ignore
     @Test
     public void shouldPerformIndexingOnRead() throws Exception {
         runTest(queue -> {
             final ExcerptAppender appender = queue.acquireAppender();
-            appender.lazyIndexing(false);
-            final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
+            appender.lazyIndexing(true);
+            final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer().indexing(true));
             assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
         });
     }
