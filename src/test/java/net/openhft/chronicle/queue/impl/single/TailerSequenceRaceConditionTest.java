@@ -19,7 +19,6 @@ public final class TailerSequenceRaceConditionTest {
     private final AtomicBoolean failedToMoveToEnd = new AtomicBoolean(false);
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8);
 
-    @Ignore
     @Test
     public void shouldAlwaysBeAbleToTail() throws Exception {
         for (int i = 0; i < 10; i++) {
