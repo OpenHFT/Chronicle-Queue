@@ -5,7 +5,6 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -27,24 +26,33 @@ public class SingleChronicleQueueStoreTest {
     public TemporaryFolder tmpDir = new TemporaryFolder();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
-    @Ignore
     @Test
     public void shouldNotPerformIndexingOnAppendWhenLazyIndexingIsEnabled() throws Exception {
         runTest(queue -> {
             final ExcerptAppender appender = queue.acquireAppender();
             appender.lazyIndexing(true);
             final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
-            assertExcerptsAreIndexed(queue, indices, i -> false);
+            assertExcerptsAreIndexed(queue, indices, i -> false, ScanResult.NOT_REACHED);
         });
     }
 
     @Test
-    public void shouldPerformIndexing() throws Exception {
+    public void shouldPerformIndexingOnRead() throws Exception {
         runTest(queue -> {
             final ExcerptAppender appender = queue.acquireAppender();
             appender.lazyIndexing(false);
             final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
-            assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0);
+            assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
+        });
+    }
+
+    @Test
+    public void shouldPerformIndexingOnAppend() throws Exception {
+        runTest(queue -> {
+            final ExcerptAppender appender = queue.acquireAppender();
+            appender.lazyIndexing(false);
+            final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
+            assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
         });
     }
 
@@ -58,7 +66,7 @@ public class SingleChronicleQueueStoreTest {
     }
 
     private static void assertExcerptsAreIndexed(final SingleChronicleQueue queue, final long[] indices,
-                                                 final Function<Integer, Boolean> shouldBeIndexed) throws Exception {
+                                                 final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) throws Exception {
         final Field field = SingleChronicleQueueStore.class.getDeclaredField("recovery");
         field.setAccessible(true);
         final SingleChronicleQueueStore wireStore = (SingleChronicleQueueStore)
@@ -67,8 +75,8 @@ public class SingleChronicleQueueStoreTest {
         final SCQIndexing indexing = wireStore.indexing;
         for (int i = 0; i < RECORD_COUNT; i++) {
             final int startLinearScanCount = indexing.linearScanCount;
-            final ScanResult scanResult = indexing.moveToIndex0(recovery, (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer(), indices[i]);
-            assertThat(scanResult, is(ScanResult.FOUND));
+            final ScanResult scanResult = indexing.moveToIndex(recovery, (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer(), indices[i]);
+            assertThat(scanResult, is(expectedScanResult));
 
             if (shouldBeIndexed.apply(i)) {
                 assertThat(indexing.linearScanCount, is(startLinearScanCount));

@@ -118,6 +118,14 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
 
+    /**
+     * Causes this tailer to update the index as queue excerpts are read
+     * @param indexing should this ExcerptTailer perform indexing
+     * @return this ExcerptTailer
+     */
+    @NotNull
+    ExcerptTailer indexing(boolean indexing);
+
     default void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
 
     }

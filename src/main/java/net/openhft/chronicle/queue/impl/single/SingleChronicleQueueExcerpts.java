@@ -948,6 +948,7 @@ public class SingleChronicleQueueExcerpts {
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
         private final MoveToState moveToState = new MoveToState();
+        private boolean shouldUpdateIndex = false;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -1821,6 +1822,13 @@ public class SingleChronicleQueueExcerpts {
                     return this;
                 }
             }
+        }
+
+        @NotNull
+        @Override
+        public ExcerptTailer indexing(final boolean indexing) {
+            this.shouldUpdateIndex = indexing;
+            return this;
         }
 
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
