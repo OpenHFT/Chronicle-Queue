@@ -176,6 +176,43 @@ For this reason, significant garbage will be generated when using an `ExcerptTai
 in a busy-spin loop in read-only mode.
 
 
+=== Queue File Reference Counting (Enterprise Edition Feature)
+
+As a queue is written to, it will create a new file for each _roll-cycle_.
+
+Over time, it may become necessary to automatically delete or archive
+old files. An automated process needs to ensure that there are not active
+file-handles open on a queue file before attempting to delete.
+
+To facilitate this operation, Enterprise Chronicle Queue tracks
+references to its _roll-cycle_ files internally.
+
+The suggested approach is to perform the maintenance operation from
+a separate JVM to the application, in the following manner:
+
+[source, java]
+....
+public void removeOldQueueFiles() throws IOException {
+    final Path queuePath = Paths.get("/path/to/queue");
+    try (final SingleChronicleQueue queue = EnterpriseChronicleQueueBuilder.
+            binary(queuePath).build()) {
+
+        try (final Stream<Path> queueFiles = Files.list(queuePath).
+                filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX))) {
+
+            queueFiles.filter(p -> isReadyForDelete(p)).map(Path::toFile).
+                    filter(f -> queue.numberOfReferences(f) == 0).
+                    forEach(File::delete);
+
+        }
+    }
+}
+....
+
+Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are
+zero references to a given file before attempting to delete it.
+
+
 === Configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
