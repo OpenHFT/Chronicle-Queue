@@ -34,6 +34,7 @@ import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.wire.AbstractWire;
 import net.openhft.chronicle.wire.BinaryReadDocumentContext;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -95,6 +96,7 @@ public class SingleChronicleQueueExcerpts {
         private final ClosableResources closableResources;
         @NotNull
         private final HeaderWriteStrategy headerWriteStrategy;
+        private final WireStorePool storePool;
         @Nullable
         WireStore store;
         private int cycle = Integer.MIN_VALUE;
@@ -115,7 +117,7 @@ public class SingleChronicleQueueExcerpts {
         private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
-        StoreAppender(@NotNull SingleChronicleQueue queue, boolean progressOnContention) {
+        StoreAppender(@NotNull SingleChronicleQueue queue, boolean progressOnContention, @NotNull WireStorePool storePool) {
             this.queue = queue;
             queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
@@ -123,6 +125,7 @@ public class SingleChronicleQueueExcerpts {
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
             headerWriteStrategy = progressOnContention ? new HeaderWriteStrategyDefer() : new HeaderWriteStrategyOriginal();
+            this.storePool = storePool;
         }
 
         @Override
@@ -176,13 +179,16 @@ public class SingleChronicleQueueExcerpts {
             wire = null;
             if (w != null)
                 w.bytes().release();
-            if (store != null)
-                queue.release(store);
+            if (store != null) {
+                storePool.release(store);
+//                queue.release(store);
+            }
             if (bufferWire != null) {
                 bufferWire.bytes().release();
                 bufferWire = null;
             }
             store = null;
+            storePool.close();
         }
 
         @Override
@@ -250,10 +256,13 @@ public class SingleChronicleQueueExcerpts {
 
             SingleChronicleQueue queue = this.queue;
 
-            if (this.store != null)
-                queue.release(this.store);
+            if (this.store != null) {
+//                queue.release(this.store);
+                storePool.release(this.store);
+            }
 
-            this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+//            this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            this.store = storePool.acquire(cycle, queue.epoch(), createIfAbsent);
             closableResources.storeReference = store;
             resetWires(queue);
 
@@ -1013,8 +1022,9 @@ public class SingleChronicleQueueExcerpts {
             if (w0 != null)
                 w0.bytes().release();
             wireForIndex = null;
-            if (store != null)
+            if (store != null) {
                 queue.release(store);
+            }
             store = null;
         }
 

@@ -32,6 +32,7 @@ import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.CommonStore;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.RollingResourcesCache;
+import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
@@ -91,6 +92,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 8);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
+    private final StoreFileListener storeFileListener;
     protected int sourceId;
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
@@ -146,7 +148,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         nameToFile = textToFile(builder);
         assignRollCycleDependentFields();
 
-        pool = WireStorePool.withSupplier(new StoreSupplier(), builder.storeFileListener());
+        storeFileListener = builder.storeFileListener();
+        pool = WireStorePool.withSupplier(new StoreSupplier(), storeFileListener);
         isBuffered = builder.buffered();
         path = builder.path();
         wireType = builder.wireType();
@@ -346,7 +349,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     protected ExcerptAppender newAppender() {
-        return new StoreAppender(this, progressOnContention);
+        final WireStorePool newPool = WireStorePool.withSupplier(new StoreSupplier(), storeFileListener);
+        return new StoreAppender(this, progressOnContention, newPool);
     }
 
     @NotNull
