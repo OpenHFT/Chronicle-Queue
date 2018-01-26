@@ -28,7 +28,16 @@ import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.BinaryWireCode;
+import net.openhft.chronicle.wire.Sequence;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.ValueOut;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -69,8 +78,9 @@ public class SingleChronicleQueueStore implements WireStore {
     private int sourceId;
 
     @NotNull
-
     private transient Sequence sequence;
+
+    private volatile Thread lastAccessedThread;
 
     /**
      * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -283,7 +293,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     @Override
     public WireStore writePosition(long position) {
-
+        assert singleThreadedAccess();
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
         int header = mappedBytes.readVolatileInt(position);
         if (Wires.isReadyData(header)) {
@@ -480,5 +490,11 @@ public class SingleChronicleQueueStore implements WireStore {
         return indexing.indexSpacing();
     }
 
+    private synchronized boolean singleThreadedAccess() {
+        if (lastAccessedThread == null) {
+            lastAccessedThread = Thread.currentThread();
+        }
+        return lastAccessedThread == Thread.currentThread();
+    }
 }
 
