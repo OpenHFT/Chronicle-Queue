@@ -119,7 +119,7 @@ public class WireStorePool {
                     return;
                 }
             }
-            LOGGER.warn("Store was not registered {}", store.file().getName());
+            LOGGER.warn("Store was not registered {}", store.file().getName(), new RuntimeException());
         }
     }
 

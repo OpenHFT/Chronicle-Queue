@@ -181,7 +181,6 @@ public class SingleChronicleQueueExcerpts {
                 w.bytes().release();
             if (store != null) {
                 storePool.release(store);
-//                queue.release(store);
             }
             if (bufferWire != null) {
                 bufferWire.bytes().release();
@@ -257,11 +256,9 @@ public class SingleChronicleQueueExcerpts {
             SingleChronicleQueue queue = this.queue;
 
             if (this.store != null) {
-//                queue.release(this.store);
                 storePool.release(this.store);
             }
 
-//            this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
             this.store = storePool.acquire(cycle, queue.epoch(), createIfAbsent);
             closableResources.storeReference = store;
             resetWires(queue);
