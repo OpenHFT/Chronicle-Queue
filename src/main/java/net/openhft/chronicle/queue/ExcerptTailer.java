@@ -47,7 +47,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
-     * @return the next index to read, this includes the cycle and the sequence number in that cycle
+     * @return if called while within the <code>try (tailer.readingDocument){ }</code> block, returns index of current reading document.
+     * Otherwise, the next index to read.
+     * Index includes the cycle and the sequence number in that cycle
      */
     @Override
     long index();
