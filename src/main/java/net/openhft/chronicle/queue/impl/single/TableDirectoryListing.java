@@ -134,7 +134,7 @@ final class TableDirectoryListing implements DirectoryListing {
                 min = Math.min(fileToCycleFunction.applyAsInt(queueFile), min);
                 max = Math.max(fileToCycleFunction.applyAsInt(queueFile), max);
             }
-            maxCycleValue.setOrderedValue(max);
+            maxCycleValue.setMaxValue(max);
             minCycleValue.setOrderedValue(min);
         }
     }
