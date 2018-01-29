@@ -47,8 +47,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
-     * @return the index just read, this include the cycle and the sequence number from with this
-     * cycle
+     * @return the next index to read, this includes the cycle and the sequence number in that cycle
      */
     @Override
     long index();
@@ -62,8 +61,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     /**
      * Randomly select an Excerpt.
      *
-     * @param index index to look up, the index includes the cycle number and a sequence number from
-     *              with this cycle
+     * @param index index to look up, the index includes the cycle number and a sequence number from with this cycle
      * @return true if this is a valid entries.
      */
     boolean moveToIndex(long index);
@@ -77,8 +75,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer toStart();
 
     /**
-     * Wind to the last entry int eh last entry <p> If the direction() == FORWARD, this will be 1
-     * more than the last entry.<br/>Otherwise the index will be the last entry. </p>
+     * Wind to the last entry in the last cycle
+     * <p> If the direction() == FORWARD, this will be 1 more than the last entry.
+     * <br/>Otherwise the index will be the last entry. </p>
      *
      * This is not atomic with the appenders, in other words if a cycle has been added in the
      * current millisecond, toEnd() may not see it, This is because for performance reasons, the
@@ -127,7 +126,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer indexing(boolean indexing);
 
     default void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
-
     }
 
     default boolean readAfterReplicaAcknowledged() {

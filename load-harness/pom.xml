@@ -15,7 +15,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
     </properties>
@@ -23,7 +24,7 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.13</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -34,56 +35,56 @@
     <packaging>jar</packaging>
 
     <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>net.openhft</groupId>
+                <artifactId>third-party-bom</artifactId>
+                <type>pom</type>
+                <!-- PLEASE DON'T LEAVE THIS ON A SNAPSHOT because they get missed in a release  -->
+                <version>3.6.2</version>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>net.openhft</groupId>
+                <artifactId>chronicle-bom</artifactId>
+                <version>1.15.73</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+
+    <repositories>
+        <repository>
+            <id>chronicle-enterprise-snapshots</id>
+            <name>Snapshot Repository</name>
+            <url>
+                http://nexus.chronicle.software/content/repositories/snapshots
+            </url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>chronicle-enterprise-release</id>
+            <url>
+                http://nexus.chronicle.software/content/repositories/releases/
+            </url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
+
     <dependencies>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>third-party-bom</artifactId>
-            <type>pom</type>
-            <!-- PLEASE DON'T LEAVE THIS ON A SNAPSHOT because they get missed in a release  -->
-            <version>3.6.2</version>
-            <scope>import</scope>
-        </dependency>
 
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>chronicle-bom</artifactId>
-                <version>1.15.48</version>
-            <type>pom</type>
-            <scope>import</scope>
+            <artifactId>chronicle-wire</artifactId>
         </dependency>
-
-    </dependencies>
-</dependencyManagement>
-
-
-<repositories>
-    <repository>
-        <id>chronicle-enterprise-snapshots</id>
-        <name>Snapshot Repository</name>
-        <url>
-            http://nexus.chronicle.software/content/repositories/snapshots
-        </url>
-        <snapshots>
-            <enabled>true</enabled>
-        </snapshots>
-    </repository>
-    <repository>
-        <id>chronicle-enterprise-release</id>
-        <url>
-            http://nexus.chronicle.software/content/repositories/releases/
-        </url>
-        <releases>
-            <enabled>true</enabled>
-        </releases>
-    </repository>
-</repositories>
-
-<dependencies>
-
-    <dependency>
-        <groupId>net.openhft</groupId>
-        <artifactId>chronicle-wire</artifactId>
-    </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-queue</artifactId>
@@ -105,15 +106,15 @@
             <artifactId>chronicle-threads</artifactId>
         </dependency>
 
-    <dependency>
-        <groupId>net.java.dev.jna</groupId>
-        <artifactId>jna</artifactId>
-    </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+        </dependency>
 
-    <dependency>
-        <groupId>net.java.dev.jna</groupId>
-        <artifactId>jna-platform</artifactId>
-    </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+        </dependency>
 
         <!-- test dependencies -->
 
@@ -176,7 +177,7 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.19.1</version>
-           </plugin>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

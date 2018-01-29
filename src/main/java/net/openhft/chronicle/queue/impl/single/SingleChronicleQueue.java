@@ -791,9 +791,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                         int queueInstanceSourceId = SingleChronicleQueue.this.sourceId;
                         int cq4FileSourceId = wireStore.sourceId();
 
-                     if (!(queueInstanceSourceId == 0 || cq4FileSourceId == 0 || queueInstanceSourceId ==
-                             cq4FileSourceId))
-                         System.out.println("");
                         assert queueInstanceSourceId == 0 || cq4FileSourceId == 0 || queueInstanceSourceId ==
                                 cq4FileSourceId : "inconsistency with the source id's, the " +
                                 "cq4FileSourceId=" +
