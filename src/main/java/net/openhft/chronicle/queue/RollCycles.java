@@ -92,4 +92,9 @@ public enum RollCycles implements RollCycle {
         return Maths.toUInt31(index >> cycleShift);
     }
 
+    public static void main(String[] args) {
+        for (RollCycles r : RollCycles.values()) {
+            System.out.println(r + ": cycleShift="+r.cycleShift+" sequenceMask="+Long.toHexString(r.sequenceMask)+" format="+r.format);
+        }
+    }
 }

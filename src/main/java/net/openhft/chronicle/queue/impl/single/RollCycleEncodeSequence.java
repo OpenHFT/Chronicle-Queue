@@ -7,7 +7,6 @@ import net.openhft.chronicle.wire.Sequence;
 
 
 class RollCycleEncodeSequence implements Sequence {
-    private static final long THIRTY_ONE_BITS = (1L << 31) - 1;
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
     private final long sequenceMask;
@@ -29,7 +28,7 @@ class RollCycleEncodeSequence implements Sequence {
 
     @Override
     public long toIndex(long headerNumber, long sequence) {
-        int cycle = toCycle(headerNumber);
+        long cycle = toLowerBitsWritePosition(headerNumber);
         return toLongValue(cycle, sequence);
     }
 
@@ -49,25 +48,25 @@ class RollCycleEncodeSequence implements Sequence {
         if (writePositionAndSequence == null)
             return Sequence.NOT_FOUND;
 
+        // We only deal with the 2nd long in the TwoLongValue, and we use it to keep track of current position
+        // and current sequence. We use the same encoding as index (cycle number is shifted left by cycleShift
+        // and sequence number occupied the lower 64-cycleShift bits) but for this use case we mask and shift
+        // position into the space used for cycle number.
+
         // todo optimize the maths in the method below
 
         final long sequenceValue = this.writePositionAndSequence.getVolatileValue2();
         if (sequenceValue == 0)
             return Sequence.NOT_FOUND;
 
-        // the below cast is safe as cycleMask always returns a number guaranteed within int range
-        int writePositionCycle = (int) cycleMask(forWritePosition);
-        final long lowerBitsOfWp = toLowerBitsWritePosition(toLongValue(writePositionCycle, 0));
-        final long toLowerBitsWritePosition = toLowerBitsWritePosition(cycleMask(sequenceValue));
+        long writePositionAsCycle = toLongValue(forWritePosition, 0);
+        long lowerBitsOfWp = toLowerBitsWritePosition(writePositionAsCycle);
+        final long toLowerBitsWritePosition = toLowerBitsWritePosition(sequenceValue);
 
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
 
         return Sequence.NOT_FOUND_RETRY;
-    }
-
-    private long cycleMask(long number) {
-        return number & THIRTY_ONE_BITS;
     }
 
     private long toLongValue(long cycle, long sequenceNumber) {
@@ -79,11 +78,7 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     private long toLowerBitsWritePosition(long index) {
-        return index >> cycleShift;
-    }
-
-    private int toCycle(long number) {
-        return Maths.toUInt31(number >> cycleShift);
+        return index >>> cycleShift;
     }
 
     @Override

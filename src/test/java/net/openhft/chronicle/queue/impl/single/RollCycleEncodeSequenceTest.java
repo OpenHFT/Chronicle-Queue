@@ -55,4 +55,31 @@ public class RollCycleEncodeSequenceTest {
         long sequence = rollCycleEncodeSequence.getSequence(forWritePosition);
         assertEquals(Sequence.NOT_FOUND_RETRY, sequence);
     }
+
+    @Test
+    public void setGet() {
+        int sequenceInitial = 0xb;
+        int position = 0x40284;
+        rollCycleEncodeSequence.setSequence(sequenceInitial, position);
+        long sequence = rollCycleEncodeSequence.getSequence(position);
+        assertEquals(sequenceInitial, sequence);
+    }
+
+    @Test
+    public void setGetPositionNeedsMasking() {
+        int sequenceInitial = 0xb;
+        long position = 0x123456789abL;
+        rollCycleEncodeSequence.setSequence(sequenceInitial, position);
+        long sequence = rollCycleEncodeSequence.getSequence(position);
+        assertEquals(sequenceInitial, sequence);
+    }
+
+    @Test
+    public void setGetPositionMinus1() {
+        int sequenceInitial = 0xb;
+        long position = (1L << 48) - 1;
+        rollCycleEncodeSequence.setSequence(sequenceInitial, position);
+        long sequence = rollCycleEncodeSequence.getSequence(position);
+        assertEquals(sequenceInitial, sequence);
+    }
 }
