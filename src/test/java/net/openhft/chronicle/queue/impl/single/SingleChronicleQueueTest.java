@@ -3938,13 +3938,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             waitFor(mappedFile1::isClosed, "mappedFile1 is not closed");
             waitFor(mappedFile2::isClosed, "mappedFile2 is not closed");
-            //      Assert.assertTrue(mappedFile1 == mappedFile3); //  todo fix
-            Assert.assertTrue(mappedFile2 == mappedFile4);
 
             // this used to fail on windows
             Assert.assertTrue(mappedFile1.file().delete());
             Assert.assertTrue(mappedFile2.file().delete());
-
         }
     }
 
