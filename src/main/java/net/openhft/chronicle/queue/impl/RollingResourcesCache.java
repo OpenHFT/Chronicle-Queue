@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 public class RollingResourcesCache {
-    private static final int CACHE_SIZE = 128;
+    private static final int CACHE_SIZE = Integer.getInteger("chronicle.queue.rollingResourceCache.size", 128);
     private static final int ONE_DAY_IN_MILLIS = 86400000;
     private static final int HALF_DAY_IN_MILLIS = ONE_DAY_IN_MILLIS / 2;
 

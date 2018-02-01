@@ -353,6 +353,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return new StoreAppender(this, progressOnContention, newPool);
     }
 
+    StoreFileListener storeFileListener() {
+        return storeFileListener;
+    }
+
+    WireStoreSupplier storeSupplier() {
+        return new StoreSupplier();
+    }
+
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
