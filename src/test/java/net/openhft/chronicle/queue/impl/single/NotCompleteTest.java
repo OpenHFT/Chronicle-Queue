@@ -20,7 +20,11 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
@@ -32,13 +36,19 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class NotCompleteTest {
@@ -287,7 +297,8 @@ public class NotCompleteTest {
                     "]\n" +
                     "# position: 640, header: -1\n" +
                     "--- !!meta-data #binary\n" +
-                    "\"!! Skipped due to recovery of locked header !!\"\n" +
+                    "\"!! Skipped due to recovery of locked header !!";
+            String expectedEagerFooter =
                     "# position: 33412, header: 0\n" +
                     "--- !!data #binary\n" +
                     "some: data\n" +
@@ -321,7 +332,8 @@ public class NotCompleteTest {
                     "}\n" +
                     "# position: 442, header: -1\n" +
                     "--- !!meta-data #binary\n" +
-                    "\"!! Skipped due to recovery of locked header !!\"\n" +
+                    "\"!! Skipped due to recovery of locked header !!";
+            String expectedLazyFooter =
                     "# position: 33212, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
@@ -341,7 +353,14 @@ public class NotCompleteTest {
                     "some: data\n" +
                     "...\n" +
                     "# 97646 bytes remaining\n";
-            assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
+
+            if (lazyIndexing) {
+                assertThat(queue.dump(), containsString(expectedLazy));
+                assertThat(queue.dump(), containsString(expectedLazyFooter));
+            } else {
+                assertThat(queue.dump(), containsString(expectedEager));
+                assertThat(queue.dump(), containsString(expectedEagerFooter));
+            }
         }
     }
 

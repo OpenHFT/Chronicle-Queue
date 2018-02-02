@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
@@ -39,6 +40,8 @@ import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -130,6 +133,28 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         }
     }
 
+    public static void main(String[] args) {
+        System.out.println(padTo(Integer.toBinaryString(0x80000000), 32));
+        System.out.println(padTo(Integer.toBinaryString(0x40800000), 32));
+        System.out.println(padTo(Integer.toBinaryString(Wires.META_DATA), 32));
+        System.out.println(padTo(Integer.toBinaryString(0x40800000 & ~Wires.META_DATA), 32));
+        System.out.println(Integer.numberOfTrailingZeros(0x40800000));
+        System.out.println(0x40800000 & ~Wires.META_DATA);
+        System.out.println(32 << 10);
+    }
+
+    private static String padTo(final String input, final int length) {
+        if (input.length() < length) {
+            String padded = "";
+            for (int i = 0; i < length - input.length(); i++) {
+                padded += "0";
+            }
+            return padded + input;
+        }
+
+        return input;
+    }
+
     @Override
     public long recoverAndWriteHeader(@NotNull Wire wire, long timeoutMS, final LongValue lastPosition, Sequence  sequence) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
@@ -155,7 +180,16 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             long pos = bytes.writePosition();
             try {
                 bytes.writeSkip(4);
-                wire.getValueOut().text("!! Skipped due to recovery of locked header !!");
+                final String debugMessage = "!! Skipped due to recovery of locked header !! By thread " +
+                        Thread.currentThread().getName() + ", pid " + OS.getProcessId();
+                wire.getValueOut().text(debugMessage);
+                final StringWriter stackVisitor = new StringWriter();
+                new RuntimeException().printStackTrace(new PrintWriter(stackVisitor));
+                final String stackTrace = stackVisitor.toString();
+                // ensure there is enough space to record a stack trace for debugging purposes
+                if (debugMessage.length() + stackTrace.length() + 16 < sizeToSkip) {
+                    wire.getValueOut().text(stackTrace);
+                }
                 wire.addPadding(Math.toIntExact(sizeToSkip + (pos + 4) - bytes.writePosition()));
             } finally {
                 bytes.writePosition(pos);
