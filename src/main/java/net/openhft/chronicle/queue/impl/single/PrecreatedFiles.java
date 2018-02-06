@@ -18,8 +18,15 @@ public enum PrecreatedFiles {
         }
     }
 
+    public static File preCreatedFileForStoreFile(final File requiredStoreFile) {
+        return new File(requiredStoreFile.getParentFile(), requiredStoreFile.getName() +
+                PRE_CREATED_FILE_SUFFIX);
+    }
+
     public static File preCreatedFile(final File requiredQueueFile) {
-        return new File(requiredQueueFile.getParentFile(), requiredQueueFile.getName() +
+        final String fileName = requiredQueueFile.getName();
+        final String name = fileName.substring(0, fileName.length() - 4);
+        return new File(requiredQueueFile.getParentFile(), name +
                 PRE_CREATED_FILE_SUFFIX);
     }
 }
