@@ -47,6 +47,7 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
  * Created by Peter Lawrey on 22/05/16.
  */
 class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
+    private static final boolean IGNORE_INDEXING_FAILURE = Boolean.getBoolean("queue.ignoreIndexingFailure");
     private final int indexCount, indexCountBits;
     private final int indexSpacing, indexSpacingBits;
     private final LongValue index2Index;
@@ -653,6 +654,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
         int index2 = (int) ((sequenceNumber) >>> (indexCountBits + indexSpacingBits));
         if (index2 >= indexCount) {
+            if (IGNORE_INDEXING_FAILURE) {
+                return;
+            }
             throw new IllegalStateException("Unable to index " + sequenceNumber);
         }
         long secondaryAddress = getSecondaryAddress(recovery, ec, ec.timeoutMS(), index2indexArr, index2);
