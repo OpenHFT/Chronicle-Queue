@@ -199,7 +199,6 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             if (bytes.compareAndSwapInt(offset, num, emptyMetaData)) {
                 warn().on(getClass(), msgStart + " switching to a corrupt meta data message");
                 bytes.writeSkip(sizeToSkip + 4);
-
             } else {
                 int num2 = bytes.readVolatileInt(offset);
                 warn().on(getClass(), msgStart + " already set to " + Integer.toHexString(num2));
