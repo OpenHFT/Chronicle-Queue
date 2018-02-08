@@ -56,9 +56,8 @@ public final class Pretoucher {
             currentCycleWireStore = queue.storeForCycle(queue.cycle(), queue.epoch(), true);
             currentCycleMappedBytes = currentCycleWireStore.bytes();
             currentCycle = queue.cycle();
-            if (chunkListener != null) {
+            if (chunkListener != null)
                 currentCycleMappedBytes.setNewChunkListener(chunkListener);
-            }
 
             cycleChangedListener.accept(queue.cycle());
         }
