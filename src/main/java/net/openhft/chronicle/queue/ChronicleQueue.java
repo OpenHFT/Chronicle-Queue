@@ -154,4 +154,6 @@ public interface ChronicleQueue extends Closeable {
                 "If you would like to use this feature, please contact sales@chronicle.software for more information.");
         return 0;
     }
+
+    long lastAcknowledgedIndexReplicated();
 }
