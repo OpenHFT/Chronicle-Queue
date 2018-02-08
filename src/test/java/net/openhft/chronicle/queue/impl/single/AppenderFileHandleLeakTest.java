@@ -16,6 +16,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -52,8 +53,14 @@ public final class AppenderFileHandleLeakTest {
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT);
     private final List<Path> lastFileHandles = new ArrayList<>();
-    private final TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
+    private TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
+    private File queuePath;
+
+    @Before
+    public void setUp() throws Exception {
+        queuePath = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName());
+    }
 
     @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws Exception {
@@ -62,18 +69,18 @@ public final class AppenderFileHandleLeakTest {
         Thread.sleep(100);
         assumeThat(OS.isLinux(), is(true));
         final List<ExcerptTailer> gcGuard = new LinkedList<>();
+        long openFileHandleCount = countFileHandlesOfCurrentProcess();
+        List<Path> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
         try (SingleChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
-            final long openFileHandleCount = countFileHandlesOfCurrentProcess();
-            final List<Path> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
             final List<Future<Boolean>> futures = new LinkedList<>();
 
             for (int i = 0; i < THREAD_COUNT; i++) {
                 futures.add(threadPool.submit(() -> {
                     for (int j = 0; j < MESSAGES_PER_THREAD; j++) {
                         writeMessage(j, queue);
-                        GcControls.requestGcCycle();
                         readMessage(queue, false, gcGuard::add);
                     }
+                    GcControls.requestGcCycle();
                     return Boolean.TRUE;
                 }));
             }
@@ -84,11 +91,11 @@ public final class AppenderFileHandleLeakTest {
             assertFalse(gcGuard.isEmpty());
             gcGuard.clear();
 
-            GcControls.waitForGcCycle();
-            GcControls.waitForGcCycle();
-
-            waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);
         }
+        GcControls.waitForGcCycle();
+        GcControls.waitForGcCycle();
+
+        waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);
     }
 
     @Test
@@ -205,7 +212,7 @@ public final class AppenderFileHandleLeakTest {
     private void waitForFileHandleCountToDrop(
             final long startFileHandleCount,
             final List<Path> fileHandlesAtStart) throws IOException {
-        final long failAt = System.currentTimeMillis() + 40_000L;
+        final long failAt = System.currentTimeMillis() + 60_000L;
         while (System.currentTimeMillis() < failAt) {
             if (countFileHandlesOfCurrentProcess() < startFileHandleCount + 5) {
                 return;
@@ -215,7 +222,8 @@ public final class AppenderFileHandleLeakTest {
         final List<Path> fileHandlesAtEnd = new ArrayList<>(lastFileHandles);
         fileHandlesAtEnd.removeAll(fileHandlesAtStart);
 
-        fail("File handle count did not drop, remaining handles:\n" + fileHandlesAtEnd);
+        fail("File handle count did not drop for queue in directory " + queuePath.getAbsolutePath() +
+                ", remaining handles:\n" + fileHandlesAtEnd);
     }
 
     private static void readMessage(final SingleChronicleQueue queue,
@@ -258,7 +266,7 @@ public final class AppenderFileHandleLeakTest {
                 } catch (IOException e) {
                     return p;
                 }
-            }).forEach(lastFileHandles::add);
+            }).filter(p -> p.toString().contains(queuePath.getName())).forEach(lastFileHandles::add);
         }
         try (final Stream<Path> fileHandles = Files.list(Paths.get("/proc/self/fd"))) {
             return fileHandles.count();
@@ -267,7 +275,7 @@ public final class AppenderFileHandleLeakTest {
 
     private SingleChronicleQueue createQueue(final TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder.
-                binary(DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName())).
+                binary(queuePath).
                 rollCycle(RollCycles.TEST_SECONDLY).
                 wireType(WireType.BINARY_LIGHT).
                 storeFileListener(storeFileListener).
