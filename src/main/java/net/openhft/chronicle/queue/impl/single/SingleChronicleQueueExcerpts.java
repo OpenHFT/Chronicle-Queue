@@ -24,29 +24,9 @@ import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.queue.TailerState;
-import net.openhft.chronicle.queue.impl.CommonStore;
-import net.openhft.chronicle.queue.impl.ExcerptContext;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.queue.impl.WireStorePool;
-import net.openhft.chronicle.wire.AbstractWire;
-import net.openhft.chronicle.wire.BinaryReadDocumentContext;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.SourceContext;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -58,14 +38,8 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
-import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
-import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
-import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.queue.TailerState.BEYOND_START_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.CYCLE_NOT_FOUND;
-import static net.openhft.chronicle.queue.TailerState.END_OF_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.FOUND_CYCLE;
-import static net.openhft.chronicle.queue.TailerState.UNINITIALISED;
+import static net.openhft.chronicle.queue.TailerDirection.*;
+import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 
@@ -126,6 +100,13 @@ public class SingleChronicleQueueExcerpts {
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
             headerWriteStrategy = progressOnContention ? new HeaderWriteStrategyDefer() : new HeaderWriteStrategyOriginal();
             this.storePool = storePool;
+        }
+
+        @NotNull
+        public WireStore store() {
+            if (store == null)
+                setCycle(cycle());
+            return store;
         }
 
         @Override
@@ -243,7 +224,7 @@ public class SingleChronicleQueueExcerpts {
             return sourceId() != 0;
         }
 
-        private void setCycle(int cycle) {
+        void setCycle(int cycle) {
             if (cycle != this.cycle)
                 setCycle2(cycle, true);
         }
@@ -1165,7 +1146,7 @@ public class SingleChronicleQueueExcerpts {
                             boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
 
                             if (foundCycle) {
-                                long lastSequenceNumberInThisCycle = store.sequenceForPosition(this, Long.MAX_VALUE, false);
+                                long lastSequenceNumberInThisCycle = store().sequenceForPosition(this, Long.MAX_VALUE, false);
                                 long nextIndex = queue.rollCycle().toIndex(this.cycle,
                                         lastSequenceNumberInThisCycle);
                                 moveToIndexInternal(nextIndex);
@@ -1238,7 +1219,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean inACycleCheckRep() {
-            long lastSequenceAck = store.lastAcknowledgedIndexReplicated();
+            long lastSequenceAck = store().lastAcknowledgedIndexReplicated();
             long seq = queue.rollCycle().toSequenceNumber(index);
             if (seq > lastSequenceAck)
                 return true;
@@ -1284,7 +1265,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void indexEntry(@NotNull Bytes<?> bytes) throws StreamCorruptedException {
-            if (store.indexable(index)
+            if (store().indexable(index)
                     && shouldUpdateIndex
                     && direction == TailerDirection.FORWARD
                     && !context.isMetaData())
@@ -1392,7 +1373,7 @@ public class SingleChronicleQueueExcerpts {
 
             if (direction == BACKWARD) {
                 try {
-                    long lastSequenceNumber0 = store.lastSequenceNumber(this);
+                    long lastSequenceNumber0 = store().lastSequenceNumber(this);
                     return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
 
                 } catch (Exception e) {
@@ -1449,7 +1430,7 @@ public class SingleChronicleQueueExcerpts {
             }
 
             index(index);
-            ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
+            ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
             Bytes<?> bytes = wire().bytes();
             if (scanResult == FOUND) {
                 state = FOUND_CYCLE;
@@ -1562,13 +1543,13 @@ public class SingleChronicleQueueExcerpts {
         private void resetWires() {
             WireType wireType = queue.wireType();
 
-            final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
+            final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store().bytes()));
             assert headerNumberCheck(wire);
             this.context.wire(wire);
             wire.parent(this);
 
             Wire wireForIndexOld = wireForIndex;
-            wireForIndex = readAnywhere(wireType.apply(store.bytes()));
+            wireForIndex = readAnywhere(wireType.apply(store().bytes()));
             closableResources.wireForIndexReference = wireForIndex.bytes();
             closableResources.wireReference = wire.bytes();
             assert headerNumberCheck((AbstractWire) wireForIndex);
@@ -1901,7 +1882,7 @@ public class SingleChronicleQueueExcerpts {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " discarded.");
                     return;
                 }
-                temp.store.lastIndexReplicated(lastIndexReplicated);
+                temp.store().lastIndexReplicated(lastIndexReplicated);
             } finally {
                 temp.release();
             }
@@ -1909,11 +1890,11 @@ public class SingleChronicleQueueExcerpts {
 
 
         public long lastAcknowledgedIndexReplicated()  {
-            return ((StoreAppender) queue.acquireAppender()).store.lastAcknowledgedIndexReplicated();
+            return ((StoreAppender) queue.acquireAppender()).store().lastAcknowledgedIndexReplicated();
         }
 
         public long lastIndexReplicated() {
-            return ((StoreAppender) queue.acquireAppender()).store.lastIndexReplicated();
+            return ((StoreAppender) queue.acquireAppender()).store().lastIndexReplicated();
         }
 
         public void setCycle(int cycle) {
@@ -1987,6 +1968,13 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
+        @NotNull
+        public WireStore store() {
+            if (store == null)
+                setCycle(cycle());
+            return store;
+        }
+
         private static final class MoveToState {
             private long lastMovedToIndex = Long.MIN_VALUE;
             private TailerDirection directionAtLastMoveTo = TailerDirection.NONE;
@@ -2035,6 +2023,8 @@ public class SingleChronicleQueueExcerpts {
                         direction == directionAtLastMoveTo &&
                         queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
             }
+
+
         }
     }
 
