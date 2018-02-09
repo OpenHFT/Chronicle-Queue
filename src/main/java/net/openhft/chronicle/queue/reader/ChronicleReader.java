@@ -190,7 +190,6 @@ public final class ChronicleReader {
         }
         return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
-                .testBlockSize()
                 .readOnly(readOnly)
                 .build();
     }

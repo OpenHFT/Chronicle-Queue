@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
@@ -21,7 +22,12 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
@@ -29,8 +35,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class ChronicleReaderTest {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
@@ -56,6 +67,67 @@ public class ChronicleReaderTest {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
+    }
+
+    @Test
+    public void shouldReadQueueWithNonDefaultRollCycle() {
+        Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
+        path.toFile().mkdirs();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+                testBlockSize().build()) {
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            methodWriterBuilder.recordHistory(true);
+            final StringEvents events = methodWriterBuilder.build();
+
+            for (int i = 0; i < 24; i++) {
+                events.say(i % 2 == 0 ? "hello" : "goodbye");
+            }
+        }
+
+        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        assertFalse(capturedOutput.isEmpty());
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws IOException, InterruptedException {
+        Path path = DirectoryUtils.tempDir("shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader").toPath();
+        path.toFile().mkdirs();
+
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicLong recordsProcessed = new AtomicLong(0);
+        final ChronicleReader reader = new ChronicleReader().withBasePath(path).withMessageSink(m -> {
+            latch.countDown();
+            recordsProcessed.incrementAndGet();
+        });
+
+        final Thread readerThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                reader.execute();
+            }
+        });
+        readerThread.start();
+
+        assertTrue(capturedOutput.isEmpty());
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+                build()) {
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            methodWriterBuilder.recordHistory(true);
+            final StringEvents events = methodWriterBuilder.build();
+
+            for (int i = 0; i < 24; i++) {
+                events.say(i % 2 == 0 ? "hello" : "goodbye");
+            }
+        }
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        while (recordsProcessed.get() < 10) {
+            LockSupport.parkNanos(1L);
+        }
+
+        readerThread.interrupt();
     }
 
     @Test
