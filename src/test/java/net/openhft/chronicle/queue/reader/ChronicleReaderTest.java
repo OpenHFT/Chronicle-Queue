@@ -89,6 +89,7 @@ public class ChronicleReaderTest {
         assertFalse(capturedOutput.isEmpty());
     }
 
+    @Ignore("wip")
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws IOException, InterruptedException {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader").toPath();
