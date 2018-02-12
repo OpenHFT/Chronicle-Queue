@@ -1813,13 +1813,14 @@ public class SingleChronicleQueueExcerpts {
                     long sourceIndex = veh.sourceIndex(i);
                     if (!moveToIndexInternal(sourceIndex)) {
                         final String errorMessage = String.format("Unable to move to sourceIndex %d, " +
-                                "which was determined to be the last entry written to queue %s", sourceIndex, queue);
+                                "which was determined to be the last entry written to queue %s",
+                                Long.toHexString(sourceIndex), queue);
                         throw new IORuntimeException(errorMessage);
                     }
                     try (DocumentContext content = readingDocument()) {
                         if (!content.isPresent()) {
                             final String errorMessage =
-                                    String.format("No readable document found at sourceIndex %d", (sourceIndex + 1));
+                                    String.format("No readable document found at sourceIndex %d",  Long.toHexString(sourceIndex + 1));
                             throw new IORuntimeException(errorMessage);
                         }
                         // skip this message and go to the next.
