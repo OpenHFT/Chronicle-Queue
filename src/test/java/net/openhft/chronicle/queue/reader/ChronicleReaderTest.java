@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
@@ -89,7 +90,6 @@ public class ChronicleReaderTest {
         assertFalse(capturedOutput.isEmpty());
     }
 
-    @Ignore("wip")
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws IOException, InterruptedException {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader").toPath();
@@ -103,13 +103,22 @@ public class ChronicleReaderTest {
             recordsProcessed.incrementAndGet();
         });
 
+        final AtomicReference<Throwable> readerException = new AtomicReference<>();
+        final CountDownLatch executeLatch = new CountDownLatch(1);
         final Thread readerThread = new Thread(() -> {
+
             while (!Thread.currentThread().isInterrupted()) {
-                reader.execute();
+                try {
+                    reader.execute();
+                    executeLatch.countDown();
+                } catch (Throwable t) {
+                    readerException.set(t);
+                    throw t;
+                }
             }
         });
         readerThread.start();
-
+        assertTrue(executeLatch.await(5, TimeUnit.SECONDS));
         assertTrue(capturedOutput.isEmpty());
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 build()) {
@@ -129,6 +138,8 @@ public class ChronicleReaderTest {
         }
 
         readerThread.interrupt();
+
+        assertThat(readerException.get(), is(nullValue()));
     }
 
     @Test

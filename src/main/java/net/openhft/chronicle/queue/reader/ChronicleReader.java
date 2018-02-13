@@ -30,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -54,13 +55,16 @@ public final class ChronicleReader {
 
     public void execute() {
         try {
-            long lastObservedTailIndex;
+            long lastObservedTailIndex = Long.MAX_VALUE;
             long highestReachedIndex = 0L;
             boolean isFirstIteration = true;
+            boolean retryLastOperation = false;
+            boolean queueHasBeenModified = false;
             do {
                 try (final SingleChronicleQueue queue = createQueue();
                      final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
                     final ExcerptTailer tailer = queue.createTailer();
+                    queueHasBeenModified = false;
 
                     if (highestReachedIndex != 0L) {
                         tailer.moveToIndex(highestReachedIndex);
@@ -85,13 +89,24 @@ public final class ChronicleReader {
                                 });
                             }
                         }
+
                     } finally {
                         textConversionTarget.release();
                         highestReachedIndex = tailer.index();
                         isFirstIteration = false;
                     }
+                    queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex);
+                } catch (final RuntimeException e) {
+                    if (e.getCause() != null && e.getCause() instanceof DateTimeParseException) {
+                        // ignore this error - due to a race condition between
+                        // the reader creating a Queue (with default roll-cycle due to no files on disk)
+                        // and the writer appending to the Queue with a non-default roll-cycle
+                        retryLastOperation = true;
+                    } else {
+                        throw e;
+                    }
                 }
-            } while (tailInputSource || queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex));
+            } while (tailInputSource || retryLastOperation || queueHasBeenModified);
         } catch (Throwable t) {
             t.printStackTrace();
             throw t;
@@ -172,9 +187,10 @@ public final class ChronicleReader {
         if (isSet(maxHistoryRecords) && isFirstIteration) {
             tailer.toEnd();
             tailer.moveToIndex(Math.max(ic.firstIndex(), tailer.index() - maxHistoryRecords));
-        } else if (tailInputSource && isFirstIteration) {
-            tailer.toEnd();
-        }
+        } else
+            if (tailInputSource && isFirstIteration) {
+                tailer.toEnd();
+            }
     }
 
     private long getCurrentTailIndex() {
