@@ -4219,14 +4219,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (DocumentContext documentContext = tailer1.readingDocument()) {
                 documentContext.wire().readEventName(sb);
-                Assert.assertEquals("hello2", sb.toString());
                 documentContext.rollbackOnClose();
+                Assert.assertEquals("hello2", sb.toString());
+
             }
 
             try (DocumentContext documentContext = tailer1.readingDocument()) {
-                documentContext.wire().readEventName(sb);
-                Assert.assertEquals("hello2", sb.toString());
-                documentContext.rollbackOnClose();
+                Bytes<?> bytes = documentContext.wire().bytes();
+                long rp = bytes.readPosition();
+                long wp = bytes.writePosition();
+                long wl = bytes.writeLimit();
+
+                try {
+                    documentContext.wire().readEventName(sb);
+                    Assert.assertEquals("hello2", sb.toString());
+                    documentContext.rollbackOnClose();
+                } finally {
+                    bytes.readPosition(rp).writePosition(wp).writeLimit(wl);
+                }
+
             }
 
             try (DocumentContext documentContext = tailer1.readingDocument()) {
