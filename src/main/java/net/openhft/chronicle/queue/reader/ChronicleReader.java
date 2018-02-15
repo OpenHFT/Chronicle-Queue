@@ -49,6 +49,7 @@ public final class ChronicleReader {
     private boolean tailInputSource = false;
     private long maxHistoryRecords = UNSET_VALUE;
     private boolean readOnly = true;
+    private ChronicleReaderPlugin customPlugin;
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
     private Supplier<QueueEntryHandler> entryHandlerFactory = MessageToTextQueueEntryHandler::new;
@@ -84,9 +85,13 @@ public final class ChronicleReader {
                                 }
                                 pauser.reset();
 
-                                messageConverter.accept(dc.wire(), text -> {
-                                    applyFiltersAndLog(text, tailer.index());
-                                });
+                                if(customPlugin == null) {
+                                    messageConverter.accept(dc.wire(), text -> {
+                                        applyFiltersAndLog(text, tailer.index());
+                                    });
+                                }else{
+                                    customPlugin.onReadDocument(dc);
+                                }
                             }
                         }
 
@@ -135,6 +140,15 @@ public final class ChronicleReader {
 
     public ChronicleReader withExclusionRegex(final String regex) {
         this.exclusionRegex.add(Pattern.compile(regex));
+        return this;
+    }
+
+    public ChronicleReader withCustomPlugin(final String customPlugin) {
+        try {
+            this.customPlugin = (ChronicleReaderPlugin) Class.forName(customPlugin).newInstance();
+        } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+            throw new IllegalArgumentException("Unable to instantiate plugin " + customPlugin, e);
+        }
         return this;
     }
 

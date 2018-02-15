@@ -49,7 +49,8 @@ public enum ChronicleReaderMain {
 
         final ChronicleReader chronicleReader = new ChronicleReader().
                 withMessageSink(System.out::println).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+                withBasePath(Paths.get(commandLine.getOptionValue('d'))).
+                withCustomPlugin(commandLine.getOptionValue('p'));
 
         configureReader(chronicleReader, commandLine);
 
@@ -112,6 +113,7 @@ public enum ChronicleReaderMain {
         final Options options = new Options();
 
         addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
+        addOption(options, "p", "custom-plugin", true, "Custom plugin to render the contents of the queue", false);
         addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
         addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
