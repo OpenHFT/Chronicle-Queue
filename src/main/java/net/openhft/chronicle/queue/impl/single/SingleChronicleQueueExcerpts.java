@@ -158,8 +158,9 @@ public class SingleChronicleQueueExcerpts {
                 w0.bytes().release();
             Wire w = wire;
             wire = null;
-            if (w != null)
+            if (w != null) {
                 w.bytes().release();
+            }
             if (store != null) {
                 storePool.release(store);
             }

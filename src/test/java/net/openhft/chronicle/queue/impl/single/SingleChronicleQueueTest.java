@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -35,15 +36,19 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -51,6 +56,7 @@ import java.util.stream.IntStream;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.*;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
@@ -3083,6 +3089,36 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws Exception {
+        final Random random = new Random(0xDEADBEEF);
+        final File queueFolder = DirectoryUtils.tempDir("mappedSegmentsShouldBeUnmappedAsCycleRolls");
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueFolder).
+                timeProvider(clock::get).
+                testBlockSize().rollCycle(RollCycles.HOURLY).
+                build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+            for (int i = 0; i < 20_000; i++) {
+                final int batchSize = random.nextInt(10);
+                appender.writeDocument(batchSize, ValueOut::int64);
+                final byte payload = (byte) random.nextInt();
+                for (int j = 0; j < batchSize; j++) {
+                    appender.writeDocument(payload, ValueOut::int8);
+                }
+                if (random.nextDouble() > 0.995) {
+                    clock.addAndGet(TimeUnit.MINUTES.toMillis(37L));
+                    // this give the reference processor a chance to run
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(15L));
+                }
+            }
+
+            assertTrue("Too many mapped files: " + getMappedQueueFileCount(), getMappedQueueFileCount() < 40);
+            assertTrue(Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count() > 10L);
+        }
+    }
+
+    @Test
     public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         File dir = getTmpDir();
@@ -4283,5 +4319,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @NotNull
     private static Object[] testConfiguration(final WireType binary, final boolean encrypted) {
         return new Object[]{binary.name() + " - " + (encrypted ? "" : "not ") + "encrypted", binary, encrypted};
+    }
+
+    private static int getMappedQueueFileCount() throws IOException, InterruptedException {
+
+        final int processId = OS.getProcessId();
+        final Process pmap = new ProcessBuilder("pmap", Integer.toString(processId)).start();
+        pmap.waitFor();
+        int queueFileCount = 0;
+        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(pmap.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains(SUFFIX)) {
+                    queueFileCount++;
+                }
+            }
+        }
+
+        return queueFileCount;
     }
 }
