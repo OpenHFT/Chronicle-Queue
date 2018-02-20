@@ -1,28 +1,24 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.time.TimeProvider;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import net.openhft.chronicle.core.time.TimeProvider;
 
 @RunWith(Parameterized.class)
 public class RollCyclesTest {
     private static final long NO_EPOCH_OFFSET = 0L;
     private static final long SOME_EPOCH_OFFSET = 17L * 37L;
-    private static final RollCycles[] TEST_DATA = new RollCycles[] {
-            RollCycles.DAILY,
-            RollCycles.HOURLY,
-            RollCycles.MINUTELY,
-            RollCycles.HUGE_DAILY
-    };
+    private static final RollCycles[] TEST_DATA = RollCycles.values();
 
     private final RollCycles cycle;
     private final AtomicLong clock = new AtomicLong();
@@ -32,7 +28,7 @@ public class RollCyclesTest {
     public static Collection<Object[]> data() {
         final List<Object[]> data = new ArrayList<>();
         for (RollCycles testDatum : TEST_DATA) {
-            data.add(new Object[] {testDatum.name(), testDatum});
+            data.add(new Object[]{testDatum.name(), testDatum});
         }
         return data;
     }
