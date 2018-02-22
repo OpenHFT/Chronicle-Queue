@@ -2003,7 +2003,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testToEndOnDeletedQueueFiles() throws IOException {
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType).build()) {
@@ -2025,6 +2025,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ChronicleQueue q2 = builder(dir, wireType).build();
             tailer = q2.createTailer();
             tailer.toEnd();
+            assertEquals(TailerState.UNINITIALISED, tailer.state());
+            append = q2.acquireAppender();
+            append.writeDocument(w -> w.write(() -> "test").text("before text"));
+
+            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("before text", Assert::assertEquals)));
         }
     }
 
