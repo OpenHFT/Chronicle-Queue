@@ -15,12 +15,14 @@
  */
 package net.openhft.chronicle.queue;
 
+import org.jetbrains.annotations.NotNull;
+
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.time.TimeProvider;
-import org.jetbrains.annotations.NotNull;
 
 public enum RollCycles implements RollCycle {
     TEST_SECONDLY(/*--*/"yyyyMMdd-HHmmss", 1000, 1 << 15, 4), // only good for testing
+    MILLI_WEEKLY(/*---*/"yyyyMMdd-HHmmssSSS", 7 * 24 * 60 * 60 * 1000, 4 << 10, 128), // 4 trillion entries per milli-week
     MINUTELY(/*-------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16), // 64 million entries per minute
     TEST_HOURLY(/*----*/"yyyyMMdd-HH", 60 * 60 * 1000, 16, 4), // 512 entries per hour.
     HOURLY(/*---------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16), // 256 million entries per hour.
@@ -48,7 +50,7 @@ public enum RollCycles implements RollCycle {
         this.length = length;
         this.indexCount = Maths.nextPower2(indexCount, 8);
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
-        cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
+        cycleShift = Math.max(32, (Maths.intLog2(indexCount) * 2) + Maths.intLog2(indexSpacing));
         sequenceMask = (1L << cycleShift) - 1;
     }
 
@@ -94,7 +96,8 @@ public enum RollCycles implements RollCycle {
 
     public static void main(String[] args) {
         for (RollCycles r : RollCycles.values()) {
-            System.out.println(r + ": cycleShift="+r.cycleShift+" sequenceMask="+Long.toHexString(r.sequenceMask)+" format="+r.format);
+            System.out.println(
+                    r + ": cycleShift=" + r.cycleShift + " sequenceMask=" + Long.toHexString(r.sequenceMask) + " format=" + r.format);
         }
     }
 }

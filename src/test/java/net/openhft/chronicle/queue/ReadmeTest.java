@@ -16,15 +16,16 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.BytesUtil;
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.threads.ThreadDump;
-import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
+import static org.junit.Assert.assertEquals;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.threads.ThreadDump;
+import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 
 /*
  * Created by Peter Lawrey on 15/03/16.
@@ -46,24 +47,18 @@ public class ReadmeTest {
     @Test
     public void createAQueue() {
         final String basePath = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
-                .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
-                .build()) {
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(basePath).testBlockSize().rollCycle(RollCycles.MILLI_WEEKLY).build()) {
             // Obtain an ExcerptAppender
             ExcerptAppender appender = queue.acquireAppender();
 
             // write - {msg: TestMessage}
             appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
 
-//            System.out.println(queue.dump());
             // write - TestMessage
             appender.writeText("TestMessage");
-
+            System.out.println(appender.cycle());
             ExcerptTailer tailer = queue.createTailer();
-
             tailer.readDocument(w -> System.out.println("msg: " + w.read(() -> "msg").text()));
-
             assertEquals("TestMessage", tailer.readText());
         }
     }
