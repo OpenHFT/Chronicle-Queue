@@ -41,6 +41,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.util.*;
@@ -1933,29 +1934,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testToEnd() {
-        File dir = getTmpDir();
-        try (ChronicleQueue chronicle = builder(dir, wireType)
-                .rollCycle(RollCycles.HOURLY)
-                .build()) {
-            ExcerptTailer tailer = chronicle.createTailer();
-
-            // move to the end even though it doesn't exist yet.
-            tailer.toEnd();
-
-            try (ChronicleQueue chronicle2 = builder(dir, wireType)
-                    .rollCycle(RollCycles.HOURLY)
-                    .build()) {
-
-                ExcerptAppender append = chronicle2.acquireAppender();
-                append.writeDocument(w -> w.write(() -> "test").text("text"));
-
-            }
-            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
-        }
-    }
-
-    @Test
     public void testAppendedBeforeToEnd() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, this.wireType)
@@ -1981,6 +1959,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void testToEnd() {
+        File dir = getTmpDir();
+        try (ChronicleQueue chronicle = builder(dir, wireType)
+                .rollCycle(RollCycles.HOURLY)
+                .build()) {
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            // move to the end even though it doesn't exist yet.
+            tailer.toEnd();
+
+            try (ChronicleQueue chronicle2 = builder(dir, wireType)
+                    .rollCycle(RollCycles.HOURLY)
+                    .build()) {
+
+                ExcerptAppender append = chronicle2.acquireAppender();
+                append.writeDocument(w -> w.write(() -> "test").text("text"));
+
+            }
+            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
+        }
+    }
+
+    @Test
     public void testToEnd2() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
@@ -2000,11 +2001,34 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
         }
+    }
 
+    @Test(expected = IllegalStateException.class)
+    public void testToEndOnDeletedQueueFiles() throws IOException {
+        File dir = getTmpDir();
+        try (ChronicleQueue q = builder(dir, wireType).build()) {
+            ExcerptAppender append = q.acquireAppender();
+            append.writeDocument(w -> w.write(() -> "test").text("before text"));
+
+            ExcerptTailer tailer = q.createTailer();
+
+            // move to the end even though it doesn't exist yet.
+            tailer.toEnd();
+
+            append.writeDocument(w -> w.write(() -> "test").text("text"));
+
+            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
+
+            Files.find(dir.toPath(), 1, (p, basicFileAttributes) -> p.toString().endsWith("cq4"), FileVisitOption.FOLLOW_LINKS)
+                    .forEach(path -> assertTrue(path.toFile().delete()));
+
+            ChronicleQueue q2 = builder(dir, wireType).build();
+            tailer = q2.createTailer();
+            tailer.toEnd();
+        }
     }
 
     @Test
-    //    @Ignore("Not sure it is useful")
     public void testReadWrite() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
