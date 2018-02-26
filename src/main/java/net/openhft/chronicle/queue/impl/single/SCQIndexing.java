@@ -124,6 +124,22 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     @Override
     public void close() {
+        Closeable.closeQuietly(index2Index);
+        Closeable.closeQuietly(nextEntryToBeIndexed);
+        // Eagerly clean up the contents of thread locals but only for this thread.
+        // The contents of the thread local for other threads will be cleaned up in
+        // MappedFile.performRelease
+        closeTL(indexArray);
+        closeTL(index2indexArray);
+    }
+
+    private void closeTL(ThreadLocal<WeakReference<LongArrayValuesHolder>> tl) {
+        WeakReference<LongArrayValuesHolder> weakReference = tl.get();
+        if (weakReference == null)
+            return;
+        LongArrayValuesHolder holder = weakReference.get();
+        if (holder != null)
+            Closeable.closeQuietly(holder.values);
     }
 
     @Override

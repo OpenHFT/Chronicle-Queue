@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
@@ -391,6 +392,11 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     private void onCleanup() {
+        Closeable.closeQuietly(writePosition);
+        Closeable.closeQuietly(indexing);
+        Closeable.closeQuietly(lastAcknowledgedIndexReplicated);
+        Closeable.closeQuietly(recovery);
+        Closeable.closeQuietly(lastIndexReplicated);
         mappedBytes.release();
     }
 

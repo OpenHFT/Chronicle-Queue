@@ -26,7 +26,9 @@ import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.Closeable;
 import java.io.EOFException;
+import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -34,7 +36,7 @@ import java.util.concurrent.TimeoutException;
 /*
  * Created by Peter Lawrey on 21/05/16.
  */
-public interface StoreRecovery extends WriteMarshallable {
+public interface StoreRecovery extends WriteMarshallable, Closeable {
     long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
 
     long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
@@ -56,4 +58,6 @@ public interface StoreRecovery extends WriteMarshallable {
     }
 
     long recoverAndWriteHeader(Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException;
+
+    default void close() throws IOException { }
 }

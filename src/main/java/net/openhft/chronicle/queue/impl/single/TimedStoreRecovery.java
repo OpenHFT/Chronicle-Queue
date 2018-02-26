@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.core.values.LongArrayValues;
@@ -40,6 +41,7 @@ import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.concurrent.Callable;
@@ -219,5 +221,10 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         } catch (EOFException e) {
             throw new AssertionError(e);
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        Closeable.closeQuietly(timeStamp);
     }
 }
