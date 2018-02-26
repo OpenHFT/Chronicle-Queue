@@ -49,9 +49,11 @@ public enum ChronicleReaderMain {
 
         final ChronicleReader chronicleReader = new ChronicleReader().
                 withMessageSink(System.out::println).
-                withBasePath(Paths.get(commandLine.getOptionValue('d'))).
-                withCustomPlugin(commandLine.getOptionValue('p'));
+                withBasePath(Paths.get(commandLine.getOptionValue('d')));
 
+        if(commandLine.hasOption('p')) {
+            chronicleReader.withCustomPlugin(commandLine.getOptionValue('p'));
+        }
         configureReader(chronicleReader, commandLine);
 
         chronicleReader.execute();
