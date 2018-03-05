@@ -4,11 +4,17 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.TextWire;
 import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireType;
 
 import java.util.function.Consumer;
 
 public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
     private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
+    private final WireType wireType;
+
+    public MessageToTextQueueEntryHandler(WireType wireType) {
+        this.wireType = wireType;
+    }
 
     @Override
     public void accept(final WireIn wireIn, final Consumer<String> messageHandler) {
@@ -19,7 +25,7 @@ public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
         if (isBinaryFormat(dataFormatIndicator)) {
             textConversionTarget.clear();
             final BinaryWire binaryWire = new BinaryWire(serialisedMessage);
-            binaryWire.copyTo(new TextWire(textConversionTarget));
+            binaryWire.copyTo(wireType.apply(textConversionTarget));
             text = textConversionTarget.toString();
         } else {
             text = serialisedMessage.toString();

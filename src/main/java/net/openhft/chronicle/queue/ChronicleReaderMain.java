@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.reader.ChronicleReader;
+import net.openhft.chronicle.wire.WireType;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -31,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
+import java.util.function.Consumer;
 
 import static java.util.Arrays.stream;
 
@@ -47,8 +49,11 @@ public enum ChronicleReaderMain {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
+        final Consumer<String> messageSink = commandLine.hasOption('l') ?
+                s -> System.out.println(s.replaceAll("\n", "")) :
+                System.out::println;
         final ChronicleReader chronicleReader = new ChronicleReader().
-                withMessageSink(System.out::println).
+                withMessageSink(messageSink).
                 withBasePath(Paths.get(commandLine.getOptionValue('d'))).
                 withCustomPlugin(commandLine.getOptionValue('p'));
 
@@ -106,6 +111,12 @@ public enum ChronicleReaderMain {
         if (commandLine.hasOption('r')) {
             chronicleReader.asMethodReader();
         }
+        if (commandLine.hasOption('w')) {
+            chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w')));
+        }
+        if (commandLine.hasOption('s')) {
+            chronicleReader.suppressDisplayIndex();
+        }
     }
 
     @NotNull
@@ -120,6 +131,9 @@ public enum ChronicleReaderMain {
         addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
         addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
         addOption(options, "r", "as-method-reader", false, "Use when reading from a queue generated using a MethodWriter", false);
+        addOption(options, "w", "wire-type", true, "Control output i.e. JSON", false);
+        addOption(options, "s", "suppress-index", false, "Display index", false);
+        addOption(options, "l", "single-line", false, "Squash each output message into a single line", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
         return options;
     }

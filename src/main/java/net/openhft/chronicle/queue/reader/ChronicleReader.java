@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
@@ -52,7 +53,9 @@ public final class ChronicleReader {
     private ChronicleReaderPlugin customPlugin;
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
-    private Supplier<QueueEntryHandler> entryHandlerFactory = MessageToTextQueueEntryHandler::new;
+    private WireType wireType = WireType.TEXT;
+    private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
+    private boolean displayIndex = true;
 
     public void execute() {
         try {
@@ -144,6 +147,8 @@ public final class ChronicleReader {
     }
 
     public ChronicleReader withCustomPlugin(final String customPlugin) {
+        if (customPlugin == null)
+            return this;
         try {
             this.customPlugin = (ChronicleReaderPlugin) Class.forName(customPlugin).newInstance();
         } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
@@ -168,7 +173,17 @@ public final class ChronicleReader {
     }
 
     public ChronicleReader asMethodReader() {
-        entryHandlerFactory = MethodReaderQueueEntryHandler::new;
+        entryHandlerFactory = () -> new MethodReaderQueueEntryHandler(wireType);
+        return this;
+    }
+
+    public ChronicleReader withWireType(WireType wireType) {
+        this.wireType = wireType;
+        return this;
+    }
+
+    public ChronicleReader suppressDisplayIndex() {
+        this.displayIndex = false;
         return this;
     }
 
@@ -227,7 +242,8 @@ public final class ChronicleReader {
     private void applyFiltersAndLog(final String text, final long index) {
         if (inclusionRegex.isEmpty() || checkForMatches(inclusionRegex, text, true)) {
             if (exclusionRegex.isEmpty() || checkForMatches(exclusionRegex, text, false)) {
-                messageSink.accept("0x" + Long.toHexString(index) + ": ");
+                if (displayIndex)
+                    messageSink.accept("0x" + Long.toHexString(index) + ": ");
                 messageSink.accept(text);
             }
         }
