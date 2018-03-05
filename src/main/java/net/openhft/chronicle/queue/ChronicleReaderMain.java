@@ -52,11 +52,15 @@ public enum ChronicleReaderMain {
         final Consumer<String> messageSink = commandLine.hasOption('l') ?
                 s -> System.out.println(s.replaceAll("\n", "")) :
                 System.out::println;
-        final ChronicleReader chronicleReader = new ChronicleReader().
+        final ChronicleReader chronicleReader = new ChronicleReader(). 
                 withMessageSink(messageSink).
                 withBasePath(Paths.get(commandLine.getOptionValue('d'))).
                 withCustomPlugin(commandLine.getOptionValue('p'));
+ 
 
+        if(commandLine.hasOption('p')) {
+            chronicleReader.withCustomPlugin(commandLine.getOptionValue('p'));
+        }
         configureReader(chronicleReader, commandLine);
 
         chronicleReader.execute();
