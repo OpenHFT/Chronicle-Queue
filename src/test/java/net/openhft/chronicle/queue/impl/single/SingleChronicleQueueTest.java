@@ -36,14 +36,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import java.io.BufferedReader;
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -3118,34 +3113,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test
-    public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws Exception {
-        final Random random = new Random(0xDEADBEEF);
-        final File queueFolder = DirectoryUtils.tempDir("mappedSegmentsShouldBeUnmappedAsCycleRolls");
-        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+    private static int getMappedQueueFileCount() throws IOException, InterruptedException {
 
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueFolder).
-                timeProvider(clock::get).
-                testBlockSize().rollCycle(RollCycles.HOURLY).
-                build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
-            for (int i = 0; i < 20_000; i++) {
-                final int batchSize = random.nextInt(10);
-                appender.writeDocument(batchSize, ValueOut::int64);
-                final byte payload = (byte) random.nextInt();
-                for (int j = 0; j < batchSize; j++) {
-                    appender.writeDocument(payload, ValueOut::int8);
-                }
-                if (random.nextDouble() > 0.995) {
-                    clock.addAndGet(TimeUnit.MINUTES.toMillis(37L));
-                    // this give the reference processor a chance to run
-                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(15L));
+        final int processId = OS.getProcessId();
+
+        final Process pmap = new ProcessBuilder("pmap", Integer.toString(processId)).start();
+        pmap.waitFor();
+        int queueFileCount = 0;
+        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(pmap.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains(SUFFIX)) {
+                    queueFileCount++;
                 }
             }
-
-            assertTrue("Too many mapped files: " + getMappedQueueFileCount(), getMappedQueueFileCount() < 40);
-            assertTrue(Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count() > 10L);
         }
+
+        return queueFileCount;
     }
 
     @Test
@@ -4351,21 +4335,34 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return new Object[]{binary.name() + " - " + (encrypted ? "" : "not ") + "encrypted", binary, encrypted};
     }
 
-    private static int getMappedQueueFileCount() throws IOException, InterruptedException {
+    @Test
+    public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws Exception {
+        final Random random = new Random(0xDEADBEEF);
+        final File queueFolder = DirectoryUtils.tempDir("mappedSegmentsShouldBeUnmappedAsCycleRolls");
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
-        final int processId = OS.getProcessId();
-        final Process pmap = new ProcessBuilder("pmap", Integer.toString(processId)).start();
-        pmap.waitFor();
-        int queueFileCount = 0;
-        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(pmap.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains(SUFFIX)) {
-                    queueFileCount++;
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueFolder).
+                timeProvider(clock::get).
+                testBlockSize().rollCycle(RollCycles.HOURLY).
+                build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+            for (int i = 0; i < 20_000; i++) {
+                final int batchSize = random.nextInt(10);
+                appender.writeDocument(batchSize, ValueOut::int64);
+                final byte payload = (byte) random.nextInt();
+                for (int j = 0; j < batchSize; j++) {
+                    appender.writeDocument(payload, ValueOut::int8);
+                }
+                if (random.nextDouble() > 0.995) {
+                    clock.addAndGet(TimeUnit.MINUTES.toMillis(37L));
+                    // this give the reference processor a chance to run
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(15L));
                 }
             }
-        }
 
-        return queueFileCount;
+            if (OS.isLinux())
+                assertTrue("Too many mapped files: " + getMappedQueueFileCount(), getMappedQueueFileCount() < 40);
+            assertTrue(Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count() > 10L);
+        }
     }
 }
