@@ -1366,6 +1366,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (DocumentContext dc = tailer.readingDocument(true)) {
                     assertTrue(dc.isMetaData());
                     ValueIn in = dc.wire().read(event);
+                    // first we will pick up header, index etc.
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
 
@@ -1374,8 +1375,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
+            long robIndex;
             try (DocumentContext dc = tailer.readingDocument(true)) {
                 assertTrue(dc.isData());
+                robIndex = dc.index();
                 dc.wire().read(() -> "FirstName").text("Rob", Assert::assertEquals);
             }
 
@@ -1389,6 +1392,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     in.text("Steve", Assert::assertEquals);
                     break;
                 }
+            }
+
+            assertTrue(tailer.moveToIndex(robIndex));
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                assertTrue(dc.isData());
+                dc.wire().read(() -> "FirstName").text("Rob", Assert::assertEquals);
             }
         }
     }
@@ -4298,6 +4307,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 documentContext.wire().readEventName(sb);
                 Assert.assertEquals("hello3", sb.toString());
                 documentContext.rollbackOnClose();
+            }
+            try (DocumentContext documentContext = tailer1.readingDocument()) {
+                Assert.assertTrue(documentContext.isPresent());
+                documentContext.wire().readEventName(sb);
+                Assert.assertEquals("hello3", sb.toString());
+            }
+            try (DocumentContext documentContext = tailer1.readingDocument()) {
+                Assert.assertFalse(documentContext.isPresent());
+                documentContext.rollbackOnClose();
+            }
+            try (DocumentContext documentContext = tailer1.readingDocument()) {
+                Assert.assertFalse(documentContext.isPresent());
             }
         }
     }

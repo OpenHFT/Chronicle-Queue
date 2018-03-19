@@ -1940,16 +1940,19 @@ public class SingleChronicleQueueExcerpts {
             public void close() {
 
                 try {
-                    if (!rollbackOnClose && isPresent()) {
-                        incrementIndex();
-                        super.close();
-                        // assert wire == null || wire.endUse();
-                    } else {
+                    if (rollbackOnClose) {
                         present = false;
                         if (start != -1)
                             wire.bytes().readPosition(start).readLimit(readLimit);
                         start = -1;
+                        return;
                     }
+
+                    if (isPresent() && !isMetaData())
+                        incrementIndex();
+
+                    super.close();
+                    // assert wire == null || wire.endUse();
 
                 } finally {
                     rollbackOnClose = false;
