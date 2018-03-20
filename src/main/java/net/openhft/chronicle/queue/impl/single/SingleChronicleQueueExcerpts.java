@@ -469,6 +469,7 @@ public class SingleChronicleQueueExcerpts {
                     if (index > wire.headerNumber() + 1)
                         throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
                     // TODO: assert bytes.equalBytes(wire.bytes() ...);
+                    Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
                     return;
                 }
 
