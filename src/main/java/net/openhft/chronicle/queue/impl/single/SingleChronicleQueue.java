@@ -792,21 +792,23 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         private void checkDiskSpace(@NotNull final File filePath) throws IOException {
 
-            if (!filePath.exists())
-                return;
+            Path path = filePath.getAbsoluteFile().toPath();
+            while (path.getNameCount() > 1) {
+                try {
+                    // The returned number of unallocated bytes is a hint, but not a guarantee
+                    long unallocatedBytes = Files.getFileStore(path).getUnallocatedSpace();
+                    long totalSpace = Files.getFileStore(path).getTotalSpace();
 
-            final Path path = filePath.getAbsoluteFile().toPath();
-
-            if (path.getFileSystem() != null) {
-                // The returned number of unallocated bytes is a hint, but not a guarantee
-                long unallocatedBytes = Files.getFileStore(path).getUnallocatedSpace();
-                long totalSpace = Files.getFileStore(path).getTotalSpace();
-
-                if (unallocatedBytes < totalSpace * .05)
-                    LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
-                            "it runs out of space.");
-                else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
-                    LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
+                    if (unallocatedBytes < totalSpace * .05)
+                        LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
+                                "it runs out of space.");
+                    else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
+                        LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
+                    return;
+                } catch (IOException nsfe) {
+                    // if the leaf directory does not exist, go to parent
+                    path = path.getParent();
+                }
             }
         }
 
