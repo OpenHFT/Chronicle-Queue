@@ -427,7 +427,14 @@ public class SingleChronicleQueueExcerpts {
             return bufferWire;
         }
 
-
+        /**
+         * Write bytes at an index, but only if the index is at the end of the chronicle.
+         * If index is after the end of the chronicle, throw an IllegalStateException. If the
+         * index is before the end of the chronicle then do not change the state of the chronicle.
+         * <p>Thread-safe</p>
+         * @param index index to write at. Only if index is at the end of the chronicle will the bytes get written
+         * @param bytes payload
+         */
         public void writeBytes(long index, @NotNull BytesStore bytes) {
 
             if (queue.isClosed.get())
@@ -448,6 +455,7 @@ public class SingleChronicleQueueExcerpts {
 
                 long pos = wire.bytes().writePosition();
 
+                // opening the context locks the chronicle
                 headerWriteStrategy.onContextOpen(false, safeLength);
 
                 boolean rollbackDontClose = index != wire.headerNumber() + 1;
@@ -460,6 +468,7 @@ public class SingleChronicleQueueExcerpts {
                     ((AbstractWire) wire).forceNotInsideHeader();
                     if (index > wire.headerNumber() + 1)
                         throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
+                    // TODO: assert bytes.equalBytes(wire.bytes() ...);
                     return;
                 }
 
@@ -469,13 +478,10 @@ public class SingleChronicleQueueExcerpts {
                     context.close();
                 }
 
-
             } finally {
                 this.appendingThread = null;
                 context.isClosed = true;
             }
-
-
         }
 
         private void position(long position) {

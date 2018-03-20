@@ -4201,6 +4201,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
+            String before = sourceQueue.dump();
             ExcerptTailer tailer = sourceQueue.createTailer();
 
             try (final SingleChronicleQueue queue =
@@ -4218,6 +4219,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
 
                 String dump = queue.dump();
+                Assert.assertEquals(before, dump);
                 System.out.println(dump);
                 Assert.assertTrue(dump.contains( "# position: 1024, header: 0\n" +
                         "--- !!data #binary\n" +

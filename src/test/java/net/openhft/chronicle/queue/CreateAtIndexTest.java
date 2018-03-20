@@ -38,6 +38,8 @@ import static org.junit.Assert.fail;
  */
 public class CreateAtIndexTest {
 
+    public static final Bytes<byte[]> HELLO_WORLD = Bytes.from("hello world");
+
     @Test
     public void testWriteBytesWithIndex() throws Exception {
         String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
@@ -47,22 +49,40 @@ public class CreateAtIndexTest {
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-            appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));
-            appender.writeBytes(0x421d00000001L, Bytes.from("hello world"));
+            appender.writeBytes(0x421d00000000L, HELLO_WORLD);
+            appender.writeBytes(0x421d00000001L, HELLO_WORLD);
         }
-        // try again and fail.
+
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-//            try {
-                appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));
-//                fail();
-//            } catch (IllegalStateException e) {
-//                assertEquals("Unable to move to index 421d00000000 as the index already exists",
-//                        e.getMessage());
-//            }
+            String before = queue.dump();
+            appender.writeBytes(0x421d00000000L, HELLO_WORLD);
+            String after = queue.dump();
+            assertEquals(before, after);
+        }
+
+        boolean runIfAssertsOn = false;
+        // TODO: implement this
+        //assert runIfAssertsOn = true;
+        if (runIfAssertsOn) {
+            try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                    .testBlockSize()
+                    .build()) {
+                InternalAppender appender = (InternalAppender) queue.acquireAppender();
+
+                String before = queue.dump();
+                try {
+                    appender.writeBytes(0x421d00000000L, Bytes.from("hellooooo world"));
+                    fail();
+                } catch (IllegalStateException e) {
+                    // expected
+                }
+                String after = queue.dump();
+                assertEquals(before, after);
+            }
         }
 
         // try too far
@@ -72,7 +92,7 @@ public class CreateAtIndexTest {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             try {
-                appender.writeBytes(0x421d00000003L, Bytes.from("hello world"));
+                appender.writeBytes(0x421d00000003L, HELLO_WORLD);
                 fail();
             } catch (IllegalStateException e) {
                 assertEquals("Unable to move to index 421d00000003 beyond the end of the queue",
@@ -85,8 +105,8 @@ public class CreateAtIndexTest {
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-            appender.writeBytes(0x421d00000002L, Bytes.from("hello world"));
-            appender.writeBytes(0x421d00000003L, Bytes.from("hello world"));
+            appender.writeBytes(0x421d00000002L, HELLO_WORLD);
+            appender.writeBytes(0x421d00000003L, HELLO_WORLD);
         }
 
         try {
@@ -95,11 +115,13 @@ public class CreateAtIndexTest {
         }
     }
 
+    // TODO: 2 or more threads soak test
+
     @Test
     public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() throws Exception {
         String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
 
-        long expected = 0;
+        long expected;
 
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
