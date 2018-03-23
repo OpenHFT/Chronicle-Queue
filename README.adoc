@@ -474,7 +474,7 @@ the `acquireAppender()` uses a thread-local pool to give you an appender which w
 As such, the method call to:
 
 ```
-long index =  appender.lastIndexAppended();
+long index = appender.lastIndexAppended();
 ```
 
 will only give you the last index appended by this appender; not the last index appended by any appender.
@@ -482,7 +482,7 @@ will only give you the last index appended by this appender; not the last index 
 If you wish to find the index of the last record written, then you have to call:
 
 ```
-long index =  queue.createTailer().toEnd().index()
+long index = queue.createTailer().toEnd().index();
 ```
 
 
@@ -563,6 +563,7 @@ Reading the queue follows the same pattern as writing, except there is a possibi
 ----
 try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
    final ExcerptTailer tailer = queue.createTailer();
+}
 ----
 
 
