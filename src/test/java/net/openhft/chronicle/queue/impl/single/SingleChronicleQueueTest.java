@@ -280,6 +280,100 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void testMetaIndexTest() {
+
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue q = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            {
+                ExcerptAppender appender = q.acquireAppender();
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("one");
+                }
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("two");
+                }
+                try (DocumentContext documentContext = appender.writingDocument
+                        (true)) {
+                    documentContext.wire().getValueOut().text("meta1");
+                }
+
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("three");
+                }
+
+                try (DocumentContext documentContext = appender.writingDocument
+                        (true)) {
+                    documentContext.wire().getValueOut().text("meta2");
+                }
+                try (DocumentContext documentContext = appender.writingDocument
+                        (true)) {
+                    documentContext.wire().getValueOut().text("meta3");
+                }
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("four");
+                }
+
+            }
+            {
+
+                ExcerptTailer tailer = q.createTailer();
+
+                try (DocumentContext documentContext2 = tailer.readingDocument()) {
+                    Assert.assertEquals(0, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(false, documentContext2.isMetaData());
+                    Assert.assertEquals("one", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    Assert.assertEquals(1, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(false, documentContext2.isMetaData());
+                    Assert.assertEquals("two", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    Assert.assertEquals(2, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(true, documentContext2.isMetaData());
+                    Assert.assertEquals("meta1", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    Assert.assertEquals(2, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(false, documentContext2.isMetaData());
+                    Assert.assertEquals("three", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    Assert.assertEquals(3, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(true, documentContext2.isMetaData());
+                    Assert.assertEquals("meta2", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    Assert.assertEquals(3, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(true, documentContext2.isMetaData());
+                    Assert.assertEquals("meta3", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    Assert.assertEquals(3, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(false, documentContext2.isMetaData());
+                    Assert.assertEquals("four", documentContext2.wire().getValueIn().text());
+                }
+
+            }
+
+        }
+
+        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+
+        }
+    }
+
+    private long toSeq(final ChronicleQueue q, final long index) {
+        return ((SingleChronicleQueue) q).rollCycle().toSequenceNumber(index);
+    }
+
+    @Test
     public void testLastWritten() throws InterruptedException {
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
