@@ -88,3 +88,64 @@ repl.startReplication(hostId, new ServicesReplicationConfig());
 // shutdown
 repl.shutdown();
 ```
+
+
+==== Example from a test case
+
+[source,ruby]
+```
+@Test
+public void shouldReplicate() throws Exception {
+
+  YamlLogging.setAll(false);
+        IOTools.deleteDirWithFiles("replica", 10);
+        TCPRegistry.createServerSocketChannelFor(
+                "host.port1",
+                "host.port2",
+                "host.port3");
+
+    startupHost((byte) 1);
+    startupHost((byte) 2);
+
+    String queueName = config().queues().getQueues().iterator().next();
+    ReplicatedQueueCfg qCfg = config().queues().getQueue(queueName);
+    QueueClusterContext clusterContext = config().clusters().getClusters().iterator().next().clusterContext();
+    String sourceBasePath = clusterContext.baseSourcePath();
+    String sinkBasePath = clusterContext.baseSinkPath();
+    WireType wireType = qCfg.wireType();
+    SingleChronicleQueue source = SingleChronicleQueueBuilder.builder(Paths.get(sourceBasePath, queueName), wireType).build();
+    SingleChronicleQueue sink = SingleChronicleQueueBuilder.builder(Paths.get(sinkBasePath, queueName), wireType).build();
+
+    final BlockingQueue<String> sinkMessages = new LinkedBlockingQueue<>();
+    ChronicleReader chronicleReader = new ChronicleReader().withBasePath(sink.file().toPath()).withMessageSink(msg -> {
+        if (!msg.startsWith("0x"))
+            sinkMessages.add(msg);
+    }).tail();
+    Thread readerThread = new Thread(chronicleReader::execute);
+    readerThread.start();
+
+    assertNull(sinkMessages.poll(200L, TimeUnit.MILLISECONDS));
+
+    ExcerptAppender appender = source.acquireAppender();
+
+    try (DocumentContext dc = appender.writingDocument()) {
+        dc.wire().write("test").text("Hello replica");
+    }
+
+    String poll = sinkMessages.poll(5000L, TimeUnit.MILLISECONDS);
+    assertEquals("test: Hello replica\n", poll);
+
+    try (DocumentContext dc = appender.writingDocument()) {
+        dc.wire().write("test2").text("Hello replica");
+    }
+
+    poll = sinkMessages.poll(5000L, TimeUnit.MILLISECONDS);
+    assertEquals("test2: Hello replica\n", poll);
+
+    poll = sinkMessages.poll(500L, TimeUnit.MILLISECONDS);
+    assertNull(poll);
+    readerThread.interrupt();
+
+    readerThread.join();
+}
+```
