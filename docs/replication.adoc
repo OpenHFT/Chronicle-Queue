@@ -89,7 +89,6 @@ repl.startReplication(hostId, new ServicesReplicationConfig());
 repl.shutdown();
 ```
 
-
 ==== Example from a test case
 
 [source,ruby]
