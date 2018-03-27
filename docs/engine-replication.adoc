@@ -60,60 +60,6 @@ header: !SCQStore {
 `lastAcknowledgedIndexReplicated` will be automatically set to the index position of the latest acknowledged message.
 
 
-== Tiered Indexing
-Chronicle Queue uses tiered multi-level indexing to provide a fast and efficient method for searching for messages in a large queue.
-
-=== Primary index
-----
-# position: 385, header: -1 #  <1>
---- !!meta-data #binary
-index2index: [ #  <2>
-  # length: 32768, used: 1
-  262568, #  <3>
-  0, 0, 0, 0, 0,
-]
-----
-
-<1> `position` specifies the starting address of the data that follows, within the the queue (*.cq4) file.
-
-<2> `index2Index` defines a pointer to the next lower level of index.
-
-<3> specifies the point to the next level index.
-
-NOTE: In this way, indexes can be tiered (primary, secondary, tertiary, etc.) as required to enhance indexing speed and efficiency.
-
-=== Final level index
-
-----
-# position: 262568, header: -1 #  <1>
---- !!meta-data #binary
-index: [ #  <2>
-  # length: 32768, used: 1
-  524744, #  <3>
-  0, 0, 0, 0, 0, 0, 0, 0,
-]
-----
-<1> `position` specifies the point in the queue.
-
-<2> `index` defines a pointer to the data.
-
-<3> specifies the point in the queue where the data begins.
-
-=== Data location
-
-----
-# position: 524744, header: 0 #  <1>
---- !!data #binary #  <2>
-"": some more text
-...
-# 785952 bytes remaining
-
-----
-<1> `position` specifies the point in the queue where the data begins.
-
-<2> `data` defines the information that follows is data (`--- !!data #binary #`), rather than than meta data (`--- !!meta-data #binary`).
-
-
 == Configuration File
 
 The host in a cluster are defined in a YAML configuration file. This configuration file below, has just two hosts, but there is no fixed limit to the number of hosts you could include, ultimately it is limited by your hardware resources.

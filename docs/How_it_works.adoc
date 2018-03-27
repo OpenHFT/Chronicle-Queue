@@ -145,7 +145,60 @@ Object ret = reader.readObject();
 reader.finish();
 ----
 
-=== File rolling
+== Tiered Indexing
+Chronicle Queue uses tiered multi-level indexing to provide a fast and efficient method for searching for messages in a large queue.
+
+=== Primary index
+----
+# position: 385, header: -1 #  <1>
+--- !!meta-data #binary
+index2index: [ #  <2>
+  # length: 32768, used: 1
+  262568, #  <3>
+  0, 0, 0, 0, 0,
+]
+----
+
+<1> `position` specifies the starting address of the data that follows, within the the queue (*.cq4) file.
+
+<2> `index2Index` defines a pointer to the next lower level of index.
+
+<3> specifies the point to the next level index.
+
+NOTE: In this way, indexes can be tiered (primary, secondary, tertiary, etc.) as required to enhance indexing speed and efficiency.
+
+=== Final level index
+
+----
+# position: 262568, header: -1 #  <1>
+--- !!meta-data #binary
+index: [ #  <2>
+  # length: 32768, used: 1
+  524744, #  <3>
+  0, 0, 0, 0, 0, 0, 0, 0,
+]
+----
+<1> `position` specifies the point in the queue.
+
+<2> `index` defines a pointer to the data.
+
+<3> specifies the point in the queue where the data begins.
+
+=== Data location
+
+----
+# position: 524744, header: 0 #  <1>
+--- !!data #binary #  <2>
+"": some more text
+...
+# 785952 bytes remaining
+
+----
+<1> `position` specifies the point in the queue where the data begins.
+
+<2> `data` defines the information that follows is data (`--- !!data #binary #`), rather than than meta data (`--- !!meta-data #binary`).
+
+== File rolling
 
 A Chronicle Queue is a logical view of a directory on the file-system.
 The queue data itself is split across multiple files, each of which contains
@@ -165,7 +218,7 @@ Maintaining this table allows an `ExcerptTailer` to busy-spin waiting for new da
 be appended to the queue, without the need to make costly calls to the file-system to
 check for the existence of new queue files.
 
-==== Read-only mode
+=== Read-only mode
 
 When opening a queue in read-only mode, it is not possible to utilise the structure
 described above (since the structure needs to be written to). In this case,
@@ -213,12 +266,12 @@ Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are
 zero references to a given file before attempting to delete it.
 
 
-=== Configuration
+== Configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
 
 
-==== RollCycle
+=== RollCycle
 
 One such piece of configuration is the `RollCycle` that determines the rate at which CQ will roll the underlying queue files.
 For instance, using the following code snippet will result in the queue files being rolled (i.e. a new file created) every hour:
