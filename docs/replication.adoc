@@ -13,6 +13,7 @@ from one host to one or more others via TCP/IP.
 .Chronicle Queue Replication
 image::images/queue-replication.png[]
 
+NOTE: for Chronicle-Engine based replication, see link:engine-replication.adoc[here]
 
 === The mechanics of Chronicle Queue Replication
 
