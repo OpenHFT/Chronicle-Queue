@@ -15,12 +15,11 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.Nullable;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
@@ -31,7 +30,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WireStorePool {
-    private static final Logger LOGGER = LoggerFactory.getLogger(WireStorePool.class);
     // must be power-of-two
     private static final int ROLL_CYCLE_CACHE_SIZE = 64;
     private static final int INDEX_MASK = ROLL_CYCLE_CACHE_SIZE - 1;
@@ -43,7 +41,6 @@ public class WireStorePool {
     private boolean isClosed = false;
     // protected by synchronized on acquire()
     private final RollDetails[] cache = new RollDetails[ROLL_CYCLE_CACHE_SIZE];
-
 
     private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
@@ -119,7 +116,8 @@ public class WireStorePool {
                     return;
                 }
             }
-            LOGGER.warn("Store was not registered {}", store.file().getName());
+            if (Jvm.debug().isEnabled(getClass()))
+                Jvm.debug().on(getClass(), "Store was not registered: " + store.file());
         }
     }
 
