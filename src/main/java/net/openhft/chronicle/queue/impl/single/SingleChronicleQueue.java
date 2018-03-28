@@ -163,7 +163,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         progressOnContention = builder.progressOnContention();
     }
 
-    @Nullable
+    @NotNull
     StoreTailer acquireTailer() {
         if (SHOULD_RELEASE_RESOURCES) {
             return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
@@ -381,7 +381,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         try {
             long index = rollCycle.toIndex(cycle, 0);
             if (tailer.moveToIndex(index)) {
-                assert tailer.store.refCount() > 0;
+                assert tailer.store != null && tailer.store.refCount() > 0;
                 return tailer.store.lastSequenceNumber(tailer) + 1;
             } else {
                 return -1;
@@ -807,9 +807,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         /**
-         * @param force
          * @return cycleTree for the current directory / parentFile
-         * @throws ParseException
          */
         @NotNull
         private NavigableMap<Long, File> cycleTree(final boolean force) {
@@ -911,10 +909,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
          * @param lowerCycle the lower cycle inclusive
          * @param upperCycle the upper cycle inclusive
          * @return the cycles between a range, inclusive
-         * @throws ParseException
          */
         @Override
-        public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException {
+        public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) {
             final NavigableMap<Long, File> tree = cycleTree(false);
             final Long lowerKey = toKey(lowerCycle, "lowerCycle");
             final Long upperKey = toKey(upperCycle, "upperCycle");
