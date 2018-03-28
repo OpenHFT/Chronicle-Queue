@@ -59,7 +59,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
                     Boolean.TRUE.toString()));
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
-    private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 8);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
     private final StoreFileListener storeFileListener;
     protected int sourceId;
@@ -104,12 +103,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private RollingResourcesCache dateCache;
     long firstAndLastCycleTime = 0;
-    int firstAndLastRetry = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
     private boolean persistedRollCycleCheckPerformed = false;
 
-    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
+    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder<?> builder) {
         readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
         cycleCalculator = builder.cycleCalculator();
@@ -546,12 +544,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     private void setFirstAndLastCycle() {
-        long now = time.currentTimeMillis() + System.currentTimeMillis();
+        long now = time.currentTimeMillis();
         if (now == firstAndLastCycleTime) {
-            if (++firstAndLastRetry > FIRST_AND_LAST_RETRY_MAX)
-                return;
-            // give it a moment.
-            Thread.yield();
+            return;
         }
 
         firstCycle = directoryListing.getMinCreatedCycle();
@@ -559,7 +554,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
 
         firstAndLastCycleTime = now;
-        firstAndLastRetry = 0;
     }
 
     @NotNull
