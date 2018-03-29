@@ -46,7 +46,7 @@ public class RollCycleTest {
             // two days pass
             timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
-            appender.writeText("Day 3 data");
+            appender.writeText("0");
 
             // allow parallel tailer to finish iteration
             for (int i = 0; i < 5_000 && observer.documentsRead != 1; i++) {

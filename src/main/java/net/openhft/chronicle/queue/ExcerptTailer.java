@@ -23,7 +23,8 @@ import net.openhft.chronicle.wire.SourceContext;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
+ * <p>The component that facilitates sequentially reading data from a {@link ChronicleQueue}.</p>
+ * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing the Tailer between threads will lead to errors and unpredictable behaviour.</p>
  *
  * @author peter.lawrey
  */
