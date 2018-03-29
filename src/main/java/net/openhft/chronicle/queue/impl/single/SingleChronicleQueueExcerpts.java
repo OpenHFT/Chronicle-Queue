@@ -434,6 +434,7 @@ public class SingleChronicleQueueExcerpts {
          * If index is after the end of the chronicle, throw an IllegalStateException. If the
          * index is before the end of the chronicle then do not change the state of the chronicle.
          * <p>Thread-safe</p>
+         *
          * @param index index to write at. Only if index is at the end of the chronicle will the bytes get written
          * @param bytes payload
          */
@@ -1788,7 +1789,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Nullable
-        private MessageHistory readHistory(final DocumentContext dc, MessageHistory history) {
+        public static MessageHistory readHistory(final DocumentContext dc, MessageHistory history) {
             final Wire wire = dc.wire();
 
             if (wire == null)
@@ -1813,7 +1814,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
 
-        private MessageHistory readHistoryFromBytes(final Wire wire, MessageHistory history) {
+        private static MessageHistory readHistoryFromBytes(final Wire wire, MessageHistory history) {
             final Bytes<?> bytes = wire.bytes();
             if (MESSAGE_HISTORY_METHOD_ID != wire.readEventNumber())
                 return null;
@@ -1822,7 +1823,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
 
-        private MessageHistory readHistoryFromWire(final Wire wire, MessageHistory history) {
+        private static MessageHistory readHistoryFromWire(final Wire wire, MessageHistory history) {
             final StringBuilder sb = SBP.acquireStringBuilder();
             ValueIn valueIn = wire.read(sb);
 
