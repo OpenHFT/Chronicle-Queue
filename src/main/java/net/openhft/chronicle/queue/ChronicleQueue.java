@@ -67,13 +67,24 @@ public interface ChronicleQueue extends Closeable {
     int TEST_BLOCK_SIZE = 64 * 1024; // smallest safe block size for Windows 8+
 
     /**
+     * <b>
+     * Tailers are NOT thread-safe, sharing the Tailer between threads will lead to errors and unpredictable behaviour.
+     * </b>
+     *
      * @return a new ExcerptTailer to read sequentially.
      */
     @NotNull
     ExcerptTailer createTailer();
 
     /**
+     * <p>
      * An Appender can be used to writeBytes new excerpts sequentially to the upper.
+     * </p>
+     * <p>
+     * Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.
+     * This method returns {@link ThreadLocal} appender, so does not produce any garbage, hence it's safe to simply call
+     * this method every time an appender is needed.
+     * </p>
      *
      * @return A thread local Appender for writing new entries to the end.
      */
