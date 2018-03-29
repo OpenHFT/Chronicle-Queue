@@ -16,14 +16,11 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.wire.*;
@@ -42,9 +39,14 @@ import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
+import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
+
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
+
+    private static int MESSAGE_HISTORY_METHOD_ID = -1;
+    private static StringBuilderPool SBP = new StringBuilderPool();
 
     @FunctionalInterface
     interface WireWriter<T> {
@@ -1785,6 +1787,52 @@ public class SingleChronicleQueueExcerpts {
             return state;
         }
 
+        @Nullable
+        private MessageHistory readHistory(final DocumentContext dc, MessageHistory history) {
+            final Wire wire = dc.wire();
+
+            if (wire == null)
+                return null;
+
+            Object parent = wire.parent();
+            wire.parent(null);
+            try {
+                final Bytes<?> bytes = wire.bytes();
+
+                final byte code = bytes.readByte(bytes.readPosition());
+                history.reset();
+
+                return code == (byte) FIELD_NUMBER ?
+                        readHistoryFromBytes(wire, history) :
+                        readHistoryFromWire(wire, history);
+            } finally {
+                wire.parent(parent);
+            }
+
+
+        }
+
+
+        private MessageHistory readHistoryFromBytes(final Wire wire, MessageHistory history) {
+            final Bytes<?> bytes = wire.bytes();
+            if (MESSAGE_HISTORY_METHOD_ID != wire.readEventNumber())
+                return null;
+            ((BytesMarshallable) history).readMarshallable(bytes);
+            return history;
+        }
+
+
+        private MessageHistory readHistoryFromWire(final Wire wire, MessageHistory history) {
+            final StringBuilder sb = SBP.acquireStringBuilder();
+            ValueIn valueIn = wire.read(sb);
+
+            if (!"history".contentEquals(sb))
+                return null;
+            valueIn.object(history, MessageHistory.class);
+            return history;
+        }
+
+
         @NotNull
         @Override
         public ExcerptTailer afterLastWritten(@NotNull ChronicleQueue queue) {
@@ -1793,26 +1841,20 @@ public class SingleChronicleQueueExcerpts {
             ExcerptTailer tailer = queue.createTailer()
                     .direction(BACKWARD)
                     .toEnd();
-            StringBuilder sb = new StringBuilder();
-            VanillaMessageHistory veh = new VanillaMessageHistory();
-            veh.addSourceDetails(false);
+
+            VanillaMessageHistory messageHistory = new VanillaMessageHistory();
+
             while (true) {
                 try (DocumentContext context = tailer.readingDocument()) {
                     if (!context.isData()) {
                         toStart();
                         return this;
                     }
-                    ValueIn valueIn = context.wire().readEventName(sb);
-                    if (!StringUtils.isEqual("history", sb))
+
+                    MessageHistory veh = readHistory(context, messageHistory);
+                    if (veh == null)
                         continue;
-                    final Wire wire = context.wire();
-                    Object parent = wire.parent();
-                    try {
-                        wire.parent(null);
-                        valueIn.marshallable(veh);
-                    } finally {
-                        wire.parent(parent);
-                    }
+
                     int i = veh.sources() - 1;
                     if (i < 0)
                         continue;
