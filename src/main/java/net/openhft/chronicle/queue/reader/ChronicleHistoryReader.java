@@ -2,14 +2,16 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.util.Histogram;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import net.openhft.chronicle.wire.VanillaMethodReader;
 import net.openhft.chronicle.wire.WireParselet;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,19 +27,20 @@ import java.util.stream.Collectors;
 public class ChronicleHistoryReader {
 
     private static final int SUMMART_OUTPUT_UNSET = -999;
-    private Path basePath;
-    private Consumer<String> messageSink;
-    private boolean progress = false;
-    private TimeUnit timeUnit = TimeUnit.NANOSECONDS;
+    protected static final Logger LOG = LoggerFactory.getLogger(ChronicleHistoryReader.class);
+    protected Path basePath;
+    protected Consumer<String> messageSink;
+    protected boolean progress = false;
+    protected TimeUnit timeUnit = TimeUnit.NANOSECONDS;
     protected boolean histosByMethod = false;
     protected Map<String, Histogram> histos = new LinkedHashMap<>();
-    private long ignore = 0;
-    private long counter = 0;
-    private long measurementWindowNanos = 0;
-    private long firstTimeStampNanos = 0;
-    private long lastWindowCount = 0;
-    private int summaryOutputOffset = SUMMART_OUTPUT_UNSET;
-    private int lastHistosSize = 0;
+    protected long ignore = 0;
+    protected long counter = 0;
+    protected long measurementWindowNanos = 0;
+    protected long firstTimeStampNanos = 0;
+    protected long lastWindowCount = 0;
+    protected int summaryOutputOffset = SUMMART_OUTPUT_UNSET;
+    protected int lastHistosSize = 0;
 
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
@@ -80,7 +83,7 @@ public class ChronicleHistoryReader {
     }
 
     @NotNull
-    private SingleChronicleQueue createQueue() {
+    protected ChronicleQueue createQueue() {
         if (!Files.exists(basePath)) {
             throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
         }
@@ -97,7 +100,7 @@ public class ChronicleHistoryReader {
     }
 
     public Map<String, Histogram> readChronicle() {
-        final SingleChronicleQueue q = createQueue();
+        final ChronicleQueue q = createQueue();
         final ExcerptTailer tailer = q.createTailer();
         final WireParselet parselet = parselet();
         final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, null, parselet);
