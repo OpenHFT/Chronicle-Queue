@@ -1827,7 +1827,7 @@ public class SingleChronicleQueueExcerpts {
             final StringBuilder sb = SBP.acquireStringBuilder();
             ValueIn valueIn = wire.read(sb);
 
-            if (!"history".contentEquals(sb))
+            if (!MethodReader.HISTORY.contentEquals(sb))
                 return null;
             valueIn.object(history, MessageHistory.class);
             return history;
@@ -1839,11 +1839,11 @@ public class SingleChronicleQueueExcerpts {
         public ExcerptTailer afterLastWritten(@NotNull ChronicleQueue queue) {
             if (queue == this.queue)
                 throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
-            ExcerptTailer tailer = queue.createTailer()
+            @NotNull ExcerptTailer tailer = queue.createTailer()
                     .direction(BACKWARD)
                     .toEnd();
 
-            VanillaMessageHistory messageHistory = new VanillaMessageHistory();
+            @NotNull VanillaMessageHistory messageHistory = new VanillaMessageHistory();
 
             while (true) {
                 try (DocumentContext context = tailer.readingDocument()) {
@@ -1864,22 +1864,31 @@ public class SingleChronicleQueueExcerpts {
 
                     long sourceIndex = veh.sourceIndex(i);
                     if (!moveToIndexInternal(sourceIndex)) {
-                        final String errorMessage = String.format("Unable to move to sourceIndex %s, " +
-                                        "which was determined to be the last entry written to queue %s",
-                                Long.toHexString(sourceIndex), queue);
-                        throw new IORuntimeException(errorMessage);
+                        final String errorMessage = String.format(
+                                "Unable to move to sourceIndex %s in queue %s",
+                                Long.toHexString(sourceIndex), this.queue.file());
+                        throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                     }
                     try (DocumentContext content = readingDocument()) {
                         if (!content.isPresent()) {
-                            final String errorMessage =
-                                    String.format("No readable document found at sourceIndex %s", Long.toHexString(sourceIndex + 1));
-                            throw new IORuntimeException(errorMessage);
+                            final String errorMessage = String.format(
+                                    "No readable document found at sourceIndex %s in queue",
+                                    Long.toHexString(sourceIndex + 1), this.queue.file());
+                            throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                         }
                         // skip this message and go to the next.
                     }
                     return this;
                 }
             }
+        }
+
+        private String extraInfo(@NotNull ExcerptTailer tailer, @NotNull VanillaMessageHistory messageHistory) {
+            return String.format(
+                    ". That sourceIndex was determined fom the last entry written to queue %s " +
+                    "(message index %s, message history %s). If source queue is replicated then " +
+                    "sourceIndex may not have been replicated yet",
+                    tailer.queue().file(), Long.toHexString(tailer.index()), WireType.TEXT.asString(messageHistory));
         }
 
         @NotNull
