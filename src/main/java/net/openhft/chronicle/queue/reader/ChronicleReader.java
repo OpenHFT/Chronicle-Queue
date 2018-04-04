@@ -59,7 +59,7 @@ public final class ChronicleReader {
 
     public void execute() {
         try {
-            long lastObservedTailIndex = Long.MAX_VALUE;
+            long lastObservedTailIndex;
             long highestReachedIndex = 0L;
             boolean isFirstIteration = true;
             boolean retryLastOperation = false;
