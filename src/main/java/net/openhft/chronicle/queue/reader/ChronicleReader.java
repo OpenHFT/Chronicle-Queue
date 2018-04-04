@@ -88,11 +88,11 @@ public final class ChronicleReader {
                                 }
                                 pauser.reset();
 
-                                if(customPlugin == null) {
+                                if (customPlugin == null) {
                                     messageConverter.accept(dc.wire(), text -> {
                                         applyFiltersAndLog(text, tailer.index());
                                     });
-                                }else{
+                                } else {
                                     customPlugin.onReadDocument(dc);
                                 }
                             }
@@ -146,14 +146,8 @@ public final class ChronicleReader {
         return this;
     }
 
-    public ChronicleReader withCustomPlugin(final String customPlugin) {
-        if (customPlugin == null)
-            return this;
-        try {
-            this.customPlugin = (ChronicleReaderPlugin) Class.forName(customPlugin).newInstance();
-        } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-            throw new IllegalArgumentException("Unable to instantiate plugin " + customPlugin, e);
-        }
+    public ChronicleReader withCustomPlugin(final ChronicleReaderPlugin customPlugin) {
+        this.customPlugin = customPlugin;
         return this;
     }
 
@@ -216,10 +210,9 @@ public final class ChronicleReader {
         if (isSet(maxHistoryRecords) && isFirstIteration) {
             tailer.toEnd();
             tailer.moveToIndex(Math.max(ic.firstIndex(), tailer.index() - maxHistoryRecords));
-        } else
-            if (tailInputSource && isFirstIteration) {
-                tailer.toEnd();
-            }
+        } else if (tailInputSource && isFirstIteration) {
+            tailer.toEnd();
+        }
     }
 
     private long getCurrentTailIndex() {
