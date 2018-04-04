@@ -10,8 +10,6 @@ import net.openhft.chronicle.wire.VanillaMessageHistory;
 import net.openhft.chronicle.wire.VanillaMethodReader;
 import net.openhft.chronicle.wire.WireParselet;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +25,6 @@ import java.util.stream.Collectors;
 public class ChronicleHistoryReader {
 
     private static final int SUMMART_OUTPUT_UNSET = -999;
-    protected static final Logger LOG = LoggerFactory.getLogger(ChronicleHistoryReader.class);
     protected Path basePath;
     protected Consumer<String> messageSink;
     protected boolean progress = false;
@@ -186,7 +183,7 @@ public class ChronicleHistoryReader {
     }
 
     protected WireParselet parselet() {
-        return (methodName, v, $) -> {
+        return (methodName, v) -> {
             v.skipValue();
             if (counter < ignore)
                 return;
