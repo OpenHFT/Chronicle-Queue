@@ -20,16 +20,9 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.wire.WireType;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.function.Consumer;
@@ -44,7 +37,7 @@ import static java.util.Arrays.stream;
 public enum ChronicleReaderMain {
     ;
 
-    public static void main(@NotNull String[] args) throws IOException {
+    public static void main(@NotNull String[] args) {
 
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
@@ -54,13 +47,9 @@ public enum ChronicleReaderMain {
                 System.out::println;
         final ChronicleReader chronicleReader = new ChronicleReader(). 
                 withMessageSink(messageSink).
-                withBasePath(Paths.get(commandLine.getOptionValue('d'))).
-                withCustomPlugin(commandLine.getOptionValue('p'));
+                withBasePath(Paths.get(commandLine.getOptionValue('d')));
  
 
-        if(commandLine.hasOption('p')) {
-            chronicleReader.withCustomPlugin(commandLine.getOptionValue('p'));
-        }
         configureReader(chronicleReader, commandLine);
 
         chronicleReader.execute();
@@ -76,12 +65,12 @@ public enum ChronicleReaderMain {
                 new HelpFormatter().printHelp(ChronicleReaderMain.class.getSimpleName(), options);
                 System.exit(0);
             }
-        } catch (ParseException e) {
-            printUsageAndExit(options);
-        }
 
-        if (!commandLine.hasOption('d')) {
-            System.out.println("Please specify the directory with -d\n");
+            if (!commandLine.hasOption('d')) {
+                System.out.println("Please specify the directory with -d\n");
+                printUsageAndExit(options);
+            }
+        } catch (ParseException e) {
             printUsageAndExit(options);
         }
 
@@ -128,7 +117,6 @@ public enum ChronicleReaderMain {
         final Options options = new Options();
 
         addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
-        addOption(options, "p", "custom-plugin", true, "Custom plugin to render the contents of the queue", false);
         addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
         addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
