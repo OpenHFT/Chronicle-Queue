@@ -11,18 +11,14 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 @RunWith(Parameterized.class)
 public class RollCyclesTest {
     private static final long NO_EPOCH_OFFSET = 0L;
     private static final long SOME_EPOCH_OFFSET = 17L * 37L;
-    private static final RollCycles[] TEST_DATA = new RollCycles[] {
-            RollCycles.DAILY,
-            RollCycles.HOURLY,
-            RollCycles.MINUTELY,
-            RollCycles.HUGE_DAILY
-    };
+    private static final RollCycles[] TEST_DATA = RollCycles.values();
 
     private final RollCycles cycle;
     private final AtomicLong clock = new AtomicLong();
@@ -49,6 +45,17 @@ public class RollCyclesTest {
     @Test
     public void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle() throws Exception {
         assertCycleRollTimes(SOME_EPOCH_OFFSET, withDelta(timeProvider, SOME_EPOCH_OFFSET));
+    }
+
+    @Test
+    public void shouldHandleReasonableDateRange() throws Exception {
+        final int currentCycle = DefaultCycleCalculator.INSTANCE.currentCycle(cycle, timeProvider, 0);
+        // ~ 14 Jul 2017 to 18 May 2033
+        for (long nowMillis  = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += 3e10) {
+            clock.set(nowMillis);
+            long index = cycle.toIndex(currentCycle, 0);
+            assertEquals(currentCycle, cycle.toCycle(index));
+        }
     }
 
     private void assertCycleRollTimes(final long epochOffset, final TimeProvider timeProvider) {
