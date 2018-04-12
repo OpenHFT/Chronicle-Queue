@@ -2,15 +2,16 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.service.HelloWorld;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -19,13 +20,14 @@ import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-public class StoreTailerTest {
+public class StoreTailerTest extends ChronicleQueueTestBase {
     private final Collection<SingleChronicleQueue> createdQueues = new ArrayList<>();
     private final Path dataDirectory = DirectoryUtils.tempDir(StoreTailerTest.class.getSimpleName()).toPath();
 
     @Test
-    public void shouldHandleCycleRollWhenInReadOnlyMode() throws Exception {
+    public void shouldHandleCycleRollWhenInReadOnlyMode() {
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
         final SingleChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
                 timeProvider(timeProvider));
@@ -51,14 +53,14 @@ public class StoreTailerTest {
     }
 
     @Test
-    public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() throws Exception {
+    public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
         final SingleChronicleQueue firstInputQueue =
                 createQueue(dataDirectory, RollCycles.TEST_DAILY, 1, "firstInputQueue");
         // different RollCycle means that indicies are not identical to firstInputQueue
         final SingleChronicleQueue secondInputQueue =
                 createQueue(dataDirectory, RollCycles.TEST_SECONDLY, 2, "secondInputQueue");
         final SingleChronicleQueue outputQueue =
-                createQueue(dataDirectory, RollCycles.TEST_DAILY, 0, "outputQueue");;
+                createQueue(dataDirectory, RollCycles.TEST_DAILY, 0, "outputQueue");
 
         final StringEvents firstWriter = firstInputQueue.acquireAppender().
                 methodWriterBuilder(StringEvents.class).get();
@@ -89,8 +91,37 @@ public class StoreTailerTest {
         secondInputQueue.createTailer().afterLastWritten(outputQueue);
     }
 
+    @Test
+    public void shouldHandleCycleRoll() {
+        File dir = getTmpDir();
+        MutableTimeProvider timeProvider = new MutableTimeProvider();
+        timeProvider.setTime(System.currentTimeMillis());
+        try (ChronicleQueue chronicle = minutely(dir, timeProvider)
+                .build();
+             ChronicleQueue chronicle2 = minutely(dir, timeProvider)
+                     .build()) {
+
+            //ExcerptAppender append = chronicle2.acquireAppender();
+            //append.writeDocument(w -> w.write(() -> "test").text("before text"));
+
+            ExcerptTailer tailer = chronicle.createTailer();
+            //tailer.toEnd();
+
+            timeProvider.addTime(10, TimeUnit.MINUTES);
+
+            ExcerptAppender append = chronicle2.acquireAppender();
+            append.writeDocument(w -> w.write(() -> "test").text("text"));
+
+            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
+        }
+    }
+
+    private SingleChronicleQueueBuilder minutely(@NotNull File file, TimeProvider timeProvider) {
+        return SingleChronicleQueueBuilder.builder(file, WireType.BINARY).rollCycle(RollCycles.MINUTELY).testBlockSize().timeProvider(timeProvider);
+    }
+
     @After
-    public void after() throws Exception {
+    public void after() {
         closeQueues(createdQueues.toArray(new SingleChronicleQueue[0]));
     }
 
