@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.RollCycles;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -21,6 +22,9 @@ public class RollingResourcesCacheTest {
     private static final long BUGGY_EPOCH = 1284739200000L;
     private static final String FILE_NAME = "19761020";
     private static final int CYCLE_NUMBER = 2484;
+    private static final long BUGGY_EPOCH2 = 1523498933145L;
+    private static final String FILE_NAME2 = "19700102-02";
+    private static final int CYCLE_NUMBER2 = 24;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final RollCycles ROLL_CYCLE = RollCycles.DAILY;
     private static final long ONE_DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1L);
@@ -52,6 +56,16 @@ public class RollingResourcesCacheTest {
 
         assertThat(cache.resourceFor(CYCLE_NUMBER).text, is(FILE_NAME));
         assertThat(cache.parseCount(FILE_NAME), is(CYCLE_NUMBER));
+    }
+
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/436")
+    @Test
+    public void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch2() throws Exception {
+        final RollingResourcesCache cache =
+                new RollingResourcesCache(RollCycles.HOURLY, BUGGY_EPOCH2, File::new, File::getName);
+
+        assertThat(cache.resourceFor(CYCLE_NUMBER2).text, is(FILE_NAME2));
+        assertThat(cache.parseCount(FILE_NAME2), is(CYCLE_NUMBER2));
     }
 
     @Test(expected = RuntimeException.class)
