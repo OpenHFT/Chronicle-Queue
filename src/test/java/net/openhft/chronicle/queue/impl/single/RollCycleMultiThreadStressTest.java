@@ -1,10 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
@@ -14,17 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
@@ -35,7 +23,9 @@ public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
     private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
     private static final int TEST_TIME = Integer.getInteger("testTime", 2);
+    private static final int ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
     static final int NUMBER_OF_INTS = 18;//1060 / 4;
+    private final SetTimeProvider timeProvider = new SetTimeProvider();
 
     @Test
     public void stress() {
@@ -76,9 +66,17 @@ public class RollCycleMultiThreadStressTest {
 
         final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME);
         final long giveUpWritingAt = System.currentTimeMillis() + maxWritingTime;
+        long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
         int i = 0;
-        while (System.currentTimeMillis() < giveUpWritingAt) {
-            if (wrote.get() < expectedNumberOfMessages) {
+        long now;
+        while ((now = System.currentTimeMillis()) < giveUpWritingAt) {
+            if (wrote.get() >= expectedNumberOfMessages)
+                break;
+            if (now > nextRollTime) {
+                timeProvider.advanceMillis(1000);
+                nextRollTime += ROLL_EVERY_MS;
+            }
+            if (now > nextCheckTime) {
                 String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
                 System.out.printf("Writer has written %d of %d messages after %ds. Readers at %s. Waiting...%n",
                         wrote.get() + 1, expectedNumberOfMessages,
@@ -91,14 +89,10 @@ public class RollCycleMultiThreadStressTest {
                     throw new AssertionError("Reader is stuck");
 
                 });
-                final long waitUntil = System.currentTimeMillis() + 10_000L;
-                while (wrote.get() < expectedNumberOfMessages && System.currentTimeMillis() < waitUntil) {
-                    LockSupport.parkNanos(1L);
-                }
-            } else {
-                break;
+                nextCheckTime = System.currentTimeMillis() + 10_000L;
             }
             i++;
+            LockSupport.parkNanos(5_000_000);
         }
 
         final StringBuilder writerExceptions = new StringBuilder();
@@ -168,7 +162,7 @@ public class RollCycleMultiThreadStressTest {
         return allReadersComplete;
     }
 
-    private static final class Reader implements Callable<Throwable> {
+    private final class Reader implements Callable<Throwable> {
         private final File path;
         private final int expectedNumberOfMessages;
         private volatile int lastRead = -1;
@@ -196,6 +190,7 @@ public class RollCycleMultiThreadStressTest {
 
             try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                     .testBlockSize()
+                    .timeProvider(timeProvider)
                     .rollCycle(RollCycles.TEST_SECONDLY)
                     .build()) {
 
@@ -244,7 +239,7 @@ public class RollCycleMultiThreadStressTest {
         }
     }
 
-    private static final class Writer implements Callable<Throwable> {
+    private final class Writer implements Callable<Throwable> {
 
         private final File path;
         private final AtomicInteger wrote;
@@ -262,6 +257,7 @@ public class RollCycleMultiThreadStressTest {
         public Throwable call() {
             try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                     .testBlockSize()
+                    .timeProvider(timeProvider)
                     .rollCycle(RollCycles.TEST_SECONDLY)
                     .build()) {
                 final ExcerptAppender appender = queue.acquireAppender();
