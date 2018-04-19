@@ -19,6 +19,7 @@
     <modelVersion>4.0.0</modelVersion>
     <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
+        <stagingRepositoryId>blank</stagingRepositoryId><!-- added for testing only -->
     </properties>
 
     <parent>
@@ -251,6 +252,29 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- override one in root-parent-pom for testing-->
+        <profile>
+            <id>bundled-nexus-staging</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.8</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>sonatype-nexus-staging</serverId>
+                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                            <stagingProfileId>37e36645f0e22</stagingProfileId>
+                            <stagingRepositoryId>${stagingRepositoryId}</stagingRepositoryId>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
