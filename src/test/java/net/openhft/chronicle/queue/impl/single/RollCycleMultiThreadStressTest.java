@@ -22,17 +22,30 @@ import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
-    private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
-    private static final int TEST_TIME = Integer.getInteger("testTime", 2);
-    private static final int MAX_WRITING_TIME = Integer.getInteger("maxTime", TEST_TIME);
-    private static final int ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
-    private static final int DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
-    private static final int DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
-    private static final int WRITE_ONE_THEN_WAIT_MS = Integer.getInteger("writeOneThenWait", 0);
-    private static final int CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
-    private static final Random random = new Random(99);
-    static final int NUMBER_OF_INTS = 18;//1060 / 4;
     private final SetTimeProvider timeProvider = new SetTimeProvider();
+    private static final long SLEEP_PER_WRITE_NANOS;
+    private static final int TEST_TIME;
+    private static final int MAX_WRITING_TIME;
+    private static final int ROLL_EVERY_MS;
+    private static final int DELAY_READER_RANDOM_MS;
+    private static final int DELAY_WRITER_RANDOM_MS;
+    private static final int WRITE_ONE_THEN_WAIT_MS;
+    private static final int CORES;
+    private static final Random random;
+    private static final int NUMBER_OF_INTS;
+
+    static {
+        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 50_000);
+        TEST_TIME = Integer.getInteger("testTime", 2);
+        MAX_WRITING_TIME = Integer.getInteger("maxTime", TEST_TIME + 2);
+        ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
+        DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
+        DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
+        WRITE_ONE_THEN_WAIT_MS = Integer.getInteger("writeOneThenWait", 0);
+        CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
+        random = new Random(99);
+        NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
+    }
 
     @Test
     public void stress() {
