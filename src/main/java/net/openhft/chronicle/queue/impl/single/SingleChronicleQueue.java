@@ -567,7 +567,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         try {
             if (!readOnly && listingPath.createNewFile()) {
                 if (!listingPath.canWrite()) {
-                    throw new IllegalStateException("Cannot write to cycle file");
+                    throw new IllegalStateException("Cannot write to listing file");
                 }
             }
         } catch (IOException e) {

@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -23,7 +24,13 @@ public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
     private static final long SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 10_000);
     private static final int TEST_TIME = Integer.getInteger("testTime", 2);
+    private static final int MAX_WRITING_TIME = Integer.getInteger("maxTime", TEST_TIME);
     private static final int ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
+    private static final int DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
+    private static final int DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
+    private static final int WRITE_ONE_THEN_WAIT_MS = Integer.getInteger("writeOneThenWait", 0);
+    private static final int CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
+    private static final Random random = new Random(99);
     static final int NUMBER_OF_INTS = 18;//1060 / 4;
     private final SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -34,7 +41,7 @@ public class RollCycleMultiThreadStressTest {
                 orElse(DirectoryUtils.tempDir("rollCycleStress"));
 
         System.out.printf("Queue dir: %s at %s%n", path.getAbsolutePath(), Instant.now());
-        final int numThreads = Runtime.getRuntime().availableProcessors();
+        final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
@@ -52,20 +59,31 @@ public class RollCycleMultiThreadStressTest {
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
 
-        for (int i = 0; i < numWriters; i++) {
-            final Writer writer = new Writer(path, wrote, expectedNumberOfMessages);
-            writers.add(writer);
-            results.add(executorService.submit(writer));
+        if (WRITE_ONE_THEN_WAIT_MS > 0) {
+            final Writer tempWriter = new Writer(path, wrote, expectedNumberOfMessages);
+            try (ChronicleQueue queue = tempWriter.queue()) {
+                tempWriter.write(queue.acquireAppender());
+            }
         }
         for (int i = 0; i < numThreads - numWriters; i++) {
             final Reader reader = new Reader(path, expectedNumberOfMessages);
             readers.add(reader);
             results.add(executorService.submit(reader));
         }
+        if (WRITE_ONE_THEN_WAIT_MS > 0) {
+            LOG.warn("Wrote one now waiting for {}ms", WRITE_ONE_THEN_WAIT_MS);
+            Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
+        }
+        for (int i = 0; i < numWriters; i++) {
+            final Writer writer = new Writer(path, wrote, expectedNumberOfMessages);
+            writers.add(writer);
+            results.add(executorService.submit(writer));
+        }
 
 
-        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME);
-        final long giveUpWritingAt = System.currentTimeMillis() + maxWritingTime;
+        final long maxWritingTime = TimeUnit.SECONDS.toMillis(MAX_WRITING_TIME);
+        long startTime = System.currentTimeMillis();
+        final long giveUpWritingAt = startTime + maxWritingTime;
         long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
         int i = 0;
         long now;
@@ -78,7 +96,7 @@ public class RollCycleMultiThreadStressTest {
             }
             if (now > nextCheckTime) {
                 String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
-                System.out.printf("Writer has written %d of %d messages after %ds. Readers at %s. Waiting...%n",
+                System.out.printf("Writer has written %d of %d messages after %dms. Readers at %s. Waiting...%n",
                         wrote.get() + 1, expectedNumberOfMessages,
                         i * 10, readersLastRead);
                 readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
@@ -92,21 +110,26 @@ public class RollCycleMultiThreadStressTest {
                 nextCheckTime = System.currentTimeMillis() + 10_000L;
             }
             i++;
-            LockSupport.parkNanos(5_000_000);
+            Jvm.pause(5);
         }
+        double timeToWriteSecs = (System.currentTimeMillis() - startTime) / 1000d;
 
         final StringBuilder writerExceptions = new StringBuilder();
         writers.stream().filter(w -> w.exception != null).forEach(w -> {
             writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n");
         });
 
-        assertTrue("Did not write " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
+        assertTrue("Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
                 wrote.get() >= expectedNumberOfMessages);
 
         readers.stream().filter(r -> r.exception != null).findAny().ifPresent(reader -> {
             throw new AssertionError("Reader encountered exception, so stopped reading messages",
                     reader.exception);
         });
+
+        System.out.println(String.format("All messages written in %,.0fsecs at rate of %,.0f/sec %,.0f/sec per writer (actual writeLatency %,.0fns)",
+                timeToWriteSecs, expectedNumberOfMessages/timeToWriteSecs, (expectedNumberOfMessages/timeToWriteSecs)/numWriters,
+                1_000_000_000/((expectedNumberOfMessages/timeToWriteSecs)/numWriters)));
 
         final long giveUpReadingAt = System.currentTimeMillis() + 60_000L;
         final long dumpThreadsAt = giveUpReadingAt - 15_000L;
@@ -197,6 +220,7 @@ public class RollCycleMultiThreadStressTest {
                 final ExcerptTailer tailer = queue.createTailer();
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
+                Jvm.pause(random.nextInt(DELAY_READER_RANDOM_MS));
                 while (lastRead != expectedNumberOfMessages - 1) {
                     try (DocumentContext rd = tailer.readingDocument()) {
                         if (rd.isPresent()) {
@@ -255,28 +279,14 @@ public class RollCycleMultiThreadStressTest {
 
         @Override
         public Throwable call() {
-            try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                    .testBlockSize()
-                    .timeProvider(timeProvider)
-                    .rollCycle(RollCycles.TEST_SECONDLY)
-                    .build()) {
+            try (final ChronicleQueue queue = queue()) {
                 final ExcerptAppender appender = queue.acquireAppender();
+                Jvm.pause(random.nextInt(DELAY_WRITER_RANDOM_MS));
                 final long startTime = System.nanoTime();
                 int loopIteration = 0;
                 while (true) {
-                    final int value;
+                    final int value = write(appender);
 
-                    try (DocumentContext writingDocument = appender.writingDocument()) {
-                        final long documentAcquireTimestamp = System.nanoTime();
-                        value = wrote.getAndIncrement();
-                        ValueOut valueOut = writingDocument.wire().getValueOut();
-                        // make the message longer
-                        valueOut.int64(documentAcquireTimestamp);
-                        for (int i = 0; i < NUMBER_OF_INTS; i++) {
-                            valueOut.int32(value);
-                        }
-                        writingDocument.wire().padToCacheAlign();
-                    }
                     while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
                         // spin
                     }
@@ -290,6 +300,30 @@ public class RollCycleMultiThreadStressTest {
                 exception = e;
                 return e;
             }
+        }
+
+        private SingleChronicleQueue queue() {
+            return SingleChronicleQueueBuilder.binary(path)
+                    .testBlockSize()
+                    .timeProvider(timeProvider)
+                    .rollCycle(RollCycles.TEST_SECONDLY)
+                    .build();
+        }
+
+        private int write(ExcerptAppender appender) {
+            int value;
+            try (DocumentContext writingDocument = appender.writingDocument()) {
+                final long documentAcquireTimestamp = System.nanoTime();
+                value = wrote.getAndIncrement();
+                ValueOut valueOut = writingDocument.wire().getValueOut();
+                // make the message longer
+                valueOut.int64(documentAcquireTimestamp);
+                for (int i = 0; i < NUMBER_OF_INTS; i++) {
+                    valueOut.int32(value);
+                }
+                writingDocument.wire().padToCacheAlign();
+            }
+            return value;
         }
     }
 }
