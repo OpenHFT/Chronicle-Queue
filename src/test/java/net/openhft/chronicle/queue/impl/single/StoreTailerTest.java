@@ -26,6 +26,14 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
     private final Collection<SingleChronicleQueue> createdQueues = new ArrayList<>();
     private final Path dataDirectory = DirectoryUtils.tempDir(StoreTailerTest.class.getSimpleName()).toPath();
 
+    private static void closeQueues(final SingleChronicleQueue... queues) {
+        for (SingleChronicleQueue queue : queues) {
+            if (queue != null) {
+                queue.close();
+            }
+        }
+    }
+
     @Test
     public void shouldHandleCycleRollWhenInReadOnlyMode() {
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
@@ -134,7 +142,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @NotNull
     private SingleChronicleQueueBuilder createQueue(final Path dataDirectory, final RollCycles rollCycle,
-                                             final int sourceId, final String subdirectory, final boolean readOnly) {
+                                                    final int sourceId, final String subdirectory, final boolean readOnly) {
         return SingleChronicleQueueBuilder
                 .binary(dataDirectory.resolve(Paths.get(subdirectory)))
                 .sourceId(sourceId)
@@ -181,14 +189,6 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
         void addTime(final long duration, final TimeUnit unit) {
             this.currentTimeMillis += unit.toMillis(duration);
-        }
-    }
-
-    private static void closeQueues(final SingleChronicleQueue... queues) {
-        for (SingleChronicleQueue queue : queues) {
-            if (queue != null) {
-                queue.close();
-            }
         }
     }
 }

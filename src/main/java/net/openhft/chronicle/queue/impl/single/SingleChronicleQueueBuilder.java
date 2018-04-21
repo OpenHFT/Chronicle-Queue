@@ -46,6 +46,8 @@ import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S>> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
+
     static {
         CLASS_ALIASES.addAlias(WireType.class);
         CLASS_ALIASES.addAlias(SCQRoll.class, "SCQSRoll");
@@ -53,12 +55,6 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
         CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
-
-    public static void addAliases() {
-        // static initialiser.
-    }
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
 
     @SuppressWarnings("unchecked")
     @Deprecated
@@ -71,6 +67,10 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     public SingleChronicleQueueBuilder(@NotNull File path) {
         super(path);
         storeFactory(SingleChronicleQueueBuilder::createStore);
+    }
+
+    public static void addAliases() {
+        // static initialiser.
     }
 
     public static void init() {
@@ -176,6 +176,15 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     // *************************************************************************
     //
     // *************************************************************************
+
+    private static boolean isQueueReplicationAvailable() {
+        try {
+            Class.forName("software.chronicle.enterprise.queue.QueueSyncReplicationHandler");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 
     @Override
     @NotNull
@@ -358,14 +367,5 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @NotNull
     private TSQueueLock createTableStoreLock() {
         return new TSQueueLock(path(), pauserSupplier());
-    }
-
-    private static boolean isQueueReplicationAvailable() {
-        try {
-            Class.forName("software.chronicle.enterprise.queue.QueueSyncReplicationHandler");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
     }
 }

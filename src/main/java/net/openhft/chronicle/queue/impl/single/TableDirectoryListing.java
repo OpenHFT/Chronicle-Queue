@@ -10,23 +10,22 @@ import java.nio.file.Path;
 import java.util.function.ToIntFunction;
 
 final class TableDirectoryListing implements DirectoryListing {
+    // visible for testing
+    static final String LOCK = "listing.exclusiveLock";
     private static final Logger LOGGER = LoggerFactory.getLogger(TableDirectoryListing.class);
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
-    // visible for testing
-    static final String LOCK = "listing.exclusiveLock";
     private static final String MOD_COUNT = "listing.modCount";
     private static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
     private static final int UNSET_MIN_CYCLE = Integer.MAX_VALUE;
     private final TableStore tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
+    private final boolean readOnly;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue lock;
     private volatile LongValue modCount;
-    private final boolean readOnly;
-
 
     TableDirectoryListing(
             final TableStore tableStore, final Path queuePath,

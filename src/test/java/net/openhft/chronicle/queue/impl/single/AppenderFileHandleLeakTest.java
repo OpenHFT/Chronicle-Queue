@@ -25,12 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -40,10 +35,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
 
 public final class AppenderFileHandleLeakTest {
@@ -56,6 +48,55 @@ public final class AppenderFileHandleLeakTest {
     private TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
     private File queuePath;
+
+    private static Matcher<Integer> withinDelta(final int expected, final int delta) {
+        return new TypeSafeMatcher<Integer>() {
+            private int actual;
+
+            @Override
+            protected boolean matchesSafely(final Integer actual) {
+                this.actual = actual;
+                return Math.abs(actual - expected) < delta;
+            }
+
+            @Override
+            public void describeTo(final Description description) {
+                description.appendText(String.format("actual %d was not within %d of %d",
+                        actual, delta, expected));
+            }
+        };
+    }
+
+    private static void readMessage(final SingleChronicleQueue queue,
+                                    final boolean manuallyReleaseResources,
+                                    final Consumer<ExcerptTailer> refHolder) {
+        final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
+        try {
+            final ExcerptTailer tailer = queue.createTailer();
+            while (bytes.isEmpty()) {
+                tailer.toStart().readBytes(bytes);
+            }
+            refHolder.accept(tailer);
+            assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
+
+            if (manuallyReleaseResources) {
+                try {
+                    ((SingleChronicleQueueExcerpts.StoreTailer) tailer).releaseResources();
+                } catch (RuntimeException e) {
+                    // ignore
+                }
+            }
+        } finally {
+            bytes.release();
+        }
+    }
+
+    private static void writeMessage(final int j, final SingleChronicleQueue queue) {
+        final ExcerptAppender appender = queue.acquireAppender();
+        appender.writeBytes(b -> {
+            b.writeInt(j);
+        });
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -191,24 +232,6 @@ public final class AppenderFileHandleLeakTest {
         BytesUtil.checkRegisteredBytes();
     }
 
-    private static Matcher<Integer> withinDelta(final int expected, final int delta) {
-        return new TypeSafeMatcher<Integer>() {
-            private int actual;
-
-            @Override
-            protected boolean matchesSafely(final Integer actual) {
-                this.actual = actual;
-                return Math.abs(actual - expected) < delta;
-            }
-
-            @Override
-            public void describeTo(final Description description) {
-                description.appendText(String.format("actual %d was not within %d of %d",
-                        actual, delta, expected));
-            }
-        };
-    }
-
     private void waitForFileHandleCountToDrop(
             final long startFileHandleCount,
             final List<Path> fileHandlesAtStart) throws IOException {
@@ -224,37 +247,6 @@ public final class AppenderFileHandleLeakTest {
 
         fail("File handle count did not drop for queue in directory " + queuePath.getAbsolutePath() +
                 ", remaining handles:\n" + fileHandlesAtEnd);
-    }
-
-    private static void readMessage(final SingleChronicleQueue queue,
-                                    final boolean manuallyReleaseResources,
-                                    final Consumer<ExcerptTailer> refHolder) {
-        final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
-        try {
-            final ExcerptTailer tailer = queue.createTailer();
-            while (bytes.isEmpty()) {
-                tailer.toStart().readBytes(bytes);
-            }
-            refHolder.accept(tailer);
-            assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
-
-            if (manuallyReleaseResources) {
-                try {
-                    ((SingleChronicleQueueExcerpts.StoreTailer) tailer).releaseResources();
-                } catch (RuntimeException e) {
-                    // ignore
-                }
-            }
-        } finally {
-            bytes.release();
-        }
-    }
-
-    private static void writeMessage(final int j, final SingleChronicleQueue queue) {
-        final ExcerptAppender appender = queue.acquireAppender();
-        appender.writeBytes(b -> {
-            b.writeInt(j);
-        });
     }
 
     private long countFileHandlesOfCurrentProcess() throws IOException {

@@ -61,13 +61,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 8);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
-    private final StoreFileListener storeFileListener;
-    protected int sourceId;
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
     final File path;
     final AtomicBoolean isClosed = new AtomicBoolean();
+    private final StoreFileListener storeFileListener;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
     @NotNull
     private final WireStorePool pool;
@@ -99,13 +98,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final QueueLock queueLock;
     private final boolean progressOnContention;
+    protected int sourceId;
+    long firstAndLastCycleTime = 0;
+    int firstAndLastRetry = 0;
+    int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     @NotNull
     private RollCycle rollCycle;
     @NotNull
     private RollingResourcesCache dateCache;
-    long firstAndLastCycleTime = 0;
-    int firstAndLastRetry = 0;
-    int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
     private boolean persistedRollCycleCheckPerformed = false;
 
@@ -163,6 +163,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
         progressOnContention = builder.progressOnContention();
+    }
+
+    @NotNull
+    public static File directoryListingPath(final File queueFolder) {
+        final File listingPath;
+        if ("".equals(queueFolder.getPath())) {
+            listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
+        } else {
+            listingPath = new File(queueFolder, DirectoryListing.DIRECTORY_LISTING_FILE);
+            listingPath.getParentFile().mkdirs();
+        }
+        return listingPath;
     }
 
     @NotNull
@@ -555,7 +567,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
 
-
         firstAndLastCycleTime = now;
         firstAndLastRetry = 0;
     }
@@ -623,13 +634,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return wireType;
     }
 
-    public long bufferCapacity() {
-        return this.bufferCapacity;
-    }
-
     // *************************************************************************
     //
     // *************************************************************************
+
+    public long bufferCapacity() {
+        return this.bufferCapacity;
+    }
 
     @NotNull
     MappedBytes mappedBytes(@NotNull File cycleFile) throws FileNotFoundException {
@@ -702,6 +713,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
     }
 
+    @Override
+    public long lastAcknowledgedIndexReplicated() {
+        return ((StoreAppender) acquireAppender()).store()
+                .lastAcknowledgedIndexReplicated();
+    }
+
     private static final class CachedCycleTree {
         private final long directoryModCount;
         private final NavigableMap<Long, File> cachedCycleTree;
@@ -713,8 +730,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     private class StoreSupplier implements WireStoreSupplier {
-        private boolean queuePathExists;
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
+        private boolean queuePathExists;
 
         @Override
         public WireStore acquire(int cycle, boolean createIfAbsent) {
@@ -821,7 +838,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             // use pre-calculated result in case where queue dir existed when StoreSupplier was constructed
             if (!queuePathExists && !parentFile.exists())
                 throw new IllegalStateException("parentFile=" + parentFile.getName() + " does not exist");
-
 
             CachedCycleTree cachedValue = cachedTree.get();
             final long directoryModCount = directoryListing.modCount();
@@ -930,23 +946,5 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
             return dateCache.toLong(file);
         }
-    }
-
-    @NotNull
-    public static File directoryListingPath(final File queueFolder) {
-        final File listingPath;
-        if ("".equals(queueFolder.getPath())) {
-            listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
-        } else {
-            listingPath = new File(queueFolder, DirectoryListing.DIRECTORY_LISTING_FILE);
-            listingPath.getParentFile().mkdirs();
-        }
-        return listingPath;
-    }
-
-    @Override
-    public long lastAcknowledgedIndexReplicated() {
-        return ((StoreAppender) acquireAppender()).store()
-                .lastAcknowledgedIndexReplicated();
     }
 }

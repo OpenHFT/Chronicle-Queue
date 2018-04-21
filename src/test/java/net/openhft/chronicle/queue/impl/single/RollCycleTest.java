@@ -81,21 +81,21 @@ public class RollCycleTest {
 
             observer.await();
 
-            for (int i=1; i<=cyclesToWrite; i++) {
+            for (int i = 1; i <= cyclesToWrite; i++) {
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
                 appender.writeText(Integer.toString(i));
             }
 
             // allow parallel tailer to finish iteration
-            for (int i = 0; i < 5_000 && observer.documentsRead != 1+cyclesToWrite; i++) {
+            for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
                 Thread.sleep(1);
             }
 
             thread.interrupt();
         }
 
-        assertEquals(1+cyclesToWrite, observer.documentsRead);
+        assertEquals(1 + cyclesToWrite, observer.documentsRead);
         observer.queue.close();
     }
 

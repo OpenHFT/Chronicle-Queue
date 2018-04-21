@@ -25,7 +25,6 @@ import java.io.StreamCorruptedException;
 
 public interface WireStore extends CommonStore {
 
-
     /**
      * @param position the start of the last written excerpt to this cycle/store
      * @return this store

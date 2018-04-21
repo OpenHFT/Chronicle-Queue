@@ -11,15 +11,22 @@ import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class ReferenceTrackerTest {
     @Rule
     public final TemporaryFolder tmpDir = new TemporaryFolder();
+    private final ReferenceTracker.ReverseCharSequenceIntegerEncoder encoder = new ReferenceTracker.ReverseCharSequenceIntegerEncoder();
     private TableStore tableStore;
     private ReferenceTracker tracker;
-    private final ReferenceTracker.ReverseCharSequenceIntegerEncoder encoder = new ReferenceTracker.ReverseCharSequenceIntegerEncoder();
+
+    private static String sequenceToString(final CharSequence sequence) {
+        final StringBuilder buffer = new StringBuilder();
+        for (int i = 0; i < sequence.length(); i++) {
+            buffer.append(sequence.charAt(i));
+        }
+        return buffer.toString();
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -63,13 +70,5 @@ public class ReferenceTrackerTest {
 
     private void assertReferenceCount(final int cycle, final long expectedCount) {
         assertThat(tableStore.acquireValueFor(Integer.toString(cycle)).getVolatileValue(), is(expectedCount));
-    }
-
-    private static String sequenceToString(final CharSequence sequence) {
-        final StringBuilder buffer = new StringBuilder();
-        for (int i = 0; i < sequence.length(); i++) {
-            buffer.append(sequence.charAt(i));
-        }
-        return buffer.toString();
     }
 }

@@ -10,7 +10,6 @@ toc::[]
 
 This document describes Chronicle Queue utility programs that have been created to help in the maintenance of your Chronicle Queue environment.
 
-
 == Chronicle Reader utility
 
 Chronicle Reader allows you to specify a Chronicle Queue folder and export the queue message data to text in standard output (`stdout`).
@@ -142,7 +141,6 @@ To display the help message:
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-h"
 ....
-
 
 == Packaging
 

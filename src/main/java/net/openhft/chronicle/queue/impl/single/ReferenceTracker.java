@@ -19,6 +19,10 @@ public final class ReferenceTracker {
         Arrays.setAll(cache, i -> new CachedLongValue());
     }
 
+    private static int mask(final int cycle) {
+        return cycle & INDEX_MASK;
+    }
+
     public synchronized void acquired(final int cycle) {
         acquireLongValue(cycle).addAtomicValue(1);
     }
@@ -48,10 +52,6 @@ public final class ReferenceTracker {
         return tableStore.acquireValueFor(encoder);
     }
 
-    private static int mask(final int cycle) {
-        return cycle & INDEX_MASK;
-    }
-
     private static final class CachedLongValue {
         private int cycle = -1;
         private LongValue value;
@@ -61,6 +61,12 @@ public final class ReferenceTracker {
         private final char[] data = new char[Integer.toString(Integer.MAX_VALUE).length()];
         private int length;
         private int indexOffset;
+
+        private static void validate(final int value) {
+            if (value < 0) {
+                throw new UnsupportedOperationException();
+            }
+        }
 
         void encode(int value) {
             validate(value);
@@ -94,12 +100,6 @@ public final class ReferenceTracker {
             if (length == 0) {
                 length = 1;
                 data[0] = '0';
-            }
-        }
-
-        private static void validate(final int value) {
-            if (value < 0) {
-                throw new UnsupportedOperationException();
             }
         }
     }

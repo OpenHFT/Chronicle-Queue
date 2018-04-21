@@ -10,7 +10,7 @@ final class FileSystemDirectoryListing implements DirectoryListing {
     private final AtomicLong modCount = new AtomicLong();
 
     FileSystemDirectoryListing(final File queueDir,
-                                      final ToIntFunction<File> fileToCycleFunction) {
+                               final ToIntFunction<File> fileToCycleFunction) {
         this.queueDir = queueDir;
         this.fileToCycleFunction = fileToCycleFunction;
     }

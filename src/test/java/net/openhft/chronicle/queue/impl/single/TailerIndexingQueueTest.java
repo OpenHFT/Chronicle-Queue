@@ -26,6 +26,24 @@ public final class TailerIndexingQueueTest {
     private final File path = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName() + "-" + System.nanoTime());
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
+    private static void deleteFile(final Path path) {
+        try {
+            Files.delete(path);
+        } catch (IOException e) {
+            throw new AssertionError("Could not delete", e);
+        }
+    }
+
+    private static SingleChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
+        return SingleChronicleQueueBuilder.
+                binary(path).
+                timeProvider(timeProvider).
+                rollCycle(RollCycles.TEST_SECONDLY).
+                testBlockSize().
+                wireType(WireType.BINARY).
+                build();
+    }
+
     @Test
     public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws Exception {
         assumeFalse(OS.isWindows());
@@ -68,23 +86,5 @@ public final class TailerIndexingQueueTest {
     @After
     public void deleteDir() throws Exception {
         DirectoryUtils.deleteDir(path);
-    }
-
-    private static void deleteFile(final Path path) {
-        try {
-            Files.delete(path);
-        } catch (IOException e) {
-            throw new AssertionError("Could not delete", e);
-        }
-    }
-
-    private static SingleChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
-        return SingleChronicleQueueBuilder.
-                binary(path).
-                timeProvider(timeProvider).
-                rollCycle(RollCycles.TEST_SECONDLY).
-                testBlockSize().
-                wireType(WireType.BINARY).
-                build();
     }
 }

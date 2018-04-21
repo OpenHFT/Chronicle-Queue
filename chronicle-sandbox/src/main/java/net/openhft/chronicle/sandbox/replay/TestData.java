@@ -24,6 +24,8 @@ import net.openhft.lang.io.serialization.BytesMarshallable;
  * Created by peter.lawrey on 20/01/15.
  */
 public interface TestData extends BytesMarshallable {
+    String getName();
+
     /*
     CREATE TABLE testSet(
         id BIGINT NOT NULL AUTO_INCREMENT,
@@ -36,17 +38,15 @@ public interface TestData extends BytesMarshallable {
     */
     void setName(CharSequence name);
 
-    String getName();
+    long getAge();
 
     void setAge(long age);
 
-    long getAge();
+    double getImportance();
 
     void setImportance(double importance);
 
-    double getImportance();
+    long getTimestamp();
 
     void setTimestamp(long timestamp);
-
-    long getTimestamp();
 }

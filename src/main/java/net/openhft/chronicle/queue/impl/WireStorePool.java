@@ -38,9 +38,9 @@ public class WireStorePool {
     @NotNull
     private final Map<RollDetails, WeakReference<WireStore>> stores;
     private final StoreFileListener storeFileListener;
-    private boolean isClosed = false;
     // protected by synchronized on acquire()
     private final RollDetails[] cache = new RollDetails[ROLL_CYCLE_CACHE_SIZE];
+    private boolean isClosed = false;
 
     private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
@@ -51,6 +51,10 @@ public class WireStorePool {
     @NotNull
     public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         return new WireStorePool(supplier, storeFileListener);
+    }
+
+    private static int cacheIndex(final int cycle) {
+        return cycle & INDEX_MASK;
     }
 
     public synchronized void close() {
@@ -134,9 +138,5 @@ public class WireStorePool {
 
     public boolean isEmpty() {
         return stores.isEmpty();
-    }
-
-    private static int cacheIndex(final int cycle) {
-        return cycle & INDEX_MASK;
     }
 }

@@ -56,7 +56,6 @@
         </dependencies>
     </dependencyManagement>
 
-
     <repositories>
         <repository>
             <id>chronicle-enterprise-snapshots</id>

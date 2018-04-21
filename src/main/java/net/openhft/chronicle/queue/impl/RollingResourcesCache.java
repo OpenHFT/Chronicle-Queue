@@ -33,11 +33,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 public class RollingResourcesCache {
+    public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
     private static final int CACHE_SIZE = Integer.getInteger("chronicle.queue.rollingResourceCache.size", 128);
     private static final int ONE_DAY_IN_MILLIS = 86400000;
     private static final int HALF_DAY_IN_MILLIS = ONE_DAY_IN_MILLIS / 2;
-
-    public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
     private static final int MAX_TIMESTAMP_CACHE_SIZE = 32;
 
     @NotNull
@@ -75,7 +74,7 @@ public class RollingResourcesCache {
 
         if (Math.abs(millisInDay) > HALF_DAY_IN_MILLIS) {
             if (millisInDay > 0) {
-                millis = - (ONE_DAY_IN_MILLIS - millisInDay);
+                millis = -(ONE_DAY_IN_MILLIS - millisInDay);
                 dayAdjustmentDueToNegativeOffset = 1;
             } else {
                 millis = ONE_DAY_IN_MILLIS - Math.abs(millisInDay);

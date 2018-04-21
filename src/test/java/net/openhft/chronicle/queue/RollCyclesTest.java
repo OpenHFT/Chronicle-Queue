@@ -24,17 +24,29 @@ public class RollCyclesTest {
     private final AtomicLong clock = new AtomicLong();
     private final TimeProvider timeProvider = clock::get;
 
+    public RollCyclesTest(final String cycleName, final RollCycles cycle) {
+        this.cycle = cycle;
+    }
+
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         final List<Object[]> data = new ArrayList<>();
         for (RollCycles testDatum : TEST_DATA) {
-            data.add(new Object[] {testDatum.name(), testDatum});
+            data.add(new Object[]{testDatum.name(), testDatum});
         }
         return data;
     }
 
-    public RollCyclesTest(final String cycleName, final RollCycles cycle) {
-        this.cycle = cycle;
+    private static TimeProvider withDelta(final TimeProvider delegate, final long deltaMillis) {
+        return () -> delegate.currentTimeMillis() + deltaMillis;
+    }
+
+    private static TimeProvider plusOneMillisecond(final TimeProvider delegate) {
+        return () -> delegate.currentTimeMillis() + 1;
+    }
+
+    private static TimeProvider minusOneMillisecond(final TimeProvider delegate) {
+        return () -> delegate.currentTimeMillis() - 1;
     }
 
     @Test
@@ -51,7 +63,7 @@ public class RollCyclesTest {
     public void shouldHandleReasonableDateRange() throws Exception {
         final int currentCycle = DefaultCycleCalculator.INSTANCE.currentCycle(cycle, timeProvider, 0);
         // ~ 14 Jul 2017 to 18 May 2033
-        for (long nowMillis  = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += 3e10) {
+        for (long nowMillis = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += 3e10) {
             clock.set(nowMillis);
             long index = cycle.toIndex(currentCycle, 0);
             assertEquals(currentCycle, cycle.toCycle(index));
@@ -76,17 +88,5 @@ public class RollCyclesTest {
         assertThat(cycle.current(timeProvider, epochOffset), is(startCycle + 2));
         assertThat(cycle.current(plusOneMillisecond(timeProvider), epochOffset), is(startCycle + 2));
         assertThat(cycle.current(minusOneMillisecond(timeProvider), epochOffset), is(startCycle + 1));
-    }
-
-    private static TimeProvider withDelta(final TimeProvider delegate, final long deltaMillis) {
-        return () -> delegate.currentTimeMillis() + deltaMillis;
-    }
-
-    private static TimeProvider plusOneMillisecond(final TimeProvider delegate) {
-        return () -> delegate.currentTimeMillis() + 1;
-    }
-
-    private static TimeProvider minusOneMillisecond(final TimeProvider delegate) {
-        return () -> delegate.currentTimeMillis() - 1;
     }
 }

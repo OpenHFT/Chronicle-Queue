@@ -19,14 +19,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
-
 public final class MessageHistoryTest {
     @Rule
     public final TestName testName = new TestName();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private File inputQueueDir;
     private File outputQueueDir;
-
 
     @Before
     public void setUp() throws Exception {
@@ -90,7 +88,6 @@ public final class MessageHistoryTest {
         // roll queue file
         clock.addAndGet(TimeUnit.DAYS.toMillis(2));
 
-
         assertThat(reader.readOne(), is(true));
         assertThat(reader.readOne(), is(false));
     }
@@ -99,6 +96,16 @@ public final class MessageHistoryTest {
         return SingleChronicleQueueBuilder.binary(queueDir).sourceId(sourceId).
                 timeProvider(clock::get).
                 testBlockSize().build();
+    }
+
+    @FunctionalInterface
+    interface First {
+        void say(final String word);
+    }
+
+    @FunctionalInterface
+    interface Second {
+        void count(final int value);
     }
 
     private static final class LoggingFirst implements First {
@@ -114,18 +121,9 @@ public final class MessageHistoryTest {
         }
     }
 
-    @FunctionalInterface
-    interface First {
-        void say(final String word);
-    }
-
-    @FunctionalInterface
-    interface Second {
-        void count(final int value);
-    }
-
     private static class ValidatingSecond implements Second {
         private boolean messageHistoryPresent = false;
+
         @Override
         public void count(final int value) {
             final MessageHistory messageHistory = MessageHistory.get();

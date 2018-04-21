@@ -69,7 +69,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     public long recoverAndWriteHeader(@NotNull Wire wire,
                                       long timeoutMS,
                                       @NotNull final LongValue lastPosition,
-                                      Sequence  sequence) throws UnrecoverableTimeoutException {
+                                      Sequence sequence) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Clearing an incomplete header so a header can be written");
         wire.bytes().writeInt(0);
         wire.pauser().reset();

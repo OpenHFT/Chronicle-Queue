@@ -9,7 +9,6 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
@@ -19,10 +18,10 @@ import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQ
  */
 public class ClientWiredExcerptAppenderStateless extends AbstractStatelessClient implements ExcerptAppender {
 
-    private ChronicleQueue queue;
-    private long cid;
     private final Bytes source = Bytes.elasticByteBuffer();
     private final Wire wire;
+    private ChronicleQueue queue;
+    private long cid;
     private long lastWrittenIndex = -1;
 
     public ClientWiredExcerptAppenderStateless(ClientWiredChronicleQueueStateless queue,

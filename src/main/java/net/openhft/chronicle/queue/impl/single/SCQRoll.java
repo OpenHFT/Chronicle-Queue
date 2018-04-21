@@ -69,10 +69,6 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
         return length;
     }
 
-    enum RollFields implements WireKey {
-        length, format, epoch,
-    }
-
     @Override
     public String toString() {
         return "SCQRoll{" +
@@ -80,5 +76,9 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
                 ", format='" + format + '\'' +
                 ", epoch=" + epoch +
                 '}';
+    }
+
+    enum RollFields implements WireKey {
+        length, format, epoch,
     }
 }

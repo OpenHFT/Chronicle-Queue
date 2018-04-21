@@ -23,7 +23,6 @@ public final class EofMarkerOnEmptyQueueTest {
     @Rule
     public TemporaryFolder tmpFolder = new TemporaryFolder();
 
-
     @Test
     public void shouldRecoverFromEmptyQueueOnRoll() throws Exception {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());

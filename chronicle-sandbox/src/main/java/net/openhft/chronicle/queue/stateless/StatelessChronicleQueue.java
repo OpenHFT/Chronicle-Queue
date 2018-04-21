@@ -33,7 +33,7 @@ import java.util.function.Function;
 
 /**
  * todo : currently work in process
- *
+ * <p>
  * Created by Rob Austin
  */
 public class StatelessChronicleQueue implements ChronicleQueue {

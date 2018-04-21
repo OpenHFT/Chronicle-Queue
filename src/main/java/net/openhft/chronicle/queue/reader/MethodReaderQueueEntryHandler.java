@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.TextWire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
 

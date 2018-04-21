@@ -24,6 +24,13 @@ public class RollCycleEncodeSequenceTest {
     private final RollCycleEncodeSequence rollCycleEncodeSequence;
     private final Bytes<ByteBuffer> bytes;
 
+    public RollCycleEncodeSequenceTest(final RollCycles cycle) {
+        longValue = new BinaryTwoLongReference();
+        bytes = Bytes.elasticByteBuffer();
+        longValue.bytesStore(bytes, 0, 16);
+        rollCycleEncodeSequence = new RollCycleEncodeSequence(longValue, cycle.defaultIndexCount(), cycle.defaultIndexSpacing());
+    }
+
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
@@ -32,13 +39,6 @@ public class RollCycleEncodeSequenceTest {
                 {RollCycles.MINUTELY},
                 {RollCycles.HUGE_DAILY}
         });
-    }
-
-    public RollCycleEncodeSequenceTest(final RollCycles cycle) {
-        longValue = new BinaryTwoLongReference();
-        bytes = Bytes.elasticByteBuffer();
-        longValue.bytesStore(bytes, 0, 16);
-        rollCycleEncodeSequence = new RollCycleEncodeSequence(longValue, cycle.defaultIndexCount(), cycle.defaultIndexSpacing());
     }
 
     @After

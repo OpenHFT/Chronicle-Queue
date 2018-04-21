@@ -49,6 +49,12 @@ public class BytesRingBuffer {
         header.setWriteUpTo(bytes.capacity());
     }
 
+    private static void checkSize(@NotNull Bytes using, long elementSize) {
+        if (using.remaining() < elementSize)
+            throw new IllegalStateException("requires size=" + elementSize +
+                    " bytes, but only " + using.remaining() + " remaining.");
+    }
+
     /**
      * Inserts the specified element at the tail of this queue if it is possible to do so
      * immediately without exceeding the queue's capacity,
@@ -188,12 +194,6 @@ public class BytesRingBuffer {
 
         using.position(using.position());
         return using;
-    }
-
-    private static void checkSize(@NotNull Bytes using, long elementSize) {
-        if (using.remaining() < elementSize)
-            throw new IllegalStateException("requires size=" + elementSize +
-                    " bytes, but only " + using.remaining() + " remaining.");
     }
 
     private enum States {BUSY, READY, USED}

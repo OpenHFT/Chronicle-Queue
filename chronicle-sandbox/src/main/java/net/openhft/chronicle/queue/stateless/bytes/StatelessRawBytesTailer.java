@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * todo : currently work in process
- *
+ * <p>
  * Created by Rob Austin
  */
 public interface StatelessRawBytesTailer {

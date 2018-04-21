@@ -59,7 +59,6 @@ header: !SCQStore {
 
 `lastAcknowledgedIndexReplicated` will be automatically set to the index position of the latest acknowledged message.
 
-
 == Configuration File
 
 The host in a cluster are defined in a YAML configuration file. This configuration file below, has just two hosts, but there is no fixed limit to the number of hosts you could include, ultimately it is limited by your hardware resources.
@@ -185,7 +184,6 @@ public interface QueueView<T, M> extends TopicPublisher<T, M>, KeyedView {
     }
 }
 ----
-
 
 == Definitions
 

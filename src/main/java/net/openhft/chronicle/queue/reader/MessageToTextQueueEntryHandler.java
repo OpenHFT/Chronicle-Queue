@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.TextWire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
 
@@ -14,6 +13,10 @@ public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
 
     public MessageToTextQueueEntryHandler(WireType wireType) {
         this.wireType = wireType;
+    }
+
+    private static boolean isBinaryFormat(final byte dataFormatIndicator) {
+        return dataFormatIndicator < 0;
     }
 
     @Override
@@ -37,9 +40,5 @@ public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
     @Override
     public void close() {
         textConversionTarget.release();
-    }
-
-    private static boolean isBinaryFormat(final byte dataFormatIndicator) {
-        return dataFormatIndicator < 0;
     }
 }

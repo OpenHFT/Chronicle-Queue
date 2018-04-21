@@ -5,7 +5,6 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.wire.Sequence;
 
-
 class RollCycleEncodeSequence implements Sequence {
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;

@@ -68,5 +68,4 @@ public enum NoMessageHistory implements MessageHistory {
         return -1;
     }
 
-
 }

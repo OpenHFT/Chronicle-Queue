@@ -4,7 +4,6 @@ import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
@@ -60,7 +59,7 @@ public final class TailerSequenceRaceConditionTest {
                 (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
         try {
             tailer.toEnd();
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             e.printStackTrace();
             failedToMoveToEnd.set(true);
         }

@@ -29,7 +29,14 @@ public class RollingResourcesCacheTest {
     private static final RollCycles ROLL_CYCLE = RollCycles.DAILY;
     private static final long ONE_DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1L);
     private static final boolean LOG_TEST_DEBUG =
-                Boolean.valueOf(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
+            Boolean.valueOf(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
+
+    private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
+                                                final Instant instant, final DateTimeFormatter formatter) {
+        final String expectedFileName = formatter.format(instant);
+        assertThat(cache.resourceFor(cycle).text, is(expectedFileName));
+        assertThat(cache.parseCount(expectedFileName), is(cycle));
+    }
 
     @Test
     public void shouldConvertCyclesToResourceNamesWithNoEpoch() throws Exception {
@@ -144,12 +151,5 @@ public class RollingResourcesCacheTest {
                         DateTimeFormatter.ofPattern("yyyyMMdd").withZone(zoneId));
             }
         }
-    }
-
-    private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
-                                                final Instant instant, final DateTimeFormatter formatter) {
-        final String expectedFileName = formatter.format(instant);
-        assertThat(cache.resourceFor(cycle).text, is(expectedFileName));
-        assertThat(cache.parseCount(expectedFileName), is(cycle));
     }
 }

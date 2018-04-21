@@ -76,7 +76,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
     /**
-     * @param config test config
+     * @param config     test config
      * @param wireType   the type of wire
      * @param encryption
      */
@@ -94,6 +94,58 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
         });
+    }
+
+    private static int getMappedQueueFileCount() throws IOException, InterruptedException {
+
+        final int processId = OS.getProcessId();
+
+        final Process pmap = new ProcessBuilder("pmap", Integer.toString(processId)).start();
+        pmap.waitFor();
+        int queueFileCount = 0;
+        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(pmap.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains(SUFFIX)) {
+                    queueFileCount++;
+                }
+            }
+        }
+
+        return queueFileCount;
+    }
+
+    private static long countEntries(final ChronicleQueue queue) {
+        final ExcerptTailer tailer = queue.createTailer();
+        tailer.toStart().direction(TailerDirection.FORWARD);
+        long entryCount = 0L;
+        while (true) {
+            try (final DocumentContext ctx = tailer.readingDocument()) {
+                if (!ctx.isPresent()) {
+                    break;
+                }
+
+                entryCount++;
+            }
+        }
+
+        return entryCount;
+    }
+
+    private static void waitFor(final Supplier<Boolean> condition, final String message) {
+        final long timeoutAt = System.currentTimeMillis() + 10_000L;
+        while (System.currentTimeMillis() < timeoutAt) {
+            if (condition.get()) {
+                return;
+            }
+        }
+
+        fail(message);
+    }
+
+    @NotNull
+    private static Object[] testConfiguration(final WireType binary, final boolean encrypted) {
+        return new Object[]{binary.name() + " - " + (encrypted ? "" : "not ") + "encrypted", binary, encrypted};
     }
 
     @Before
@@ -3216,25 +3268,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    private static int getMappedQueueFileCount() throws IOException, InterruptedException {
-
-        final int processId = OS.getProcessId();
-
-        final Process pmap = new ProcessBuilder("pmap", Integer.toString(processId)).start();
-        pmap.waitFor();
-        int queueFileCount = 0;
-        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(pmap.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains(SUFFIX)) {
-                    queueFileCount++;
-                }
-            }
-        }
-
-        return queueFileCount;
-    }
-
     @Test
     public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -4119,10 +4152,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    interface Msg {
-        void msg(String s);
-    }
-
     @Test
     public void shouldCreateQueueInCurrentDirectory() {
         try (final SingleChronicleQueue queue =
@@ -4157,52 +4186,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         Jvm.pause(50);
 
         MappedFile.checkMappedFiles();
-    }
-
-    private static class MapWrapper extends AbstractMarshallable {
-        final Map<CharSequence, Double> map = new HashMap<>();
-    }
-
-    static class MyMarshable extends AbstractMarshallable implements Demarshallable {
-        @UsedViaReflection
-        String name;
-
-        @UsedViaReflection
-        public MyMarshable(@NotNull WireIn wire) {
-            readMarshallable(wire);
-        }
-
-        public MyMarshable() {
-        }
-
-    }
-
-    private static long countEntries(final ChronicleQueue queue) {
-        final ExcerptTailer tailer = queue.createTailer();
-        tailer.toStart().direction(TailerDirection.FORWARD);
-        long entryCount = 0L;
-        while (true) {
-            try (final DocumentContext ctx = tailer.readingDocument()) {
-                if (!ctx.isPresent()) {
-                    break;
-                }
-
-                entryCount++;
-            }
-        }
-
-        return entryCount;
-    }
-
-    private static void waitFor(final Supplier<Boolean> condition, final String message) {
-        final long timeoutAt = System.currentTimeMillis() + 10_000L;
-        while (System.currentTimeMillis() < timeoutAt) {
-            if (condition.get()) {
-                return;
-            }
-        }
-
-        fail(message);
     }
 
     @Test
@@ -4315,7 +4298,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 String dump = queue.dump();
                 Assert.assertEquals(before, dump);
                 System.out.println(dump);
-                Assert.assertTrue(dump.contains( "# position: 1024, header: 0\n" +
+                Assert.assertTrue(dump.contains("# position: 1024, header: 0\n" +
                         "--- !!data #binary\n" +
                         "hello: world0\n" +
                         "# position: 1041, header: 1\n" +
@@ -4419,7 +4402,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     private BytesWithIndex bytes(final ExcerptTailer tailer) {
         try (DocumentContext dc = tailer.readingDocument()) {
 
@@ -4430,26 +4412,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             long index = dc.index();
             return new BytesWithIndex(bytes, index);
         }
-    }
-
-    private static class BytesWithIndex implements Closeable {
-        private BytesStore bytes;
-        private long index;
-
-        public BytesWithIndex(Bytes<?> bytes, long index) {
-            this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
-            this.index = index;
-        }
-
-        @Override
-        public void close() {
-            bytes.release();
-        }
-    }
-
-    @NotNull
-    private static Object[] testConfiguration(final WireType binary, final boolean encrypted) {
-        return new Object[]{binary.name() + " - " + (encrypted ? "" : "not ") + "encrypted", binary, encrypted};
     }
 
     @Test
@@ -4480,6 +4442,43 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             if (OS.isLinux())
                 assertTrue("Too many mapped files: " + getMappedQueueFileCount(), getMappedQueueFileCount() < 40);
             assertTrue(Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count() > 10L);
+        }
+    }
+
+    interface Msg {
+        void msg(String s);
+    }
+
+    private static class MapWrapper extends AbstractMarshallable {
+        final Map<CharSequence, Double> map = new HashMap<>();
+    }
+
+    static class MyMarshable extends AbstractMarshallable implements Demarshallable {
+        @UsedViaReflection
+        String name;
+
+        @UsedViaReflection
+        public MyMarshable(@NotNull WireIn wire) {
+            readMarshallable(wire);
+        }
+
+        public MyMarshable() {
+        }
+
+    }
+
+    private static class BytesWithIndex implements Closeable {
+        private BytesStore bytes;
+        private long index;
+
+        public BytesWithIndex(Bytes<?> bytes, long index) {
+            this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
+            this.index = index;
+        }
+
+        @Override
+        public void close() {
+            bytes.release();
         }
     }
 }

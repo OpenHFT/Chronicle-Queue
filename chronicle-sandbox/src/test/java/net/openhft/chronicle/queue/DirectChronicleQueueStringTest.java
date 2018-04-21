@@ -54,7 +54,7 @@ public class DirectChronicleQueueStringTest {
     public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
 
     @Test
-    public void testCreateAppender()   {
+    public void testCreateAppender() {
         for (int r = 0; r < 2; r++) {
             long start = System.nanoTime();
 
@@ -102,7 +102,7 @@ public class DirectChronicleQueueStringTest {
     }
 
     @Test
-    public void testCreateAppenderMT()   {
+    public void testCreateAppenderMT() {
         for (int r = 0; r < 2; r++) {
             for (int t = 1; t < Runtime.getRuntime().availableProcessors(); t++) {
                 List<Future<?>> futureList = new ArrayList<>();

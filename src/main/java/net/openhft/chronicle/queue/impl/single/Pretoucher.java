@@ -8,12 +8,12 @@ import java.util.function.IntConsumer;
 
 /**
  * A class designed to be called from a long-lived thread.
- *
+ * <p>
  * Upon invocation of the {@code execute()} method, this object will pre-touch pages in the supplied queue's underlying store file,
  * attempting to keep ahead of any appenders to the queue.
- *
+ * <p>
  * Resources held by this object will be released when the underlying queue is closed.
- *
+ * <p>
  * Alternatively, the {@code shutdown()} method can be called to close the supplied queue and release any other resources.
  * Invocation of the {@code execute()} method after {@code shutdown()} has been called with cause an {@code IllegalStateException} to be thrown.
  */
@@ -27,7 +27,8 @@ public final class Pretoucher {
     private MappedBytes currentCycleMappedBytes;
 
     public Pretoucher(final SingleChronicleQueue queue) {
-        this(queue, null, c -> {});
+        this(queue, null, c -> {
+        });
     }
 
     // visible for testing

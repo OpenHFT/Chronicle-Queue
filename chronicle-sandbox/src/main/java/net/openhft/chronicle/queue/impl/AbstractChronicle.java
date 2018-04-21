@@ -25,7 +25,10 @@ import net.openhft.chronicle.wire.Wire;
  */
 abstract class AbstractChronicle implements ChronicleQueue, DirectChronicleQueue {
     abstract Wire wire();
+
     abstract Class<? extends Wire> wireType();
+
     abstract long indexToIndex();
+
     abstract long newIndex();
 }

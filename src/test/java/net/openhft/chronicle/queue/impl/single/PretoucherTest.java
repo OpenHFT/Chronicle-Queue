@@ -27,6 +27,16 @@ public class PretoucherTest {
     private final List<Integer> capturedCycles = new ArrayList<>();
     private final CapturingChunkListener chunkListener = new CapturingChunkListener();
 
+    private static SingleChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
+        return SingleChronicleQueueBuilder.
+                binary(path).
+                timeProvider(timeProvider).
+                rollCycle(RollCycles.TEST_SECONDLY).
+                testBlockSize().
+                wireType(WireType.BINARY).
+                build();
+    }
+
     @Test
     public void shouldHandleCycleRoll() throws Exception {
         try (final SingleChronicleQueue queue = createQueue(path, clock::get)) {
@@ -59,15 +69,5 @@ public class PretoucherTest {
         public void onNewChunk(final String filename, final int chunk, final long delayMicros) {
             chunkMap.computeIfAbsent(filename, f -> new ArrayList<>()).add(chunk);
         }
-    }
-
-    private static SingleChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
-        return SingleChronicleQueueBuilder.
-                binary(path).
-                timeProvider(timeProvider).
-                rollCycle(RollCycles.TEST_SECONDLY).
-                testBlockSize().
-                wireType(WireType.BINARY).
-                build();
     }
 }

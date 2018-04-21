@@ -14,12 +14,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public final class RollAtEndOfCycleTest {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+
+    private static void assertQueueFileCount(final Path path, final long expectedCount) throws IOException {
+        final long count = Files.list(path).filter(p -> p.toString().
+                endsWith(SingleChronicleQueue.SUFFIX)).count();
+
+        assertThat(count, is(expectedCount));
+    }
 
     @Test
     public void shouldRollAndAppendToNewFile() throws Exception {
@@ -92,13 +97,6 @@ public final class RollAtEndOfCycleTest {
                 assertTrue(context.isPresent());
             }
         }
-    }
-
-    private static void assertQueueFileCount(final Path path, final long expectedCount) throws IOException {
-        final long count = Files.list(path).filter(p -> p.toString().
-                endsWith(SingleChronicleQueue.SUFFIX)).count();
-
-        assertThat(count, is(expectedCount));
     }
 
     private SingleChronicleQueue createQueue() {

@@ -21,7 +21,6 @@ public SingleChronicleQueueBuilder<E> rollTime(@NotNull final LocalTime rollTime
 NOTE: `rollTime()` allows the rollover time of the cycle file to be controlled in both open-source Chronicle Queue and Enterprise Edition. +
 If this is used with in the open-source version, any `zoneId` other than `UTC` will be converted to `UTC`, and a warning message logged.
 
-
 == Examples
 
 The following code extract is an instruction to use `Europe/London` as time zone, and rolls over queues at midnight regardless of offset to UTC.

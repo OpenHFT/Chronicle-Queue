@@ -56,7 +56,6 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
 
                 System.out.println(inQueue.dump());
 
-
                 AtomicReference<String> actualValue = new AtomicReference<>();
 
                 // check that we are able to pick up from where we left off, in other words the next read should be somedata-2

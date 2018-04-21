@@ -274,4 +274,3 @@ We have a number of strategies to minimise garbage, the key one being that we tr
 We use object pools where appropriate, and we support reading into mutable objects.
 For text data we support both a `String` pool and reading to/from `StringBuilder`
 
-

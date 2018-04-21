@@ -16,6 +16,18 @@ import static org.junit.Assert.fail;
 public final class FileModificationTimeTest {
     private final AtomicInteger fileCount = new AtomicInteger();
 
+    private static void waitForDiff(final long a, final LongSupplier b) {
+        final long timeout = System.currentTimeMillis() + 15_000L;
+        while ((!Thread.currentThread().isInterrupted()) && System.currentTimeMillis() < timeout) {
+            if (a != b.getAsLong()) {
+                return;
+            }
+            Jvm.pause(1_000L);
+        }
+
+        fail("Values did not become different");
+    }
+
     @Test
     public void shouldUpdateDirectoryModificationTime() throws Exception {
         final File dir = DirectoryUtils.tempDir(FileModificationTimeTest.class.getSimpleName());
@@ -46,17 +58,5 @@ public final class FileModificationTimeTest {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static void waitForDiff(final long a, final LongSupplier b) {
-        final long timeout = System.currentTimeMillis() + 15_000L;
-        while ((!Thread.currentThread().isInterrupted()) && System.currentTimeMillis() < timeout) {
-            if (a != b.getAsLong()) {
-                return;
-            }
-            Jvm.pause(1_000L);
-        }
-
-        fail("Values did not become different");
     }
 }

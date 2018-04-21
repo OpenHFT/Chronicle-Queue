@@ -21,7 +21,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
-import org.junit.*;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
@@ -46,7 +45,19 @@ public class BytesRingBufferTest {
     Bytes<ByteBuffer> out;
     NativeBytesStore outBuffer;
 
-         private ThreadDump threadDump;      @Before     public void threadDump() {         threadDump = new ThreadDump();     }          @After     public void checkThreadDump() {         threadDump.assertNoNewThreads();     } @Before
+    private ThreadDump threadDump;
+
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
+    }
+
+    @Before
     public void setup() {
         try {
             outBuffer = NativeBytesStore.nativeStoreWithFixedCapacity(12);
@@ -65,7 +76,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testWriteAndRead3SingleThreadedWrite()   {
+    public void testWriteAndRead3SingleThreadedWrite() {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(24)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
@@ -87,7 +98,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testSimpledSingleThreadedWriteRead()   {
+    public void testSimpledSingleThreadedWriteRead() {
 
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
@@ -99,7 +110,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testPollWithNoData()   {
+    public void testPollWithNoData() {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             assert nativeStore.isNative();
 
@@ -111,7 +122,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testWriteAndRead()   {
+    public void testWriteAndRead() {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             assert nativeStore.isNative();
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
@@ -123,7 +134,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers()   {
+    public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             System.out.println(nativeStore.realCapacity());
             System.out.println(nativeStore.capacity());
@@ -146,7 +157,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testWrite3read3SingleThreadedWrite()   {
+    public void testWrite3read3SingleThreadedWrite() {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
@@ -250,7 +261,7 @@ public class BytesRingBufferTest {
     // a" +
     //        " synchronized to ringbuffer.poll() and ringbuffer.offer()")
     @Test
-    public void testMultiThreadedWithIntValues()   {
+    public void testMultiThreadedWithIntValues() {
 
         try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());

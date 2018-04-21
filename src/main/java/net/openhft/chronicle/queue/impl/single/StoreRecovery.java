@@ -59,5 +59,6 @@ public interface StoreRecovery extends WriteMarshallable, Closeable {
 
     long recoverAndWriteHeader(Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException;
 
-    default void close() throws IOException { }
+    default void close() throws IOException {
+    }
 }

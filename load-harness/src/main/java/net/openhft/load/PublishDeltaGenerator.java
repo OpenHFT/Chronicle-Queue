@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToLongFunction;
 
-
 public final class PublishDeltaGenerator {
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
@@ -26,7 +25,10 @@ public final class PublishDeltaGenerator {
         }
         Jvm.setExceptionHandlers((c, m, t) -> {
             System.out.println(m);
-        }, (c, m, t) -> {System.out.println(m); t.printStackTrace();}, (c, m, t) -> System.out.println(m));
+        }, (c, m, t) -> {
+            System.out.println(m);
+            t.printStackTrace();
+        }, (c, m, t) -> System.out.println(m));
 
         final ConfigParser configParser = new ConfigParser(args[0]);
         final List<StageConfig> allStageConfigs = configParser.getAllStageConfigs();
@@ -36,13 +38,13 @@ public final class PublishDeltaGenerator {
                 final SingleChronicleQueue pubQueue =
                         SingleChronicleQueueBuilder.binary(configParser.getPublisherConfig().outputDir()).build();
                 final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(lastStageConfig.getOutputPath()).build();
-             final Writer resultsWriter = new FileWriter("publish-deltas.txt", false);
-             final Writer s0Pub = new FileWriter("s0-deltas.txt", false);
-             final Writer s1Pub = new FileWriter("s1-deltas.txt", false);
-             final Writer s0s2Pub = new FileWriter("s0-s2-deltas.txt", false);
-             final Writer s1s2Pub = new FileWriter("s1-s2-deltas.txt", false);
-             ) {
+                        SingleChronicleQueueBuilder.binary(lastStageConfig.getOutputPath()).build();
+                final Writer resultsWriter = new FileWriter("publish-deltas.txt", false);
+                final Writer s0Pub = new FileWriter("s0-deltas.txt", false);
+                final Writer s1Pub = new FileWriter("s1-deltas.txt", false);
+                final Writer s0s2Pub = new FileWriter("s0-s2-deltas.txt", false);
+                final Writer s1s2Pub = new FileWriter("s1-s2-deltas.txt", false);
+        ) {
             final MethodReader reader = pubQueue.createTailer().methodReader(new CapturingReceiver(resultsWriter, m -> m.publishNanos));
             while (reader.readOne()) {
                 // report
@@ -78,12 +80,11 @@ public final class PublishDeltaGenerator {
         private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss nnnnnnnnn");
         private final Writer writer;
         private final ToLongFunction<EightyByteMessage> timestampAccessor;
-
+        private final long maskMatch;
         private long lastPublishNanos = -1L;
         private long lastBatchMillis = -1L;
         private long maxDelta = 0;
         private long previousValue = 0L;
-        private final long maskMatch;
 
         private CapturingReceiver(final Writer writer, final ToLongFunction<EightyByteMessage> timestampAccessor) {
             this(writer, timestampAccessor, 0);
@@ -114,7 +115,7 @@ public final class PublishDeltaGenerator {
             if (lastBatchMillis != message.batchStartMillis) {
                 final long deltaMicros = TimeUnit.NANOSECONDS.toMicros(maxDelta);
                 final String logMsg = String.format("%s %d%n",
-                        FORMATTER.format(LocalDateTime.ofEpochSecond(lastBatchMillis / 1000, ((int)(lastBatchMillis % 1000)) * 1_000_000, ZoneOffset.UTC)),
+                        FORMATTER.format(LocalDateTime.ofEpochSecond(lastBatchMillis / 1000, ((int) (lastBatchMillis % 1000)) * 1_000_000, ZoneOffset.UTC)),
                         deltaMicros);
                 writeToResults(logMsg);
                 lastPublishNanos = currentVal;

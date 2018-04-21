@@ -107,7 +107,6 @@ This memory mapped file is also used for exceptionally fast interprocess communi
 
 image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png[]
 
-
 == Chronicle Queue (Enterprise Edition)
 
 Chronicle Queue (Enterprise Edition) is a commercially supported version of our successful open source Chronicle Queue.
@@ -121,7 +120,6 @@ The open source documentation is extended by this document to describe the addit
 In addition, you will be fully supported by our technical experts.
 
 For more information on Chronicle Queue (Enterprise Edition), please contact mailto:sales@chronicle.software[sales@chronicle.software].
-
 
 == How does Chronicle Queue v4 work
 
@@ -460,7 +458,6 @@ Hello World
 000402e0 6C 6F 20 57 6F 72 6C 64                          lo World
 ----
 
-
 === Finding the index at the end of a Chronicle Queue
 
 Chronicle Queue appenders are thread-local. In fact when you ask for:
@@ -484,7 +481,6 @@ If you wish to find the index of the last record written, then you have to call:
 ```
 long index = queue.createTailer().toEnd().index();
 ```
-
 
 === Dumping a Chronicle Queue, cq4 file as text to the Command Line
 
@@ -565,7 +561,6 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades")
    final ExcerptTailer tailer = queue.createTailer();
 }
 ----
-
 
 You can turn each message into a method call based on the content of the message.
 
@@ -655,7 +650,6 @@ If you are writing your code not have GC pauses and you explicitly want to clean
 ((StoreTailer)tailer).releaseResources()
 ```
 
-
 ==== `ExcerptTailer.toEnd()`
 
 In some applications, it may be necessary to start reading from the end of the queue
@@ -673,7 +667,6 @@ available for reading:
 // this will be false until new messages are appended to the queue
 boolean messageAvailable = tailer.toEnd().readingDocument().isPresent();
 ....
-
 
 If it is necessary to read backwards through the queue from the end, then the tailer can be
 set to read backwards:
@@ -694,10 +687,6 @@ last record in the queue. If the queue is not empty, then there will be a
 boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
         readingDocument().isPresent();
 ....
-
-
-
-
 
 === High level interface
 
@@ -861,7 +850,6 @@ try (DocumentContext dc = tailer.readingDocument()) {
 }
 ----
 
-
 === Single Chronicle Queue
 
 This queue is a designed to support:
@@ -967,7 +955,6 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 ----
 
 === FAQ
-
 
 === If you are seeing "OutOfMemoryError: Map failed"
 
@@ -1088,7 +1075,6 @@ The `writingDocument()` should be performed as quickly as possible because a wri
 if something keeps the thread busy long enough(more than recovery timeout, which is 20 seconds by defult) between call to `appender.writingDocument()` and code that actually writes something into bytes,
 it can cause recovery to kick in from other appenders (potentially in other process), which will rewrite message header, and if your thread subsequently continues writing its own message it will corrupt queue file.
 
-
 [source, Java]
 ----
 try (DocumentContext dc = appender.writingDocument()) {
@@ -1096,7 +1082,6 @@ try (DocumentContext dc = appender.writingDocument()) {
   // DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
 }
 ----
-
 
 ==== Exceptions thrown with a writingDocument()
 
@@ -1411,11 +1396,9 @@ In another thread you can wake the reader with:
 pauser.unpause();
 ----
 
-
 === Configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
-
 
 ==== RollCycle
 
@@ -1479,11 +1462,9 @@ console output:
     Overriding this queue to use HOURLY
 ----
 
-
 === More information
 
 More in-depth information can be found in the following topics:
-
 
    * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some of the techniques utilised by Chronicle Queue
    * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/encryption.adoc[Encryption] - describes how to encrypt the contents of a Queue

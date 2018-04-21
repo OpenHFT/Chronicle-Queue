@@ -22,12 +22,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
@@ -35,14 +30,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class ChronicleReaderTest {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
@@ -54,6 +43,12 @@ public class ChronicleReaderTest {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
+
+    private static long getCurrentQueueFileLength(final Path dataDir) throws IOException {
+        return new RandomAccessFile(
+                Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
+                        orElseThrow(AssertionError::new).toFile(), "r").length();
+    }
 
     @Before
     public void before() throws Exception {
@@ -94,7 +89,6 @@ public class ChronicleReaderTest {
     public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws IOException, InterruptedException {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader").toPath();
         path.toFile().mkdirs();
-
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicLong recordsProcessed = new AtomicLong(0);
@@ -168,7 +162,7 @@ public class ChronicleReaderTest {
     public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() throws Exception {
         basicReader().
                 // matches goodbye, but not hello or history
-                withInclusionRegex("goodbye").
+                        withInclusionRegex("goodbye").
                 asMethodReader().
                 execute();
         assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(false));
@@ -246,7 +240,7 @@ public class ChronicleReaderTest {
         final Path queueFile = Files.list(dataDir).
                 filter(f -> f.getFileName().toString().endsWith(SingleChronicleQueue.SUFFIX)).findFirst().
                 orElseThrow(() ->
-                new AssertionError("Could not find queue file in directory " + dataDir));
+                        new AssertionError("Could not find queue file in directory " + dataDir));
 
         assertThat(queueFile.toFile().setWritable(false), is(true));
 
@@ -346,6 +340,25 @@ public class ChronicleReaderTest {
         assertThat(pollMethod.invocationCount, is(expectedPollCountWhenDocumentIsEmpty));
     }
 
+    private String findAnExistingIndex() {
+        basicReader().execute();
+        final List<String> indicies = capturedOutput.stream().
+                filter(s -> s.startsWith("0x")).
+                collect(Collectors.toList());
+        capturedOutput.clear();
+        return indicies.get(indicies.size() / 2).trim().replaceAll(":", "");
+    }
+
+    private ChronicleReader basicReader() {
+        return new ChronicleReader().
+                withBasePath(dataDir).withMessageSink(capturedOutput::add);
+    }
+
+    @FunctionalInterface
+    private interface StringEvents {
+        void say(final String msg);
+    }
+
     private static final class RecordCounter implements Consumer<String> {
         private final AtomicLong recordCount = new AtomicLong();
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -386,30 +399,5 @@ public class ChronicleReaderTest {
 
             return documentContext;
         }
-    }
-
-    private static long getCurrentQueueFileLength(final Path dataDir) throws IOException {
-        return new RandomAccessFile(
-                Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
-                        orElseThrow(AssertionError::new).toFile(), "r").length();
-    }
-
-    private String findAnExistingIndex() {
-        basicReader().execute();
-        final List<String> indicies = capturedOutput.stream().
-                filter(s -> s.startsWith("0x")).
-                collect(Collectors.toList());
-        capturedOutput.clear();
-        return indicies.get(indicies.size() / 2).trim().replaceAll(":", "");
-    }
-
-    private ChronicleReader basicReader() {
-        return new ChronicleReader().
-                withBasePath(dataDir).withMessageSink(capturedOutput::add);
-    }
-
-    @FunctionalInterface
-    private interface StringEvents {
-        void say(final String msg);
     }
 }

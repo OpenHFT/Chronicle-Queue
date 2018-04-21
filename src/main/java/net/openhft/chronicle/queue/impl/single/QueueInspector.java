@@ -12,6 +12,10 @@ public final class QueueInspector {
         this.queue = queue;
     }
 
+    public static boolean isValidThreadId(final int writingThreadId) {
+        return writingThreadId != NO_CURRENT_WRITER;
+    }
+
     public int getWritingThreadId() {
         final WireStore wireStore = queue.storeForCycle(queue.cycle(), queue.epoch(), false);
         if (wireStore != null) {
@@ -27,9 +31,5 @@ public final class QueueInspector {
             }
         }
         return NO_CURRENT_WRITER;
-    }
-
-    public static boolean isValidThreadId(final int writingThreadId) {
-        return writingThreadId != NO_CURRENT_WRITER;
     }
 }

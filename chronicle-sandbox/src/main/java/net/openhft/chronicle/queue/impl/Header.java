@@ -21,7 +21,6 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.Compression;
-import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.ZonedDateTime;
@@ -49,8 +48,16 @@ class Header implements Marshallable {
     private LongValue index2Index = null;
     private LongValue lastIndex = null;
 
+    public static void main(String... args) {
+        Header h = new Header();
+        h.init(Compression.NONE);
+        TextWire tw = new TextWire(NativeBytes.nativeBytes());
+        tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
+        System.out.println(tw.bytes().flip().toString());
+    }
+
     LongValue writeByte() {
-      return writeByte;
+        return writeByte;
     }
 
     LongValue index2Index() {
@@ -71,13 +78,6 @@ class Header implements Marshallable {
         return this;
     }
 
-    enum Field implements WireKey {
-        type,
-        uuid, created, user, host, compression,
-        indexCount, indexSpacing,
-        writeByte, index2Index,lastIndex
-    }
-
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write(Field.uuid).uuid(uuid)
@@ -94,7 +94,7 @@ class Header implements Marshallable {
         // TODO: this is an hack and should be properly implemented.
         // The header is written as document which is enclosed between brackets
         // so it add a few more bytes thus the writeByte is invalid.
-        if(out instanceof TextWire) {
+        if (out instanceof TextWire) {
             out.addPadding((int) (PADDED_SIZE - 2 - out.bytes().position()));
 
         } else {
@@ -124,11 +124,10 @@ class Header implements Marshallable {
         this.writeByte().setOrderedValue(writeByte);
     }
 
-    public static void main(String... args) {
-        Header h = new Header();
-        h.init(Compression.NONE);
-        TextWire tw = new TextWire(NativeBytes.nativeBytes());
-        tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
-        System.out.println(tw.bytes().flip().toString());
+    enum Field implements WireKey {
+        type,
+        uuid, created, user, host, compression,
+        indexCount, indexSpacing,
+        writeByte, index2Index, lastIndex
     }
 }

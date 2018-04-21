@@ -48,10 +48,10 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
  */
 class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     private static final boolean IGNORE_INDEXING_FAILURE = Boolean.getBoolean("queue.ignoreIndexingFailure");
+    final LongValue nextEntryToBeIndexed;
     private final int indexCount, indexCountBits;
     private final int indexSpacing, indexSpacingBits;
     private final LongValue index2Index;
-    final LongValue nextEntryToBeIndexed;
     private final Supplier<LongArrayValues> longArraySupplier;
     @NotNull
     private final ThreadLocal<WeakReference<LongArrayValuesHolder>> index2indexArray;

@@ -15,19 +15,13 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public final class DocumentOrderingTest {
@@ -37,13 +31,20 @@ public final class DocumentOrderingTest {
     private final AtomicInteger counter = new AtomicInteger(0);
     private final boolean progressOnContention;
 
-    @Parameterized.Parameters(name = "{0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[] {"progressOnContention", true}, new Object[] {"waitOnContention", false});
-    }
-
     public DocumentOrderingTest(final String testType, final boolean progressOnContention) {
         this.progressOnContention = progressOnContention;
+    }
+
+    @Parameterized.Parameters(name = "{0}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[]{"progressOnContention", true}, new Object[]{"waitOnContention", false});
+    }
+
+    private static void expectValue(final int expectedValue, final ExcerptTailer tailer) {
+        try (final DocumentContext documentContext = tailer.readingDocument()) {
+            assertTrue(documentContext.isPresent());
+            assertEquals(expectedValue, documentContext.wire().getValueIn().int32());
+        }
     }
 
     @Test
@@ -232,13 +233,6 @@ public final class DocumentOrderingTest {
     @After
     public void tearDown() {
         executorService.shutdownNow();
-    }
-
-    private static void expectValue(final int expectedValue, final ExcerptTailer tailer) {
-        try (final DocumentContext documentContext = tailer.readingDocument()) {
-            assertTrue(documentContext.isPresent());
-            assertEquals(expectedValue, documentContext.wire().getValueIn().int32());
-        }
     }
 
     private Future<RecordInfo> attemptToWriteDocument(final SingleChronicleQueue queue) throws InterruptedException {

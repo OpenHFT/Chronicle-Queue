@@ -3,7 +3,6 @@
 :toc-title: Contents
 :toclevels: 2
 
-
 == Chronicle Queue Enterprise Replication
 
 At the heart of Chronicle Services Replication lies Chronicle Queue Enterprise replication,
@@ -75,7 +74,6 @@ In the above configuration, the queue "queue1" is set to be replicated from host
 defined for cluster "cluster1". Queues will use storage paths defined by `baseSourcePath`/`baseSinkPath` for source and
 sink, respectively, followed by queue name. So for this example, source queue will be at `replica/source/queue1` while
 sink will be written to `replica/sink/queue1`.
-
 
 === Using Enterprise Queue Replication
 

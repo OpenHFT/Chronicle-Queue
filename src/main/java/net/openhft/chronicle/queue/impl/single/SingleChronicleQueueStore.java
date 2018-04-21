@@ -29,16 +29,7 @@ import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.BinaryWireCode;
-import net.openhft.chronicle.wire.Sequence;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.ValueOut;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -141,39 +132,6 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-    @Override
-    public int sourceId() {
-        return sourceId;
-    }
-
-    private LongValue loadWritePosition(@NotNull WireIn wire) {
-
-        final ValueIn read = wire.read(MetaDataField.writePosition);
-
-        final int code;
-        final long start = wire.bytes().readPosition();
-
-        try {
-            wire.consumePadding();
-            code = wire.bytes().uncheckedReadUnsignedByte();
-        } finally {
-            wire.bytes().readPosition(start);
-        }
-
-        if (code == BinaryWireCode.I64_ARRAY) {
-            TwoLongValue result = wire.newTwoLongReference();
-            // when the write position is and array it also encodes the sequence number in the write position as the second long value
-            read.int128(result);
-            return result;
-        }
-
-
-        final LongValue result = wire.newLongReference();
-        read.int64(result);
-        return result;
-
-    }
-
     /**
      * @param rollCycle               the current rollCycle
      * @param wireType                the wire type that is being used
@@ -228,6 +186,45 @@ public class SingleChronicleQueueStore implements WireStore {
         return q.dump();
     }
 
+    private static WireOut intForBinding(ValueOut wireOut, final LongValue value) {
+        return value instanceof TwoLongValue ?
+                wireOut.int128forBinding(0L, 0L, (TwoLongValue) value) :
+                wireOut.int64forBinding(0L, value);
+
+    }
+
+    @Override
+    public int sourceId() {
+        return sourceId;
+    }
+
+    private LongValue loadWritePosition(@NotNull WireIn wire) {
+
+        final ValueIn read = wire.read(MetaDataField.writePosition);
+
+        final int code;
+        final long start = wire.bytes().readPosition();
+
+        try {
+            wire.consumePadding();
+            code = wire.bytes().uncheckedReadUnsignedByte();
+        } finally {
+            wire.bytes().readPosition(start);
+        }
+
+        if (code == BinaryWireCode.I64_ARRAY) {
+            TwoLongValue result = wire.newTwoLongReference();
+            // when the write position is and array it also encodes the sequence number in the write position as the second long value
+            read.int128(result);
+            return result;
+        }
+
+        final LongValue result = wire.newLongReference();
+        read.int64(result);
+        return result;
+
+    }
+
     /**
      * @return the type of wire used
      */
@@ -257,7 +254,6 @@ public class SingleChronicleQueueStore implements WireStore {
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
-
 
     /**
      * when using replication to another host, this is the last index that has been sent to the remote host.
@@ -391,6 +387,10 @@ public class SingleChronicleQueueStore implements WireStore {
         return sb.toString();
     }
 
+    // *************************************************************************
+    // Marshalling
+    // *************************************************************************
+
     private void onCleanup() {
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
@@ -399,10 +399,6 @@ public class SingleChronicleQueueStore implements WireStore {
         Closeable.closeQuietly(lastIndexReplicated);
         mappedBytes.release();
     }
-
-    // *************************************************************************
-    // Marshalling
-    // *************************************************************************
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
@@ -419,13 +415,6 @@ public class SingleChronicleQueueStore implements WireStore {
         wire.write(MetaDataField.lastIndexReplicated).int64forBinding(-1L, lastIndexReplicated);
         wire.write(MetaDataField.sourceId).int32(sourceId);
         wire.padToCacheAlign();
-    }
-
-    private static WireOut intForBinding(ValueOut wireOut, final LongValue value) {
-        return value instanceof TwoLongValue ?
-                wireOut.int128forBinding(0L, 0L, (TwoLongValue) value) :
-                wireOut.int64forBinding(0L, value);
-
     }
 
     @Override

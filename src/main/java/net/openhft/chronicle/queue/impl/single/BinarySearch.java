@@ -23,7 +23,7 @@ public enum BinarySearch {
      * <p>
      * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
      * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
-     * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the 
+     * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
      * bit not being set ( in other words set to zero ).
      */

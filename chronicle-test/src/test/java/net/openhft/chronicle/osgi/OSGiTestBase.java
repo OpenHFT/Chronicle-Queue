@@ -25,7 +25,6 @@ import java.io.File;
 
 public class OSGiTestBase {
     /**
-     *
      * @param projectName
      * @return
      */
@@ -33,20 +32,20 @@ public class OSGiTestBase {
         String baseDir = System.getProperty("main.basedir");
         String bundleDir = null;
 
-        bundleDir = String.format("%s/%s/target/classes",baseDir,projectName);
-        if(new File(bundleDir).exists()) {
+        bundleDir = String.format("%s/%s/target/classes", baseDir, projectName);
+        if (new File(bundleDir).exists()) {
             return CoreOptions.bundle(String.format("reference:file:%s", bundleDir));
         }
 
-        bundleDir = String.format("%s/../%s/target/classes",baseDir,projectName);
-        if(new File(bundleDir).exists()) {
+        bundleDir = String.format("%s/../%s/target/classes", baseDir, projectName);
+        if (new File(bundleDir).exists()) {
             return CoreOptions.bundle(String.format("reference:file:%s", bundleDir));
         }
 
         return null;
     }
 
-    public static MavenArtifactProvisionOption mavenBundleAsInProject(final String groupId,final String artifactId) {
+    public static MavenArtifactProvisionOption mavenBundleAsInProject(final String groupId, final String artifactId) {
         return CoreOptions.mavenBundle().groupId(groupId).artifactId(artifactId).versionAsInProject();
     }
 }

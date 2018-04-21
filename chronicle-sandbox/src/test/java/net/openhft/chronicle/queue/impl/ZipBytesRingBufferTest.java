@@ -33,13 +33,24 @@ import java.util.concurrent.atomic.AtomicLong;
 @Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
 public class ZipBytesRingBufferTest {
 
+    public static Header getHeader(SingleChronicleQueue singleChronicleQueue) {
+        Field header = singleChronicleQueue.getClass().getDeclaredField("header");
+        header.setAccessible(true);
+
+        return (Header) header.get(singleChronicleQueue);
+    }
+
+    public static long lastWrite(SingleChronicleQueue chronicle) {
+        return getHeader(chronicle).writeByte().getVolatileValue();
+    }
+
     @Test
-    public void testZipAndAppend()   {
+    public void testZipAndAppend() {
         File file = null;
 
         try {
 
-            NativeBytesStore allocate =  NativeBytesStore.nativeStoreWithFixedCapacity(1024);
+            NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1024);
             NativeBytesStore msgBytes = NativeBytesStore.nativeStoreWithFixedCapacity(150);
 
             net.openhft.chronicle.bytes.Bytes message = msgBytes.bytes();
@@ -78,16 +89,5 @@ public class ZipBytesRingBufferTest {
             if (file != null)
                 file.delete();
         }
-    }
-
-    public static Header getHeader(SingleChronicleQueue singleChronicleQueue)   {
-        Field header = singleChronicleQueue.getClass().getDeclaredField("header");
-        header.setAccessible(true);
-
-        return (Header) header.get(singleChronicleQueue);
-    }
-
-    public static long lastWrite(SingleChronicleQueue chronicle)   {
-        return getHeader(chronicle).writeByte().getVolatileValue();
     }
 }

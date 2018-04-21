@@ -225,7 +225,7 @@ public class SingleCQFormatTest {
             dc.wire().writeEventName(() -> "header").typedMarshallable(
                     new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 60 *
                             60 * 1000, 4 << 10, 4, new TimedStoreRecovery(WireType.BINARY),
-                            -1,0));
+                            -1, 0));
         }
 
         assertEquals("--- !!meta-data #binary\n" +
@@ -316,7 +316,7 @@ public class SingleCQFormatTest {
                 dc.wire().writeEventName(() -> "header").typedMarshallable(
                         new SingleChronicleQueueStore(cycle, WireType.BINARY, mappedBytes, 0,
                                 cycle.defaultIndexCount(), cycle.defaultIndexSpacing(), new
-                                TimedStoreRecovery(WireType.BINARY), -1,0));
+                                TimedStoreRecovery(WireType.BINARY), -1, 0));
             }
             try (DocumentContext dc = wire.writingDocument(false)) {
                 dc.wire().writeEventName("msg").text("Hello world");

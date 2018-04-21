@@ -32,6 +32,12 @@ public final class QueueEpochTest {
 
     private long currentTime;
 
+    private static void logDebug(final String format, final Object... args) {
+        if (DEBUG) {
+            System.out.printf(format, args);
+        }
+    }
+
     @Test
     public void shouldRollQueueFilesAccordingToUtcOffset() throws Exception {
         logDebug("UTC offset is %dms%n", UTC_OFFSET);
@@ -78,6 +84,20 @@ public final class QueueEpochTest {
         }
     }
 
+    private long getCurrentTime() {
+        return currentTime;
+    }
+
+    private void setCurrentTime(final long currentTime) {
+        logDebug("Setting current time to %s%n", Instant.ofEpochMilli(currentTime));
+        this.currentTime = currentTime;
+    }
+
+    @FunctionalInterface
+    interface TestEvent {
+        void setOrGetEvent(String event);
+    }
+
     private final class CapturingStoreFileListener implements StoreFileListener {
         private int numberOfRollEvents = 0;
 
@@ -100,25 +120,5 @@ public final class QueueEpochTest {
             logDebug("%s file %s for cycle %d at %s%n", action, file.getName(), cycle,
                     Instant.ofEpochMilli(getCurrentTime()));
         }
-    }
-
-    private long getCurrentTime() {
-        return currentTime;
-    }
-
-    private void setCurrentTime(final long currentTime) {
-        logDebug("Setting current time to %s%n", Instant.ofEpochMilli(currentTime));
-        this.currentTime = currentTime;
-    }
-
-    private static void logDebug(final String format, final Object... args) {
-        if (DEBUG) {
-            System.out.printf(format, args);
-        }
-    }
-
-    @FunctionalInterface
-    interface TestEvent {
-        void setOrGetEvent(String event);
     }
 }

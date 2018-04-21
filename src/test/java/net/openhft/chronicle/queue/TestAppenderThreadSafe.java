@@ -5,5 +5,4 @@ package net.openhft.chronicle.queue;
  */
 public class TestAppenderThreadSafe {
 
-
 }

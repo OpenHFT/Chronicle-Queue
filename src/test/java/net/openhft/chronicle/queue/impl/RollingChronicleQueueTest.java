@@ -360,7 +360,10 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTailingWithEmptyCycles() {
-        testTailing(p -> { p.execute(); return 1; });
+        testTailing(p -> {
+            p.execute();
+            return 1;
+        });
     }
 
     @Test
@@ -410,7 +413,7 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
 
             // now make sure we can go direct to each index (like afterLastWritten)
             tailer.toStart();
-            for (int i=0; i<indexes.length; i++) {
+            for (int i = 0; i < indexes.length; i++) {
                 assertTrue(tailer.moveToIndex(indexes[i]));
                 String text = tailer.readText();
                 assertEquals(i, Integer.parseInt(text));

@@ -90,9 +90,9 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
 
     /**
      * Resets the concept of 'epoch' from 1970-01-01T00:00:00 UTC to a new value (in UTC millis).
-     *
+     * <p>
      * This method is deprecated and will be removed in a future release.
-     *
+     * <p>
      * Please use the <code>rollTime</code> method, specifying the new epoch as a
      * <code>LocalTime</code> that will be resolved against UTC.
      *
@@ -107,12 +107,12 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
 
     /**
      * Resets the rollTime for the queue cycle to a new time.
-     *
+     * <p>
      * E.g. builder.rollTime(LocalTime.of(21, 0), ZoneId.of("UTC"))
      * will cause the queue to roll cycles at 21:00 UTC,
      * rather than the default roll-time of midnight UTC.
      *
-     * @param time the new value for the time of day when the cycle should roll
+     * @param time   the new value for the time of day when the cycle should roll
      * @param zoneId the time-zone against which to base the roll-time
      * @return the builder
      */
@@ -204,6 +204,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
      * </ul>
      * Setting this true means that there is no longer a guarantee of ordering provided by the try block around the
      * DocumentContext i.e. 2 concurrent appenders can race in the DocumentContext.close.
+     *
      * @param progressOnContention leave false (default) for existing behaviour
      * @return this
      */

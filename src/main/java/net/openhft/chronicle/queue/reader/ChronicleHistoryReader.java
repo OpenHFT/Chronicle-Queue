@@ -103,7 +103,7 @@ public class ChronicleHistoryReader {
         final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, null, parselet);
 
         MessageHistory.set(new VanillaMessageHistory());
-        while (! Thread.currentThread().isInterrupted() && mr.readOne()) {
+        while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
             ++counter;
             if (this.progress && counter % 1_000_000L == 0) {
                 System.out.println("Progress: " + counter);
@@ -151,13 +151,13 @@ public class ChronicleHistoryReader {
         long tsSinceStart = (lastWindowCount * measurementWindowNanos) - firstTimeStampNanos;
         messageSink.accept(
                 Long.toString(timeUnit.convert(tsSinceStart, TimeUnit.NANOSECONDS)) + "," +
-                histos.values().stream().
-                map(h -> Long.toString(timeUnit.convert((long) offset(h.getPercentiles(), summaryOutputOffset), TimeUnit.NANOSECONDS))).
-                collect(Collectors.joining(",")));
+                        histos.values().stream().
+                                map(h -> Long.toString(timeUnit.convert((long) offset(h.getPercentiles(), summaryOutputOffset), TimeUnit.NANOSECONDS))).
+                                collect(Collectors.joining(",")));
     }
 
     private double offset(double[] percentiles, int offset) {
-        return offset >=0 ? percentiles[offset] : percentiles[percentiles.length + offset];
+        return offset >= 0 ? percentiles[offset] : percentiles[percentiles.length + offset];
     }
 
     private String count() {
@@ -177,7 +177,7 @@ public class ChronicleHistoryReader {
             int myIndex = index;
             if (myIndex == -1) myIndex = percentiles.length - 1;
             double value = percentiles[myIndex];
-            sb.append(String.format("%12d ", timeUnit.convert((long)value, TimeUnit.NANOSECONDS)));
+            sb.append(String.format("%12d ", timeUnit.convert((long) value, TimeUnit.NANOSECONDS)));
         });
         return sb.toString();
     }
@@ -209,15 +209,15 @@ public class ChronicleHistoryReader {
     }
 
     protected void processMessage(CharSequence methodName, MessageHistory history) {
-        CharSequence extraHistoId = histosByMethod ? ("_"+methodName) : "";
+        CharSequence extraHistoId = histosByMethod ? ("_" + methodName) : "";
         long lastTime = 0;
         // if the tailer has recordHistory(true) then the MessageHistory will be
         // written with a single timing and nothing else. This is then carried through
         int firstWriteOffset = history.timings() - (history.sources() * 2);
-        if (! (firstWriteOffset == 0 || firstWriteOffset == 1))
+        if (!(firstWriteOffset == 0 || firstWriteOffset == 1))
             // don't know how this can happen, but there is at least one CQ that exhibits it
             return;
-        for (int sourceIndex=0; sourceIndex<history.sources(); sourceIndex++) {
+        for (int sourceIndex = 0; sourceIndex < history.sources(); sourceIndex++) {
             String histoId = Integer.toString(history.sourceId(sourceIndex)) + extraHistoId;
             Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
             long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
@@ -227,7 +227,7 @@ public class ChronicleHistoryReader {
                 Histogram histo1 = histos.computeIfAbsent("startTo" + histoId, s -> histogram());
                 histo1.sample(receivedByThisComponent - history.timing(0));
             } else if (lastTime != 0) {
-                Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex-1)) + "to" + histoId, s -> histogram());
+                Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex - 1)) + "to" + histoId, s -> histogram());
                 // here we are comparing System.nanoTime across processes. YMMV
                 histo1.sample(receivedByThisComponent - lastTime);
             }

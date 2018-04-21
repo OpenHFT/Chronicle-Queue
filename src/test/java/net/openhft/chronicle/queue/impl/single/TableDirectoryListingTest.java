@@ -20,6 +20,11 @@ public class TableDirectoryListingTest {
     private File tableFile;
     private File tempFile;
 
+    @NotNull
+    private static File testDirectory() {
+        return DirectoryUtils.tempDir(TableDirectoryListingTest.class.getSimpleName());
+    }
+
     @Before
     public void setUp() throws Exception {
         testDirectory = testDirectory();
@@ -78,10 +83,5 @@ public class TableDirectoryListingTest {
 
         listing.onFileCreated(tempFile, 9);
         assertThat(listing.getMaxCreatedCycle(), is(9));
-    }
-
-    @NotNull
-    private static File testDirectory() {
-        return DirectoryUtils.tempDir(TableDirectoryListingTest.class.getSimpleName());
     }
 }

@@ -45,10 +45,9 @@ public enum ChronicleReaderMain {
         final Consumer<String> messageSink = commandLine.hasOption('l') ?
                 s -> System.out.println(s.replaceAll("\n", "")) :
                 System.out::println;
-        final ChronicleReader chronicleReader = new ChronicleReader(). 
+        final ChronicleReader chronicleReader = new ChronicleReader().
                 withMessageSink(messageSink).
                 withBasePath(Paths.get(commandLine.getOptionValue('d')));
- 
 
         configureReader(chronicleReader, commandLine);
 
@@ -131,7 +130,7 @@ public enum ChronicleReaderMain {
     }
 
     public static void addOption(final Options options, final String opt, final String argName, final boolean hasArg,
-                                  final String description, final boolean isRequired) {
+                                 final String description, final boolean isRequired) {
         final Option option = new Option(opt, hasArg, description);
         option.setArgName(argName);
         option.setRequired(isRequired);

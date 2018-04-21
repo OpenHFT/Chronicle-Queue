@@ -55,13 +55,8 @@ public class SingleTableStore implements TableStore {
     private final ReferenceCounter refCount;
     @NotNull
     private final StoreRecovery recovery;
-
-    @Override
-    public boolean isClosed() {
-        return isClosed;
-    }
-
     private volatile boolean isClosed;
+
     /**
      * used by {@link Demarshallable}
      *
@@ -104,6 +99,11 @@ public class SingleTableStore implements TableStore {
         this.mappedFile = mappedBytes.mappedFile();
         this.refCount = ReferenceCounter.onReleased(this::onCleanup);
         mappedWire = wireType.apply(mappedBytes);
+    }
+
+    @Override
+    public boolean isClosed() {
+        return isClosed;
     }
 
     /**

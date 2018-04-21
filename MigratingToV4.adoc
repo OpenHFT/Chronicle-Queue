@@ -115,4 +115,3 @@ When writing you want to use
 - getter `writeLimit()` and setter `writeLimit(long)` -  last valid writePosition().
 - writeRemaining() is  writeLimit() - writePosition();
 
-

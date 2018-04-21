@@ -29,9 +29,7 @@ import org.osgi.framework.BundleContext;
 
 import javax.inject.Inject;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.ops4j.pax.exam.CoreOptions.*;
 
 /**
@@ -46,22 +44,22 @@ public class OSGiBundleTest extends OSGiTestBase {
     @Configuration
     public Option[] config() {
         return options(
-            systemProperty("org.osgi.framework.storage.clean").value("true"),
-            systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
-            mavenBundleAsInProject("org.slf4j"  ,"slf4j-api"),
-            mavenBundleAsInProject("org.slf4j"  ,"slf4j-simple").noStart(),
-            mavenBundleAsInProject("net.openhft","affinity"),
-            mavenBundleAsInProject("net.openhft","compiler"),
-            mavenBundleAsInProject("net.openhft","lang"),
-            mavenBundleAsInProject("net.openhft","chronicle"),
-            workspaceBundle("chronicle-test"),
-            junitBundles(),
-            systemPackage("sun.misc"),
-            systemPackage("sun.nio.ch"),
-            systemPackage("com.sun.jna"),
-            systemPackage("com.sun.jna.ptr"),
-            systemPackage("com.sun.tools.javac.api"),
-            cleanCaches()
+                systemProperty("org.osgi.framework.storage.clean").value("true"),
+                systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
+                mavenBundleAsInProject("org.slf4j", "slf4j-api"),
+                mavenBundleAsInProject("org.slf4j", "slf4j-simple").noStart(),
+                mavenBundleAsInProject("net.openhft", "affinity"),
+                mavenBundleAsInProject("net.openhft", "compiler"),
+                mavenBundleAsInProject("net.openhft", "lang"),
+                mavenBundleAsInProject("net.openhft", "chronicle"),
+                workspaceBundle("chronicle-test"),
+                junitBundles(),
+                systemPackage("sun.misc"),
+                systemPackage("sun.nio.ch"),
+                systemPackage("com.sun.jna"),
+                systemPackage("com.sun.jna.ptr"),
+                systemPackage("com.sun.tools.javac.api"),
+                cleanCaches()
         );
     }
 
@@ -79,7 +77,7 @@ public class OSGiBundleTest extends OSGiTestBase {
             if (bundle != null) {
                 if (bundle.getSymbolicName().equals("net.openhft.chronicle")) {
                     bundleFound = true;
-                    assertEquals(bundle.getState(),Bundle.ACTIVE);
+                    assertEquals(bundle.getState(), Bundle.ACTIVE);
                 }
             }
         }

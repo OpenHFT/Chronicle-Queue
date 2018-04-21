@@ -25,11 +25,9 @@ import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Consumer;
-
 /**
  * todo : currently work in process
- *
+ * <p>
  * Created by Rob Austin
  */
 public class StatelessAppender implements ExcerptAppender {

@@ -71,16 +71,16 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     /**
      * The number of excerpts between the indexes, {@code fromIndex} inclusive, {@code toIndex}
      * exclusive.
-     *
+     * <p>
      * When {@code fromIndex} and {@code toIndex} are in different cycles which are not adjacent, this
      * operation can be expensive, as the index count for each intermediate cycle has to be found
      * and calculated. As such, and in this situation, it's not recommended to call this method
      * regularly in latency sensitive systems.
      *
      * @param fromIndex from index, the index provided must exist.  To improve performance no checking
-     *               is  carried out to validate if an excerpt exists at this index. ( inclusive )
-     * @param toIndex to index, the index provided must exist. To improve performance no checking is
-     *               carried out to validate if an excerpt exists at this index. ( exclusive )
+     *                  is  carried out to validate if an excerpt exists at this index. ( inclusive )
+     * @param toIndex   to index, the index provided must exist. To improve performance no checking is
+     *                  carried out to validate if an excerpt exists at this index. ( exclusive )
      * @return the number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
      * exclusive.
      * @throws java.lang.IllegalStateException if the cycle of {@code fromIndex} or {@code toIndex} can

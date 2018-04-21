@@ -33,7 +33,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     /**
      * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a
      * lambda expression.
-     *
+     * <p>
      * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
      *
      * @return the document context
@@ -81,7 +81,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * Wind to the last entry in the last cycle
      * <p> If the direction() == FORWARD, this will be 1 more than the last entry.
      * <br/>Otherwise the index will be the last entry. </p>
-     *
+     * <p>
      * This is not atomic with the appenders, in other words if a cycle has been added in the
      * current millisecond, toEnd() may not see it, This is because for performance reasons, the
      * queue.lastCycle() is cached, as finding the last cycle is expensive, it requires asking the
@@ -122,6 +122,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
 
     /**
      * Causes this tailer to update the index as queue excerpts are read
+     *
      * @param indexing should this ExcerptTailer perform indexing
      * @return this ExcerptTailer
      */
@@ -140,9 +141,11 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
 
     /**
      * A task that will be run if a WeakReference referring this appender is registered with a clean-up task.
+     *
      * @return Task to release any associated resources
      */
     default Runnable getCloserJob() {
-        return () -> {};
+        return () -> {
+        };
     }
 }

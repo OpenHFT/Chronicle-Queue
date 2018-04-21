@@ -41,16 +41,14 @@ import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
-
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
 
     private static int MESSAGE_HISTORY_METHOD_ID = -1;
     private static StringBuilderPool SBP = new StringBuilderPool();
 
-    @FunctionalInterface
-    interface WireWriter<T> {
-        void write(T message, WireOut wireOut);
+    private static void releaseWireResources(final Wire wire) {
+        StoreComponentReferenceHandler.queueForRelease(wire);
     }
 
     // *************************************************************************
@@ -58,6 +56,11 @@ public class SingleChronicleQueueExcerpts {
     // APPENDERS
     //
     // *************************************************************************
+
+    @FunctionalInterface
+    interface WireWriter<T> {
+        void write(T message, WireOut wireOut);
+    }
 
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
@@ -670,6 +673,25 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
+        @Override
+        public String toString() {
+            return "StoreAppender{" +
+                    "queue=" + queue +
+                    ", cycle=" + cycle +
+                    ", position=" + position +
+                    ", lastIndex=" + lastIndex +
+                    ", lazyIndexing=" + lazyIndexing +
+                    ", lastPosition=" + lastPosition +
+                    ", lastCycle=" + lastCycle +
+                    '}';
+        }
+
+        private interface HeaderWriteStrategy {
+            void onContextClose();
+
+            boolean onContextOpen(boolean metaData, int safeLength);
+        }
+
         class StoreAppenderContext implements DocumentContext {
 
             boolean isClosed;
@@ -809,25 +831,6 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        @Override
-        public String toString() {
-            return "StoreAppender{" +
-                    "queue=" + queue +
-                    ", cycle=" + cycle +
-                    ", position=" + position +
-                    ", lastIndex=" + lastIndex +
-                    ", lazyIndexing=" + lazyIndexing +
-                    ", lastPosition=" + lastPosition +
-                    ", lastCycle=" + lastCycle +
-                    '}';
-        }
-
-        private interface HeaderWriteStrategy {
-            void onContextClose();
-
-            boolean onContextOpen(boolean metaData, int safeLength);
-        }
-
         /**
          * Strategise previous behaviour
          */
@@ -907,6 +910,12 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
+// *************************************************************************
+//
+// TAILERS
+//
+// *************************************************************************
+
     private static final class ClosableResources {
         private final SingleChronicleQueue queue;
         private volatile Bytes wireReference = null;
@@ -937,12 +946,6 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
-// *************************************************************************
-//
-// TAILERS
-//
-// *************************************************************************
-
     /**
      * Tailer
      */
@@ -952,6 +955,7 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
         private final ClosableResources closableResources;
+        private final MoveToState moveToState = new MoveToState();
         long index; // index of the next read.
         @Nullable
         WireStore store;
@@ -964,7 +968,6 @@ public class SingleChronicleQueueExcerpts {
         private TailerState state = UNINITIALISED;
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
-        private final MoveToState moveToState = new MoveToState();
         private boolean shouldUpdateIndex = false;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
@@ -979,6 +982,48 @@ public class SingleChronicleQueueExcerpts {
         private static boolean isReadOnly(Bytes bytes) {
             return bytes instanceof MappedBytes &&
                     ((MappedBytes) bytes).isBackingFileReadOnly();
+        }
+
+        @Nullable
+        public static MessageHistory readHistory(final DocumentContext dc, MessageHistory history) {
+            final Wire wire = dc.wire();
+
+            if (wire == null)
+                return null;
+
+            Object parent = wire.parent();
+            wire.parent(null);
+            try {
+                final Bytes<?> bytes = wire.bytes();
+
+                final byte code = bytes.readByte(bytes.readPosition());
+                history.reset();
+
+                return code == (byte) FIELD_NUMBER ?
+                        readHistoryFromBytes(wire, history) :
+                        readHistoryFromWire(wire, history);
+            } finally {
+                wire.parent(parent);
+            }
+
+        }
+
+        private static MessageHistory readHistoryFromBytes(final Wire wire, MessageHistory history) {
+            final Bytes<?> bytes = wire.bytes();
+            if (MESSAGE_HISTORY_METHOD_ID != wire.readEventNumber())
+                return null;
+            ((BytesMarshallable) history).readMarshallable(bytes);
+            return history;
+        }
+
+        private static MessageHistory readHistoryFromWire(final Wire wire, MessageHistory history) {
+            final StringBuilder sb = SBP.acquireStringBuilder();
+            ValueIn valueIn = wire.read(sb);
+
+            if (!MethodReader.HISTORY.contentEquals(sb))
+                return null;
+            valueIn.object(history, MessageHistory.class);
+            return history;
         }
 
         @Override
@@ -1788,52 +1833,6 @@ public class SingleChronicleQueueExcerpts {
             return state;
         }
 
-        @Nullable
-        public static MessageHistory readHistory(final DocumentContext dc, MessageHistory history) {
-            final Wire wire = dc.wire();
-
-            if (wire == null)
-                return null;
-
-            Object parent = wire.parent();
-            wire.parent(null);
-            try {
-                final Bytes<?> bytes = wire.bytes();
-
-                final byte code = bytes.readByte(bytes.readPosition());
-                history.reset();
-
-                return code == (byte) FIELD_NUMBER ?
-                        readHistoryFromBytes(wire, history) :
-                        readHistoryFromWire(wire, history);
-            } finally {
-                wire.parent(parent);
-            }
-
-
-        }
-
-
-        private static MessageHistory readHistoryFromBytes(final Wire wire, MessageHistory history) {
-            final Bytes<?> bytes = wire.bytes();
-            if (MESSAGE_HISTORY_METHOD_ID != wire.readEventNumber())
-                return null;
-            ((BytesMarshallable) history).readMarshallable(bytes);
-            return history;
-        }
-
-
-        private static MessageHistory readHistoryFromWire(final Wire wire, MessageHistory history) {
-            final StringBuilder sb = SBP.acquireStringBuilder();
-            ValueIn valueIn = wire.read(sb);
-
-            if (!MethodReader.HISTORY.contentEquals(sb))
-                return null;
-            valueIn.object(history, MessageHistory.class);
-            return history;
-        }
-
-
         @NotNull
         @Override
         public ExcerptTailer afterLastWritten(@NotNull ChronicleQueue queue) {
@@ -1886,8 +1885,8 @@ public class SingleChronicleQueueExcerpts {
         private String extraInfo(@NotNull ExcerptTailer tailer, @NotNull VanillaMessageHistory messageHistory) {
             return String.format(
                     ". That sourceIndex was determined fom the last entry written to queue %s " +
-                    "(message index %s, message history %s). If source queue is replicated then " +
-                    "sourceIndex may not have been replicated yet",
+                            "(message index %s, message history %s). If source queue is replicated then " +
+                            "sourceIndex may not have been replicated yet",
                     tailer.queue().file(), Long.toHexString(tailer.index()), WireType.TEXT.asString(messageHistory));
         }
 
@@ -1924,7 +1923,6 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-
         public void lastIndexReplicated(long lastIndexReplicated) {
 
             Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().file().getAbsolutePath());
@@ -1950,7 +1948,6 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-
         public long lastAcknowledgedIndexReplicated() {
             return ((StoreAppender) queue.acquireAppender()).store().lastAcknowledgedIndexReplicated();
         }
@@ -1970,67 +1967,6 @@ public class SingleChronicleQueueExcerpts {
         // visible for testing
         int getIndexMoveCount() {
             return moveToState.indexMoveCount;
-        }
-
-        class StoreTailerContext extends BinaryReadDocumentContext {
-
-            boolean rollbackOnClose = false;
-
-            @Override
-            public void rollbackOnClose() {
-                rollbackOnClose = true;
-            }
-
-            StoreTailerContext() {
-                super(null);
-            }
-
-            @Override
-            public long index() {
-                return StoreTailer.this.index();
-            }
-
-            @Override
-            public int sourceId() {
-                return StoreTailer.this.sourceId();
-            }
-
-            @Override
-            public void close() {
-
-                try {
-                    if (rollbackOnClose) {
-                        present = false;
-                        if (start != -1)
-                            wire.bytes().readPosition(start).readLimit(readLimit);
-                        start = -1;
-                        return;
-                    }
-
-                    if (isPresent() && !isMetaData())
-                        incrementIndex();
-
-                    super.close();
-                    // assert wire == null || wire.endUse();
-
-                } finally {
-                    rollbackOnClose = false;
-                }
-            }
-
-            boolean present(boolean present) {
-                return this.present = present;
-            }
-
-            public void wire(@Nullable AbstractWire wire) {
-
-                AbstractWire oldWire = this.wire;
-                this.wire = wire;
-
-                if (oldWire != null) {
-                    releaseWireResources(oldWire);
-                }
-            }
         }
 
         @NotNull
@@ -2089,11 +2025,67 @@ public class SingleChronicleQueueExcerpts {
                         queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
             }
 
-
         }
-    }
 
-    private static void releaseWireResources(final Wire wire) {
-        StoreComponentReferenceHandler.queueForRelease(wire);
+        class StoreTailerContext extends BinaryReadDocumentContext {
+
+            boolean rollbackOnClose = false;
+
+            StoreTailerContext() {
+                super(null);
+            }
+
+            @Override
+            public void rollbackOnClose() {
+                rollbackOnClose = true;
+            }
+
+            @Override
+            public long index() {
+                return StoreTailer.this.index();
+            }
+
+            @Override
+            public int sourceId() {
+                return StoreTailer.this.sourceId();
+            }
+
+            @Override
+            public void close() {
+
+                try {
+                    if (rollbackOnClose) {
+                        present = false;
+                        if (start != -1)
+                            wire.bytes().readPosition(start).readLimit(readLimit);
+                        start = -1;
+                        return;
+                    }
+
+                    if (isPresent() && !isMetaData())
+                        incrementIndex();
+
+                    super.close();
+                    // assert wire == null || wire.endUse();
+
+                } finally {
+                    rollbackOnClose = false;
+                }
+            }
+
+            boolean present(boolean present) {
+                return this.present = present;
+            }
+
+            public void wire(@Nullable AbstractWire wire) {
+
+                AbstractWire oldWire = this.wire;
+                this.wire = wire;
+
+                if (oldWire != null) {
+                    releaseWireResources(oldWire);
+                }
+            }
+        }
     }
 }

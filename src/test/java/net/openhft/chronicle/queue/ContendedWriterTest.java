@@ -40,9 +40,8 @@ import static org.junit.Assert.assertEquals;
 @Ignore("long running")
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ContendedWriterTest {
-    private final AtomicBoolean running = new AtomicBoolean(true);
     private static final long NUMBER_OF_LONGS = 3;
-
+    private final AtomicBoolean running = new AtomicBoolean(true);
     private ThreadDump threadDump;
 
     @Before
@@ -80,44 +79,44 @@ public class ContendedWriterTest {
 
     @Test
     public void twoThreadsWritingLargeMessagesAtSameSlowRate() {
-        test("twoThreadsWritingLargeMessagesAtSameSlowRate", 
-                new Config(false, 1, 5), 
-                new Config(false,1, 5));
+        test("twoThreadsWritingLargeMessagesAtSameSlowRate",
+                new Config(false, 1, 5),
+                new Config(false, 1, 5));
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred() {
-        test("twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred", 
-                new Config(true, 1, 5), 
-                new Config(true,1, 5));
+        test("twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred",
+                new Config(true, 1, 5),
+                new Config(true, 1, 5));
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesOneFastOneSlow() {
-        test("twoThreadsWritingLargeMessagesOneFastOneSlow", 
-                new Config(false,1, 0), 
+        test("twoThreadsWritingLargeMessagesOneFastOneSlow",
+                new Config(false, 1, 0),
                 new Config(false, 1, 5));
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred() {
-        test("twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred", 
-                new Config(false,1, 0), 
+        test("twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred",
+                new Config(false, 1, 0),
                 new Config(true, 1, 5));
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow() {
-        test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow", 
-                new Config(false, 1, 0), 
-                new Config(false,0, 5));
+        test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow",
+                new Config(false, 1, 0),
+                new Config(false, 0, 5));
     }
 
     @Test
     public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred() {
-        test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred", 
-                new Config(false, 1, 0), 
-                new Config(true,0, 5));
+        test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred",
+                new Config(false, 1, 0),
+                new Config(true, 0, 5));
     }
 
     private void test(String name, Config... configs) {
@@ -127,7 +126,7 @@ public class ContendedWriterTest {
         StartAndMonitor[] startAndMonitors = new StartAndMonitor[configs.length];
 
         try {
-            for (int i=0; i<configs.length; i++) {
+            for (int i = 0; i < configs.length; i++) {
                 queues[i] = SingleChronicleQueueBuilder
                         .binary(path)
                         .testBlockSize()
@@ -142,7 +141,7 @@ public class ContendedWriterTest {
             Jvm.pause(50);
 
             running.set(true);
-            for (int i=0; i<configs.length; i++) {
+            for (int i = 0; i < configs.length; i++) {
                 startAndMonitors[i] = new StartAndMonitor(queues[i], Integer.toString(i), configs[i].writePause, configs[i].pauseBetweenWrites);
             }
 
@@ -150,8 +149,8 @@ public class ContendedWriterTest {
             running.set(false);
             Jvm.pause(50);
 
-            for (int i=0; i<configs.length; i++) {
-                System.out.println("thread"+i+" progress=" + configs[i].progressOnContention + " writePause=" +
+            for (int i = 0; i < configs.length; i++) {
+                System.out.println("thread" + i + " progress=" + configs[i].progressOnContention + " writePause=" +
                         configs[i].writePause + " between=" + configs[i].pauseBetweenWrites + ": " +
                         startAndMonitors[i].histo.toMicrosFormat());
             }
@@ -169,6 +168,31 @@ public class ContendedWriterTest {
             this.progressOnContention = progressOnContention;
             this.writePause = writePause;
             this.pauseBetweenWrites = pauseBetweenWrites;
+        }
+    }
+
+    private static class SlowToSerialiseAndDeserialise implements Marshallable {
+        private final StringBuilder sb = new StringBuilder();
+        private final long writePauseMs;
+
+        private SlowToSerialiseAndDeserialise(long writePauseMs) {
+            this.writePauseMs = writePauseMs;
+        }
+
+        @Override
+        public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
+            ValueIn valueIn = wire.getValueIn();
+            for (int i = 0; i < NUMBER_OF_LONGS; i++)
+                assertEquals(i, valueIn.int64());
+            //Jvm.pause(PAUSE_READ_MS);
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull WireOut wire) {
+            ValueOut valueOut = wire.getValueOut();
+            for (int i = 0; i < NUMBER_OF_LONGS; i++)
+                valueOut.int64(i);
+            Jvm.pause(writePauseMs);
         }
     }
 
@@ -198,31 +222,6 @@ public class ContendedWriterTest {
                 }
             }, name);
             thread.start();
-        }
-    }
-
-    private static class SlowToSerialiseAndDeserialise implements Marshallable {
-        private final StringBuilder sb = new StringBuilder();
-        private final long writePauseMs;
-
-        private SlowToSerialiseAndDeserialise(long writePauseMs) {
-            this.writePauseMs = writePauseMs;
-        }
-
-        @Override
-        public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-            ValueIn valueIn = wire.getValueIn();
-            for (int i=0; i<NUMBER_OF_LONGS; i++)
-                assertEquals(i, valueIn.int64());
-            //Jvm.pause(PAUSE_READ_MS);
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull WireOut wire) {
-            ValueOut valueOut = wire.getValueOut();
-            for (int i=0; i<NUMBER_OF_LONGS; i++)
-                valueOut.int64(i);
-            Jvm.pause(writePauseMs);
         }
     }
 }

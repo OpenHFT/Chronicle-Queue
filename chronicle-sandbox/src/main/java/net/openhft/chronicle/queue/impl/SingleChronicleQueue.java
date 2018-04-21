@@ -17,10 +17,8 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.ByteableLongArrayValues;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireKey;
@@ -41,7 +39,7 @@ import static net.openhft.chronicle.wire.Wires.isData;
 
 /**
  * SingleChronicle implements Chronicle over a single streaming file.
- *
+ * <p>
  * Created by peter.lawrey on 30/01/15.
  */
 public class SingleChronicleQueue extends AbstractChronicle {
@@ -77,9 +75,8 @@ public class SingleChronicleQueue extends AbstractChronicle {
 
     // used in the indexer
     private final ThreadLocal<ByteableLongArrayValues> longArray;
-    private long firstBytes;
-
     private final ChronicleQueueBuilder builder;
+    private long firstBytes;
 
     public SingleChronicleQueue(@NotNull final ChronicleQueueBuilder builder) throws IOException {
         this.builder = builder.clone();
@@ -93,6 +90,18 @@ public class SingleChronicleQueue extends AbstractChronicle {
         this.longArray = WireUtil.newLongArrayValuesPool(wireType());
 
         initialiseHeader();
+    }
+
+    static String getHostName() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            try {
+                return Files.readAllLines(Paths.get("etc", "hostname")).get(0);
+            } catch (Exception e2) {
+                return "localhost";
+            }
+        }
     }
 
     Wire createWire(@NotNull final Bytes bytes) {
@@ -196,18 +205,6 @@ public class SingleChronicleQueue extends AbstractChronicle {
     @Override
     public long lastWrittenIndex() {
         return header.lastIndex().getValue();
-    }
-
-    static String getHostName() {
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            try {
-                return Files.readAllLines(Paths.get("etc", "hostname")).get(0);
-            } catch (Exception e2) {
-                return "localhost";
-            }
-        }
     }
 
     @Override
@@ -381,10 +378,6 @@ public class SingleChronicleQueue extends AbstractChronicle {
         return i & LENGTH_MASK;
     }
 
-    enum MetaDataKey implements WireKey {
-        header, index2index, index
-    }
-
     protected long checkRemainingForAppend(@NotNull Bytes buffer) {
         long remaining = buffer.remaining();
         if (remaining > MAX_LENGTH) {
@@ -392,5 +385,9 @@ public class SingleChronicleQueue extends AbstractChronicle {
         }
 
         return remaining;
+    }
+
+    enum MetaDataKey implements WireKey {
+        header, index2index, index
     }
 }

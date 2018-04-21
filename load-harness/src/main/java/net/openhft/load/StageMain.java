@@ -39,11 +39,8 @@ public final class StageMain {
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
                         reader.readOne();
-                    }
-                    catch (Exception e)
-                    {
-                        if (!warnOnce)
-                        {
+                    } catch (Exception e) {
+                        if (!warnOnce) {
                             e.printStackTrace();
                             warnOnce = true;
                         }

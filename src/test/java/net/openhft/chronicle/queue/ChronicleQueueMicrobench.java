@@ -52,6 +52,14 @@ public class ChronicleQueueMicrobench {
     //
     // *************************************************************************
 
+    public static void handleUnexpectedException(Throwable t) {
+        assertNull(t);
+    }
+
+    public static void main(String[] args) throws RunnerException {
+        new Runner(new ChronicleQueueMicrobench().newOptionsBuilder().build()).run();
+    }
+
     private ChainedOptionsBuilder newOptionsBuilder() {
         String className = getClass().getSimpleName();
 
@@ -99,19 +107,11 @@ public class ChronicleQueueMicrobench {
         return Integer.getInteger("measureIterations", -1);
     }
 
-    private String getReportDir() {
-        return System.getProperty("perfReportDir");
-    }
-
-    public static void handleUnexpectedException(Throwable t) {
-        assertNull(t);
-    }
-
     // *************************************************************************
     //
     // *************************************************************************
 
-    public static void main(String[] args) throws RunnerException {
-        new Runner(new ChronicleQueueMicrobench().newOptionsBuilder().build()).run();
+    private String getReportDir() {
+        return System.getProperty("perfReportDir");
     }
 }

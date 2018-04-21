@@ -29,21 +29,21 @@ import java.io.IOException;
  * Created by peter.lawrey on 20/01/15.
  */
 public class ReplayData {
-/*
-On an i7-3970X prints.
+    /*
+    On an i7-3970X prints.
 
-999999 : TestData{ age= 999999, importance= 0.0999999, timestamp= 1421790885572, name= Name999999 }
-1999999 : TestData{ age= 1999999, importance= 0.1999999, timestamp= 1421790885701, name= Name1999999 }
-2999999 : TestData{ age= 2999999, importance= 0.2999999, timestamp= 1421790885822, name= Name2999999 }
-4000000 : TestData{ age= 3999999, importance= 0.3999999, timestamp= 1421790885964, name= Name3999999 }
-5000000 : TestData{ age= 4999999, importance= 0.4999999, timestamp= 1421790886091, name= Name4999999 }
-6000000 : TestData{ age= 5999999, importance= 0.5999999, timestamp= 1421790886228, name= Name5999999 }
-7000000 : TestData{ age= 6999999, importance= 0.6999999, timestamp= 1421790886356, name= Name6999999 }
-8000001 : TestData{ age= 7999999, importance= 0.7999999, timestamp= 1421790886515, name= Name7999999 }
-9000001 : TestData{ age= 8999999, importance= 0.8999999, timestamp= 1421790886639, name= Name8999999 }
-10000001 : TestData{ age= 9999999, importance= 0.9999999, timestamp= 1421790886763, name= Name9999999 }
-Took 1.178 seconds to read 10,000,000 records
-*/
+    999999 : TestData{ age= 999999, importance= 0.0999999, timestamp= 1421790885572, name= Name999999 }
+    1999999 : TestData{ age= 1999999, importance= 0.1999999, timestamp= 1421790885701, name= Name1999999 }
+    2999999 : TestData{ age= 2999999, importance= 0.2999999, timestamp= 1421790885822, name= Name2999999 }
+    4000000 : TestData{ age= 3999999, importance= 0.3999999, timestamp= 1421790885964, name= Name3999999 }
+    5000000 : TestData{ age= 4999999, importance= 0.4999999, timestamp= 1421790886091, name= Name4999999 }
+    6000000 : TestData{ age= 5999999, importance= 0.5999999, timestamp= 1421790886228, name= Name5999999 }
+    7000000 : TestData{ age= 6999999, importance= 0.6999999, timestamp= 1421790886356, name= Name6999999 }
+    8000001 : TestData{ age= 7999999, importance= 0.7999999, timestamp= 1421790886515, name= Name7999999 }
+    9000001 : TestData{ age= 8999999, importance= 0.8999999, timestamp= 1421790886639, name= Name8999999 }
+    10000001 : TestData{ age= 9999999, importance= 0.9999999, timestamp= 1421790886763, name= Name9999999 }
+    Took 1.178 seconds to read 10,000,000 records
+    */
     public static void main(String[] args) throws IOException {
         TestData td = DataValueClasses.newInstance(TestData.class);
         String path = "/tmp/test";

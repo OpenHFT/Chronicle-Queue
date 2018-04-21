@@ -183,7 +183,7 @@ public class RollEOFTest {
 
         ExcerptAppender excerptAppender = queue.acquireAppender();
 
-        try(DocumentContext dc = excerptAppender.writingDocument(false)) {
+        try (DocumentContext dc = excerptAppender.writingDocument(false)) {
             dc.wire().write(() -> "test").int64(0);
         }
     }

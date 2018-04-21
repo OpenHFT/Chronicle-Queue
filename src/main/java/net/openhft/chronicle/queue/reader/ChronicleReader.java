@@ -57,6 +57,24 @@ public final class ChronicleReader {
     private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
     private boolean displayIndex = true;
 
+    private static boolean checkForMatches(final List<Pattern> patterns, final String text,
+                                           final boolean shouldBePresent) {
+        for (Pattern pattern : patterns) {
+            if (!shouldBePresent == pattern.matcher(text).find()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isSet(final long configValue) {
+        return configValue != UNSET_VALUE;
+    }
+
+    private static boolean isBinaryFormat(final byte dataFormatIndicator) {
+        return dataFormatIndicator < 0;
+    }
+
     public void execute() {
         try {
             long lastObservedTailIndex;
@@ -240,23 +258,5 @@ public final class ChronicleReader {
                 messageSink.accept(text);
             }
         }
-    }
-
-    private static boolean checkForMatches(final List<Pattern> patterns, final String text,
-                                           final boolean shouldBePresent) {
-        for (Pattern pattern : patterns) {
-            if (!shouldBePresent == pattern.matcher(text).find()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean isSet(final long configValue) {
-        return configValue != UNSET_VALUE;
-    }
-
-    private static boolean isBinaryFormat(final byte dataFormatIndicator) {
-        return dataFormatIndicator < 0;
     }
 }

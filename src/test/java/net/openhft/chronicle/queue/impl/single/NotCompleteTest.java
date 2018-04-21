@@ -20,11 +20,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
@@ -36,19 +32,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class NotCompleteTest {
@@ -300,10 +289,10 @@ public class NotCompleteTest {
                     "\"!! Skipped due to recovery of locked header !!";
             String expectedEagerFooter =
                     "# position: 33412, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "some: data\n" +
-                    "...\n" +
-                    "# 97642 bytes remaining\n";
+                            "--- !!data #binary\n" +
+                            "some: data\n" +
+                            "...\n" +
+                            "# 97642 bytes remaining\n";
             String expectedLazy = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -335,24 +324,24 @@ public class NotCompleteTest {
                     "\"!! Skipped due to recovery of locked header !!";
             String expectedLazyFooter =
                     "# position: 33212, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  33312,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 33312, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  33408,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 33408, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "some: data\n" +
-                    "...\n" +
-                    "# 97646 bytes remaining\n";
+                            "--- !!meta-data #binary\n" +
+                            "index2index: [\n" +
+                            "  # length: 8, used: 1\n" +
+                            "  33312,\n" +
+                            "  0, 0, 0, 0, 0, 0, 0\n" +
+                            "]\n" +
+                            "# position: 33312, header: -1\n" +
+                            "--- !!meta-data #binary\n" +
+                            "index: [\n" +
+                            "  # length: 8, used: 1\n" +
+                            "  33408,\n" +
+                            "  0, 0, 0, 0, 0, 0, 0\n" +
+                            "]\n" +
+                            "# position: 33408, header: 0\n" +
+                            "--- !!data #binary\n" +
+                            "some: data\n" +
+                            "...\n" +
+                            "# 97646 bytes remaining\n";
 
             if (lazyIndexing) {
                 assertThat(queue.dump(), containsString(expectedLazy));
@@ -368,7 +357,7 @@ public class NotCompleteTest {
     public void testInterruptedDuringSerialisation()
             throws InterruptedException {
 
-        final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation_"+(lazyIndexing?"lazy":"eager"));
+        final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation_" + (lazyIndexing ? "lazy" : "eager"));
         DirectoryUtils.deleteDir(tmpDir);
         tmpDir.mkdirs();
 
@@ -384,9 +373,9 @@ public class NotCompleteTest {
                 .timeoutMS(500)
                 .build();
              final ChronicleQueue queueWriter = binary(tmpDir)
-                 .testBlockSize()
-                 .rollCycle(RollCycles.TEST_DAILY)
-                 .build()) {
+                     .testBlockSize()
+                     .rollCycle(RollCycles.TEST_DAILY)
+                     .build()) {
 
             ExcerptTailer tailer = queueReader.createTailer();
             MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
@@ -524,7 +513,7 @@ public class NotCompleteTest {
 
         File tmpDir = DirectoryUtils.tempDir("testSkipSafeLengthOverBlock");
         // 3rd time will do it
-        for (int i=0; i<8; i++) {
+        for (int i = 0; i < 8; i++) {
             try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).timeoutMS(1).build()) {
                 ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
                 // start a message which won't be completed.
@@ -541,7 +530,7 @@ public class NotCompleteTest {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertFalse(dc.isPresent());
             }
-       }
+        }
     }
 
     @After

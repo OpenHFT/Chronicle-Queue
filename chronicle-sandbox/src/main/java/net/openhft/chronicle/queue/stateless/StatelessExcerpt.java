@@ -23,15 +23,13 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.stateless.bytes.StatelessRawBytesTailer;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * todo : currently work in process
- *
+ * <p>
  * Created by Rob Austin
  */
 public class StatelessExcerpt implements Excerpt {

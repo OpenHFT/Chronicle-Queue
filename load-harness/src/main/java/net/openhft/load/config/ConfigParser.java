@@ -4,11 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 
 public final class ConfigParser {
     private final PublisherConfig config;
@@ -43,6 +39,29 @@ public final class ConfigParser {
         pretouchIntervalMillis = requiredIntValue(properties, "pretouch.interval.ms");
     }
 
+    private static Path toRelativePath(final String subDir) {
+        return Paths.get(System.getProperty("user.dir"), subDir);
+    }
+
+    private static int requiredIntValue(final Properties properties, final String key) {
+        final String value = requiredValue(properties, key);
+        try {
+            return Integer.parseInt(value);
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("Cannot parse " + value + " as int for key " + key);
+        }
+    }
+
+    private static String requiredValue(final Properties properties, final String key) {
+        if (System.getProperties().containsKey(key)) {
+            return System.getProperties().getProperty(key);
+        }
+        if (!properties.containsKey(key)) {
+            throw new IllegalArgumentException("Cannot find required key: " + key);
+        }
+        return properties.getProperty(key);
+    }
+
     public PublisherConfig getPublisherConfig() {
         return config;
     }
@@ -69,28 +88,5 @@ public final class ConfigParser {
                 toRelativePath(requiredValue(properties, String.format("stage.%d.inputDir", index))),
                 toRelativePath(requiredValue(properties, String.format("stage.%d.outputDir", index))),
                 stageIndices);
-    }
-
-    private static Path toRelativePath(final String subDir) {
-        return Paths.get(System.getProperty("user.dir"), subDir);
-    }
-
-    private static int requiredIntValue(final Properties properties, final String key) {
-        final String value = requiredValue(properties, key);
-        try {
-            return Integer.parseInt(value);
-        } catch (RuntimeException e) {
-            throw new IllegalArgumentException("Cannot parse " + value + " as int for key " + key);
-        }
-    }
-
-    private static String requiredValue(final Properties properties, final String key) {
-        if (System.getProperties().containsKey(key)) {
-            return System.getProperties().getProperty(key);
-        }
-        if (!properties.containsKey(key)) {
-            throw new IllegalArgumentException("Cannot find required key: " + key);
-        }
-        return properties.getProperty(key);
     }
 }

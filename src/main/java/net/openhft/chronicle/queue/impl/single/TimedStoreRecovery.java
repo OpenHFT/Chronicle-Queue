@@ -29,15 +29,7 @@ import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.wire.AbstractMarshallable;
-import net.openhft.chronicle.wire.Demarshallable;
-import net.openhft.chronicle.wire.Sequence;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
@@ -64,16 +56,38 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         timeStamp = wireType.newLongReference().get();
     }
 
-    @Override
-    public void writeMarshallable(@NotNull WireOut out) {
-        out.write("timeStamp").int64forBinding(0);
-    }
-
     @NotNull
     private static ExceptionHandler warn() {
         // prevent a warning to be logged back to the same queue potentially corrupting it.
         // return Jvm.warn();
         return Slf4jExceptionHandler.WARN;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(padTo(Integer.toBinaryString(0x80000000), 32));
+        System.out.println(padTo(Integer.toBinaryString(0x40800000), 32));
+        System.out.println(padTo(Integer.toBinaryString(Wires.META_DATA), 32));
+        System.out.println(padTo(Integer.toBinaryString(0x40800000 & ~Wires.META_DATA), 32));
+        System.out.println(Integer.numberOfTrailingZeros(0x40800000));
+        System.out.println(0x40800000 & ~Wires.META_DATA);
+        System.out.println(32 << 10);
+    }
+
+    private static String padTo(final String input, final int length) {
+        if (input.length() < length) {
+            String padded = "";
+            for (int i = 0; i < length - input.length(); i++) {
+                padded += "0";
+            }
+            return padded + input;
+        }
+
+        return input;
+    }
+
+    @Override
+    public void writeMarshallable(@NotNull WireOut out) {
+        out.write("timeStamp").int64forBinding(0);
     }
 
     long acquireLock(long timeoutMS) {
@@ -135,30 +149,8 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         }
     }
 
-    public static void main(String[] args) {
-        System.out.println(padTo(Integer.toBinaryString(0x80000000), 32));
-        System.out.println(padTo(Integer.toBinaryString(0x40800000), 32));
-        System.out.println(padTo(Integer.toBinaryString(Wires.META_DATA), 32));
-        System.out.println(padTo(Integer.toBinaryString(0x40800000 & ~Wires.META_DATA), 32));
-        System.out.println(Integer.numberOfTrailingZeros(0x40800000));
-        System.out.println(0x40800000 & ~Wires.META_DATA);
-        System.out.println(32 << 10);
-    }
-
-    private static String padTo(final String input, final int length) {
-        if (input.length() < length) {
-            String padded = "";
-            for (int i = 0; i < length - input.length(); i++) {
-                padded += "0";
-            }
-            return padded + input;
-        }
-
-        return input;
-    }
-
     @Override
-    public long recoverAndWriteHeader(@NotNull Wire wire, long timeoutMS, final LongValue lastPosition, Sequence  sequence) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverAndWriteHeader(@NotNull Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
 
         long offset = bytes.writePosition();

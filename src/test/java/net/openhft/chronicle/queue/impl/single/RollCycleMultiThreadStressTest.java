@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
     private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
-    private final SetTimeProvider timeProvider = new SetTimeProvider();
     private static final long SLEEP_PER_WRITE_NANOS;
     private static final int TEST_TIME;
     private static final int MAX_WRITING_TIME;
@@ -46,6 +45,8 @@ public class RollCycleMultiThreadStressTest {
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
     }
+
+    private final SetTimeProvider timeProvider = new SetTimeProvider();
 
     @Test
     public void stress() {
@@ -92,7 +93,6 @@ public class RollCycleMultiThreadStressTest {
             writers.add(writer);
             results.add(executorService.submit(writer));
         }
-
 
         final long maxWritingTime = TimeUnit.SECONDS.toMillis(MAX_WRITING_TIME);
         long startTime = System.currentTimeMillis();
@@ -141,8 +141,8 @@ public class RollCycleMultiThreadStressTest {
         });
 
         System.out.println(String.format("All messages written in %,.0fsecs at rate of %,.0f/sec %,.0f/sec per writer (actual writeLatency %,.0fns)",
-                timeToWriteSecs, expectedNumberOfMessages/timeToWriteSecs, (expectedNumberOfMessages/timeToWriteSecs)/numWriters,
-                1_000_000_000/((expectedNumberOfMessages/timeToWriteSecs)/numWriters)));
+                timeToWriteSecs, expectedNumberOfMessages / timeToWriteSecs, (expectedNumberOfMessages / timeToWriteSecs) / numWriters,
+                1_000_000_000 / ((expectedNumberOfMessages / timeToWriteSecs) / numWriters)));
 
         final long giveUpReadingAt = System.currentTimeMillis() + 60_000L;
         final long dumpThreadsAt = giveUpReadingAt - 15_000L;

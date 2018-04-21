@@ -20,13 +20,13 @@ public class QueueTailerResponse extends QueueAppenderResponse {
     @Override
     public void readMarshallable(WireIn wire) throws IllegalStateException {
         super.readMarshallable(wire);
-        wire.read(()->"start").int64(x -> start = x);
+        wire.read(() -> "start").int64(x -> start = x);
     }
 
     @Override
     public void writeMarshallable(WireOut wire) {
         super.writeMarshallable(wire);
-        wire.write(()->"start").int64(start);
+        wire.write(() -> "start").int64(start);
     }
 
     @Override

@@ -82,7 +82,6 @@ enum QueueFiles {
                 }
                 return Optional.ofNullable(processor.apply(wire, queueStore));
 
-
             } catch (final Throwable e) {
                 LOGGER.warn("Unable to load queue store from file {}", filePath, e);
                 return Optional.empty();

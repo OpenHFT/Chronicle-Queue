@@ -30,7 +30,7 @@ import static org.junit.Assert.assertTrue;
 public class FsFullReadTest {
 
     @NotNull
-    private static  String basePath = "src/test/resources/tr2";
+    private static String basePath = "src/test/resources/tr2";
 
     @Ignore("broken test")
     @Test
@@ -44,7 +44,7 @@ public class FsFullReadTest {
         DocumentContext dc = tailer.readingDocument();
         boolean doExit = false;
         int entries = 0;
-        while(!doExit) {
+        while (!doExit) {
             try {
                 if (dc.isPresent()) {
                     entries++;
@@ -61,7 +61,7 @@ public class FsFullReadTest {
                 dc.close();
             }
         }
-        System.out.println(String.format("Read %d entries.",entries));
+        System.out.println(String.format("Read %d entries.", entries));
         CommonStore commonStore = queue.storeForCycle(queue.cycle(), 0, false);
         File file = commonStore.file();
         queue.close();
@@ -75,7 +75,7 @@ public class FsFullReadTest {
             while (bytes.readRemaining() >= 4) {
                 StringBuilder sb = new StringBuilder();
                 boolean last = dumper.dumpOne(sb, buffer);
-                assertTrue(sb.length()>0);
+                assertTrue(sb.length() > 0);
 
                 if (last)
                     break;
@@ -85,7 +85,7 @@ public class FsFullReadTest {
             err.println("Failed to read " + file + " " + ioe);
         }
 
-        assertEquals(dumpEntries,entries);
+        assertEquals(dumpEntries, entries);
     }
 
 }

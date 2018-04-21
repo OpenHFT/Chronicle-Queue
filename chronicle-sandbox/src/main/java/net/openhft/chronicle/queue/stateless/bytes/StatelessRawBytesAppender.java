@@ -25,7 +25,7 @@ import java.util.function.UnaryOperator;
 
 /**
  * todo : currently work in process
- *
+ * <p>
  * Created by Rob Austin
  */
 public interface StatelessRawBytesAppender {

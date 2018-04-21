@@ -26,8 +26,6 @@ import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Consumer;
-
 /*
  * Created by peter.lawrey on 30/01/15.
  */
@@ -69,7 +67,7 @@ public class SingleAppender implements ExcerptAppender {
         if (lastWrittenIndex == -1) {
             throw new IllegalStateException(
                     "No document has been written using this appender, so the "
-                    + "lastWrittenIndex() is not available.");
+                            + "lastWrittenIndex() is not available.");
         }
 
         return lastWrittenIndex;

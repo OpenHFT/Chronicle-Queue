@@ -32,7 +32,7 @@ public class FsFullWriteTest {
        dd if=/dev/zero of=/mnt/tmpfs/fillspace bs=1M count=90
       */
     @NotNull
-    private static  String basePath = "/mnt/tmpfs/cq/testqueue";
+    private static String basePath = "/mnt/tmpfs/cq/testqueue";
 
     //@Before
     public void before() throws Exception {
@@ -57,7 +57,7 @@ public class FsFullWriteTest {
         Random r = new Random();
         r.nextBytes(payload);
         final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
-        for (int i = 0; i < 1024*200; i++) {
+        for (int i = 0; i < 1024 * 200; i++) {
             DocumentContext dc = appender.writingDocument();
             try {
 

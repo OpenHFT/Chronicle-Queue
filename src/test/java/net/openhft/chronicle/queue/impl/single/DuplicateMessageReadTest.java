@@ -19,6 +19,24 @@ import static org.junit.Assert.assertThat;
 public final class DuplicateMessageReadTest {
     private static final RollCycles QUEUE_CYCLE = RollCycles.DAILY;
 
+    private static void write(final ExcerptAppender appender, final Data data) throws Exception {
+        try (final DocumentContext dc = appender.writingDocument()) {
+            final ObjectOutput out = dc.wire().objectOutput();
+            out.writeInt(data.id);
+        }
+    }
+
+    private static Data read(final ExcerptTailer tailer) throws Exception {
+        try (final DocumentContext dc = tailer.readingDocument()) {
+            if (!dc.isPresent()) {
+                return null;
+            }
+
+            final ObjectInput in = dc.wire().objectInput();
+            return new Data(in.readInt());
+        }
+    }
+
     @Test
     public void shouldNotReceiveDuplicateMessages() throws Exception {
         final File location = DirectoryUtils.tempDir(DuplicateMessageReadTest.class.getSimpleName());
@@ -50,24 +68,6 @@ public final class DuplicateMessageReadTest {
         }
 
         assertThat(actual, is(expected));
-    }
-
-    private static void write(final ExcerptAppender appender, final Data data) throws Exception {
-        try (final DocumentContext dc = appender.writingDocument()) {
-            final ObjectOutput out = dc.wire().objectOutput();
-            out.writeInt(data.id);
-        }
-    }
-
-    private static Data read(final ExcerptTailer tailer) throws Exception {
-        try (final DocumentContext dc = tailer.readingDocument()) {
-            if (!dc.isPresent()) {
-                return null;
-            }
-
-            final ObjectInput in = dc.wire().objectInput();
-            return new Data(in.readInt());
-        }
     }
 
     private static final class Data {

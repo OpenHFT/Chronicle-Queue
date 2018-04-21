@@ -32,6 +32,10 @@ public final class Publisher {
         }
     }
 
+    private static long nanosToMicros(final long nanos) {
+        return TimeUnit.NANOSECONDS.toMicros(nanos);
+    }
+
     void init() {
         final int bytesPerSec = config.getPublishRateMegaBytesPerSecond() * 1024 * 1024;
         messagesPerSec = bytesPerSec / Sizer.size(message);
@@ -87,9 +91,5 @@ public final class Publisher {
                 warnOnce = true;
             }
         }
-    }
-
-    private static long nanosToMicros(final long nanos) {
-        return TimeUnit.NANOSECONDS.toMicros(nanos);
     }
 }

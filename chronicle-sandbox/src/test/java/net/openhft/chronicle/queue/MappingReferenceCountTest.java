@@ -38,7 +38,7 @@ public class MappingReferenceCountTest {
      * @
      */
     @Test
-    public void testMappingReferenceCount()   {
+    public void testMappingReferenceCount() {
 
         File tempFile = File.createTempFile("chronicle", "q");
 
@@ -46,7 +46,7 @@ public class MappingReferenceCountTest {
             int BLOCK_SIZE = 4096;
             final MappedFile mappedFile = MappedFile.mappedFile(tempFile.getName(), BLOCK_SIZE, 8);
             final Bytes bytes = mappedFile.bytes();
-            
+
             // write into block 1
             bytes.writeLong(4096 + 8, Long.MAX_VALUE);
 //            Assert.assertEquals(1, mappedFile.getRefCount(1));

@@ -89,6 +89,7 @@ public class ReadWriteTest {
             out.acquireAppender();
         }
     }
+
     @Test
     public void testToEndOnReadOnly() {
 

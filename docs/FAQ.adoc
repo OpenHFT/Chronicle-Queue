@@ -14,7 +14,6 @@ It supports:
 - the header stores key information so there is no longer the requirement that the writers and reads be configured the same.
 - you don't need to know how big the message is.
 
-
 === What is the performance like?
 
 While Single Chronicle (single file per cycle) supports sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.

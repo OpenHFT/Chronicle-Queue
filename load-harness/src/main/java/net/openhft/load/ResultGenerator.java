@@ -34,7 +34,12 @@ public final class ResultGenerator {
                 get(allStageConfigs.size() - 1);
         Jvm.setExceptionHandlers((c, m, t) -> {
             System.out.println(m);
-        }, (c, m, t) -> {System.out.println(m); if (t != null) {t.printStackTrace();}}, (c, m, t) -> System.out.println(m));
+        }, (c, m, t) -> {
+            System.out.println(m);
+            if (t != null) {
+                t.printStackTrace();
+            }
+        }, (c, m, t) -> System.out.println(m));
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(lastStageConfig.getOutputPath()).build();
              final Writer resultsWriter = new FileWriter("results.txt", false)) {
@@ -62,6 +67,31 @@ public final class ResultGenerator {
 
         private CapturingReceiver(final Writer writer) {
             this.writer = writer;
+        }
+
+        private static long getLatestTimestamp(final EightyByteMessage message) {
+            if (EightyByteMessage.isSet(message.t6)) {
+                return message.t6;
+            }
+            if (EightyByteMessage.isSet(message.t5)) {
+                return message.t5;
+            }
+            if (EightyByteMessage.isSet(message.t4)) {
+                return message.t4;
+            }
+            if (EightyByteMessage.isSet(message.t3)) {
+                return message.t3;
+            }
+            if (EightyByteMessage.isSet(message.t2)) {
+                return message.t2;
+            }
+            if (EightyByteMessage.isSet(message.t1)) {
+                return message.t1;
+            }
+            if (EightyByteMessage.isSet(message.t0)) {
+                return message.t0;
+            }
+            throw new IllegalStateException("No values were set on message: " + Marshallable.$toString(message));
         }
 
         @Override
@@ -107,7 +137,7 @@ public final class ResultGenerator {
                 }
                 writeToResults("\n");
                 System.out.println("Worst in second");
-                System.out.println(FORMATTER.format(LocalDateTime.ofEpochSecond(worstCopy.batchStartMillis/1000, 0, ZoneOffset.UTC)));
+                System.out.println(FORMATTER.format(LocalDateTime.ofEpochSecond(worstCopy.batchStartMillis / 1000, 0, ZoneOffset.UTC)));
                 System.out.println("publish to first stage");
                 if (worstCopy.stagesToPublishBitMask == 5) {
                     System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t0 - worstCopy.publishNanos));
@@ -121,7 +151,6 @@ public final class ResultGenerator {
                     System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t2 - worstCopy.t1));
                 }
                 System.out.println(worstMessage);
-
 
                 messagesInThisSecond = 0L;
                 maxTotalLatencyInThisSecond = 0L;
@@ -151,31 +180,6 @@ public final class ResultGenerator {
             } catch (IOException e) {
                 System.err.println("Failed to write: " + e.getMessage());
             }
-        }
-
-        private static long getLatestTimestamp(final EightyByteMessage message) {
-            if (EightyByteMessage.isSet(message.t6)) {
-                return message.t6;
-            }
-            if (EightyByteMessage.isSet(message.t5)) {
-                return message.t5;
-            }
-            if (EightyByteMessage.isSet(message.t4)) {
-                return message.t4;
-            }
-            if (EightyByteMessage.isSet(message.t3)) {
-                return message.t3;
-            }
-            if (EightyByteMessage.isSet(message.t2)) {
-                return message.t2;
-            }
-            if (EightyByteMessage.isSet(message.t1)) {
-                return message.t1;
-            }
-            if (EightyByteMessage.isSet(message.t0)) {
-                return message.t0;
-            }
-            throw new IllegalStateException("No values were set on message: " + Marshallable.$toString(message));
         }
     }
 }

@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  * <li>latencies for each component that has processed a message</li>
  * <li>latencies between each component that has processed a message</li>
  * </ul>
+ *
  * @author Jerry Shea
  */
 public class ChronicleHistoryReaderMain {

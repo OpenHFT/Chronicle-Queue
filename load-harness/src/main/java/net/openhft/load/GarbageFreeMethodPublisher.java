@@ -2,7 +2,6 @@ package net.openhft.load;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.ExcerptAppender;
-//import net.openhft.chronicle.queue.impl.single.DebugTimestamps;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.ValueOut;
@@ -11,6 +10,8 @@ import net.openhft.load.messages.EightyByteMessage;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Supplier;
+
+//import net.openhft.chronicle.queue.impl.single.DebugTimestamps;
 
 public final class GarbageFreeMethodPublisher implements MethodDefinition {
     private final Supplier<ExcerptAppender> outputSupplier;
@@ -35,7 +36,7 @@ public final class GarbageFreeMethodPublisher implements MethodDefinition {
                 final ValueOut valueOut = wire.writeEventName("onEightyByteMessage");
                 valueOut.object(EightyByteMessage.class, message);
                 wire.padToCacheAlign();
-            }finally {
+            } finally {
 //                DebugTimestamps.operationEnd(DebugTimestamps.Operation.WRITE_EVENT);
             }
         } finally {
@@ -43,7 +44,7 @@ public final class GarbageFreeMethodPublisher implements MethodDefinition {
 //            DebugTimestamps.operationStart(DebugTimestamps.Operation.CLOSE_CONTEXT);
             try {
                 context.close();
-            }finally {
+            } finally {
 //                DebugTimestamps.operationEnd(DebugTimestamps.Operation.CLOSE_CONTEXT);
             }
         }

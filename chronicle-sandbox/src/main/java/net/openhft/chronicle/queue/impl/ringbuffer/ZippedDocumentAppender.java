@@ -40,16 +40,13 @@ import static java.util.concurrent.Executors.newSingleThreadExecutor;
  */
 public class ZippedDocumentAppender implements Closeable {
 
+    public static final String ERR_MSG = "It not possible to zip more than " +
+            "Integer.MAX_VALUE bytes in one go";
     private static final Logger LOG = LoggerFactory.getLogger(ZippedDocumentAppender.class.getName());
-
     @NotNull
     private final BytesRingBuffer q;
     @NotNull
     private final DirectChronicleQueue chronicleQueue;
-
-    public static final String ERR_MSG = "It not possible to zip more than " +
-            "Integer.MAX_VALUE bytes in one go";
-
     @NotNull
     private final ExecutorService qReader;
 

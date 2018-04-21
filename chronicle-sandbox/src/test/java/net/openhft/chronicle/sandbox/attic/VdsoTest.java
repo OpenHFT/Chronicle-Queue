@@ -21,8 +21,6 @@ package net.openhft.chronicle.sandbox.attic;
 import net.openhft.lang.io.NativeBytes;
 import org.junit.Test;
 
-import java.io.*;
-
 public class VdsoTest {
 
     @Test

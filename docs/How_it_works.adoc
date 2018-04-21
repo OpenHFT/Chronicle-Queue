@@ -37,7 +37,6 @@ An excerpt is the main data container in a Chronicle queue. Each queue is compos
 
 An appender is something like an iterator in Chronicle environment. You add data by appending it to the current queue.
 
-
 === HashMap v B-Tree
 
 HashMap is more performant with lower garbage collection than a B-Tree.  The advantage of a B-Tree is that it is sorted.  If you don't need this, use a hash map of some kind.
@@ -228,7 +227,6 @@ new queue files are created.
 For this reason, significant garbage will be generated when using an `ExcerptTailer`
 in a busy-spin loop in read-only mode.
 
-
 === Queue File Reference Counting (Enterprise Edition Feature)
 
 As a queue is written to, it will create a new file for each _roll-cycle_.
@@ -265,11 +263,9 @@ public void removeOldQueueFiles() throws IOException {
 Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are
 zero references to a given file before attempting to delete it.
 
-
 == Configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
-
 
 === RollCycle
 
