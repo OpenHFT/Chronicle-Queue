@@ -8,7 +8,7 @@ if [[ "$1" == "" ]]; then
     exit 1
 fi
 
-UBER_JAR=$(find $PROJECT_DIR/target/chronicle-queue-*-all.jar | tail -n 1)
+UBER_JAR=$(find ${PROJECT_DIR}/target/chronicle-queue-*-all.jar | tail -n 1)
 
 if [[ "$?" != "0" ]]; then
     echo "Could not find uber-jar, please run 'mvn package' in the project root"

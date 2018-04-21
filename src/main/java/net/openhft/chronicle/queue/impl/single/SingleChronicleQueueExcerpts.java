@@ -44,7 +44,7 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
 
-    private static int MESSAGE_HISTORY_METHOD_ID = -1;
+    private static final int MESSAGE_HISTORY_METHOD_ID = -1;
     private static StringBuilderPool SBP = new StringBuilderPool();
 
     private static void releaseWireResources(final Wire wire) {
@@ -1277,9 +1277,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean inACycleCheckRep() {
             long lastSequenceAck = store().lastAcknowledgedIndexReplicated();
             long seq = queue.rollCycle().toSequenceNumber(index);
-            if (seq > lastSequenceAck)
-                return true;
-            return false;
+            return seq > lastSequenceAck;
         }
 
         private boolean inACycleNotForward() {
@@ -1381,7 +1379,7 @@ public class SingleChronicleQueueExcerpts {
 
             if (nextIndex != Long.MIN_VALUE && queue.rollCycle().toCycle(nextIndex) - 1 != cycle) {
 
-                /**
+                /*
                  * lets say that you were using a roll cycle of TEST_SECONDLY
                  * and you wrote a message to the queue, if you created a tailer and read the first message,
                  * then waited around 22 seconds before writing the next message, when the tailer

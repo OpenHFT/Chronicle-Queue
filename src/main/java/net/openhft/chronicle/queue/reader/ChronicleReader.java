@@ -107,9 +107,7 @@ public final class ChronicleReader {
                                 pauser.reset();
 
                                 if (customPlugin == null) {
-                                    messageConverter.accept(dc.wire(), text -> {
-                                        applyFiltersAndLog(text, tailer.index());
-                                    });
+                                    messageConverter.accept(dc.wire(), text -> applyFiltersAndLog(text, tailer.index()));
                                 } else {
                                     customPlugin.onReadDocument(dc);
                                 }

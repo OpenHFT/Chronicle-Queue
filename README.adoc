@@ -1115,9 +1115,9 @@ try (DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-If you kill Chronicle Queue when its half way through writing a document, this can leave your Chronicle Queue in a locked state, which could later prevent other appenders from  writing to the queue file.
+If you kill Chronicle Queue when its half way through writing a document, this can leave your Chronicle Queue in a locked state, which could later prevent other appenders from  writing to the queue file.
 
-Although we do not recommend that you `$kill -9` your process,  in the event that your process abruptly terminates we have added recovery code  that should recover from this situation.
+Although we do not recommend that you `$kill -9` your process,  in the event that your process abruptly terminates we have added recovery code  that should recover from this situation.
 
 == Design
 

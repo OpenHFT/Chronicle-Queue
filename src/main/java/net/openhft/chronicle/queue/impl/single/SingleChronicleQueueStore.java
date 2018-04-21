@@ -372,19 +372,17 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("SingleChronicleQueueStore{" + "indexing=").append(indexing).
-                append(", wireType=").append(wireType).
-                append(", checkpointInterval=").append(this.deltaCheckpointInterval).
-                append(", roll=").append(roll).
-                append(", writePosition=").append(writePosition.getValue());
-
-        sb.append(", lastSequence=").append(Long.toHexString(((TwoLongValue) writePosition).getValue2()));
-        sb.append(", mappedFile=").append(mappedFile).
-                append(", refCount=").append(refCount).
-                append(", lastAcknowledgedIndexReplicated=").append(lastAcknowledgedIndexReplicated).
-                append('}');
-        return sb.toString();
+        return "SingleChronicleQueueStore{" +
+                "indexing=" + indexing +
+                ", wireType=" + wireType +
+                ", checkpointInterval=" + this.deltaCheckpointInterval +
+                ", roll=" + roll +
+                ", writePosition=" + writePosition.getValue() +
+                ", lastSequence=" + Long.toHexString(((TwoLongValue) writePosition).getValue2()) +
+                ", mappedFile=" + mappedFile +
+                ", refCount=" + refCount +
+                ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
+                '}';
     }
 
     // *************************************************************************

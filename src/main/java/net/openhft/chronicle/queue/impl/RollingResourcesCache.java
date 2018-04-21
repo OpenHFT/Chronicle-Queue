@@ -151,7 +151,7 @@ public class RollingResourcesCache {
         if (filenameToTimestampCache.size() >= MAX_TIMESTAMP_CACHE_SIZE) {
             filenameToTimestampCache.clear();
         }
-        filenameToTimestampCache.put(file, Long.valueOf(value));
+        filenameToTimestampCache.put(file, value);
 
         return value;
     }

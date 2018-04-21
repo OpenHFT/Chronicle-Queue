@@ -78,7 +78,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * regularly in latency sensitive systems.
      *
      * @param fromIndex from index, the index provided must exist.  To improve performance no checking
-     *                  is  carried out to validate if an excerpt exists at this index. ( inclusive )
+     *                  is carried out to validate if an excerpt exists at this index. ( inclusive )
      * @param toIndex   to index, the index provided must exist. To improve performance no checking is
      *                  carried out to validate if an excerpt exists at this index. ( exclusive )
      * @return the number of excerpts between the indexes, {@code index1} inclusive, {@code index2}

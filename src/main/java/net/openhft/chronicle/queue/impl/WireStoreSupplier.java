@@ -41,7 +41,6 @@ public interface WireStoreSupplier {
      * @param lowerCycle the lower cycle inclusive
      * @param upperCycle the upper cycle inclusive
      * @return the cycles between a range, inclusive
-     * @throws ParseException
      */
     NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException;
 }

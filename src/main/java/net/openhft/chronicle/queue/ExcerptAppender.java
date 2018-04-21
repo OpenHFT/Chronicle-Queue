@@ -46,22 +46,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
      *
      * @param index to write the byte to or fail.
-     * @param bytes to write.
-     * @throws StreamCorruptedException the write failed is was unable to write the data at the
-     *                                  given index.
-     */
-  /*  default void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
-        throw new UnsupportedOperationException();
-    }
-*/
-
-    /**
-     * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
-     *
-     * @param index to write the byte to or fail.
      * @return DocumentContext to write to.
-     * @throws StreamCorruptedException the write failed is was unable to write the data at the
-     *                                  given index.
      */
     @NotNull
     default DocumentContext writingDocument(long index) {
