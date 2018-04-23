@@ -35,7 +35,7 @@ public class TSQueueLock implements QueueLock {
 
     private static final String QUEUE_LOCK_FILE = "queue-lock" + SingleTableBuilder.SUFFIX;
     private static final String LOCK_KEY = "chronicle.queue.lock";
-    private static final long LOCK_WAIT_TIMEOUT = Long.getLong("chronicle.queue.lock.timeoutMS", 30_000);
+    private static final long LOCK_WAIT_TIMEOUT = Long.getLong("chronicle.queue.lock.timeoutMS", 15_000);
     private static final long UNLOCKED = Long.MIN_VALUE;
     private static final long PID = Jvm.getProcessId();
     private final LongValue lock;
@@ -76,8 +76,10 @@ public class TSQueueLock implements QueueLock {
             // success
             lockHolderTidTL.set(tid);
         } catch (TimeoutException e) {
-            throw new IllegalStateException("Couldn't acquire lock after " + LOCK_WAIT_TIMEOUT
-                    + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue());
+            Jvm.warn().on(getClass(), "Couldn't acquire lock after " + LOCK_WAIT_TIMEOUT
+                    + "ms for the lock file:" + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
+            forceUnlock();
+            acquireLock();
         } finally {
             pauser.reset();
         }
@@ -99,8 +101,9 @@ public class TSQueueLock implements QueueLock {
                 pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
             }
         } catch (TimeoutException e) {
-            throw new IllegalStateException("Queue lock is still held after " + LOCK_WAIT_TIMEOUT
-                    + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlock manually");
+            Jvm.warn().on(getClass(), "Queue lock is still held after " + LOCK_WAIT_TIMEOUT
+                    + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
+            forceUnlock();
         } finally {
             pauser.reset();
         }
@@ -126,5 +129,9 @@ public class TSQueueLock implements QueueLock {
         long tid = Thread.currentThread().getId();
         Long lockHolderTid = lockHolderTidTL.get();
         return lockHolderTid != null && lockHolderTid == tid;
+    }
+
+    private void forceUnlock() {
+        lock.setValue(UNLOCKED);
     }
 }
