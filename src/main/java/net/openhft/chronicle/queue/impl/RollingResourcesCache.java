@@ -23,7 +23,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
@@ -36,7 +35,6 @@ public class RollingResourcesCache {
     public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
     private static final int CACHE_SIZE = Integer.getInteger("chronicle.queue.rollingResourceCache.size", 128);
     private static final int ONE_DAY_IN_MILLIS = 86400000;
-    private static final int HALF_DAY_IN_MILLIS = ONE_DAY_IN_MILLIS / 2;
     private static final int MAX_TIMESTAMP_CACHE_SIZE = 32;
 
     @NotNull
@@ -48,12 +46,11 @@ public class RollingResourcesCache {
     private final int length;
     @NotNull
     private final Function<File, String> fileToName;
-    private final int offsetTotalSeconds;
     private final String format;
     private final ConcurrentMap<File, Long> filenameToTimestampCache =
             new ConcurrentHashMap<>(MAX_TIMESTAMP_CACHE_SIZE);
     private ParseCount lastParseCount = NO_PARSE_COUNT;
-    private int dayAdjustmentDueToNegativeOffset;
+    private final long epoch;
 
     public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
                                  @NotNull Function<String, File> nameToFile,
@@ -68,24 +65,12 @@ public class RollingResourcesCache {
         this.length = length;
         this.fileToName = fileToName;
         this.values = new Resource[CACHE_SIZE];
+
         final long millisInDay = epoch % ONE_DAY_IN_MILLIS;
+        this.epoch = millisInDay >= 0 ? epoch - millisInDay : -ONE_DAY_IN_MILLIS;
 
-        long millis = millisInDay;
-
-        if (Math.abs(millisInDay) > HALF_DAY_IN_MILLIS) {
-            if (millisInDay > 0) {
-                millis = -(ONE_DAY_IN_MILLIS - millisInDay);
-                dayAdjustmentDueToNegativeOffset = 1;
-            } else {
-                millis = ONE_DAY_IN_MILLIS - Math.abs(millisInDay);
-            }
-        }
-
-        offsetTotalSeconds = (int) (millis / 1000);
-        ZoneOffset zoneOffsetFromUtc = ZoneOffset.ofTotalSeconds(offsetTotalSeconds);
-        ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffsetFromUtc);
         this.format = format;
-        this.formatter = DateTimeFormatter.ofPattern(this.format).withZone(zoneId);
+        this.formatter = DateTimeFormatter.ofPattern(this.format).withZone(ZoneId.of("UTC"));
         this.fileFactory = nameToFile;
 
     }
@@ -98,11 +83,11 @@ public class RollingResourcesCache {
      */
     @NotNull
     public Resource resourceFor(long cycle) {
-        long millisSinceBeginningOfEpoch = ((cycle + dayAdjustmentDueToNegativeOffset) * length);
+        long millisSinceBeginningOfEpoch = (cycle * length);
         int hash = Maths.hash32(millisSinceBeginningOfEpoch) & (CACHE_SIZE - 1);
         Resource dv = values[hash];
         if (dv == null || dv.millis != millisSinceBeginningOfEpoch) {
-            final Instant instant = Instant.ofEpochMilli(millisSinceBeginningOfEpoch);
+            final Instant instant = Instant.ofEpochMilli(millisSinceBeginningOfEpoch + epoch);
             @NotNull String text = formatter.format(instant);
             values[hash] = dv = new Resource(millisSinceBeginningOfEpoch, text, fileFactory.apply(text));
         }
@@ -126,9 +111,7 @@ public class RollingResourcesCache {
             if (parse.isSupported(ChronoField.SECOND_OF_DAY))
                 epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
 
-            return Maths.toInt32(epochDay / (length / 1000)) +
-                    (offsetTotalSeconds < 0 ? 1 : 0) -
-                    dayAdjustmentDueToNegativeOffset;
+            return Maths.toInt32((epochDay-((epoch)/1000)) / (length / 1000));
         } catch (DateTimeParseException e) {
             throw new RuntimeException(String.format(
                     "Unable to parse %s using format %s", name, format), e);

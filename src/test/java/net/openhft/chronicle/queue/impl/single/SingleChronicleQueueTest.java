@@ -39,6 +39,7 @@ import org.junit.runners.Parameterized.Parameters;
 import java.io.*;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -2026,14 +2027,36 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    // TODO Test fails if you are at Epoch.
-    @Ignore("Started failing 2018-02-19 :/")
+    //("https://github.com/OpenHFT/Chronicle-Queue/issues/436")
     @Test
     public void testReadingDocumentWithFirstAMoveWithEpoch() {
+        Instant hourly = Instant.parse("2018-02-12T00:59:59.999Z");
+        Instant minutely = Instant.parse("2018-02-12T00:00:59.999Z");
 
+        Date epochHourlyFirstCycle = Date.from(hourly);
+        Date epochMinutelyFirstCycle = Date.from(minutely);
+        Date epochHourlySecondCycle = Date.from(hourly.plusMillis(1));
+        Date epochMinutelySecondCycle = Date.from(minutely.plusMillis(1));
+
+        doTestEpochMove(epochHourlyFirstCycle.getTime(), RollCycles.MINUTELY);
+        doTestEpochMove(epochHourlySecondCycle.getTime(), RollCycles.MINUTELY);
+        doTestEpochMove(epochHourlyFirstCycle.getTime(), RollCycles.HOURLY);
+        doTestEpochMove(epochHourlySecondCycle.getTime(), RollCycles.HOURLY);
+        doTestEpochMove(epochHourlyFirstCycle.getTime(), RollCycles.DAILY);
+        doTestEpochMove(epochHourlySecondCycle.getTime(), RollCycles.DAILY);
+
+        doTestEpochMove(epochMinutelyFirstCycle.getTime(), RollCycles.MINUTELY);
+        doTestEpochMove(epochMinutelySecondCycle.getTime(), RollCycles.MINUTELY);
+        doTestEpochMove(epochMinutelyFirstCycle.getTime(), RollCycles.HOURLY);
+        doTestEpochMove(epochMinutelySecondCycle.getTime(), RollCycles.HOURLY);
+        doTestEpochMove(epochMinutelyFirstCycle.getTime(), RollCycles.DAILY);
+        doTestEpochMove(epochMinutelySecondCycle.getTime(), RollCycles.DAILY);
+    }
+
+    private void doTestEpochMove(long epoch, RollCycle rollCycle) {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .rollCycle(RollCycles.HOURLY)
-                .epoch(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1))
+                .rollCycle(rollCycle)
+                .epoch(epoch)
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -4416,10 +4439,57 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws Exception {
+        long now = System.currentTimeMillis();
+        long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000;
+        long ONE_DAY_IN_MILLIS = ONE_HOUR_IN_MILLIS * 24;
+        long midnight = now - (now % ONE_DAY_IN_MILLIS);
+        AtomicLong clock = new AtomicLong(now);
+
+        boolean passed = true;
+        StringBuilder builder = new StringBuilder();
+        passed = passed && doMappedSegmentUnmappedRollTest(clock, builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (2*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (3*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (4*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (5*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (6*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (7*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (8*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (9*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (10*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (11*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (12*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (13*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (14*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (15*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (16*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (17*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (18*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (19*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (20*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (21*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (22*ONE_HOUR_IN_MILLIS)), builder);
+        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (23*ONE_HOUR_IN_MILLIS)), builder);
+
+        if(!passed) {
+            fail(builder.toString());
+        } else {
+            System.out.println(builder.toString());
+        }
+    }
+
+    private AtomicLong setTime(AtomicLong clock, long newValue) {
+        clock.set(newValue);
+        return clock;
+    }
+
+    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException, InterruptedException {
+        String time = Instant.ofEpochMilli(clock.get()).toString();
+
         final Random random = new Random(0xDEADBEEF);
         final File queueFolder = DirectoryUtils.tempDir("mappedSegmentsShouldBeUnmappedAsCycleRolls");
-        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
-
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueFolder).
                 timeProvider(clock::get).
                 testBlockSize().rollCycle(RollCycles.HOURLY).
@@ -4435,13 +4505,30 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 if (random.nextDouble() > 0.995) {
                     clock.addAndGet(TimeUnit.MINUTES.toMillis(37L));
                     // this give the reference processor a chance to run
-                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(15L));
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(30L));
                 }
             }
 
-            if (OS.isLinux())
-                assertTrue("Too many mapped files: " + getMappedQueueFileCount(), getMappedQueueFileCount() < 40);
-            assertTrue(Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count() > 10L);
+            boolean passed = true;
+            if (OS.isLinux()) {
+                int filesOpen = getMappedQueueFileCount();
+                if(filesOpen >= 40) {
+                    passed = false;
+                    builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, filesOpen));
+                }
+            }
+
+            long fileCount = Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count();
+            if(fileCount <= 10L) {
+                passed = false;
+                builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, fileCount));
+            }
+
+            if(passed) {
+                builder.append(String.format("Test for time %s passed!%n", time));
+            }
+
+            return passed;
         }
     }
 
