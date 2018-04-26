@@ -27,6 +27,7 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -37,13 +38,12 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
@@ -55,6 +55,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerp
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
+    static final ExecutorService DISK_SPACE_CHECKER = Executors.newSingleThreadExecutor(new NamedThreadFactory("disk-space-checker", true));
     private static final boolean SHOULD_RELEASE_RESOURCES =
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
                     Boolean.TRUE.toString()));
@@ -628,15 +629,15 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return this.overlapSize;
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     @NotNull
     @Override
     public WireType wireType() {
         return wireType;
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     public long bufferCapacity() {
         return this.bufferCapacity;
@@ -805,26 +806,39 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
-        private void checkDiskSpace(@NotNull final File filePath) throws IOException {
-
-            Path path = filePath.getAbsoluteFile().toPath();
-            while (path.getNameCount() > 1) {
+        private void checkDiskSpace(@NotNull final File filePath) {
+            // This operation can stall for 500 ms or more under load.
+            DISK_SPACE_CHECKER.submit(() -> {
+                long start = System.nanoTime();
                 try {
-                    // The returned number of unallocated bytes is a hint, but not a guarantee
-                    long unallocatedBytes = Files.getFileStore(path).getUnallocatedSpace();
-                    long totalSpace = Files.getFileStore(path).getTotalSpace();
+                    Path path = filePath.getAbsoluteFile().toPath();
+                    while (path.getNameCount() > 1) {
+                        try {
+                            // The returned number of unallocated bytes is a hint, but not a guarantee
+                            FileStore fileStore = Files.getFileStore(path);
+                            long unallocatedBytes = fileStore.getUnallocatedSpace();
+                            long totalSpace = fileStore.getTotalSpace();
 
-                    if (unallocatedBytes < totalSpace * .05)
-                        LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
-                                "it runs out of space.");
-                    else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
-                        LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
-                    return;
-                } catch (IOException nsfe) {
-                    // if the leaf directory does not exist, go to parent
-                    path = path.getParent();
+                            if (unallocatedBytes < totalSpace * .05)
+                                LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
+                                        "it runs out of space.");
+                            else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
+                                LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
+                            return;
+                        } catch (IOException nsfe) {
+                            // if the leaf directory does not exist, go to parent
+                            path = path.getParent();
+                        }
+                    }
+                } catch (Throwable e) {
+                    LOG.warn("Failed to check disk space for " + filePath, e);
+
+                } finally {
+                    double time = (System.nanoTime() - start) / 1000 / 1000.0;
+                    if (time > 1)
+                        System.out.println("Took " + time + " ms to check the disk space.");
                 }
-            }
+            });
         }
 
         /**
