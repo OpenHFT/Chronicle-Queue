@@ -154,6 +154,7 @@ public class RollingResourcesCache {
         public final String text;
         public final File path;
         public final File parentPath;
+        public boolean pathExists;
 
         Resource(long millis, String text, File path) {
             this.millis = millis;

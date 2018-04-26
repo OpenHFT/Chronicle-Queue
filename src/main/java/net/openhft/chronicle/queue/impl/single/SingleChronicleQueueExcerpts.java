@@ -358,7 +358,7 @@ public class SingleChronicleQueueExcerpts {
                         "EPOCH or different roll cycle." +
                         "All your appenders ( that write to a given directory ) " +
                         "should have the same EPOCH and roll cycle" +
-                        " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.file().getAbsolutePath());
+                        " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.fileAbsolutePath());
             }
             return cycle;
         }
@@ -1096,6 +1096,20 @@ public class SingleChronicleQueueExcerpts {
         public DocumentContext readingDocument(boolean includeMetaData) {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
+
+            if (state == FOUND_CYCLE) {
+                Wire wire = wire();
+                if (wire != null) {
+                    int header = wire.bytes().peekVolatileInt();
+                    if (header == 0)
+                        return NoDocumentContext.INSTANCE;
+                }
+            }
+            return readingDocument0(includeMetaData);
+        }
+
+        @NotNull
+        private DocumentContext readingDocument0(boolean includeMetaData) {
             try {
                 boolean next = false, tryAgain = true;
                 if (state == FOUND_CYCLE) {
@@ -1863,14 +1877,14 @@ public class SingleChronicleQueueExcerpts {
                     if (!moveToIndexInternal(sourceIndex)) {
                         final String errorMessage = String.format(
                                 "Unable to move to sourceIndex %s in queue %s",
-                                Long.toHexString(sourceIndex), this.queue.file());
+                                Long.toHexString(sourceIndex), this.queue.fileAbsolutePath());
                         throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                     }
                     try (DocumentContext content = readingDocument()) {
                         if (!content.isPresent()) {
                             final String errorMessage = String.format(
                                     "No readable document found at sourceIndex %s in queue",
-                                    Long.toHexString(sourceIndex + 1), this.queue.file());
+                                    Long.toHexString(sourceIndex + 1), this.queue.fileAbsolutePath());
                             throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                         }
                         // skip this message and go to the next.
@@ -1885,7 +1899,7 @@ public class SingleChronicleQueueExcerpts {
                     ". That sourceIndex was determined fom the last entry written to queue %s " +
                             "(message index %s, message history %s). If source queue is replicated then " +
                             "sourceIndex may not have been replicated yet",
-                    tailer.queue().file(), Long.toHexString(tailer.index()), WireType.TEXT.asString(messageHistory));
+                    tailer.queue().fileAbsolutePath(), Long.toHexString(tailer.index()), WireType.TEXT.asString(messageHistory));
         }
 
         @NotNull
@@ -1898,14 +1912,19 @@ public class SingleChronicleQueueExcerpts {
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
 
             if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "received lastAcknowledgedIndexReplicated=" + Long.toHexString(acknowledgeIndex) + " ,file=" + queue().file().getAbsolutePath());
+                Jvm.debug().on(getClass(), "received lastAcknowledgedIndexReplicated=" + Long.toHexString(acknowledgeIndex) + " ,file=" + queue().fileAbsolutePath());
 
+            RollCycle rollCycle = queue.rollCycle();
+            int cycle0 = rollCycle.toCycle(acknowledgeIndex);
+            // cycle is the same so the same tailer can be used.
+            if (cycle0 == cycle()) {
+                store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
+                return;
+            }
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            // NOTE: This is a very expensive operation.
             StoreTailer temp = queue.acquireTailer();
             try {
-                RollCycle rollCycle = queue.rollCycle();
-                int cycle0 = rollCycle.toCycle(acknowledgeIndex);
-
                 if (!temp.cycle(cycle0, false)) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
                     return;
@@ -1925,13 +1944,19 @@ public class SingleChronicleQueueExcerpts {
         public void lastIndexReplicated(long lastIndexReplicated) {
 
             if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().file().getAbsolutePath());
+                Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().fileAbsolutePath());
 
+            RollCycle rollCycle = queue.rollCycle();
+            int cycle0 = rollCycle.toCycle(lastIndexReplicated);
+            // cycle is the same so the same tailer can be used.
+            if (cycle0 == cycle()) {
+                store().lastIndexReplicated(lastIndexReplicated);
+                return;
+            }
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            // NOTE: This is a very expensive operation.
             StoreTailer temp = queue.acquireTailer();
             try {
-                RollCycle rollCycle = queue.rollCycle();
-                int cycle0 = rollCycle.toCycle(lastIndexReplicated);
 
                 if (!temp.cycle(cycle0, false)) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " for a cycle which could not found");

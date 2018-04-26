@@ -123,6 +123,16 @@ public interface ChronicleQueue extends Closeable {
     File file();
 
     /**
+     * Cache this value as getAbsolutePath is expensive
+     *
+     * @return the absolute path of the file where ChronicleQueue stores its data.
+     */
+    @NotNull
+    default String fileAbsolutePath() {
+        return file().getAbsolutePath();
+    }
+
+    /**
      * Dump a Queue in YAML format.
      *
      * @return the contents of the Queue as YAML.

@@ -67,6 +67,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     final long timeoutMS;
     @NotNull
     final File path;
+    final String fileAbsolutePath;
     final AtomicBoolean isClosed = new AtomicBoolean();
     private final StoreFileListener storeFileListener;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
@@ -123,6 +124,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         pool = WireStorePool.withSupplier(new StoreSupplier(), storeFileListener);
         isBuffered = builder.buffered();
         path = builder.path();
+        fileAbsolutePath = path.getAbsolutePath();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
         overlapSize = Math.max(64 << 10, builder.blockSize() / 4);
@@ -216,6 +218,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     public File file() {
         return path;
+    }
+
+    @NotNull
+    @Override
+    public String fileAbsolutePath() {
+        return fileAbsolutePath;
     }
 
     @NotNull
@@ -756,13 +764,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
 
-                if (createIfAbsent && !path.exists()) {
+                if (!dateValue.pathExists && createIfAbsent && !path.exists()) {
                     parentFile.mkdirs();
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
                     // before we create a new file, we need to ensure previous file has got EOF mark
                     // but only if we are not in the process of normal rolling
                     QueueFiles.writeEOFIfNeeded(path.toPath(), wireType(), blockSize(), timeoutMS, pauserSupplier.get());
                 }
+                dateValue.pathExists = true;
 
                 final MappedBytes mappedBytes = mappedBytes(path);
                 directoryListing.onFileCreated(path, cycle);
