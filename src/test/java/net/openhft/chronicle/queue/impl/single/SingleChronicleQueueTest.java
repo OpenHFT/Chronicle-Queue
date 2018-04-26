@@ -96,23 +96,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         });
     }
 
-    private static int getMappedQueueFileCount() throws IOException, InterruptedException {
+    private static List<String> getMappedQueueFileCount() throws IOException, InterruptedException {
 
         final int processId = OS.getProcessId();
+        final List<String> fileList = new ArrayList<>();
 
         final Process pmap = new ProcessBuilder("pmap", Integer.toString(processId)).start();
         pmap.waitFor();
-        int queueFileCount = 0;
         try (final BufferedReader reader = new BufferedReader(new InputStreamReader(pmap.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.contains(SUFFIX)) {
-                    queueFileCount++;
+                    fileList.add(line);
                 }
             }
         }
 
-        return queueFileCount;
+        return fileList;
     }
 
     private static long countEntries(final ChronicleQueue queue) {
@@ -4490,10 +4490,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             boolean passed = true;
             if (OS.isLinux()) {
-                int filesOpen = getMappedQueueFileCount();
+                List<String> openFiles = getMappedQueueFileCount();
+                int filesOpen = openFiles.size();
                 if (filesOpen >= 50) {
                     passed = false;
                     builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, filesOpen));
+                    builder.append("Open files:").append("\n");
+                    openFiles.stream().map(s -> s + "\n").forEach(builder::append);
                 }
             }
 
