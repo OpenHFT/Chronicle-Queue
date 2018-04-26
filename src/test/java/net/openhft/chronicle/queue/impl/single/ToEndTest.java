@@ -50,6 +50,7 @@ public class ToEndTest {
     public void before() {
         threadDump = new ThreadDump();
         threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
+        threadDump.ignore("main/" + SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 

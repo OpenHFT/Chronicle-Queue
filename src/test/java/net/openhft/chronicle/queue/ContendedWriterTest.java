@@ -48,6 +48,7 @@ public class ContendedWriterTest {
     public void threadDump() {
         threadDump = new ThreadDump();
         threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
+        threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
     }
 
     @After

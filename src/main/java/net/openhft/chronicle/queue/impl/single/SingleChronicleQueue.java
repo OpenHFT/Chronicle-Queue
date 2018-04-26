@@ -55,7 +55,8 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerp
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
-    static final ExecutorService DISK_SPACE_CHECKER = Executors.newSingleThreadExecutor(new NamedThreadFactory("disk-space-checker", true));
+    public static final String DISK_SPACE_CHECKER_NAME = "disk-space-checker";
+    static final ExecutorService DISK_SPACE_CHECKER = Executors.newSingleThreadExecutor(new NamedThreadFactory(DISK_SPACE_CHECKER_NAME, true));
     private static final boolean SHOULD_RELEASE_RESOURCES =
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
                     Boolean.TRUE.toString()));

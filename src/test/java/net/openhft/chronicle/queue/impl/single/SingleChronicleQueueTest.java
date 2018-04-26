@@ -45,7 +45,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -153,6 +152,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void before() {
         threadDump = new ThreadDump();
         threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
+        threadDump.ignore("main/" + SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 
@@ -4449,31 +4449,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         StringBuilder builder = new StringBuilder();
         passed = passed && doMappedSegmentUnmappedRollTest(clock, builder);
         passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (2*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (3*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (4*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (5*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (6*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (7*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (8*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (9*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (10*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (11*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (12*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (13*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (14*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (15*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (16*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (17*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (18*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (19*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (20*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (21*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (22*ONE_HOUR_IN_MILLIS)), builder);
-        passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (23*ONE_HOUR_IN_MILLIS)), builder);
+        for (int i = 1; i < 24; i += 2)
+            passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * ONE_HOUR_IN_MILLIS)), builder);
 
-        if(!passed) {
+        if (!passed) {
             fail(builder.toString());
         } else {
             System.out.println(builder.toString());
@@ -4505,26 +4484,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 if (random.nextDouble() > 0.995) {
                     clock.addAndGet(TimeUnit.MINUTES.toMillis(37L));
                     // this give the reference processor a chance to run
-                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(30L));
+                    Jvm.pause(10);
                 }
             }
 
             boolean passed = true;
             if (OS.isLinux()) {
                 int filesOpen = getMappedQueueFileCount();
-                if(filesOpen >= 40) {
+                if (filesOpen >= 50) {
                     passed = false;
                     builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, filesOpen));
                 }
             }
 
             long fileCount = Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count();
-            if(fileCount <= 10L) {
+            if (fileCount <= 10L) {
                 passed = false;
                 builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, fileCount));
             }
 
-            if(passed) {
+            if (passed) {
                 builder.append(String.format("Test for time %s passed!%n", time));
             }
 

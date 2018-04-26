@@ -68,6 +68,7 @@ public class IndexTest extends ChronicleQueueTestBase {
     public void threadDump() {
         threadDump = new ThreadDump();
         threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
+        threadDump.ignore("main/" + SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
     }
 
     @After
