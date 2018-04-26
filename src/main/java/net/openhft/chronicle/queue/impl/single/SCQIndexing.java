@@ -556,7 +556,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 }
             }
         } catch (EOFException | IllegalStateException e) {
-            Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
         }
         try {
             return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);

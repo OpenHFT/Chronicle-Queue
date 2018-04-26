@@ -120,7 +120,7 @@ public class WireStorePool {
                     return;
                 }
             }
-            if (Jvm.debug().isEnabled(getClass()))
+            if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "Store was not registered: " + store.file());
         }
     }

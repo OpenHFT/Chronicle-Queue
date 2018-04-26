@@ -80,8 +80,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private WireStoreFactory storeFactory;
     private int sourceId = 0;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
-    private StoreFileListener storeFileListener = (cycle, file) ->
-            Jvm.debug().on(getClass(), "File released " + file);
+    private StoreFileListener storeFileListener;
 
     private boolean readOnly = false;
     private boolean rollCycleSet = false;
@@ -96,6 +95,10 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.bufferCapacity = -1;
         this.indexSpacing = -1;
         this.indexCount = -1;
+        storeFileListener = (cycle, file) -> {
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "File released " + file);
+        };
     }
 
     protected Logger getLogger() {

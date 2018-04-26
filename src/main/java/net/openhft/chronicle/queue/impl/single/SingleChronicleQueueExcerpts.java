@@ -1897,7 +1897,8 @@ public class SingleChronicleQueueExcerpts {
 
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
 
-            Jvm.debug().on(getClass(), "received lastAcknowledgedIndexReplicated=" + Long.toHexString(acknowledgeIndex) + " ,file=" + queue().file().getAbsolutePath());
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "received lastAcknowledgedIndexReplicated=" + Long.toHexString(acknowledgeIndex) + " ,file=" + queue().file().getAbsolutePath());
 
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
             StoreTailer temp = queue.acquireTailer();
@@ -1923,7 +1924,8 @@ public class SingleChronicleQueueExcerpts {
 
         public void lastIndexReplicated(long lastIndexReplicated) {
 
-            Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().file().getAbsolutePath());
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().file().getAbsolutePath());
 
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
             StoreTailer temp = queue.acquireTailer();

@@ -744,10 +744,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             try {
                 File path = dateValue.path;
 
-                if ((cycle > directoryListing.getMaxCreatedCycle()
+                if (!createIfAbsent &&
+                        (cycle > directoryListing.getMaxCreatedCycle()
                         || cycle < directoryListing.getMinCreatedCycle()
-                        || !path.exists())
-                        && !createIfAbsent) {
+                                || !path.exists())) {
                     return null;
                 }
 
