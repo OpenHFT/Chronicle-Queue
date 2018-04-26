@@ -4484,7 +4484,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 if (random.nextDouble() > 0.995) {
                     clock.addAndGet(TimeUnit.MINUTES.toMillis(37L));
                     // this give the reference processor a chance to run
-                    Jvm.pause(10);
+                    Jvm.pause(30);
                 }
             }
 
