@@ -8,6 +8,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -47,6 +48,7 @@ public final class DocumentOrderingTest {
         }
     }
 
+    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws Exception {
         try (final SingleChronicleQueue queue =
