@@ -1869,7 +1869,7 @@ public class SingleChronicleQueueExcerpts {
                     try (DocumentContext content = readingDocument()) {
                         if (!content.isPresent()) {
                             final String errorMessage = String.format(
-                                    "No readable document found at sourceIndex %s in queue",
+                                    "No readable document found at sourceIndex %s in queue %s",
                                     Long.toHexString(sourceIndex + 1), this.queue.fileAbsolutePath());
                             throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                         }

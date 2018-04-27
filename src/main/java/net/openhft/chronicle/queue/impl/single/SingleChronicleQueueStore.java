@@ -451,7 +451,7 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long tryWriteHeader(Wire wire, int safeLength) {
+    public long tryWriteHeader(@NotNull Wire wire, int safeLength) {
         return recovery.tryWriteHeader(wire, safeLength);
     }
 
