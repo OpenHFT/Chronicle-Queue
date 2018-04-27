@@ -43,7 +43,7 @@
                 <artifactId>third-party-bom
                 </artifactId> <!-- PLEASE DON'T LEAVE THIS ON A SNAPSHOT because they get missed in a release  -->
                 <type>pom</type>
-                <version>3.6.0</version>
+                <version>3.6.2</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
