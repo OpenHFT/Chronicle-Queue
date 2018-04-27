@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
@@ -57,7 +58,8 @@ public class RollCycleMultiThreadStressTest {
         System.out.printf("Queue dir: %s at %s%n", path.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
-        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+        final ExecutorService executorServiceWrite = Executors.newFixedThreadPool(numWriters, new NamedThreadFactory("writer"));
+        final ExecutorService executorServiceRead = Executors.newFixedThreadPool(numThreads - numWriters, new NamedThreadFactory("reader"));
 
         final AtomicInteger wrote = new AtomicInteger();
         final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS);
@@ -82,7 +84,7 @@ public class RollCycleMultiThreadStressTest {
         for (int i = 0; i < numThreads - numWriters; i++) {
             final Reader reader = new Reader(path, expectedNumberOfMessages);
             readers.add(reader);
-            results.add(executorService.submit(reader));
+            results.add(executorServiceRead.submit(reader));
         }
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
             LOG.warn("Wrote one now waiting for {}ms", WRITE_ONE_THEN_WAIT_MS);
@@ -91,7 +93,7 @@ public class RollCycleMultiThreadStressTest {
         for (int i = 0; i < numWriters; i++) {
             final Writer writer = new Writer(path, wrote, expectedNumberOfMessages);
             writers.add(writer);
-            results.add(executorService.submit(writer));
+            results.add(executorServiceWrite.submit(writer));
         }
 
         final long maxWritingTime = TimeUnit.SECONDS.toMillis(MAX_WRITING_TIME);
@@ -166,11 +168,11 @@ public class RollCycleMultiThreadStressTest {
         assertTrue("Readers did not catch up",
                 areAllReadersComplete(expectedNumberOfMessages, readers));
 
-        executorService.shutdownNow();
+        executorServiceWrite.shutdownNow();
+        executorServiceRead.shutdownNow();
 
         results.forEach(f -> {
             try {
-
                 final Throwable exception = f.get();
                 if (exception != null) {
                     exception.printStackTrace();
