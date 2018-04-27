@@ -36,7 +36,7 @@ public class RollCycleMultiThreadStressTest {
     static {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 50_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
-        MAX_WRITING_TIME = Integer.getInteger("maxTime", TEST_TIME + 2);
+        MAX_WRITING_TIME = Integer.getInteger("maxTime", TEST_TIME + 5);
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
         DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
         DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);

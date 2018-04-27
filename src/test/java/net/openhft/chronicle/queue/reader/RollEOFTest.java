@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.reader;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -56,15 +57,15 @@ public class RollEOFTest {
     @Test(timeout = 5000L)
     public void testRollWritesEOF() throws Exception {
 
-        final MutableTimeProvider timeProvider = new MutableTimeProvider();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DAY_OF_MONTH, -1);
-        timeProvider.setTime(cal.getTimeInMillis());
+        timeProvider.currentTimeMillis(cal.getTimeInMillis());
         createQueueAndWriteData(timeProvider);
         assertEquals(1, getNumberOfQueueFiles());
 
         // adjust time
-        timeProvider.setTime(System.currentTimeMillis());
+        timeProvider.currentTimeMillis(System.currentTimeMillis());
         createQueueAndWriteData(timeProvider);
         assertEquals(2, getNumberOfQueueFiles());
 
@@ -77,15 +78,15 @@ public class RollEOFTest {
     @Test(timeout = 5000L)
     public void testRollWithoutEOFDoesntBlowup() throws Exception {
 
-        final MutableTimeProvider timeProvider = new MutableTimeProvider();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DAY_OF_MONTH, -1);
-        timeProvider.setTime(cal.getTimeInMillis());
+        timeProvider.currentTimeMillis(cal.getTimeInMillis());
         createQueueAndWriteData(timeProvider);
         assertEquals(1, getNumberOfQueueFiles());
 
         // adjust time
-        timeProvider.setTime(System.currentTimeMillis());
+        timeProvider.currentTimeMillis(System.currentTimeMillis());
         createQueueAndWriteData(timeProvider);
         assertEquals(2, getNumberOfQueueFiles());
 
@@ -105,15 +106,15 @@ public class RollEOFTest {
     @Test(timeout = 5000L)
     public void testRollWithoutEOF() throws Exception {
 
-        final MutableTimeProvider timeProvider = new MutableTimeProvider();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DAY_OF_MONTH, -3);
-        timeProvider.setTime(cal.getTimeInMillis());
+        timeProvider.currentTimeMillis(cal.getTimeInMillis());
         createQueueAndWriteData(timeProvider);
         assertEquals(1, getNumberOfQueueFiles());
 
         // adjust time
-        timeProvider.setTime(System.currentTimeMillis());
+        timeProvider.currentTimeMillis(System.currentTimeMillis());
         createQueueAndWriteData(timeProvider);
         assertEquals(2, getNumberOfQueueFiles());
 
@@ -173,7 +174,7 @@ public class RollEOFTest {
         return Files.list(path.toPath()).filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX));
     }
 
-    private void createQueueAndWriteData(MutableTimeProvider timeProvider) {
+    private void createQueueAndWriteData(TimeProvider timeProvider) {
         final SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(path)
                 .testBlockSize()
@@ -185,23 +186,6 @@ public class RollEOFTest {
 
         try (DocumentContext dc = excerptAppender.writingDocument(false)) {
             dc.wire().write(() -> "test").int64(0);
-        }
-    }
-
-    private static final class MutableTimeProvider implements TimeProvider {
-        private long currentTimeMillis;
-
-        @Override
-        public long currentTimeMillis() {
-            return currentTimeMillis;
-        }
-
-        void setTime(final long millis) {
-            this.currentTimeMillis = millis;
-        }
-
-        void addTime(final long duration, final TimeUnit unit) {
-            this.currentTimeMillis += unit.toMillis(duration);
         }
     }
 }

@@ -4439,8 +4439,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws Exception {
-        // this test takes time and not dependant on wire type
-        assumeTrue(wireType == WireType.BINARY);
+
+        Assume.assumeTrue("this test is slow and does not depend on wire type", wireType == WireType.BINARY);
+
         long now = System.currentTimeMillis();
         long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000;
         long ONE_DAY_IN_MILLIS = ONE_HOUR_IN_MILLIS * 24;
