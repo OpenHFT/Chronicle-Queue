@@ -1096,20 +1096,6 @@ public class SingleChronicleQueueExcerpts {
         public DocumentContext readingDocument(boolean includeMetaData) {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
-
-            if (state == FOUND_CYCLE) {
-                Wire wire = wire();
-                if (wire != null) {
-                    int header = wire.bytes().peekVolatileInt();
-                    if (header == 0)
-                        return NoDocumentContext.INSTANCE;
-                }
-            }
-            return readingDocument0(includeMetaData);
-        }
-
-        @NotNull
-        private DocumentContext readingDocument0(boolean includeMetaData) {
             try {
                 boolean next = false, tryAgain = true;
                 if (state == FOUND_CYCLE) {
