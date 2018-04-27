@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
@@ -70,6 +71,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     final String fileAbsolutePath;
     final AtomicBoolean isClosed = new AtomicBoolean();
     private final StoreFileListener storeFileListener;
+    private final StoreSupplier storeSupplier;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
     @NotNull
     private final WireStorePool pool;
@@ -121,7 +123,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         assignRollCycleDependentFields();
 
         storeFileListener = builder.storeFileListener();
-        pool = WireStorePool.withSupplier(new StoreSupplier(), storeFileListener);
+        storeSupplier = new StoreSupplier();
+        pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         isBuffered = builder.buffered();
         path = builder.path();
         fileAbsolutePath = path.getAbsolutePath();
@@ -340,7 +343,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     protected ExcerptAppender newAppender() {
-        final WireStorePool newPool = WireStorePool.withSupplier(new StoreSupplier(), storeFileListener);
+        final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, progressOnContention, newPool);
     }
 
@@ -348,8 +351,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return storeFileListener;
     }
 
+    // used by enterprise CQ
     WireStoreSupplier storeSupplier() {
-        return new StoreSupplier();
+        return storeSupplier;
     }
 
     @NotNull
@@ -653,10 +657,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @NotNull
-    MappedBytes mappedBytes(@NotNull File cycleFile) throws FileNotFoundException {
+    private MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
-        return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize, readOnly);
+        return MappedFile.of(file, chunkSize, overlapSize, readOnly);
     }
 
     boolean isReadOnly() {
@@ -741,6 +745,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     private class StoreSupplier implements WireStoreSupplier {
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
+        private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache =
+                new ReferenceCountedCache<>(MappedBytes::mappedBytes, SingleChronicleQueue.this::mappedFile);
         private boolean queuePathExists;
 
         @Override
@@ -773,7 +779,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 }
                 dateValue.pathExists = true;
 
-                final MappedBytes mappedBytes = mappedBytes(path);
+                final MappedBytes mappedBytes = mappedFileCache.get(path);
                 directoryListing.onFileCreated(path, cycle);
                 queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
