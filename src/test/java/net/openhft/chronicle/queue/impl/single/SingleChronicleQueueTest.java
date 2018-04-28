@@ -508,6 +508,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
+        if (OS.isWindows()) {
+            System.err.println("Cannot test deleting after close on windows");
+            return;
+        }
+
         final File dir = DirectoryUtils.tempDir("to-be-deleted");
         try (final SingleChronicleQueue queue =
                      builder(dir, wireType).

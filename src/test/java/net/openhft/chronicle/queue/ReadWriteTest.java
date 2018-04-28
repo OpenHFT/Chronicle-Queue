@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -79,8 +80,13 @@ public class ReadWriteTest {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test(expected = IORuntimeException.class)
     public void testWriteToReadOnlyChronicle() {
+        if (OS.isWindows()) {
+            System.err.println("Cannot test read only mode on windows");
+            return;
+        }
+
         try (SingleChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
