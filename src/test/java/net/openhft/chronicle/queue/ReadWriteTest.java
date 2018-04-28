@@ -80,7 +80,8 @@ public class ReadWriteTest {
         }
     }
 
-    @Test(expected = IORuntimeException.class)
+    // Can't append to a read-only chronicle
+    @Test(expected = IllegalStateException.class)
     public void testWriteToReadOnlyChronicle() {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test read only mode on windows");
