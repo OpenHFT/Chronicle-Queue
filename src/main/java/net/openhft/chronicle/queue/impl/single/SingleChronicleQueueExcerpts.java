@@ -322,6 +322,8 @@ public class SingleChronicleQueueExcerpts {
             assert checkWritePositionHeaderNumber();
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
+            if (Thread.currentThread().isInterrupted())
+                throw new IllegalStateException("Queue won't write from an interrupted thread");
             boolean ok = false;
             try {
                 int cycle = queue.cycle();
