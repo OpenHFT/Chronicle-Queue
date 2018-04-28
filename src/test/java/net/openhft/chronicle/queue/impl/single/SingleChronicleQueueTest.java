@@ -509,7 +509,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
         if (OS.isWindows()) {
-            System.err.println("Cannot test deleting after close on windows");
+            System.err.println("#460 Cannot test deleting after close on windows");
             return;
         }
 

@@ -83,8 +83,8 @@ public class ReadWriteTest {
     @Test(expected = IORuntimeException.class)
     public void testWriteToReadOnlyChronicle() {
         if (OS.isWindows()) {
-            System.err.println("Cannot test read only mode on windows");
-            return;
+            System.err.println("#460 Cannot test read only mode on windows");
+            throw new IORuntimeException("not run");
         }
 
         try (SingleChronicleQueue out = SingleChronicleQueueBuilder

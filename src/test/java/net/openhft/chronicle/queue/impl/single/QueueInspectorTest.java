@@ -42,7 +42,7 @@ public final class QueueInspectorTest {
     @Test
     public void shouldDetermineWritingProcessIdWhenDocumentIsNotComplete() throws IOException {
         if (OS.isWindows()) {
-            System.err.println("Cannot test thread ids on windows");
+            System.err.println("#460 Cannot test thread ids on windows");
             return;
         }
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir.newFolder()).
