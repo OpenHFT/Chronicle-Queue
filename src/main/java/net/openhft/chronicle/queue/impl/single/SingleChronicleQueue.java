@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -181,7 +182,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
         } else {
             listingPath = new File(queueFolder, DirectoryListing.DIRECTORY_LISTING_FILE);
-            Files.createDirectories(Paths.get(listingPath.getParent()));
+            Path dir = Paths.get(listingPath.getAbsoluteFile().getParent());
+            IOTools.createDirectories(dir);
         }
         return listingPath;
     }
