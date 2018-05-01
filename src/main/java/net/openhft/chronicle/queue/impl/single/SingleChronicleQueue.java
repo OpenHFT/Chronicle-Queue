@@ -576,8 +576,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private void setFirstAndLastCycle() {
         long now = time.currentTimeMillis();
         if (now == firstAndLastCycleTime) {
-            if (++firstAndLastRetry > FIRST_AND_LAST_RETRY_MAX)
-                return;
+            return;
         }
 
         firstCycle = directoryListing.getMinCreatedCycle();
