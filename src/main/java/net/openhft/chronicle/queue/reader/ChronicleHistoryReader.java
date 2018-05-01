@@ -100,9 +100,9 @@ public class ChronicleHistoryReader {
         final ChronicleQueue q = createQueue();
         final ExcerptTailer tailer = q.createTailer();
         final WireParselet parselet = parselet();
+        MessageHistory.set(new VanillaMessageHistory());
         final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, null, parselet);
 
-        MessageHistory.set(new VanillaMessageHistory());
         while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
             ++counter;
             if (this.progress && counter % 1_000_000L == 0) {
