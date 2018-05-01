@@ -21,6 +21,8 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -42,6 +44,7 @@ import java.lang.reflect.Method;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.*;
@@ -173,13 +176,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @NotNull
-    public static File directoryListingPath(final File queueFolder) {
+    public static File directoryListingPath(final File queueFolder) throws IOException {
         final File listingPath;
         if ("".equals(queueFolder.getPath())) {
             listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
         } else {
             listingPath = new File(queueFolder, DirectoryListing.DIRECTORY_LISTING_FILE);
-            listingPath.getParentFile().mkdirs();
+            Path dir = Paths.get(listingPath.getAbsoluteFile().getParent());
+            IOTools.createDirectories(dir);
         }
         return listingPath;
     }
@@ -574,8 +578,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private void setFirstAndLastCycle() {
         long now = time.currentTimeMillis();
         if (now == firstAndLastCycleTime) {
-            if (++firstAndLastRetry > FIRST_AND_LAST_RETRY_MAX)
-                return;
+            return;
         }
 
         firstCycle = directoryListing.getMinCreatedCycle();
@@ -588,15 +591,15 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private File createDirectoryListingFile() {
         final File listingPath;
-        listingPath = directoryListingPath(this.path);
         try {
+            listingPath = directoryListingPath(this.path);
             if (!readOnly && listingPath.createNewFile()) {
                 if (!listingPath.canWrite()) {
-                    throw new IllegalStateException("Cannot write to listing file");
+                    throw new IllegalStateException("Cannot write to listing file " + path);
                 }
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Unable to create listing file", e);
+            throw new IORuntimeException("Unable to create listing file " + path, e);
         }
         return listingPath;
     }
@@ -760,7 +763,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
                 if (!createIfAbsent &&
                         (cycle > directoryListing.getMaxCreatedCycle()
-                        || cycle < directoryListing.getMinCreatedCycle()
+                                || cycle < directoryListing.getMinCreatedCycle()
                                 || !path.exists())) {
                     return null;
                 }

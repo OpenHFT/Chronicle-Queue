@@ -527,6 +527,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
+        if (OS.isWindows()) {
+            System.err.println("#460 Cannot test deleting after close on windows");
+            return;
+        }
+
         final File dir = DirectoryUtils.tempDir("to-be-deleted");
         try (final SingleChronicleQueue queue =
                      builder(dir, wireType).
@@ -2197,6 +2202,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testToEndOnDeletedQueueFiles() throws IOException {
+        if (OS.isWindows()) {
+            System.err.println("#460 Cannot test delete after close on windows");
+            return;
+        }
+
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType).build()) {
             ExcerptAppender append = q.acquireAppender();
@@ -4044,29 +4054,32 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void checkReferenceCountingAndCheckFileDeletion() {
 
         MappedFile mappedFile;
-        {
-            try (RollingChronicleQueue queue =
-                         binary(getTmpDir())
-                                 .rollCycle(RollCycles.TEST_SECONDLY)
-                                 .build()) {
-                ExcerptAppender appender = queue.acquireAppender();
 
-                try (DocumentContext documentContext1 = appender.writingDocument()) {
-                    documentContext1.wire().write().text("some text");
-                }
+        try (RollingChronicleQueue queue =
+                     binary(getTmpDir())
+                             .rollCycle(RollCycles.TEST_SECONDLY)
+                             .build()) {
+            ExcerptAppender appender = queue.acquireAppender();
 
-                try (DocumentContext documentContext = queue.createTailer().readingDocument()) {
-                    mappedFile = toMappedFile(documentContext);
-                    Assert.assertEquals("some text", documentContext.wire().read().text());
-                }
-
+            try (DocumentContext documentContext1 = appender.writingDocument()) {
+                documentContext1.wire().write().text("some text");
             }
 
-            waitFor(mappedFile::isClosed, "mappedFile is not closed");
+            try (DocumentContext documentContext = queue.createTailer().readingDocument()) {
+                mappedFile = toMappedFile(documentContext);
+                Assert.assertEquals("some text", documentContext.wire().read().text());
+            }
 
-            // this used to fail on windows
-            Assert.assertTrue(mappedFile.file().delete());
         }
+
+        waitFor(mappedFile::isClosed, "mappedFile is not closed");
+
+        if (OS.isWindows()) {
+            System.err.println("#460 Cannot test delete after close on windows");
+            return;
+        }
+        // this used to fail on windows
+        Assert.assertTrue(mappedFile.file().delete());
 
     }
 
@@ -4075,45 +4088,48 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         MappedFile mappedFile1, mappedFile2, mappedFile3, mappedFile4;
-        {
-            try (RollingChronicleQueue queue =
-                         binary(getTmpDir())
-                                 .rollCycle(RollCycles.TEST_SECONDLY)
-                                 .timeProvider(timeProvider)
-                                 .build()) {
-                ExcerptAppender appender = queue.acquireAppender();
 
-                try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write().text("some text");
-                    mappedFile1 = toMappedFile(dc);
-                }
-                timeProvider.advanceMillis(1100);
-                try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write().text("some more text");
-                    mappedFile2 = toMappedFile(dc);
-                }
+        try (RollingChronicleQueue queue =
+                     binary(getTmpDir())
+                             .rollCycle(RollCycles.TEST_SECONDLY)
+                             .timeProvider(timeProvider)
+                             .build()) {
+            ExcerptAppender appender = queue.acquireAppender();
 
-                ExcerptTailer tailer = queue.createTailer();
-                try (DocumentContext documentContext = tailer.readingDocument()) {
-                    mappedFile3 = toMappedFile(documentContext);
-                    Assert.assertEquals("some text", documentContext.wire().read().text());
-
-                }
-
-                try (DocumentContext documentContext = tailer.readingDocument()) {
-                    mappedFile4 = toMappedFile(documentContext);
-                    Assert.assertEquals("some more text", documentContext.wire().read().text());
-
-                }
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write().text("some text");
+                mappedFile1 = toMappedFile(dc);
+            }
+            timeProvider.advanceMillis(1100);
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write().text("some more text");
+                mappedFile2 = toMappedFile(dc);
             }
 
-            waitFor(mappedFile1::isClosed, "mappedFile1 is not closed");
-            waitFor(mappedFile2::isClosed, "mappedFile2 is not closed");
+            ExcerptTailer tailer = queue.createTailer();
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                mappedFile3 = toMappedFile(documentContext);
+                Assert.assertEquals("some text", documentContext.wire().read().text());
 
-            // this used to fail on windows
-            Assert.assertTrue(mappedFile1.file().delete());
-            Assert.assertTrue(mappedFile2.file().delete());
+            }
+
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                mappedFile4 = toMappedFile(documentContext);
+                Assert.assertEquals("some more text", documentContext.wire().read().text());
+
+            }
         }
+
+        waitFor(mappedFile1::isClosed, "mappedFile1 is not closed");
+        waitFor(mappedFile2::isClosed, "mappedFile2 is not closed");
+
+        if (OS.isWindows()) {
+            System.err.println("#460 Cannot test delete after close on windows");
+            return;
+        }
+        // this used to fail on windows
+        Assert.assertTrue(mappedFile1.file().delete());
+        Assert.assertTrue(mappedFile2.file().delete());
     }
 
     @Test
@@ -4175,6 +4191,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldBeAbleToLoadQueueFromReadOnlyFiles() throws Exception {
+        if (OS.isWindows()) {
+            System.err.println("#460 Cannot test read only mode on windows");
+            return;
+        }
+
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = builder(queueDir, wireType).
                 testBlockSize().build()) {
@@ -4202,6 +4223,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
 
+        if (OS.isWindows()) {
+            System.err.println("#460 Cannot test delete after close on windows");
+            return;
+        }
         assertThat(new File("directory-listing.cq4t").delete(), is(true));
     }
 
