@@ -187,6 +187,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void testCleanupDir() {
+
+        File tmpDir = getTmpDir();
+        try (final RollingChronicleQueue queue =
+                     builder(tmpDir, wireType)
+                             .build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("hello").text("world");
+            }
+
+
+        }
+        DirectoryUtils.deleteDir(tmpDir);
+        Assert.assertFalse(tmpDir.exists());
+    }
+
+    @Test
     public void testRollbackOnAppend() {
         try (final RollingChronicleQueue queue =
                      builder(getTmpDir(), wireType)
