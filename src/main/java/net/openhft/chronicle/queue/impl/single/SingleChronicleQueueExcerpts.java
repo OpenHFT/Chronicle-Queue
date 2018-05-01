@@ -1163,85 +1163,20 @@ public class SingleChronicleQueueExcerpts {
                         break;
                     }
 
-                    case END_OF_CYCLE: {
-                        long oldIndex = this.index;
-                        int currentCycle = queue.rollCycle().toCycle(oldIndex);
-                        long nextIndex = nextIndexWithNextAvailableCycle(currentCycle);
-
-                        if (nextIndex != Long.MIN_VALUE) {
-                            if (moveToIndexInternal(nextIndex)) {
-                                state = FOUND_CYCLE;
-                                continue;
-                            }
-                            if (state == END_OF_CYCLE)
-                                continue;
-                            if (cycle < queue.lastCycle()) {
-                                // we have encountered an empty file without an EOF marker
-                                // TODO: more work needed - I thought that the appender and/or tailer would write an EOF into this file
-                                state = END_OF_CYCLE;
-                                continue;
-                            }
-                            // We are here because we are waiting for an entry to be written to this file.
-                            // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
-                            int nextCycle = queue.rollCycle().toCycle(nextIndex);
-                            cycle(nextCycle, false);
-                            state = CYCLE_NOT_FOUND;
-                        } else {
-                            state = END_OF_CYCLE;
-                        }
-                        return false;
-                    }
-                    case BEYOND_START_OF_CYCLE: {
-                        if (direction == FORWARD) {
-                            state = UNINITIALISED;
+                    case END_OF_CYCLE:
+                        if (endOfCycle())
                             continue;
-                        }
-                        if (direction == BACKWARD) {
+                        return false;
 
-                            // give the position of the last entry and
-                            // flag we want to count it even though we don't know if it will be meta data or not.
-
-                            boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
-
-                            if (foundCycle) {
-                                long lastSequenceNumberInThisCycle = store().sequenceForPosition(this, Long.MAX_VALUE, false);
-                                long nextIndex = queue.rollCycle().toIndex(this.cycle,
-                                        lastSequenceNumberInThisCycle);
-                                moveToIndexInternal(nextIndex);
-                                state = FOUND_CYCLE;
-                                continue;
-                            }
-
-                            int cycle = queue.rollCycle().toCycle(index);
-                            long nextIndex = nextIndexWithNextAvailableCycle(cycle);
-
-                            if (nextIndex != Long.MIN_VALUE) {
-                                moveToIndexInternal(nextIndex);
-                                state = FOUND_CYCLE;
-                                continue;
-                            }
-
-                            state = BEYOND_START_OF_CYCLE;
-                            return false;
-                        }
-                    }
-                    throw new AssertionError("direction not set, direction=" + direction);
+                    case BEYOND_START_OF_CYCLE:
+                        if (beyondStartOfCycle())
+                            continue;
+                        return false;
 
                     case CYCLE_NOT_FOUND:
-
-                        if (index == Long.MIN_VALUE) {
-                            if (this.store != null)
-                                queue.release(this.store);
-                            this.store = null;
-                            closableResources.storeReference = null;
-                            return false;
-                        }
-
-                        if (moveToIndexInternal(index)) {
-                            state = FOUND_CYCLE;
+                        if (nextCycleNotFound())
                             continue;
-                        } else
-                            return false;
+                        return false;
 
                     default:
                         throw new AssertionError("state=" + state);
@@ -1249,6 +1184,95 @@ public class SingleChronicleQueueExcerpts {
             }
 
             throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
+        }
+
+        private boolean endOfCycle() {
+            long oldIndex = this.index;
+            int currentCycle = queue.rollCycle().toCycle(oldIndex);
+            long nextIndex = nextIndexWithNextAvailableCycle(currentCycle);
+
+            if (nextIndex != Long.MIN_VALUE) {
+                if (nextEndOfCycle(nextIndex))
+                    return true;
+            } else {
+                state = END_OF_CYCLE;
+            }
+            return false;
+        }
+
+        private boolean beyondStartOfCycle() throws StreamCorruptedException {
+            if (direction == FORWARD) {
+                state = UNINITIALISED;
+                return true;
+            } else if (direction == BACKWARD) {
+                return beyondStartOfCycleBackward();
+            }
+            throw new AssertionError("direction not set, direction=" + direction);
+        }
+
+        private boolean nextEndOfCycle(long nextIndex) {
+            if (moveToIndexInternal(nextIndex)) {
+                state = FOUND_CYCLE;
+                return true;
+            }
+            if (state == END_OF_CYCLE)
+                return true;
+            if (cycle < queue.lastCycle()) {
+                // we have encountered an empty file without an EOF marker
+                // TODO: more work needed - I thought that the appender and/or tailer would write an EOF into this file
+                state = END_OF_CYCLE;
+                return true;
+            }
+            // We are here because we are waiting for an entry to be written to this file.
+            // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
+            int nextCycle = queue.rollCycle().toCycle(nextIndex);
+            cycle(nextCycle, false);
+            state = CYCLE_NOT_FOUND;
+            return false;
+        }
+
+        private boolean beyondStartOfCycleBackward() throws StreamCorruptedException {
+            // give the position of the last entry and
+            // flag we want to count it even though we don't know if it will be meta data or not.
+
+            boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
+
+            if (foundCycle) {
+                long lastSequenceNumberInThisCycle = store().sequenceForPosition(this, Long.MAX_VALUE, false);
+                long nextIndex = queue.rollCycle().toIndex(this.cycle,
+                        lastSequenceNumberInThisCycle);
+                moveToIndexInternal(nextIndex);
+                state = FOUND_CYCLE;
+                return true;
+            }
+
+            int cycle = queue.rollCycle().toCycle(index);
+            long nextIndex = nextIndexWithNextAvailableCycle(cycle);
+
+            if (nextIndex != Long.MIN_VALUE) {
+                moveToIndexInternal(nextIndex);
+                state = FOUND_CYCLE;
+                return true;
+            }
+
+            state = BEYOND_START_OF_CYCLE;
+            return false;
+        }
+
+        private boolean nextCycleNotFound() {
+            if (index == Long.MIN_VALUE) {
+                if (this.store != null)
+                    queue.release(this.store);
+                this.store = null;
+                closableResources.storeReference = null;
+                return false;
+            }
+
+            if (moveToIndexInternal(index)) {
+                state = FOUND_CYCLE;
+                return true;
+            }
+            return false;
         }
 
         private boolean inACycle(boolean includeMetaData, boolean first)
