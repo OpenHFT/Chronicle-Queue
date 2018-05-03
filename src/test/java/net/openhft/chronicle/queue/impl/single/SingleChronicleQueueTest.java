@@ -202,7 +202,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
         DirectoryUtils.deleteDir(tmpDir);
-        Assert.assertFalse(tmpDir.exists());
+        if (OS.isWindows()) {
+            System.err.println("#460 Directory clean up not supported on Windows");
+        } else {
+            Assert.assertFalse(tmpDir.exists());
+        }
     }
 
     @Test

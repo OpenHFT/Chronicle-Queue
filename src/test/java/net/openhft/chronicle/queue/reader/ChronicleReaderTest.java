@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.MethodWriterBuilder;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -196,7 +197,9 @@ public class ChronicleReaderTest {
             executorService.awaitTermination(Jvm.isDebug() ? 50 : 5, TimeUnit.SECONDS);
             submit.get(1, TimeUnit.SECONDS);
 
-            assertEquals(expectedReadingDocumentCount, recordCounter.recordCount.get() - 1);
+            // #460 read only not supported on windows.
+            if (!OS.isWindows())
+                assertEquals(expectedReadingDocumentCount, recordCounter.recordCount.get() - 1);
         }
     }
 
@@ -237,6 +240,10 @@ public class ChronicleReaderTest {
 
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws Exception {
+        if (OS.isWindows()) {
+            System.err.println("#460 read-only not supported on Windows");
+            return;
+        }
         final Path queueFile = Files.list(dataDir).
                 filter(f -> f.getFileName().toString().endsWith(SingleChronicleQueue.SUFFIX)).findFirst().
                 orElseThrow(() ->
