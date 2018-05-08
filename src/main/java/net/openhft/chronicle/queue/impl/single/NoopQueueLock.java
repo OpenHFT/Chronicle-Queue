@@ -32,4 +32,9 @@ public class NoopQueueLock implements QueueLock {
     public void unlock() {
 
     }
+
+    @Override
+    public void close() {
+
+    }
 }

@@ -17,7 +17,9 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-public interface QueueLock {
+import net.openhft.chronicle.core.io.Closeable;
+
+public interface QueueLock extends Closeable {
 
     void checkLock();
 

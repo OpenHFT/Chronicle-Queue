@@ -158,6 +158,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         this.queueLock = builder.queueLock();
         addCloseListener(directoryListing, DirectoryListing::close);
+        addCloseListener(queueLock, QueueLock::close);
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
             try {

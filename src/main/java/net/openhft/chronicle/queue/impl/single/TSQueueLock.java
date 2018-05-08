@@ -42,6 +42,7 @@ public class TSQueueLock implements QueueLock {
     private final Pauser pauser;
     private final ThreadLocal<Long> lockHolderTidTL = new ThreadLocal<>();
     private final String path;
+    private final TableStore tableStore;
 
     public TSQueueLock(File queueDirectoryPath, Supplier<Pauser> pauser) {
         final File storeFilePath;
@@ -51,7 +52,7 @@ public class TSQueueLock implements QueueLock {
             storeFilePath = new File(queueDirectoryPath, QUEUE_LOCK_FILE);
             queueDirectoryPath.mkdirs();
         }
-        TableStore tableStore = SingleTableBuilder.binary(storeFilePath).build();
+        this.tableStore = SingleTableBuilder.binary(storeFilePath).build();
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(LOCK_KEY));
         this.pauser = pauser.get();
         this.path = storeFilePath.getPath();
@@ -82,6 +83,7 @@ public class TSQueueLock implements QueueLock {
             acquireLock();
         } finally {
             pauser.reset();
+
         }
     }
 
@@ -123,6 +125,10 @@ public class TSQueueLock implements QueueLock {
         }
 
         lockHolderTidTL.remove();
+    }
+
+    public void close() {
+        this.tableStore.close();
     }
 
     private boolean isLockHeldByCurrentThread() {
