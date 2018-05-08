@@ -32,15 +32,7 @@ public class StuckQueueTest {
             Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
             //   Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
 
-            try (DocumentContext dc = tailer.readingDocument()) {
-//                Assert.assertTrue(!dc.isPresent());
-                System.out.println(Long.toHexString(dc.index()));
-            }
 
-            //  Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
-            try (DocumentContext dc = q.acquireAppender().writingDocument()) {
-                dc.wire().write("hello").text("world");
-            }
             try (DocumentContext dc = tailer.readingDocument()) {
                 Assert.assertTrue(dc.isPresent());
                 String actual = dc.wire().read("hello").text();
