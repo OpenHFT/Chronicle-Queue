@@ -60,7 +60,35 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     public static final String DISK_SPACE_CHECKER_NAME = "disk-space-checker";
-    static final ExecutorService DISK_SPACE_CHECKER = Executors.newSingleThreadExecutor(new NamedThreadFactory(DISK_SPACE_CHECKER_NAME, true));
+    private static ExecutorService DISK_SPACE_CHECKER = null;
+
+    /**
+     * Sets the `ExecutorService` that will be used to check disk space. If the executor has
+     * already been initialized, this method has no effect.
+     */
+    public static void initializeDiskSpaceCheckerExecutorService(@NotNull final ExecutorService executorService) {
+        if (DISK_SPACE_CHECKER == null) {
+            synchronized (SingleChronicleQueue.class) {
+                if (DISK_SPACE_CHECKER == null) {
+                    DISK_SPACE_CHECKER = executorService;
+                }
+            }
+        }
+    }
+
+    @NotNull
+    private static ExecutorService getDiskSpaceCheckerExecutorService() {
+        if (DISK_SPACE_CHECKER == null) {
+            synchronized (SingleChronicleQueue.class) {
+                if (DISK_SPACE_CHECKER == null) {
+                    DISK_SPACE_CHECKER = Executors.newSingleThreadExecutor(new NamedThreadFactory(DISK_SPACE_CHECKER_NAME, true));
+                }
+            }
+        }
+
+        return DISK_SPACE_CHECKER;
+    }
+
     private static final boolean SHOULD_RELEASE_RESOURCES =
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
                     Boolean.TRUE.toString()));
@@ -829,7 +857,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         private void checkDiskSpace(@NotNull final File filePath) {
             // This operation can stall for 500 ms or more under load.
-            DISK_SPACE_CHECKER.submit(() -> {
+            getDiskSpaceCheckerExecutorService().submit(() -> {
                 long start = System.nanoTime();
                 try {
                     Path path = filePath.getAbsoluteFile().toPath();
@@ -857,7 +885,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 } finally {
                     double time = (System.nanoTime() - start) / 1000 / 1000.0;
                     if (time > 1)
-                        System.out.println("Took " + time + " ms to check the disk space.");
+                        LOG.debug("Took " + time + " ms to check the disk space.");
                 }
             });
         }
