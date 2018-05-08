@@ -40,7 +40,7 @@ public class SingleChronicleQueueBuilderTest {
     }
 
     Path tmpDir = DirectoryUtils.tempDir(StuckQueueTest.class.getSimpleName()).toPath();
-
+/*
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Before
     public void setup() throws Exception {
@@ -67,5 +67,5 @@ public class SingleChronicleQueueBuilderTest {
                              .build()) {
             assertThat(queue.createTailer().readingDocument().isPresent(), is(false));
         }
-    }
+    }*/
 }
