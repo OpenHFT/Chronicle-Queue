@@ -49,4 +49,4 @@ local.properties
 
 ### Queue files
 *.cq4t
-*.cq4
+#*.cq4
