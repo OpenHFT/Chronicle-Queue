@@ -1814,11 +1814,11 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             }
 
-            if (store != null)
-                queue.release(store);
-
             if (nextStore == this.store)
                 return true;
+
+            if (store != null)
+                queue.release(store);
 
             context.wire(null);
             this.store = nextStore;
