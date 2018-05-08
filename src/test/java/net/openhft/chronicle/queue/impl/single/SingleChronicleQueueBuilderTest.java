@@ -20,7 +20,7 @@ public class SingleChronicleQueueBuilderTest {
                      SingleChronicleQueueBuilder.binary(path)
                              .testBlockSize()
                              .build()) {
-            assertThat(queue.createTailer().readingDocument().isPresent(), is(true));
+            assertThat(queue.createTailer().readingDocument().isPresent(), is(false));
         }
     }
 
