@@ -12,11 +12,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URL;
 
-public class SuckQueueTest {
+public class StuckQueueTest {
 
     @Test
     public void test() throws FileNotFoundException {
-        URL resource = SuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4");
+        URL resource = StuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4");
         File dir = new File(resource.getFile()).getParentFile();
 
         DumpQueueMain.dump(dir.getAbsolutePath());
