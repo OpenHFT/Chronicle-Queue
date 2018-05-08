@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.WireType;
@@ -13,7 +14,7 @@ public enum RollCycleRetriever {
     private static final RollCycles[] ROLL_CYCLES = RollCycles.values();
 
     public static Optional<RollCycle> getRollCycle(final Path queuePath, final WireType wireType, final long blockSize) {
-        return QueueFiles.processLastQueueFile(queuePath, wireType, blockSize, true, (w, qs) -> {
+        return QueueFiles.processLastQueueFile(queuePath, wireType, blockSize, !OS.isWindows(), (w, qs) -> {
             final int rollCycleLength = qs.rollCycleLength();
             final int rollCycleIndexCount = qs.rollIndexCount();
             final int rollCycleIndexSpacing = qs.rollIndexSpacing();
