@@ -1,29 +1,40 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.net.URL;
+import java.nio.file.*;
 
 public class StuckQueueTest {
 
+    Path tmpDir = DirectoryUtils.tempDir(StuckQueueTest.class.getSimpleName()).toPath();
+
+    @Before
+    public void setup() throws Exception {
+        //noinspection ResultOfMethodCallIgnored
+        tmpDir.toFile().mkdirs();
+        Path templatePath = Paths.get(StuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4").getFile());
+        Path to = tmpDir.resolve(templatePath.getFileName());
+        Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    @After
+    public void cleanup() {
+        DirectoryUtils.deleteDir(tmpDir.toFile());
+    }
+
     @Test
-    @Ignore
     public void test() throws FileNotFoundException {
-        URL resource = StuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4");
-        File dir = new File(resource.getFile()).getParentFile();
 
-        DumpQueueMain.dump(dir.getAbsolutePath());
+        DumpQueueMain.dump(tmpDir.toString());
 
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).rollCycle(RollCycles.MINUTELY).readOnly(true).build()) {
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.MINUTELY).readOnly(true).build()) {
 
             ExcerptTailer tailer = q.createTailer();
 
@@ -40,7 +51,7 @@ public class StuckQueueTest {
             }
 
             //  Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
-            try (DocumentContext dc = SingleChronicleQueueBuilder.binary(dir).rollCycle(RollCycles.MINUTELY).build().acquireAppender().writingDocument()) {
+            try (DocumentContext dc = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.MINUTELY).build().acquireAppender().writingDocument()) {
                 dc.wire().write("hello").text("world");
             }
             try (DocumentContext dc = tailer.readingDocument()) {
