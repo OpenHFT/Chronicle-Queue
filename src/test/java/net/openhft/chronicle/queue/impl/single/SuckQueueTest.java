@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -18,7 +19,7 @@ public class SuckQueueTest {
         URL resource = SuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4");
         File dir = new File(resource.getFile()).getParentFile();
 
-        //  DumpQueueMain.dump(dir.getAbsolutePath());
+        DumpQueueMain.dump(dir.getAbsolutePath());
 
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).rollCycle(RollCycles.MINUTELY).build()) {
 
@@ -28,7 +29,7 @@ public class SuckQueueTest {
             WireStore wireStore = q.storeForCycle(cycle, q.epoch(), false);
             String absolutePath = wireStore.file().getAbsolutePath();
             System.out.println(absolutePath);
-
+            Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
             Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
 
             //  Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
