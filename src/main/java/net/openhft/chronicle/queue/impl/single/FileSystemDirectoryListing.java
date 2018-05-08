@@ -7,7 +7,6 @@ import java.util.function.ToIntFunction;
 final class FileSystemDirectoryListing implements DirectoryListing {
     private final File queueDir;
     private final ToIntFunction<File> fileToCycleFunction;
-    private final AtomicLong modCount = new AtomicLong();
 
     FileSystemDirectoryListing(final File queueDir,
                                final ToIntFunction<File> fileToCycleFunction) {
@@ -27,7 +26,6 @@ final class FileSystemDirectoryListing implements DirectoryListing {
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
-        modCount.incrementAndGet();
     }
 
     @Override
@@ -56,7 +54,7 @@ final class FileSystemDirectoryListing implements DirectoryListing {
 
     @Override
     public long modCount() {
-        return modCount.get();
+        return -1;
     }
 
     @Override

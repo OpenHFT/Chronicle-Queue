@@ -29,10 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
@@ -122,7 +119,17 @@ enum QueueFiles {
                                 // nothing has happened within queue timeout
                                 // nothing more can be done at this point
                                 Jvm.warn().on(QueueFiles.class, "Timed out waiting for first message in " +
-                                        f + ". Not writing EOF marker.");
+                                        f + ". Recovering EOF marker.");
+                                try {
+                                    boolean foundData = w.readDataHeader();
+                                    if (!foundData) {
+                                        // we are at EOF
+                                        long eofPosition = bytes.readPosition();
+                                        bytes.writePosition(eofPosition);
+                                        w.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, eofPosition);
+                                    }
+                                } catch (EOFException ignored) {
+                                }
                                 return null;
                             }
                         }

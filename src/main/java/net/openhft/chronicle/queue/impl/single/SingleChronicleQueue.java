@@ -904,7 +904,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             CachedCycleTree cachedValue = cachedTree.get();
             final long directoryModCount = directoryListing.modCount();
-            if (force || (cachedValue == null || directoryModCount > cachedValue.directoryModCount)) {
+            if (force || (cachedValue == null || directoryModCount == -1 || directoryModCount > cachedValue.directoryModCount)) {
 
                 final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
                 final NavigableMap<Long, File> tree = new TreeMap<>();
