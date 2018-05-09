@@ -39,6 +39,7 @@ import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
 public class SingleChronicleQueueExcerpts {
@@ -1519,6 +1520,9 @@ public class SingleChronicleQueueExcerpts {
             } else if (scanResult == END_OF_FILE) {
                 state = END_OF_CYCLE;
                 return scanResult;
+            } else if (scanResult == NOT_FOUND && this.cycle < this.queue.lastCycle) {
+                state = END_OF_CYCLE;
+                return END_OF_FILE;
             }
 
             bytes.readLimit(bytes.readPosition());
