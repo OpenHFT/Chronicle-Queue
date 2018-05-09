@@ -39,33 +39,4 @@ public class SingleChronicleQueueBuilderTest {
                 binary(tempFile);
     }
 
-    Path tmpDir = DirectoryUtils.tempDir(StuckQueueTest.class.getSimpleName()).toPath();
-/*
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    @Before
-    public void setup() throws Exception {
-        tmpDir.toFile().mkdirs();
-        Path templatePath = Paths.get(StuckQueueTest.class.getResource("/tr2/directory-listing.cq4t").getFile());
-        Path to = tmpDir.resolve(templatePath.getFileName());
-        Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
-        File file = tmpDir.resolve("20170320.cq4").toFile();
-        new FileOutputStream(file).close();
-    }
-
-    @After
-    public void cleanup() {
-        DirectoryUtils.deleteDir(tmpDir.toFile());
-    }
-
-    @Test
-    @Ignore("crashes JVM")
-    public void shouldHandleEmptyFile() {
-        try (final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(tmpDir)
-                             .testBlockSize()
-                             .readOnly(true)
-                             .build()) {
-            assertThat(queue.createTailer().readingDocument().isPresent(), is(false));
-        }
-    }*/
 }
