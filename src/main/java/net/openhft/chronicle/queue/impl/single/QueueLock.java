@@ -21,7 +21,7 @@ import net.openhft.chronicle.core.io.Closeable;
 
 public interface QueueLock extends Closeable {
 
-    void checkLock();
+    void waitForLock();
 
     void acquireLock();
 

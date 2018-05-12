@@ -368,7 +368,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             throw new IllegalStateException("Can't append to a read-only chronicle");
         }
 
-        queueLock.checkLock();
+        queueLock.waitForLock();
 
         if (SHOULD_RELEASE_RESOURCES) {
             return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,

@@ -92,7 +92,7 @@ public class TSQueueLock implements QueueLock {
      * for the lock to be released, and if it is not after timeout, throws {@link IllegalStateException}.
      */
     @Override
-    public void checkLock() {
+    public void waitForLock() {
         if (isLockHeldByCurrentThread())
             return;
 

@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 public class NoopQueueLock implements QueueLock {
 
     @Override
-    public void checkLock() {
+    public void waitForLock() {
     }
 
     @Override
