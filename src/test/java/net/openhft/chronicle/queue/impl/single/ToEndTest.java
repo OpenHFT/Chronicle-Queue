@@ -21,7 +21,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
-import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -35,7 +34,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.nio.file.NoSuchFileException;
 import java.util.*;
 
 import static junit.framework.Assert.assertEquals;
@@ -45,7 +43,7 @@ public class ToEndTest {
     long lastCycle;
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
-    private List<File> pathsToDelete = new LinkedList<>();
+    private static List<File> pathsToDelete = new LinkedList<>();
 
     @Before
     public void before() {
@@ -67,7 +65,7 @@ public class ToEndTest {
     }
 
     @AfterClass
-    public void afterClass() {
+    public static void afterClass() {
         for (File file : pathsToDelete) {
             IOTools.shallowDeleteDirWithFiles(file);
         }
