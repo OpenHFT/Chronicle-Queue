@@ -29,6 +29,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -63,7 +64,10 @@ public class ToEndTest {
             fail();
         }
         Jvm.resetExceptionHandlers();
+    }
 
+    @AfterClass
+    public void afterClass() {
         for (File file : pathsToDelete) {
             IOTools.shallowDeleteDirWithFiles(file);
         }
