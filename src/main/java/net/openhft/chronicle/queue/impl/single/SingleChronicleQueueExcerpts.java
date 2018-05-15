@@ -37,9 +37,7 @@ import java.text.ParseException;
 
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
 public class SingleChronicleQueueExcerpts {
@@ -1818,11 +1816,12 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             }
 
+            if (store != null)
+                queue.release(store);
+
             if (nextStore == this.store)
                 return true;
 
-            if (store != null)
-                queue.release(store);
 
             context.wire(null);
             this.store = nextStore;
