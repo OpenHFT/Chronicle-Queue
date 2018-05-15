@@ -33,10 +33,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.*;
@@ -45,6 +42,7 @@ public class ToEndTest {
     long lastCycle;
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
+    private List<File> pathsToDelete = new LinkedList<>();
 
     @Before
     public void before() {
@@ -56,6 +54,10 @@ public class ToEndTest {
 
     @After
     public void after() {
+        for(File file : pathsToDelete) {
+            IOTools.shallowDeleteDirWithFiles(file);
+        }
+
         threadDump.assertNoNewThreads();
 
         if (Jvm.hasException(exceptionKeyIntegerMap)) {
@@ -216,11 +218,7 @@ public class ToEndTest {
             checkOneFile(baseDir);
         }
         System.gc();
-        try {
-            IOTools.shallowDeleteDirWithFiles(baseDir);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        pathsToDelete.add(baseDir);
     }
 
     @Test
@@ -255,7 +253,7 @@ public class ToEndTest {
             final int j = i;
             appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
         }*/
-        IOTools.shallowDeleteDirWithFiles(baseDir);
+        pathsToDelete.add(baseDir);
     }
 
     @Test
@@ -305,7 +303,7 @@ public class ToEndTest {
             assertNull(excerptTailer.readText());
         }
         System.gc();
-        IOTools.shallowDeleteDirWithFiles(file);
+        pathsToDelete.add(file);
     }
 
     private void checkOneFile(@NotNull File baseDir) {
