@@ -21,6 +21,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
+import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -61,7 +62,7 @@ public class ToEndTest {
 
         threadDump.assertNoNewThreads();
 
-        exceptionKeyIntegerMap.keySet().stream().filter(exceptionKey -> exceptionKey.clazz.equals(NoSuchFileException.class)).findFirst().ifPresent(exceptionKeyIntegerMap::remove);
+        exceptionKeyIntegerMap.keySet().stream().filter(ek -> ek.message.contains("/home") && ek.level == LogLevel.WARN).findFirst().ifPresent(exceptionKeyIntegerMap::remove);
 
         if (Jvm.hasException(exceptionKeyIntegerMap)) {
             Jvm.dumpException(exceptionKeyIntegerMap);
