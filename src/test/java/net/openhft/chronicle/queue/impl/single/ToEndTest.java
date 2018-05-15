@@ -33,6 +33,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.nio.file.NoSuchFileException;
 import java.util.*;
 
 import static junit.framework.Assert.assertEquals;
@@ -59,6 +60,8 @@ public class ToEndTest {
         }
 
         threadDump.assertNoNewThreads();
+
+        exceptionKeyIntegerMap.keySet().stream().filter(exceptionKey -> exceptionKey.clazz.equals(NoSuchFileException.class)).findFirst().ifPresent(exceptionKeyIntegerMap::remove);
 
         if (Jvm.hasException(exceptionKeyIntegerMap)) {
             Jvm.dumpException(exceptionKeyIntegerMap);
