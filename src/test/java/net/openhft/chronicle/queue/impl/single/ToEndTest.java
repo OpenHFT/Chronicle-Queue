@@ -56,19 +56,17 @@ public class ToEndTest {
 
     @After
     public void after() {
-        for(File file : pathsToDelete) {
-            IOTools.shallowDeleteDirWithFiles(file);
-        }
-
         threadDump.assertNoNewThreads();
-
-        exceptionKeyIntegerMap.keySet().stream().filter(ek -> ek.message.contains("/home") && ek.level == LogLevel.WARN).findFirst().ifPresent(exceptionKeyIntegerMap::remove);
 
         if (Jvm.hasException(exceptionKeyIntegerMap)) {
             Jvm.dumpException(exceptionKeyIntegerMap);
             fail();
         }
         Jvm.resetExceptionHandlers();
+
+        for (File file : pathsToDelete) {
+            IOTools.shallowDeleteDirWithFiles(file);
+        }
     }
 
     @Test
