@@ -64,6 +64,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private static final boolean SHOULD_RELEASE_RESOURCES =
             Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
                     Boolean.TRUE.toString()));
+
+    private static final boolean SHOULD_CHECK_CYCLE = Boolean.getBoolean("chronicle.queue.checkrollcycle");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 1);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
@@ -786,7 +788,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 dateValue.pathExists = true;
 
                 final MappedBytes mappedBytes = mappedFileCache.get(path);
+
                 directoryListing.onFileCreated(path, cycle);
+
+                if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
+                    Jvm.warn().on(getClass(), new Exception("Creating cycle whcih is not the current cycle"));
+                }
                 queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
                 assert wire.startUse();
