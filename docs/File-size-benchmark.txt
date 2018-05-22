@@ -1,0 +1,51 @@
+Warmed up
+messageSize 64
+messages 488110620
+write histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.46 / 0.70  1.7 / 7.2  19 / 32  2,320 / 7,260
+transport histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.14 / 0.38  0.85 / 17  1,010 / 2,190  2,810 / 4,900
+read histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.18 / 0.28  0.98 / 1.3  15 / 21  72 / 4,900
+messageSize 256
+messages 292968736
+write histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.61 / 1.0  2.5 / 16  21 / 1,300  3,580 / 24,050
+transport histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.091 / 0.21  0.98 / 23  1,170 / 2,920  4,210 / 8,620
+read histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.23 / 0.34  1.1 / 2.2  16 / 31  2,560 / 8,550
+messageSize 1024
+messages 73242177
+write histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.89 / 2.5  4.9 / 19  33 / 3,240  5,260 / 30,080
+transport histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.069 / 0.12  0.42 / 19  1,220 / 4,090  6,140 / 30,080
+read histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.35 / 1.1  1.4 / 15  20 / 1,950  3,870 / 30,080
+messageSize 4096
+messages 18310545
+write histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 4.2 / 5.9  21 / 31  2,040 / 3,890  6,440 / 9,990
+transport histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.080 / 0.12  0.22 / 18  1,450 / 6,080  7,320 / 7,490
+read histogram: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.85 / 0.96  1.6 / 17  32 / 3,120  4,310 / 7,520
+messageSize 16384
+messages 4577637
+write histogram: 50/90 99/99.9 99.99/99.999 - worst was 15 / 30  40 / 63  4,040 / 7,000 - 22,350
+transport histogram: 50/90 99/99.9 99.99/99.999 - worst was 0.078 / 0.14  0.41 / 16  1,180 / 5,160 - 6,900
+read histogram: 50/90 99/99.9 99.99/99.999 - worst was 2.8 / 3.1  6.1 / 21  51 / 1,920 - 4,700
+messageSize 65536
+messages 1144409
+write histogram: 50/90 99/99.9 99.99/99.999 - worst was 69 / 87  134 / 3,060  5,420 / 10,650 - 43,120
+transport histogram: 50/90 99/99.9 99.99/99.999 - worst was 0.075 / 0.14  0.38 / 15  555 / 1,380 - 3,990
+read histogram: 50/90 99/99.9 99.99/99.999 - worst was 11 / 12  27 / 41  78 / 645 - 1,980
+messageSize 262144
+messages 286103
+write histogram: 50/90 99/99.9 99.99 - worst was 253 / 398  511 / 3,830  7,000 - 150,470
+transport histogram: 50/90 99/99.9 99.99 - worst was 0.16 / 0.34  5.6 / 16  645 - 1,350
+read histogram: 50/90 99/99.9 99.99 - worst was 40 / 55  76 / 97  588 - 1,800
+messageSize 1048576
+messages 71526
+write histogram: 50/90 99/99.9 99.99 - worst was 936 / 1,100  3,150 / 5,720  8,270 - 208,140
+transport histogram: 50/90 99/99.9 99.99 - worst was 0.18 / 0.39  4.4 / 16  155 - 850
+read histogram: 50/90 99/99.9 99.99 - worst was 159 / 198  236 / 345  858 - 1,750
+messageSize 4194304
+messages 17882
+write histogram: 50/90 99/99.9 99.99 - worst was 3,510 / 4,150  6,860 / 9,990  16,420 - 212,340
+transport histogram: 50/90 99/99.9 99.99 - worst was 0.19 / 0.51  6.2 / 17  165 - 961
+read histogram: 50/90 99/99.9 99.99 - worst was 666 / 756  846 / 1,250  1,450 - 2,710
+messageSize 16777216
+messages 4471
+write histogram: 50/90 99/99.9 99.99 - worst was 13,530 / 15,960  19,990 / 29,820  215,480 - 215,480
+transport histogram: 50/90 99/99.9 99.99 - worst was 0.47 / 2.9  7.6 / 18  85 - 85
+read histogram: 50/90 99/99.9 99.99 - worst was 2,660 / 2,920  3,220 / 4,570  5,060 - 5,060
