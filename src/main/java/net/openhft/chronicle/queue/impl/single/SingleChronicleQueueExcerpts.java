@@ -1750,8 +1750,11 @@ public class SingleChronicleQueueExcerpts {
                 case NONE:
                     break;
                 case FORWARD:
+                    // if it runs out of seq number it will flow over to tomorrows cycle file
                     if (rollCycle.toSequenceNumber(seq) < seq) {
                         cycle(cycle + 1, false);
+                        LOG.warn("we have run out of sequence numbers, so will start to write to " +
+                                "the next .cq4 file, the new cycle=" + cycle);
                         seq = 0;
                     }
                     break;
