@@ -1,5 +1,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 
@@ -28,7 +31,9 @@ public final class ReferenceTracker {
     }
 
     public synchronized void released(final int cycle) {
-        acquireLongValue(cycle).addAtomicValue(-1);
+        LongValue longValue = acquireLongValue(cycle);
+        if (longValue != null)
+            longValue.addAtomicValue(-1);
     }
 
     public long referenceCount(final int cycle) {
@@ -45,6 +50,8 @@ public final class ReferenceTracker {
                 cachedValue.value.compareAndSwapValue(Long.MIN_VALUE, 0);
             }
         }
+        if (cachedValue.value == null)
+            Jvm.warn().on(getClass(), "cachedValue.value was null");
         return cachedValue.value;
     }
 
