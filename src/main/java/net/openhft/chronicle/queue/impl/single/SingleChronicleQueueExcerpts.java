@@ -68,7 +68,7 @@ public class SingleChronicleQueueExcerpts {
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
 
-        public static final long PRETOUCHER_PREROLL_TIME_MS = 1_000L;
+        private static final long PRETOUCHER_PREROLL_TIME_MS = 2_000L;
         private final TimeProvider pretouchTimeProvider;
         private WireStore pretouchStore = null;
 
