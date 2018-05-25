@@ -8,7 +8,6 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -16,7 +15,6 @@ import org.junit.rules.TestName;
 import java.io.File;
 import java.util.UUID;
 
-@Ignore
 public class TestTailAfterRoll {
 
     private static final String EXPECTED = "hello world  3";
@@ -51,6 +49,7 @@ public class TestTailAfterRoll {
             ExcerptAppender appender = writeQ.acquireAppender();
             long wp;
             Wire wire;
+
             try (DocumentContext dc = appender.writingDocument()) {
                 wire = dc.wire();
                 wire.write().text("hello world");
