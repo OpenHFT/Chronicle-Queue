@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.wire.*;
@@ -66,6 +67,12 @@ public class SingleChronicleQueueExcerpts {
     }
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
+
+        public static final long PRETOUCHER_PREROLL_TIME_MS = 1_000L;
+        private final TimeProvider pretouchTimeProvider;
+        private WireStore pretouchStore = null;
+
+
         static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
         private final SingleChronicleQueue queue;
@@ -94,16 +101,17 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
+        private int pretouchCycle = Integer.MIN_VALUE;
 
         StoreAppender(@NotNull SingleChronicleQueue queue, boolean progressOnContention, @NotNull WireStorePool storePool) {
             this.queue = queue;
             queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
-
+            this.storePool = storePool;
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
             headerWriteStrategy = progressOnContention ? new HeaderWriteStrategyDefer() : new HeaderWriteStrategyOriginal();
-            this.storePool = storePool;
+            pretouchTimeProvider = () -> queue.time().currentTimeMillis() + PRETOUCHER_PREROLL_TIME_MS;
         }
 
         @NotNull
@@ -165,6 +173,8 @@ public class SingleChronicleQueueExcerpts {
             if (w != null) {
                 w.bytes().release();
             }
+            if (pretouchStore != null)
+                pretouchStore.release();
             if (store != null) {
                 storePool.release(store);
             }
@@ -176,11 +186,27 @@ public class SingleChronicleQueueExcerpts {
             storePool.close();
         }
 
+
         @Override
         public void pretouch() {
-            setCycle(queue.cycle());
+            int qCycle = queue.cycle();
+            setCycle(qCycle);
             if (pretoucher == null)
                 pretoucher = new PretoucherState(() -> this.store.writePosition());
+
+            int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
+
+            if (pretouchCycle0 != qCycle && pretouchCycle0 != pretouchCycle) {
+
+                pretouchCycle = pretouchCycle0;
+
+                if (pretouchStore != null)
+                    // we have to release the old - so it does  not to mess up the ref counting
+                    pretouchStore.release();
+
+                pretouchStore = queue.storeSupplier().acquire(pretouchCycle, true);
+            }
+
             Wire wire = this.wire;
             if (wire != null)
                 pretoucher.pretouch((MappedBytes) wire.bytes());

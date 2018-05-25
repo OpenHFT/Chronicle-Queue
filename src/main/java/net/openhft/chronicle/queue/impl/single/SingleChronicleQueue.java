@@ -551,6 +551,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return cycleCalculator.currentCycle(rollCycle, time, epoch);
     }
 
+    public final int cycle(TimeProvider timeProvider) {
+        return cycleCalculator.currentCycle(rollCycle, timeProvider, epoch);
+    }
+
+
     @Override
     public long firstIndex() {
         // TODO - as discussed, peter is going find another way to do this as this solution
