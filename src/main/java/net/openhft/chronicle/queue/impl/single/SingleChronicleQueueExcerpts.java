@@ -187,35 +187,45 @@ public class SingleChronicleQueueExcerpts {
             storePool.close();
         }
 
-
+        /**
+         * this is not currently thread safe so should be run on the same thread as the appender
+         */
         @Override
         public void pretouch() {
-            int qCycle = queue.cycle();
-            setCycle(qCycle);
-            if (pretoucher == null)
-                pretoucher = new PretoucherState(() -> this.store.writePosition());
+            try {
+                int qCycle = queue.cycle();
+                setCycle(qCycle);
+                WireStore store = this.store;
+                if (store == null)
+                    return;
+                if (pretoucher == null)
+                    pretoucher = new PretoucherState(() -> store.writePosition());
 
-            final WireStore ptStore = pretouchStore.get();
+              /*  final WireStore ptStore = pretouchStore.get();
 
-            if (ptStore == store) {
-                if (ptStore != null) {
-                    pretouchStore.compareAndSet(ptStore, null);
-                    ptStore.release();
-                }
-            } else {
+                if (ptStore == this.store) {
+                    if (ptStore != null) {
+                        pretouchStore.compareAndSet(ptStore, null);
+                        ptStore.release();
+                    }
+                } else {
 
-                int pretouchCycle = queue.cycle(pretouchTimeProvider);
+                    int pretouchCycle = queue.cycle(pretouchTimeProvider);
 
-                if (pretouchCycle != qCycle) {
-                    WireStore old = pretouchStore.getAndSet(queue.storeSupplier().acquire(pretouchCycle, true));
-                    if (old != null)
-                        old.release();
-                }
+                    if (pretouchCycle != qCycle) {
+                        WireStore old = pretouchStore.getAndSet(queue.storeSupplier().acquire(pretouchCycle, true));
+                        if (old != null)
+                            old.release();
+                    }
+                }*/
+
+                Wire wire = this.wire;
+                if (wire != null)
+                    pretoucher.pretouch((MappedBytes) wire.bytes());
+
+            } catch (Throwable e) {
+                Jvm.warn().on(getClass(), e);
             }
-
-            Wire wire = this.wire;
-            if (wire != null)
-                pretoucher.pretouch((MappedBytes) wire.bytes());
         }
 
         @Nullable
