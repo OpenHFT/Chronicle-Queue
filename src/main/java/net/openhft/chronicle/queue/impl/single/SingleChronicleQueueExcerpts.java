@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
@@ -70,7 +71,7 @@ public class SingleChronicleQueueExcerpts {
 
         private static final long PRETOUCHER_PREROLL_TIME_MS = 2_000L;
         private final TimeProvider pretouchTimeProvider;
-        private WireStore pretouchStore = null;
+        private final AtomicReference<WireStore> pretouchStore = new AtomicReference<>();
 
 
         static final int REPEAT_WHILE_ROLLING = 128;
@@ -101,7 +102,6 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
-        private int pretouchCycle = Integer.MIN_VALUE;
 
         StoreAppender(@NotNull SingleChronicleQueue queue, boolean progressOnContention, @NotNull WireStorePool storePool) {
             this.queue = queue;
@@ -173,8 +173,9 @@ public class SingleChronicleQueueExcerpts {
             if (w != null) {
                 w.bytes().release();
             }
-            if (pretouchStore != null)
-                pretouchStore.release();
+            WireStore ps = pretouchStore.getAndSet(null);
+            if (ps != null)
+                ps.release();
             if (store != null) {
                 storePool.release(store);
             }
@@ -194,17 +195,22 @@ public class SingleChronicleQueueExcerpts {
             if (pretoucher == null)
                 pretoucher = new PretoucherState(() -> this.store.writePosition());
 
-            int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
+            final WireStore ptStore = pretouchStore.get();
 
-            if (pretouchCycle0 != qCycle && pretouchCycle0 != pretouchCycle) {
+            if (ptStore == store) {
+                if (ptStore != null) {
+                    pretouchStore.compareAndSet(ptStore, null);
+                    ptStore.release();
+                }
+            } else {
 
-                pretouchCycle = pretouchCycle0;
+                int pretouchCycle = queue.cycle(pretouchTimeProvider);
 
-                if (pretouchStore != null)
-                    // we have to release the old - so it does  not to mess up the ref counting
-                    pretouchStore.release();
-
-                pretouchStore = queue.storeSupplier().acquire(pretouchCycle, true);
+                if (pretouchCycle != qCycle) {
+                    WireStore old = pretouchStore.getAndSet(queue.storeSupplier().acquire(pretouchCycle, true));
+                    if (old != null)
+                        old.release();
+                }
             }
 
             Wire wire = this.wire;
