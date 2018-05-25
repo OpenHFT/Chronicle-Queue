@@ -3839,8 +3839,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             });
 
-            f1.get();
-            f2.get();
+            f1.get(1, TimeUnit.SECONDS);
+            f2.get(1, TimeUnit.SECONDS);
 
             executorService.shutdownNow();
         }
