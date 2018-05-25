@@ -47,7 +47,12 @@ class PretoucherState {
 
     // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null
     public void pretouch(MappedBytes bytes) {
-        long pos = posSupplier.getAsLong();
+        long pos = 0;
+        try {
+            pos = posSupplier.getAsLong();
+        } catch (Exception ignore) {
+            return;
+        }
         // don't retain the bytes object when it is head so keep the hashCode instead.
         // small risk of a duplicate hashCode.
         int pageSize = OS.pageSize();

@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
@@ -71,8 +70,8 @@ public class SingleChronicleQueueExcerpts {
 
         private static final long PRETOUCHER_PREROLL_TIME_MS = 2_000L;
         private final TimeProvider pretouchTimeProvider;
-        private final AtomicReference<WireStore> pretouchStore = new AtomicReference<>();
-
+        private WireStore pretouchStore;
+        private int pretouchCycle;
 
         static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
@@ -173,9 +172,8 @@ public class SingleChronicleQueueExcerpts {
             if (w != null) {
                 w.bytes().release();
             }
-            WireStore ps = pretouchStore.getAndSet(null);
-            if (ps != null)
-                ps.release();
+
+            releasePretouchStore();
             if (store != null) {
                 storePool.release(store);
             }
@@ -192,40 +190,52 @@ public class SingleChronicleQueueExcerpts {
          */
         @Override
         public void pretouch() {
+            if (queue.isClosed())
+                throw new RuntimeException("Queue Closed");
             try {
                 int qCycle = queue.cycle();
                 setCycle(qCycle);
                 WireStore store = this.store;
-                if (store == null)
+                if (store == null || store.bytes().isClosed())
                     return;
                 if (pretoucher == null)
-                    pretoucher = new PretoucherState(() -> store.writePosition());
-
-              /*  final WireStore ptStore = pretouchStore.get();
-
-                if (ptStore == this.store) {
-                    if (ptStore != null) {
-                        pretouchStore.compareAndSet(ptStore, null);
-                        ptStore.release();
-                    }
-                } else {
-
-                    int pretouchCycle = queue.cycle(pretouchTimeProvider);
-
-                    if (pretouchCycle != qCycle) {
-                        WireStore old = pretouchStore.getAndSet(queue.storeSupplier().acquire(pretouchCycle, true));
-                        if (old != null)
-                            old.release();
-                    }
-                }*/
+                    pretoucher = new PretoucherState(store::writePosition);
 
                 Wire wire = this.wire;
-                if (wire != null)
+                if (wire != null && wire.bytes().bytesStore().refCount() > 0)
                     pretoucher.pretouch((MappedBytes) wire.bytes());
 
+                if (pretouchStore != null && pretouchCycle == qCycle) {
+                    releasePretouchStore();
+                } else {
+
+                    int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
+
+                    if (pretouchCycle0 != qCycle && pretouchCycle != pretouchCycle0) {
+                        releasePretouchStore();
+
+                        pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
+                        pretouchCycle = pretouchCycle0;
+                        pretoucher = null;
+                        if (Jvm.isDebugEnabled(getClass()))
+                            Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
+                                    pretouchStore.file());
+                    }
+                }
             } catch (Throwable e) {
+                e.printStackTrace();
                 Jvm.warn().on(getClass(), e);
             }
+        }
+
+        private void releasePretouchStore() {
+            WireStore pretouchStore = this.pretouchStore;
+            if (pretouchStore == null)
+                return;
+            pretouchStore.release();
+            pretouchCycle = -1;
+            this.pretouchStore = null;
+
         }
 
         @Nullable

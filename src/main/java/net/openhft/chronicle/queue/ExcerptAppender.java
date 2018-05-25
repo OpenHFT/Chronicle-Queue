@@ -23,8 +23,6 @@ import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.StreamCorruptedException;
-
 /**
  * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.</p>
  * <p><b>NOTE:</b> Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.</p>
@@ -66,7 +64,12 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     int cycle();
 
     /**
-     * Asynchronous call to load a block before it  needed to reduce latency.
+     * We suggest this code is called from a background thread [ not you main
+     * business thread ], it must be called from the same thread that created it, as the call to
+     * pretouch() is not thread safe. For example :
+     *
+     * newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> queue.acquireAppender().pretouch(), 0, 1, TimeUnit.SECONDS);
+     *
      */
     default void pretouch() {
     }
