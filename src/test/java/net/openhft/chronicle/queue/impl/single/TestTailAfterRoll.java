@@ -31,6 +31,18 @@ public class TestTailAfterRoll {
                 methodName.replaceAll("[\\[\\]\\s]+", "_") : "NULL-" + UUID.randomUUID());
     }
 
+    /**
+     * the following steps
+     *
+     * (1) write to a queue
+     * (2) force and end for file marker
+     * (3) write to the queue again, this will cause it to be written to tomorrows .cq4 file
+     * (4) delete todays queue files, that was created in step (1)
+     * (5) create a new instance of chronicle queue ( same directory ) as step 1
+     * (6) create a tailer toEnd
+     * (6) write to this queue created in (5)
+     * (7) when you now try to read from this queue you will not be able to read back what you have just written in (6)
+     */
     @Test
     public void test()  {
         File tmpDir = getTmpDir();
@@ -45,7 +57,6 @@ public class TestTailAfterRoll {
                 Bytes<?> bytes = wire.bytes();
                 wp = bytes.writePosition();
             }
-
 
             File dir = new File(appender.queue().fileAbsolutePath());
             files = dir.listFiles(pathname -> pathname.getAbsolutePath().endsWith(".cq4"));
