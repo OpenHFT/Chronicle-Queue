@@ -14,14 +14,12 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.UUID;
 
 @Ignore
 public class TestTailAfterRoll {
 
-
-    public static final String EXPECTED = "hello world  3";
+    private static final String EXPECTED = "hello world  3";
     @Rule
     public final TestName testName = new TestName();
 

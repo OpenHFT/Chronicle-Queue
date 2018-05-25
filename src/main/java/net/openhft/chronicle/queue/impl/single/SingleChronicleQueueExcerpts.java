@@ -327,9 +327,12 @@ public class SingleChronicleQueueExcerpts {
             try {
                 int cycle = queue.cycle();
 
-                if (wire == null)
+                if (wire == null) {
+                    // we have check it the queue file has rolled due to an early EOF
+                    cycle = Math.max(queue.lastCycle(), cycle);
+
                     setCycle2(cycle, true);
-                else if (this.cycle != cycle)
+                } else if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
                 int safeLength = (int) queue.overlapSize();
