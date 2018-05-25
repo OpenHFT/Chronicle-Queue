@@ -8,6 +8,7 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -16,6 +17,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.UUID;
 
+@Ignore
 public class TestTailAfterRoll {
 
 
