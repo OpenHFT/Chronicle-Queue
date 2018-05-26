@@ -197,32 +197,44 @@ public class SingleChronicleQueueExcerpts {
                 setCycle(qCycle);
 
                 if (pretoucher == null)
-                    pretoucher = new PretoucherState(this.store::writePosition);
+                    pretoucher = new PretoucherState(store()::writePosition);
 
                 Wire wire = this.wire;
                 if (wire != null)
                     pretoucher.pretouch((MappedBytes) wire.bytes());
 
-                if (pretouchStore != null && pretouchCycle == qCycle) {
-                    releasePretouchStore();
-                    return;
-                }
-
-                int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
-
-                if (pretouchCycle0 != qCycle && pretouchCycle != pretouchCycle0) {
-                    releasePretouchStore();
-                    pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
-                    pretouchCycle = pretouchCycle0;
-                    pretoucher = null;
-                    if (Jvm.isDebugEnabled(getClass()))
-                        Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
-                                pretouchStore.file());
-                }
+                earlyAcquireNextCycle(qCycle);
 
             } catch (Throwable e) {
                 Jvm.warn().on(getClass(), e);
             }
+        }
+
+        /**
+         * used by the pretoucher to early acquire the next cycle file, but does NOT do the roll
+         *
+         * @param qCycle the current queue cycle*
+         */
+        private void earlyAcquireNextCycle(final int qCycle) {
+            if (pretouchStore != null && pretouchCycle == qCycle) {
+                releasePretouchStore();
+                return;
+            }
+
+            int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
+
+            if (pretouchCycle0 == qCycle || pretouchCycle == pretouchCycle0)
+                return;
+
+            // do the roll
+            releasePretouchStore();
+            pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
+            pretouchCycle = pretouchCycle0;
+            pretoucher = null;
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
+                        pretouchStore.file());
+
         }
 
         private void releasePretouchStore() {
