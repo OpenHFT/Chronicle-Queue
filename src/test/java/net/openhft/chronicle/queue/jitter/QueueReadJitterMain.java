@@ -88,6 +88,7 @@ public class QueueReadJitterMain {
 
             } while (System.currentTimeMillis() < start0 + runTime * 1_000);
         }
+        running = false;
         IOTools.deleteDirWithFiles(path, 2);
     }
 }
