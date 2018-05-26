@@ -226,7 +226,6 @@ public class SingleChronicleQueueExcerpts {
             if (pretouchCycle0 == qCycle || pretouchCycle == pretouchCycle0)
                 return;
 
-            // do the roll
             releasePretouchStore();
             pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
             pretouchCycle = pretouchCycle0;
