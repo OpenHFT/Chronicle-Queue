@@ -186,7 +186,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * this is not currently thread safe so should be run on the same thread as the appender
+         * this method NOT thread safe
          */
         @Override
         public void pretouch() {
@@ -195,35 +195,32 @@ public class SingleChronicleQueueExcerpts {
             try {
                 int qCycle = queue.cycle();
                 setCycle(qCycle);
-                WireStore store = this.store;
-                if (store == null || store.bytes().isClosed())
-                    return;
+
                 if (pretoucher == null)
-                    pretoucher = new PretoucherState(store::writePosition);
+                    pretoucher = new PretoucherState(this.store::writePosition);
 
                 Wire wire = this.wire;
-                if (wire != null && wire.bytes().bytesStore().refCount() > 0)
+                if (wire != null)
                     pretoucher.pretouch((MappedBytes) wire.bytes());
 
                 if (pretouchStore != null && pretouchCycle == qCycle) {
                     releasePretouchStore();
-                } else {
-
-                    int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
-
-                    if (pretouchCycle0 != qCycle && pretouchCycle != pretouchCycle0) {
-                        releasePretouchStore();
-
-                        pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
-                        pretouchCycle = pretouchCycle0;
-                        pretoucher = null;
-                        if (Jvm.isDebugEnabled(getClass()))
-                            Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
-                                    pretouchStore.file());
-                    }
+                    return;
                 }
+
+                int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
+
+                if (pretouchCycle0 != qCycle && pretouchCycle != pretouchCycle0) {
+                    releasePretouchStore();
+                    pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
+                    pretouchCycle = pretouchCycle0;
+                    pretoucher = null;
+                    if (Jvm.isDebugEnabled(getClass()))
+                        Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
+                                pretouchStore.file());
+                }
+
             } catch (Throwable e) {
-                e.printStackTrace();
                 Jvm.warn().on(getClass(), e);
             }
         }
@@ -235,7 +232,6 @@ public class SingleChronicleQueueExcerpts {
             pretouchStore.release();
             pretouchCycle = -1;
             this.pretouchStore = null;
-
         }
 
         @Nullable
