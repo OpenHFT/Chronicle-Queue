@@ -68,12 +68,9 @@ public class SingleChronicleQueueExcerpts {
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
 
+        static final int REPEAT_WHILE_ROLLING = 128;
         private static final long PRETOUCHER_PREROLL_TIME_MS = 2_000L;
         private final TimeProvider pretouchTimeProvider;
-        private WireStore pretouchStore;
-        private int pretouchCycle;
-
-        static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -84,6 +81,8 @@ public class SingleChronicleQueueExcerpts {
         private final WireStorePool storePool;
         @Nullable
         WireStore store;
+        private WireStore pretouchStore;
+        private int pretouchCycle;
         private int cycle = Integer.MIN_VALUE;
         @Nullable
         private Wire wire;
@@ -1022,6 +1021,7 @@ public class SingleChronicleQueueExcerpts {
         long index; // index of the next read.
         @Nullable
         WireStore store;
+        int notPresentCounter = 0;
         private int cycle;
         private long timeForNextCycle = Long.MAX_VALUE;
         private TailerDirection direction = TailerDirection.FORWARD;
@@ -1338,6 +1338,7 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean inACycle(boolean includeMetaData, boolean first)
                 throws EOFException, StreamCorruptedException {
+            Jvm.optionalSafepoint();
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
@@ -1347,7 +1348,15 @@ public class SingleChronicleQueueExcerpts {
 
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
-                    return inACycleNone(includeMetaData, first, bytes);
+                    Jvm.optionalSafepoint();
+                    // don't need to busy poll this relatively expensive operation.
+                    if ((notPresentCounter++ & 0xFF) == 0) {
+                        boolean inACycleNone = inACycleNone(includeMetaData, first, bytes);
+                        Jvm.optionalSafepoint();
+                        return inACycleNone;
+                    } else {
+                        return false;
+                    }
 
                 case META_DATA:
                     context.metaData(true);
