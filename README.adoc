@@ -1,4 +1,4 @@
-
+image::images/queue.png[width=20%]
 = Chronicle Queue
 Peter Lawrey, Rob Austin
 :toc: manual
