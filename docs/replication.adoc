@@ -5,7 +5,6 @@
 
 == Chronicle Queue Enterprise Replication
 
-At the heart of Chronicle Services Replication lies Chronicle Queue Enterprise replication,
 Chronicle Queue Enterprise replication performs simple unidirectional multi-way replication by copying a chronicle queue
 from one host to one or more others via TCP/IP.
 
