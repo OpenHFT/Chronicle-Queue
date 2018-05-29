@@ -1,10 +1,9 @@
-image::images/queue.png[width=20%]
 = Chronicle Queue
 Peter Lawrey, Rob Austin
 :toc: manual
 :css-signature: demo
 :toc-placement: preamble
-
+image::images/queue.png[width=20%]
 == Chronicle Queue
 ==== Version
 
