@@ -5,7 +5,7 @@ Peter Lawrey, Rob Austin
 :css-signature: demo
 :toc-placement: preamble
 
-image::images/queue.png[width=10%]
+image::images/queue.png[width=20%]
 
 == Chronicle Queue
 ==== Version
