@@ -6,7 +6,7 @@ Peter Lawrey, Rob Austin
 
 == Chronicle Queue
 
-image::images/queue.png[width=64%]
+image::images/queue.png[width=20%]
 
 ==== Version
 
