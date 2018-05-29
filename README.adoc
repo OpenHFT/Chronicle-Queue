@@ -4,7 +4,7 @@ Peter Lawrey, Rob Austin
 :css-signature: demo
 :toc-placement: preamble
 
-image::images/queue.png[width=20%]
+
 
 ==== Version
 
