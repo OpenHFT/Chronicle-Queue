@@ -5,14 +5,14 @@ Peter Lawrey, Rob Austin
 :css-signature: demo
 :toc-placement: preamble
 
-image::images/queue.png[width=20%]
+
 
 ==== Version
 
 [#image-maven]
 [caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
 image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[]
-
+image::images/queue.png[width=20%]
 
 
 ==== About Chronicle Software
