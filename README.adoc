@@ -1,10 +1,8 @@
-
 = Chronicle Queue
 Peter Lawrey, Rob Austin
 :toc: manual
 :css-signature: demo
 :toc-placement: preamble
-
 
 ==== Logo
 image::images/queue.png[width=20%]
