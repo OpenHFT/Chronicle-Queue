@@ -88,7 +88,7 @@ repl.shutdown();
 
 ==== Example from a test case
 
-[source,ruby]
+[source,java]
 ```
 @Test
 public void shouldReplicate() throws Exception {
