@@ -1,5 +1,7 @@
 
 = Chronicle Queue
+image::images/queue.png[width=20%]
+
 Peter Lawrey, Rob Austin
 :toc: manual
 :css-signature: demo
