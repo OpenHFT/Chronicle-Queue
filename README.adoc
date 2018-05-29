@@ -4,6 +4,10 @@ Peter Lawrey, Rob Austin
 :css-signature: demo
 :toc-placement: preamble
 
+== Chronicle Queue
+
+image::images/queue.png[width=64%]
+
 ==== Version
 
 [#image-maven]
