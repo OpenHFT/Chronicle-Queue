@@ -6,6 +6,7 @@ Peter Lawrey, Rob Austin
 :toc-placement: preamble
 
 image::images/queue.png[width=20%]
+
 ==== Version
 
 [#image-maven]
