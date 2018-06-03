@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 
 public class QueueWriteJitterMain {
@@ -26,13 +27,17 @@ public class QueueWriteJitterMain {
     }
 
     public static void main(String[] args) {
+        new QueueWriteJitterMain().run();
+    }
+
+    private void run() {
         MappedFile.warmup();
 
         String path = OS.TMP + "/test-q-" + System.nanoTime();
         System.out.println("Writing to " + path);
 
         Thread pretoucher = new Thread(() -> {
-            try (ChronicleQueue q = ChronicleQueueBuilder.single(path).testBlockSize().build()) {
+            try (ChronicleQueue q = createQueue(path)) {
                 ExcerptAppender appender = q.acquireAppender();
                 while (true) {
                     Thread.sleep(50);
@@ -47,7 +52,7 @@ public class QueueWriteJitterMain {
         pretoucher.start();
 
         Thread writer = new Thread(() -> {
-            try (ChronicleQueue q = ChronicleQueueBuilder.single(path).testBlockSize().build()) {
+            try (ChronicleQueue q = createQueue(path)) {
                 ExcerptAppender appender = q.acquireAppender();
                 while (running) {
                     writeStarted = System.nanoTime();
@@ -69,7 +74,7 @@ public class QueueWriteJitterMain {
         writer.start();
         Jvm.pause(100); // give it time to start
 
-        try (ChronicleQueue q = ChronicleQueueBuilder.single(path).testBlockSize().build()) {
+        try (ChronicleQueue q = createQueue(path)) {
             ExcerptTailer tailer = q.createTailer();
             long start0 = System.currentTimeMillis();
             do {
@@ -103,7 +108,7 @@ public class QueueWriteJitterMain {
         IOTools.deleteDirWithFiles(path, 2);
     }
 
-    private static void waitForNext(int sampleTime) {
+    private void waitForNext(int sampleTime) {
         long start1 = System.nanoTime();
         do {
             Thread.yield();
@@ -112,5 +117,9 @@ public class QueueWriteJitterMain {
         if (time1 > sampleTime * 1000 * 10) {
             System.out.println("Time paused = " + time1 / 1000 + " us");
         }
+    }
+
+    protected SingleChronicleQueue createQueue(String path) {
+        return ChronicleQueueBuilder.single(path).testBlockSize().build();
     }
 }

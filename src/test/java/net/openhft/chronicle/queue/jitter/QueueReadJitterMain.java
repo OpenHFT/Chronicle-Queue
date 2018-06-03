@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,6 +28,10 @@ public class QueueReadJitterMain {
     }
 
     public static void main(String[] args) {
+        new QueueReadJitterMain().run();
+    }
+
+    private void run() {
         MappedFile.warmup();
 
         String path = OS.TMP + "/test-q-" + System.nanoTime();
@@ -34,7 +39,7 @@ public class QueueReadJitterMain {
         AtomicLong lastRead = new AtomicLong();
 
         Thread reader = new Thread(() -> {
-            try (ChronicleQueue q = ChronicleQueueBuilder.single(path).testBlockSize().build()) {
+            try (ChronicleQueue q = createQueue(path)) {
                 ExcerptTailer tailer = q.createTailer().toEnd();
                 while (running) {
                     Jvm.safepoint();
@@ -60,7 +65,7 @@ public class QueueReadJitterMain {
         Jvm.pause(100); // give it time to start
 
         long count = 0;
-        try (ChronicleQueue q = ChronicleQueueBuilder.single(path).testBlockSize().build()) {
+        try (ChronicleQueue q = createQueue(path)) {
             ExcerptAppender appender = q.acquireAppender();
             long start0 = System.currentTimeMillis();
             do {
@@ -90,5 +95,9 @@ public class QueueReadJitterMain {
         }
         running = false;
         IOTools.deleteDirWithFiles(path, 2);
+    }
+
+    protected SingleChronicleQueue createQueue(String path) {
+        return ChronicleQueueBuilder.single(path).testBlockSize().build();
     }
 }
