@@ -31,7 +31,7 @@ public class QueueReadJitterMain {
         new QueueReadJitterMain().run();
     }
 
-    private void run() {
+    protected void run() {
         MappedFile.warmup();
 
         String path = OS.TMP + "/test-q-" + System.nanoTime();
