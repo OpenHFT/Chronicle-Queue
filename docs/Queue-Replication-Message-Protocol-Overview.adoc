@@ -30,6 +30,8 @@ When the UberHandler is loaded by the remote machine it’s  onInitialize() meth
 
 Note: when sending the UberHandler its  only its data that is serialised, the java byte code of the UberHandler must already be available on the remote machine, as such its just the data of the UberHandler instance that is sent not the byte code for the UberHandler class its self as automatically running any arbitrary code vai the onInitialize() method remotely could lead to security concerns. This is also true for any SubHandler  ( see net.openhft.chronicle.network.api.session.SubHandler)  which also has an onInitialize() method and is covered in more detail  below.
 
+==== SubHandlers
+
 The UberHandler is used to route messages to SubHandlers based upon the csp ( or for that matter the 'cid` which is just an alias to the `cid`, the reason that we set up `cid` are that `cid`s are just numbers and as such will be limited [ when using BinaryWire ] to using 8 bytes ( which is the size of a long ) where as `csp`s are string fields which can often end up being much larger. Once the relationship between the `cip` and its alias ( the `cid` ) is established, then only the more compact `cid` will be used.
 
 So to summaries, first the UberHandler is sent, which is used to route the subHandler messages. Then any number of SubHandlers are sent. There is a relationship that is maintained by the uberhandler  between the sub-handler instance and its cip/cid used for routing purposes.
