@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.threads.Threads;
 import net.openhft.chronicle.wire.Wire;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +23,8 @@ public enum StoreComponentReferenceHandler implements Closeable {
     private static final ReferenceQueue<SingleChronicleQueueExcerpts.StoreTailer>
             EXPIRED_THREAD_LOCAL_TAILERS_QUEUE = new ReferenceQueue<>();
     private static final ExecutorService THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE =
-            Executors.newSingleThreadExecutor(r -> {
-                final Thread thread = new Thread(r);
-                thread.setDaemon(true);
-                thread.setName(THREAD_NAME);
-                return thread;
-            });
+            Threads.acquireExecutorService(THREAD_NAME, 1, true);
+
     private static final Queue<Wire> WIRES_TO_RELEASE = new ConcurrentLinkedQueue<>();
     private static final ConcurrentMap<Reference<?>, Runnable> CLOSE_ACTIONS = new ConcurrentHashMap<>();
     private static final boolean SHOULD_RELEASE_RESOURCES =
@@ -39,7 +36,8 @@ public enum StoreComponentReferenceHandler implements Closeable {
 
     static {
         THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.submit(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
+            Thread thread = Thread.currentThread();
+            while (!thread.isInterrupted()) {
                 boolean workDone = processReferenceQueue(EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE);
                 workDone |= processReferenceQueue(EXPIRED_THREAD_LOCAL_TAILERS_QUEUE);
                 workDone |= processWireQueue();
