@@ -6,6 +6,8 @@ This document covers the high level protocol and handshaking, that is used by ch
 
 Anyone who wants to get a bit more inside into the data transefered between the remotes host for chronicle queue enterprise tcp/ip replication. This document is not a queue functionality overview.
 
+=== UberHandler
+
 Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are  serialised locally then sent to the remote host via tcp/ip, The serialised form of UberHandler looks as follows ( see below )
 
 ```
@@ -18,11 +20,13 @@ handler: !net.openhft.chronicle.network.cluster.handlers.UberHandler {
 }
 ```
 
+==== Message format in this Document
+
 Chronicle Queue Enterprise typically sends its messages in binary wire format see net.openhft.chronicle.wire.BinaryWire. This is a  binary form of YAML, however to make the messages human readable in this document, we will show the message in text wire  see net.openhft.chronicle.wire.TextWire.
 
 === onInitialize() and TerminatorHandler
 
-When the UberHandler is loaded by the remote machine it’s  onInitialize() method is automatically called  ( see net.openhft.chronicle.network.cluster.handlers.UberHandler#onInitialize) , Running the onInitialize() method establishes, on the remote host, a message router, which later can be shutdown by a net.openhft.chronicle.network.cluster.TerminatorHandler. If you wish to cleanly shutdown a connection you should send a TerminatorHandler message otherwise the remote connection may think the connection was closed abruptly and re-establish the connection.
+When the UberHandler is loaded by the remote machine it’s  onInitialize() method is automatically called  ( see net.openhft.chronicle.network.cluster.handlers.UberHandler#onInitialize) , Running the onInitialize() method establishes, on the remote host, a UberHandler which is a a message router, which later can be shutdown by a net.openhft.chronicle.network.cluster.TerminatorHandler. If you wish to cleanly shutdown a connection you should send a TerminatorHandler message otherwise the remote connection may think the connection was closed abruptly and re-establish the connection.
 
 Note: when sending the UberHandler its  only its data that is serialised, the java byte code of the UberHandler must already be available on the remote machine, as such its just the data of the UberHandler instance that is sent not the byte code for the UberHandler class its self as automatically running any arbitrary code vai the onInitialize() method remotely could lead to security concerns. This is also true for any SubHandler  ( see net.openhft.chronicle.network.api.session.SubHandler)  which also has an onInitialize() method and is covered in more detail  below.
 
