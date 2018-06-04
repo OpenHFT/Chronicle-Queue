@@ -2,9 +2,9 @@
 == Overview
 This document covers the high level protocol and handshaking, that is used by chronicle queue enterprise to replicate data via tcp/ip to queues running on different machines.
 
-=== Audience
+=== Who should read this
 
-Anyone who wants to get a bit more inside into the data transefered between the remotes host for chronicle queue enterprise tcp/ip replication. This document is not a queue functionality overview.
+Anyone who wants to get a bit more inside into the data transfered between the remotes host for chronicle queue enterprise tcp/ip replication but this document is not a queue functionality document.
 
 === UberHandler
 
