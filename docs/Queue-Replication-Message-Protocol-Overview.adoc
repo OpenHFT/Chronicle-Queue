@@ -1,6 +1,6 @@
 
 == Overview
-This document covers the high level protocol and handshaking, that is used by chronicle queue enterprise to replication data via tcp/ip to queues running on different machines.
+This document covers the high level protocol and handshaking, that is used by chronicle queue enterprise to replicate data via tcp/ip to queues running on different machines.
 
 === Audience
 
