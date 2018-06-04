@@ -4,16 +4,19 @@ This document covers the high level protocol and handshaking that is used by chr
 
 == Audience
 
-Anyone who wants to get a bit more inside into the data transefer between the remotes host of queue repliaction. This document is not a user functionally guide.
+Anyone who wants to get a bit more inside into the data transefer between the remotes host of queue replication. This document is not a user functionally guide.
 
 Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are  serialised locally then sent to the remote host via tcp/ip, The serialised form of UberHandler looks as follows ( see below )
 
+```
+--- !!data #binary
 handler: !net.openhft.chronicle.network.cluster.handlers.UberHandler {
   remoteIdentifier: 1,
   localIdentifier: 2,
   wireType: !WireType BINARY_LIGHT,
   clusterName: global
 }
+```
 
 Chronicle Queue Enterprise typically sends its messages in binary wire format see net.openhft.chronicle.wire.BinaryWire. This is a  binary form of YAML, however to make the messages human readable in this document, we will show the message in text wire  see net.openhft.chronicle.wire.TextWire.
 
@@ -29,13 +32,16 @@ So to summaries, first the UberHandler is sent, which is used to route the subHa
 
 This message  ( below  ) sets up the following relationship between the `csp: /`  also aliased as `cid: !int 1671070996`and its HeartbeatHandler, so that any message sent with  cid: !int 1671070996 will be be received by this heart beat handler instance running on  the remote machine.
 
+```
 --- !!meta-data #binary
 csp: /
 cid: !int 1671070996
+--- !!meta-data #binary
 handler: !net.openhft.chronicle.network.cluster.handlers.HeartbeatHandler {
   heartbeatTimeoutMs: !int 40000,
   heartbeatIntervalMs: !short 30000
 }
+```
 
 HeartbeatHandlers are set up on both the source and sink machines. Periodically they send a heartbeat message to their corresponding remote machines. If the heartbeatIntervalMs has passed ( and no heartbeat message has been received),  the HeartbeatHandler will close the socket connection and attempt to reconnect.
 
@@ -44,21 +50,20 @@ Data is replicated using the SourceReplicationHandler, which sends its messages 
 
 However handshaking messages are send back from the SinkReplicationHandler to the SourceReplicationHandler, one such message is the acknowledgement  message the sinks sends the source. This also you to added code on your sink machine to ensure that message as received by the remote machine and therefore replicated.
 
+```
 --- !!meta-data #binary
-cid: 292323922173§575
---- !!data #binary
-# position: 17, header: 0
+cid: 292323922173575
 --- !!data #binary
 idx: 0x451600000000
 ns: 10849029994071
-
+```
 
 So the handers are as follows
 
 | from	|	to 	| msg sent
 ———————————————————
-| source	| sink	| software.chronicle.enterprise.queue.replication.SinkReplicationHandler
-| sink 	| source	| software.chronicle.enterprise.queue.replication.SourceReplicationHandler
+| source | sink	    | software.chronicle.enterprise.queue.replication.SinkReplicationHandler
+| sink 	 | source	| software.chronicle.enterprise.queue.replication.SourceReplicationHandler
 
 When using Chronicle Service additional Sink and Source handlers are used to ensure that input queues are replicated before output queues
 
@@ -70,8 +75,12 @@ When using Chronicle Service additional Sink and Source handlers are used to ens
 
 So the source side of the connection sends a ServiceSinkReplicationHandler ( be be run on the remote machine )
 
+
+```
+--- !!meta-data #binary
 csp: /replication/out-1/2
 cid: 292323922173575
+--- !!data #binary
 handler: !ServiceSinkReplicationHandler {
   queueName: out-1,
   wireType: BINARY_LIGHT,
@@ -80,23 +89,24 @@ handler: !ServiceSinkReplicationHandler {
   sourceId: !short 1002,
   sourceBuilderClass: !type ServiceSourceReplicationHandlerBuilder
 }
-
+```
 
 
 As mentioned above the SubHandler that will be run for all messages that contain the following meta data
-
+```
 --- !!meta-data #binary
 csp: /replication/out-1/2
-
+```
 or
-
+```
 --- !!meta-data #binary
 cid: 292323922173575
-
+```
 
 and the Sink side of the connection, respond and setup a ServiceSourceReplicationHandler to be run on the other host.
 
 DocumentContext:
+```
 --- !!meta-data #binary
 csp: /replication/out-1/2
 cid: 292323922173575
@@ -107,6 +117,7 @@ handler: !ServiceSourceReplicationHandler {
   nextIndexRequired: 0x0,
   sourceId: !short 1002
 }
+```
 
 When ever your application appends data to the source queue, The SourceReplicationHandler will read this queue  ( by using a queue tailer ) and then stream any new data to the remote host imediatly. As such Chronicle Queue Enterprise establishes a stream rather than a polling protocol. If the network buffers are full then data won’t be sent by the ServiceSourceReplicationHandler. So its not strictly `reactive` but rather sensitive to push back, and given that chronicle queue enterprise is back by chronicle queues which pages its data to disk rather than holding it all in memory, chronicle queue won’t get saturated by a slow consumer, as the data is not paged into memory from the queue until the tcp/ip buffers have sufficient free space.
 
@@ -147,7 +158,6 @@ Once the message is received by the sink it send an acknologment to the source
 --- !!meta-data #binary
 cid: 292323922173575
 DocumentContext:
-# position: 17, header: 0
 --- !!data #binary
 idx: 0x451600000000
 ns: 10849029994071
