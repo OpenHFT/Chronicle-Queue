@@ -4,7 +4,7 @@ This document covers the high level protocol and handshaking, that is used by ch
 
 === Who should read this
 
-Anyone who wants to get a bit more inside into the data transfered between the remotes host for chronicle queue enterprise tcp/ip replication but this document is not a queue functionality document.
+Anyone who wants to get a bit more inside into the data transfered between the remote hosts used by chronicle queue enterprise to do tcp/ip replication. This document is not a queue functionality overview document.
 
 === UberHandler
 
