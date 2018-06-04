@@ -110,7 +110,7 @@ or
 cid: 292323922173575
 ```
 
-and the Sink side of the connection, respond and setup a ServiceSourceReplicationHandler to be run on the other host.
+and the Sink side of the connection, respond and setup a SourceReplicationHandler to be run on the other host.
 
 DocumentContext:
 ```
@@ -126,7 +126,7 @@ handler: !ServiceSourceReplicationHandler {
 }
 ```
 
-When ever your application appends data to the source queue, The SourceReplicationHandler will read this queue  ( by using a queue tailer ) and then stream any new data to the remote host imediatly. As such Chronicle Queue Enterprise establishes a stream rather than a polling protocol. If the network buffers are full then data won’t be sent by the ServiceSourceReplicationHandler. So its not strictly `reactive` but rather sensitive to push back, and given that chronicle queue enterprise is back by chronicle queues which pages its data to disk rather than holding it all in memory, chronicle queue won’t get saturated by a slow consumer, as the data is not paged into memory from the queue until the tcp/ip buffers have sufficient free space.
+When ever your application appends data to the source queue, The SourceReplicationHandler will read this queue  ( by using a queue tailer ) and then stream any new data to the remote host imediatly. As such Chronicle Queue Enterprise establishes a stream rather than a polling protocol. If the network buffers are full then data won’t be sent by the SourceReplicationHandler. So its not strictly `reactive` but rather sensitive to push back, and given that chronicle queue enterprise is back by chronicle queues which pages its data to disk rather than holding it all in memory, chronicle queue won’t get saturated by a slow consumer, as the data is not paged into memory from the queue until the tcp/ip buffers have sufficient free space.
 
 == ServiceSinkReplicationHandler
 
