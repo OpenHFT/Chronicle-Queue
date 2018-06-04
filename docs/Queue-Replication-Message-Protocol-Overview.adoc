@@ -80,7 +80,7 @@ When using Chronicle Service additional Sink and Source handlers are used to ens
 | sink 	| source	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSinkReplicationHandler
 
 
-So the source side of the connection sends a ServiceSinkReplicationHandler ( be be run on the remote machine )
+So the source side of the connection sends a ServiceSinkReplicationHandler ( to be run on the remote machine )
 
 
 ```
