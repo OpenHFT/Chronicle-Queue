@@ -69,7 +69,7 @@ handler: !net.openhft.chronicle.network.cluster.handlers.HeartbeatHandler {
 
 Heartbeat handlers are set up on both the source, and the sink machines. Periodically (set using the `heartbeatIntervalMs` field) they send a heartbeat message to their corresponding remote host. If the `heartbeatTimeoutMs` has passed and no heartbeat message has been received, then the heartbeat handler will close the socket connection and attempt to reconnect.
 
-== SourceReplicationHandler
+=== Exchaning data between Source and Sink 
 
 Chronicle queues are repliated using the `SourceReplicationHandler`, which sends its messages to the `SinkReplicationHandler`. Both the `SourceReplicationHandler` and `SinkReplicationHandler` are SubHandlers.
 
@@ -141,7 +141,7 @@ Chronicle Queue Enterprise establishes a stream rather than a polling protocol. 
 
 Chronicle Queue Enterprise uses queues which page data to disk, rather than holding it all in memory. Therefor Chronicle Queue will not get saturated by a slow consumer, because the data is not paged into memory from the queue until the TCP/IP buffers have sufficient free space.
 
-== ServiceSinkReplicationHandler
+== SinkReplicationHandler
 
 Before the sink replication handler starts to read messages from the source machine, it first copies back  messages from the sink machine, to the source machine; this is called the back copy.
 
@@ -162,7 +162,7 @@ DocumentContext:
 eos: !!null "" #  END_OF_STREAM
 ```
 
-=== Sending data with the SourceReplicationHandler
+== Sending data with the SourceReplicationHandler
 
 The `SourceReplicationHandler` sends messages to the `SinkReplicationHandler`. The `SourceReplicationHandler` uses a Chronicle tailer to read new messages from your Chronicle queue. The messages will be written to the queue by your application logic. When the `SourceReplicationHandler` comes to read the contents of this Chronicle queue, it does not de-serialize the message in any way, it treats the message as a blob of bytes, and writes the bytes to the replication event. This is also known as the `re` in the message below:
 
