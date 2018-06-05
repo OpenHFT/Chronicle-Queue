@@ -13,7 +13,7 @@ Chronicle Queue Enterprise sends its messages in binary wire format (see `net.op
 
 In order to make the messages human-readable in this document, the messages are shown in text wire format (see `net.openhft.chronicle.wire.TextWire`).
 
-=== Who should read this
+=== Who should read this document
 
 Anyone who wants to get more information into the data that is transfered between the remote hosts used by Chronicle Queue Enterprise to do TCP/IP replication. This document is not a queue functionality overview document.
 
