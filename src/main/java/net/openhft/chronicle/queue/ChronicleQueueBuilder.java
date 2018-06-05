@@ -59,6 +59,12 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     File path();
 
+    /**
+     * you should make sure that your largest message size is no larger than 1/4 of your block size
+     *
+     * @param blockSize the size of the off heap memory mapping
+     * @return that
+     */
     @NotNull
     B blockSize(int blockSize);
 
