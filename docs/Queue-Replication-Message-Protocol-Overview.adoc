@@ -73,6 +73,7 @@ So the handers are as follows
 |===
 | source | sink	    | software.chronicle.enterprise.queue.replication.SinkReplicationHandler
 | sink 	 | source	| software.chronicle.enterprise.queue.replication.SourceReplicationHandler
+|===
 
 When using Chronicle Service additional Sink and Source handlers are used to ensure that input queues are replicated before output queues
 
@@ -82,7 +83,7 @@ When using Chronicle Service additional Sink and Source handlers are used to ens
 |===
 | source	| sink	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSourceReplicationHandler
 | sink 	| source	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSinkReplicationHandler
-
+|===
 
 So the source side of the connection sends a ServiceSinkReplicationHandler ( to be run on the remote machine )
 
