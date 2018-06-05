@@ -104,7 +104,7 @@ When using Chronicle Services, extended sink and source handlers are used, these
 | sink 	| source	| `software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSinkReplicationHandler`
 |===
 
-The source-side of the connection sends a `ServiceSinkReplicationHandler` to be run on the remote machine.
+The source-side of the connection sends a `ServiceSinkReplicationHandler` to be run on the remote sink host.
 
 ```
 --- !!meta-data #binary
@@ -121,7 +121,7 @@ handler: !ServiceSinkReplicationHandler {
 }
 ```
 
-The sink-side of the connection will respond by setting up a `SourceReplicationHandler` to be run on the other host.
+The sink-side of the connection will respond by setting up a `SourceReplicationHandler` to be run on the remote source host.
 
 ```
 --- !!meta-data #binary
