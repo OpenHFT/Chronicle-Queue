@@ -5,7 +5,7 @@
 :toclevels: 1
 
 == Overview
-This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP to queues that are running on different machines.
+This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP from queues that are running on different machines.
 
 === Message format in this document
 
