@@ -55,6 +55,8 @@ To summarise;
 - first, the Uberhandler is sent, which is used to route the subHandler messages.
 - then, any number of SubHandlers are sent. There is a relationship that is maintained by the Uberhandler, between the SubHandler and its `cip`/`cid` used for routing purposes.
 
+==== Heartbeat Handlers
+
 The message shown below sets up the following relationship between the `csp: /`  also aliased as `cid: !int 1671070996` and its heartbeat handler`, so that any message sent with  `cid: !int 1671070996` will be received by this heartbeat handler instance running on the remote machine.
 
 ```
