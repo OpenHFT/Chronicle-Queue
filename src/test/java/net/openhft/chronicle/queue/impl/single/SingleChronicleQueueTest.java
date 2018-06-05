@@ -2054,8 +2054,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
-
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/485")
+    
     @Test
     public void testReadingDocumentWithFirstAMoveWithEpoch() {
         Instant hourly = Instant.parse("2018-02-12T00:59:59.999Z");
