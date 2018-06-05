@@ -145,7 +145,7 @@ Chronicle Queue Enterprise uses queues which page data to disk, rather than hold
 Before the sink replication handler starts to read messages from the source machine, it first copies back  messages from the sink machine, to the source machine; this is called the back copy.
 
 Although rare, it is useful for example, if the source machine was replicating to two (or more) sinks, and the source suffered a power outage. +
-Chronicle will fail-over to one of the remaining sinks, and therefore we need to ensure that, whichever sink is chosen, it has the latest messages. +
+Chronicle Queue Enterprise will fail-over to one of the remaining sinks, and therefore we need to ensure that, whichever sink is chosen, it has the latest messages. +
 Therefore, in the event that one of the sinks has more messages than the other, we will first copy any messages from the other sink before we establish this sink as our new source.
 
 When the `ServiceSinkReplicationHandler` starts, it calls `software.chronicle.enterprise.queue.replication.SinkReplicationHandler#onInitialize`.
