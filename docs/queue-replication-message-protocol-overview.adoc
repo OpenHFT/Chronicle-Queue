@@ -1,5 +1,5 @@
 
-= Chonicle Queue Enterpise - TCP/IP Repliction Protocol
+= Chronicle Queue Enterpise - TCP/IP Replication Protocol
 :toc:
 :toc-title: Contents
 :toclevels: 1
