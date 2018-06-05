@@ -4,7 +4,7 @@ Peter Lawrey, Rob Austin
 :css-signature: demo
 :toc-placement: preamble
 
-image::images/queue.png[width=20%]
+image::docs/images/queue.png[width=20%]
 
 ==== Version
 
@@ -114,6 +114,8 @@ The open source documentation is extended by this document to describe the addit
 - Encryption of message queues and messages. For more information see <<docs/encryption.adoc#, Encryption>>.
 - Replication to ensure real-time backup of all your queue data. For more information see <<docs/replication.adoc#, Replication>>.
 - Timezone support for daily queue rollover scheduling. For more information see <<docs/timezone_rollover.adoc#, Timezone support>>.
+- Ring Buffer support to give improved performance at high throughput on slower filesystems.
+For more information see <<docs/ring_buffer.adoc#, Ring Buffer>>.
 
 In addition, you will be fully supported by our technical experts.
 

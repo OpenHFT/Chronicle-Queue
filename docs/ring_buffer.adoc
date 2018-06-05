@@ -1,0 +1,150 @@
+= Ring Buffer
+:toc:
+:toc-title: Contents
+:toclevels: 2
+
+== Chronicle Ring Buffer
+
+Chronicle Queue Enterprise Ring Buffer provides a high performance, multi-writer, multi-reader ring buffer implementation
+which can be used in your application code. Additionally to this, it allows the ring buffer to be accessed
+via two different implementations of the `ChronicleQueue` interface.
+
+.Chronicle Queue Ring Buffer
+image::images/ring-buffer.svg[]
+
+=== The mechanics of Chronicle Ring Buffer
+
+The Chronicle Queue Enterprise Ring Buffer is a multi-writer, multi-reader, zero GC, monitered, ring buffer implementation,
+which takes `Bytes`. As the Chronicle stack is built on `Bytes` you can use the ring buffer for byte arrays,
+packed objects, or you can (de)serialise objects out of/in to it with
+https://github.com/OpenHFT/Chronicle-Wire[Chronicle Wire]
+
+When you create a ring buffer then any and all readers can block all writers. If a reader stops reading
+then this will eventually block writers. The number of readers is fixed and they are all created when the
+RB is created (actually when the underlying BytesStore is first written to) and will live for as long as the
+Ring Buffer (actually until you stop using the BytesStore).
+
+Backing the RB with a persistent BytesStore (i.e. one backed with a memory-mapped file) means it will be visible to
+multiple processes and all processes can write to and all read from the RB.
+
+Common scenarios:
+1. back the ring buffer with an in-memory BytesStore and you can have multiple writers and multiple readers in
+the same process. The ring buffer does not survive longer than the process.
+2. back the ring buffer with an memory-mapped BytesStore and you can have multiple writers and multiple readers in
+multiple processes. The ring buffer's data can outlast individual processes.
+
+To use the basic ring buffer, first one must be created by calling `newInstance`. Note that the number of readers
+must be specified up-front. If not provided the number of readers is assumed to be 1. The BytesStore must be an
+implementation of NativeBytesStore and must be sized appropriately by using the `sizeFor` method (note that base
+size must be a power of 2).
+
+```
+  int size = BytesRingBuffer.sizeFor(2 << 20);
+  NativeBytesStore nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(size);
+  BytesRingBuffer ringBuffer = BytesRingBuffer.newInstance(nativeStore)
+
+  int numReaders = 2;
+  NativeBytesStore nativeStore2 = NativeBytesStore.nativeStoreWithFixedCapacity(size, numReaders);
+  MultiReaderBytesRingBuffer ringBuffer2 = newInstance(nativeStore2, numReaders)
+```
+
+And once created, can be written to with `offer` (multiple threads can call `offer` at the "same" time). If
+`offer` returns false it means that the queue is full and we are waiting for one or more readers.
+
+```
+  boolean succeeded = ringBuffer.offer(bytesToWrite);
+```
+
+And when `offer` has returned, the data is available for all readers to consume. The `read` method consumes from
+the ring buffer into the passed `BytesStore` and returns a success boolean indicating whether anything was read.
+If the queue is empty, false will be returned.
+
+```
+  boolean succeeded = ringBuffer.read(bytesToRead);
+```
+==== Example from a test case
+
+TODO: add this in
+
+=== Chronicle Ring Buffer and Chronicle Queue
+
+There are two types of Chronicle Queue which are backed by the ring buffer
+
+==== software.chronicle.enterprise.queue.RingBufferChronicleQueue
+
+This queue does not implement the full contract of `ChronicleQueue` and will throw `UnsupportedOperationException`
+from some methods. It is created as below where `ringBuffer` is the ring buffer to back this queue with,
+`wireType` is the wireType to use when appending and tailing, `pauser` is the pauser to use by the appender
+when waiting for readers.
+
+```
+    ChronicleQueue rbq = new RingBufferChronicleQueue(ringBuffer, wireType, pauser);
+```
+
+And can be used in the same way as any other ChronicleQueue implementation.
+
+==== software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue
+
+The ring buffer can be used in one of two ways in EnterpriseSingleChronicleQueue, and this is controlled by
+the builder's `readBufferMode` and `writeBufferMode`.
+
+===== Asynchronous writes
+
+If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the queue will be given to the
+ring buffer and a background task is created in the builder's event loop to drain the ring buffer in to
+the underlying (disk-backed) chronicle queue. Reads are made from the underlying queue. This use case is
+designed to help with very bursty writes, which cannot afford to be blocked by a slow underlying disk
+subsystem. The ring buffer's buffer size must be carefully chosen to allow for the maxmimum burst size.
+
+Example:
+
+```
+    try (ChronicleQueue queue = EnterpriseChronicleQueueBuilder
+            .binary(path)
+            .bufferCapacity(1 << 20) // ring buffer base capacity
+            .writeBufferMode(BufferMode.Asynchronous)
+            .build()) {
+        ExcerptAppender appender = queue.acquireAppender();
+        ...
+        ExcerptTailer tailer = queue.createTailer();
+        ...
+    }
+```
+
+===== Writes and reads using ring buffer
+
+If both `writeBufferMode` and `readBufferMode` are set to `BufferMode.Asynchronous` then any writes to the
+queue will be given to the ring buffer and reads will read from the ring buffer. This gives the lowest possible
+latency as the disk subsystem is not involved at all. As with asynchronous writes, a background task is
+created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue.
+
+Example for asynchronous reads and writes using a memory-mapped file and two processes
+
+```
+    // process 1
+    try (@NotNull ChronicleQueue queue = EnterpriseChronicleQueueBuilder
+            .binary(path)
+            .bufferCapacity(1 << 20)
+            .readBufferMode(BufferMode.Asynchronous)
+            .writeBufferMode(BufferMode.Asynchronous)
+            // RB_BYTES_STORE_CREATOR_MAPPED_FILE is an example implementation of a bufferBytesStoreCreator
+            // which creates a memory-mapped file located in a fast filesystem (/tmp) and has same name as
+            // underlying queue, thus allowing its contents to be mapped and shared between processes.
+            .bufferBytesStoreCreator(EnterpriseChronicleQueueBuilder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
+            .build()) {
+        ExcerptAppender appender = queue.acquireAppender();
+        ...
+    }
+
+    // process 2
+    try (@NotNull ChronicleQueue queue = EnterpriseChronicleQueueBuilder
+            .binary(path) // same path as process 1
+            .bufferCapacity(1 << 20)
+            .readBufferMode(BufferMode.Asynchronous)
+            .writeBufferMode(BufferMode.Asynchronous)
+            .bufferBytesStoreCreator(EnterpriseChronicleQueueBuilder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
+            .build()) {
+        ExcerptTailer tailer = queue.createTailer();
+        ...
+    }
+```
