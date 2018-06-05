@@ -60,7 +60,7 @@ HeartbeatHandlers are set up on both the source and sink machines. Periodically 
 
 == Source Replication Handler
 
-Data is replicated using the SourceReplicationHandler, which sends its messages to the SinkReplicationHandler
+Chroncile Queues are repliated using the SourceReplicationHandler, which sends its messages to the SinkReplicationHandler
 
 However handshaking messages are send back from the SinkReplicationHandler to the SourceReplicationHandler, one such message is the acknowledgement  message the sinks sends the source. This also you to added code on your sink machine to ensure that message as received by the remote machine and therefore replicated.
 
