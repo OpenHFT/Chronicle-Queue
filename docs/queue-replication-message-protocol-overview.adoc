@@ -73,7 +73,7 @@ Heartbeat handlers are set up on both the source, and the sink machines. Periodi
 
 Chronicle queues are repliated using the `SourceReplicationHandler`, which sends its messages to the `SinkReplicationHandler`. Both the `SourceReplicationHandler` and `SinkReplicationHandler` are SubHandlers.
 
-However, handshaking messages are sent back from the `SinkReplicationHandler` to the `SourceReplicationHandler`. One such message is the acknowledgement message which the sink sends the source. By inspecting the `idx: 0x451600000000` (see example message below) this alows you to add code on your source machine to ensure that the message was received by the remote machine, and therefore successfully replicated.
+However, handshaking messages are sent back from the `SinkReplicationHandler` to the `SourceReplicationHandler`. One such message is the acknowledgement message which the sink sends the source. By inspecting the `idx: 0x451600000000` (see example message below) this allows you to add code on your source machine to ensure that the message was received by the remote machine, and therefore successfully replicated.
 
 ```
 --- !!meta-data #binary
