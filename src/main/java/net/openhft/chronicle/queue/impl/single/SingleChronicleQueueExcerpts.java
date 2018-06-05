@@ -1104,7 +1104,7 @@ public class SingleChronicleQueueExcerpts {
         public DocumentContext readingDocument() {
             // trying to create an initial document without a direction should not consume a message
             if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
-                return NoDocumentContext.INSTANCE;
+                return net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
             }
             return readingDocument(false);
         }
@@ -1201,7 +1201,7 @@ public class SingleChronicleQueueExcerpts {
                     throw e;
                 }
             }
-            return NoDocumentContext.INSTANCE;
+            return net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
         }
 
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {

@@ -22,51 +22,8 @@ import net.openhft.chronicle.wire.Wire;
 /*
  * Created by Peter Lawrey on 12/02/2016.
  */
-public enum NoDocumentContext implements DocumentContext {
-    INSTANCE;
-
-    @Override
-    public boolean isMetaData() {
-        return false;
-    }
-
-    @Override
-    public void metaData(boolean metaData) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean isPresent() {
-        return false;
-    }
-
-    @Override
-    public boolean isData() {
-        return false;
-    }
-
-    @Override
-    public Wire wire() {
-        return null;
-    }
-
-    @Override
-    public int sourceId() {
-        return -1;
-    }
-
-    @Override
-    public long index() {
-        return Long.MIN_VALUE;
-    }
-
-    @Override
-    public boolean isNotComplete() {
-        return false;
-    }
-
-    @Override
-    public void close() {
-
-    }
+@Deprecated(/* to be removed in 1.17 */)
+public interface NoDocumentContext {
+    @Deprecated
+    public static final DocumentContext INSTANCE = net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 }
