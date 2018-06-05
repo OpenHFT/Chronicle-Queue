@@ -45,9 +45,9 @@ NOTE: When sending the Uberhandler, only its data is serialised. The Java byte c
 
 The Uberhandler is used to route messages to SubHandlers based upon the `csp`, or the `cid` which is just an alias to the `csp`.
 
-The reason that we set up a `cid` is that a `cid` is numeric, and as such is limited (using BinaryWire) to 8 bytes (`long`).
+The reason that we set up a `cid` is that a `cid` is numeric, and as such is limited (using BinaryWire) to 8 bytes (`long` type).
 
-A `csp` is a string field which can be much larger. Once the relationship between the `csp` and its alias `cid` is established, then only the more compact `csp` will be sent.
+A `csp` is a string field which can be much larger. Once the relationship between the `csp` and its alias `cid` is established, then only the more compact `cid` will be sent.
 
 To summarise;
 
