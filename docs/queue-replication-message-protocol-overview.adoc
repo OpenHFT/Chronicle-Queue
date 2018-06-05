@@ -17,7 +17,7 @@ In order to make the messages human-readable in this document, the messages are 
 
 Anyone who wants to get more information into the data that is transfered between the remote hosts used by Chronicle Queue Enterprise to do TCP/IP replication. This document is not a queue functionality overview document.
 
-== Uberhandler
+== UberHandler
 
 Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are serialised locally, and then sent to the remote host using TCP/IP. The serialised form of UberHandler is shown below:
 
