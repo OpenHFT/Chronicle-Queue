@@ -159,15 +159,27 @@ eos: !!null "" #  END_OF_STREAM
 === Sending data
 
 The SourceReplicationHandler sends a message to the SinkReplicationHandler.
-The SinkReplicationHandler uses a chronicle tailer to read new message from a chronicle queue, the contents of the chronicle queue is not inspected or parsed in any way its just sent as < binary data>, see the example below :
-
+The SinkReplicationHandler uses a chronicle tailer to read new message from a chronicle queue, the contents of the chronicle queue is not inspected or parsed in any way its just sent as the replicaton event, also know as the `re` in the message below: 
 ```
 --- !!meta-data #binary
 cid: 292323922173575
  --- !!data #binary
 DocumentContext:
 --- !!data #binary
-re: < binary data>
+re: < replication-event> # see below
+```
+
+the bytes that make up the `replication-event` follow the following format :
+
+```
+public void writeMarshallable(@NotNull WireOut wire) {
+    @NotNull ValueOut out = wire.getValueOut();
+    out.int64_0x(index);
+    out.bytesLiteral(payload);
+
+    // nano-timestamp create with the timestamp from the source machine
+    out.int64(nanoTimeStamp = System.nanoTime());
+}
 ```
 
 Once the message is received by the sink it send an acknologment to the source
