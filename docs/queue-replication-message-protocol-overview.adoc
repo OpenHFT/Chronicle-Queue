@@ -109,25 +109,13 @@ handler: !ServiceSinkReplicationHandler {
 }
 ```
 
-
-As mentioned above the SubHandler that will be run for all messages that contain the following meta data
-```
---- !!meta-data #binary
-csp: /replication/out-1/2
-```
-or
-```
---- !!meta-data #binary
-cid: 292323922173575
-```
-
 and the Sink side of the connection, respond and setup a SourceReplicationHandler to be run on the other host.
 
-DocumentContext:
 ```
 --- !!meta-data #binary
 csp: /replication/out-1/2
 cid: 292323922173575
+--- !!data #binary
 handler: !ServiceSourceReplicationHandler {
   queueName: out-1,
   wireType: BINARY_LIGHT,
