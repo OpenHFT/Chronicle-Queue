@@ -1,5 +1,5 @@
 
-= TCP/IP Repliction Protocol
+= Chonicle Queues TCP/IP Repliction Protocol
 :toc:
 :toc-title: Contents
 :toclevels: 2
