@@ -4,8 +4,9 @@
 :toc-title: Contents
 :toclevels: 1
 
+
 == Overview
-This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP from queues that are running on different machines.
+This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP from queues that are on different machines. Chronicle Queue Enterprise is a licenced product, if you are interested in obtaining more information about this please contact sales@chronicle.software 
 
 === Message format in this document
 
