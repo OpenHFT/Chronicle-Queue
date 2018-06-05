@@ -92,7 +92,7 @@ The Sink and Source handers are as follows:
 | sink  |source   | `software.chronicle.enterprise.queue.replication.SourceReplicationHandler`
 |===
 
-When using Chronicle Service, additional sink and source handlers are used to ensure that input queues are replicated before output queues.
+When using Chronicle Services, extended sink and source handlers are used, these ensure that input queues are replicated before output queues.
 
 [%autowidth]
 |===
@@ -102,7 +102,6 @@ When using Chronicle Service, additional sink and source handlers are used to en
 |===
 
 The source-side of the connection sends a `ServiceSinkReplicationHandler` to be run on the remote machine.
-
 
 ```
 --- !!meta-data #binary
