@@ -1,23 +1,26 @@
 
-= Chonicle Queues Enterpise - TCP/IP Repliction Protocol
+= Chronicle Queue Enterpise - TCP/IP Replication Protocol
 :toc:
 :toc-title: Contents
-:toclevels: 2
+:toclevels: 1
+
 
 == Overview
-This document covers the high level protocol and handshaking, that is used by chronicle queue enterprise to replicate data via tcp/ip to queues running on different machines.
+This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP from queues that are on different machines. Chronicle Queue Enterprise is a licenced product, if you are interested in obtaining more information about this please contact sales@chronicle.software 
 
-=== Message format in this Document
+=== Message format in this document
 
-Chronicle Queue Enterprise typically sends its messages in binary wire format see net.openhft.chronicle.wire.BinaryWire. This is a  binary form of YAML, however to make the messages human readable in this document, we will show the message in text wire  see net.openhft.chronicle.wire.TextWire.
+Chronicle Queue Enterprise sends its messages in binary wire format (see `net.openhft.chronicle.wire.BinaryWire`); this is a  binary form of `YAML`.
 
-=== Who should read this
+In order to make the messages human-readable in this document, the messages are shown in text wire format (see `net.openhft.chronicle.wire.TextWire`).
 
-Anyone who wants to get a bit more inside into the data transfered between the remote hosts used by chronicle queue enterprise to do tcp/ip replication. This document is not a queue functionality overview document.
+=== Who should read this document
 
-== Uber Handler
+Anyone who wants to get more information into the data that is transfered between the remote hosts used by Chronicle Queue Enterprise to do TCP/IP replication. This document is not a queue functionality overview document.
 
-Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are  serialised locally then sent to the remote host via tcp/ip, The serialised form of UberHandler looks as follows ( see below )
+== UberHandler
+
+Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are serialised locally, and then sent to the remote host using TCP/IP. The serialised form of UberHandler is shown below:
 
 ```
 --- !!data #binary
@@ -29,21 +32,32 @@ handler: !net.openhft.chronicle.network.cluster.handlers.UberHandler {
 }
 ```
 
+=== onInitialize() and TerminatorHandler
 
+When the Uberhandler is loaded by the remote machine, its `onInitialize()` method is automatically called (`see net.openhft.chronicle.network.cluster.handlers.UberHandler#onInitialize`).
 
-== onInitialize() and TerminatorHandler
+Running the `onInitialize()` method establishes, on the remote host, an Uberhandler (message router), which later can be shutdown by a `net.openhft.chronicle.network.cluster.TerminatorHandler`. If you wish to cleanly shutdown a connection, you should send a `TerminatorHandler` message, otherwise the remote connection may think the connection was closed abruptly and try to re-establish the connection.
 
-When the UberHandler is loaded by the remote machine it’s  onInitialize() method is automatically called  ( see net.openhft.chronicle.network.cluster.handlers.UberHandler#onInitialize) , Running the onInitialize() method establishes, on the remote host, a UberHandler which is a a message router, which later can be shutdown by a net.openhft.chronicle.network.cluster.TerminatorHandler. If you wish to cleanly shutdown a connection you should send a TerminatorHandler message otherwise the remote connection may think the connection was closed abruptly and re-establish the connection.
+NOTE: When sending the Uberhandler, only its data is serialised. The Java byte code of the Uberhandler must already exist on the remote machine. Only the data of the Uberhandler instance is sent, not the byte code for the Uberhandler class itself. This is because automatically running any arbitrary code using the `onInitialize()` method remotely could lead to security concerns. +
+ +
+ This is also true for any SubHandler (see `net.openhft.chronicle.network.api.session.SubHandler`) which also has an `onInitialize()` method. This is covered in more detail below.
 
-Note: when sending the UberHandler its  only its data that is serialised, the java byte code of the UberHandler must already be available on the remote machine, as such its just the data of the UberHandler instance that is sent not the byte code for the UberHandler class its self as automatically running any arbitrary code vai the onInitialize() method remotely could lead to security concerns. This is also true for any SubHandler  ( see net.openhft.chronicle.network.api.session.SubHandler)  which also has an onInitialize() method and is covered in more detail  below.
+=== SubHandlers
 
-==== SubHandlers
+The Uberhandler is used to route messages to SubHandlers based upon the `csp`, or the `cid` which is just an alias to the `csp`.
 
-The UberHandler is used to route messages to SubHandlers based upon the csp ( or for that matter the 'cid` which is just an alias to the `cid`, the reason that we set up `cid` are that `cid` are just numbers and as such will be limited [ when using BinaryWire ] to using 8 bytes ( which is the size of a long ) where as `csp` s are string fields which can often end up being much larger. Once the relationship between the `cip` and its alias ( the `cid` ) is established, then only the more compact `cid` will be sent.
+The reason that we set up a `cid` is that a `cid` is numeric, and as such is limited (using BinaryWire) to 8 bytes (`long` type).
 
-So to summaries, first the UberHandler is sent, which is used to route the subHandler messages. Then any number of SubHandlers are sent. There is a relationship that is maintained by the uberhandler, between the sub-handler  and its cip/cid used for routing purposes.
+A `csp` is a string field which can be much larger. Once the relationship between the `csp` and its alias `cid` is established, then only the more compact `cid` will be sent.
 
-This message  ( below  ) sets up the following relationship between the `csp: /`  also aliased as `cid: !int 1671070996`and its HeartbeatHandler, so that any message sent with  cid: !int 1671070996 will be be received by this heart beat handler instance running on  the remote machine.
+To summarise;
+
+- first, the Uberhandler is sent, which is used to route the subHandler messages.
+- then, any number of SubHandlers are sent. There is a relationship that is maintained by the Uberhandler, between the SubHandler and its `cip`/`cid` used for routing purposes.
+
+==== Heartbeat Handlers
+
+The message shown below sets up the following relationship between the `csp: /`  also aliased as `cid: !int 1671070996` and its heartbeat handler`, so that any message sent with  `cid: !int 1671070996` will be received by this heartbeat handler instance running on the remote machine.
 
 ```
 --- !!meta-data #binary
@@ -56,13 +70,13 @@ handler: !net.openhft.chronicle.network.cluster.handlers.HeartbeatHandler {
 }
 ```
 
-HeartbeatHandlers are set up on both the source and sink machines. Periodically ( set via the `heartbeatIntervalMs` field ) they send a heartbeat message to their corresponding remote host. If the heartbeatTimeoutMs has passed ( and no heartbeat message has been received), the HeartbeatHandler will close the socket connection and attempt to reconnect.
+Heartbeat handlers are set up on both the source, and the sink machines. Periodically (set using the `heartbeatIntervalMs` field) they send a heartbeat message to their corresponding remote host. If the `heartbeatTimeoutMs` has passed and no heartbeat message has been received, then the heartbeat handler will close the socket connection and attempt to reconnect.
 
-== Source Replication Handler
+=== Exchanging data between Source and Sink 
 
-Chronicle Queues are repliated using the SourceReplicationHandler, which sends its messages to the SinkReplicationHandler. Both the SourceReplicationHandler and SinkReplicationHandler are SubHandlers
+Chronicle queues are repliated using the `SourceReplicationHandler`, which sends its messages to the `SinkReplicationHandler`. Both the `SourceReplicationHandler` and `SinkReplicationHandler` are SubHandlers.
 
-However handshaking messages are send back from the SinkReplicationHandler to the SourceReplicationHandler, one such message is the acknowledgement message which the sinks sends the source. By inspecting the `idx: 0x451600000000` ( see message below ) this alows you to added code on your source machine to ensure that message was received by the remote machine and therefore replicated.
+However, handshaking messages are sent back from the `SinkReplicationHandler` to the `SourceReplicationHandler`. One such message is the acknowledgement message which the sink sends the source. By inspecting the `idx: 0x451600000000` (see example message below) this allows you to add code on your source machine to ensure that the message was received by the remote machine, and therefore successfully replicated.
 
 ```
 --- !!meta-data #binary
@@ -72,27 +86,25 @@ idx: 0x451600000000
 ns: 10849029994071
 ```
 
-So the handers are as follows
-
- 
-[%autowidth]
-|===
-| from	|	to 	| msg sent
-| source  |sink   | software.chronicle.enterprise.queue.replication.SinkReplicationHandler
-| sink  |source   | software.chronicle.enterprise.queue.replication.SourceReplicationHandler
-|===
-
-When using Chronicle Service additional Sink and Source handlers are used to ensure that input queues are replicated before output queues
+The Sink and Source handers are as follows:
 
 [%autowidth]
 |===
 | from	|	to 	| msg sent
-| source	| sink	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSourceReplicationHandler
-| sink 	| source	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSinkReplicationHandler
+| source  |sink   | `software.chronicle.enterprise.queue.replication.SinkReplicationHandler`
+| sink  |source   | `software.chronicle.enterprise.queue.replication.SourceReplicationHandler`
 |===
 
-So the source side of the connection sends a ServiceSinkReplicationHandler ( to be run on the remote machine )
+When using Chronicle Services, extended sink and source handlers are used, these ensure that input queues are replicated before output queues.
 
+[%autowidth]
+|===
+| from	|	to 	| msg sent
+| source	| sink	| `software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSourceReplicationHandler`
+| sink 	| source	| `software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSinkReplicationHandler`
+|===
+
+The source-side of the connection sends a `ServiceSinkReplicationHandler` to be run on the remote sink host.
 
 ```
 --- !!meta-data #binary
@@ -109,7 +121,7 @@ handler: !ServiceSinkReplicationHandler {
 }
 ```
 
-and the Sink side of the connection will respond by setting up a SourceReplicationHandler to be run on the other host.
+The sink-side of the connection will respond by setting up a `SourceReplicationHandler` to be run on the remote source host.
 
 ```
 --- !!meta-data #binary
@@ -125,15 +137,23 @@ handler: !ServiceSourceReplicationHandler {
 }
 ```
 
-When ever your application appends data to the source queue, The SourceReplicationHandler will read this queue  ( by using a queue tailer ) and then stream any new data to the remote host imediatly. As such Chronicle Queue Enterprise establishes a stream rather than a polling protocol. If the network buffers are full then data won’t be sent by the SourceReplicationHandler. So its not strictly `reactive` but rather sensitive to push back, and given that chronicle queue enterprise is back by chronicle queues which pages its data to disk rather than holding it all in memory, chronicle queue won’t get saturated by a slow consumer, as the data is not paged into memory from the queue until the tcp/ip buffers have sufficient free space.
+Whenever your application appends data to the source queue, the `SourceReplicationHandler` will read this queue using a queue tailer, and then immediately stream any new data to the remote host.
 
-== ServiceSinkReplicationHandler
+Chronicle Queue Enterprise establishes a stream rather than a polling protocol. If the network buffers are full, then data will not be sent by the `SourceReplicationHandler`. Therefore, it is not strictly reactive, but rather, it is sensitive to push back.
 
-Before the sink replication handler starts to read messages from the source machine, it first copies back  messages from the sink machine to the source machine. ( we call this the back copy ). This  often never happens but in the rare event, that the source machine was replicating to two ( or more sinks ) if the source had an outage, and we failed over to one of the remaining sinks, we want to ensure which ever sink we choose, it has the latest messages, and hence in the event that one of the sinks has more messages than the other we will first copy any messages from the other sink before we establish this sink as our new source.
+Chronicle Queue Enterprise uses queues which page data to disk, rather than holding it all in memory. Therefor Chronicle Queue will not get saturated by a slow consumer, because the data is not paged into memory from the queue until the TCP/IP buffers have sufficient free space.
 
-When the ServiceSinkReplicationHandler starts it calls software.chronicle.enterprise.queue.replication.SinkReplicationHandler#onInitialize
+== SinkReplicationHandler
 
-Once all the data has been replicated, to notify the SourceReplicationHandler that the back copy is now complete a END_OF_STREAM message is sent
+Before the sink replication handler starts to read messages from the source machine, it first copies back  messages from the sink machine, to the source machine; this is called the back copy.
+
+Although rare, it is useful for example, if the source machine was replicating to two (or more) sinks, and the source suffered a power outage. +
+Chronicle Queue Enterprise will fail-over to one of the remaining sinks, and therefore we need to ensure that, whichever sink is chosen, it has the latest messages. +
+Therefore, in the event that one of the sinks has more messages than the other, we will first copy any messages from the other sink before we establish this sink as our new source.
+
+When the `ServiceSinkReplicationHandler` starts, it calls `software.chronicle.enterprise.queue.replication.SinkReplicationHandler#onInitialize`.
+
+When all the data has been replicated, an `END_OF_STREAM` message is sent to notify the `SourceReplicationHandler` that the back copy is complete.
 
 ```
 --- !!meta-data #binary
@@ -144,9 +164,13 @@ DocumentContext:
 eos: !!null "" #  END_OF_STREAM
 ```
 
-=== Sending data with the SourceReplicationHandler
+The sink replication handler then receives new messages from the SourceReplicationHandler. When it receives these new messages it uses a chronicle queue appender to write them to a chronicle queue. 
 
-The SourceReplicationHandler sends messages to the SinkReplicationHandler. The SourceReplicationHandler uses a chronicle tailer to read new messages from your chronicle queue, the messages will be written to the queue by your application logic. When the SourceReplicationHandler comes to read the contents of this chronicle queue, it does not deserialize the message in any way, it  just treats the message as a blob of bytes and writes the bytes to the replication event, also known as the `re` in the message below: 
+NOTE: When the messages are written to the chronicle queue by the SinkReplicationHandler, we write the message and take account of the source index, to guarantee that the order of messages from the source exactly matches the order of messages on the sink, in addition, using the index also ensures that the message has always been written to the correct queue file. This is even if events such has roll over have occured, which typically would cause a normal appender to write the message to the next queue file, which is not what we want here because we creaete an exact copy, of messages from the source to the sink.
+
+== Sending data with the SourceReplicationHandler
+
+The `SourceReplicationHandler` sends messages to the `SinkReplicationHandler`. The `SourceReplicationHandler` uses a Chronicle tailer to read new messages from your Chronicle queue. The messages will be written to the queue by your application logic. When the `SourceReplicationHandler` comes to read the contents of this Chronicle queue, it does not de-serialize the message in any way, it treats the message as a blob of bytes, and writes the bytes to the replication event. This is also known as the `re` in the message below:
 
 ```
 --- !!meta-data #binary
@@ -157,7 +181,7 @@ DocumentContext:
 re: < replication-event> # see below
 ```
 
-the bytes that make up the `replication-event` follow the following format :
+The bytes that make up the `replication-event` follow the following format:
 
 ```
 public void writeMarshallable(@NotNull WireOut wire) {
@@ -170,7 +194,7 @@ public void writeMarshallable(@NotNull WireOut wire) {
 }
 ```
 
-Once the message is received by the sink it send an acknologment to the source
+When the message is received by the sink, it sends an acknowledgement to the source:
 
 ```
 --- !!meta-data #binary
