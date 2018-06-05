@@ -156,7 +156,7 @@ DocumentContext:
 eos: !!null "" #  END_OF_STREAM
 ```
 
-=== Sending data
+=== Sending data with the SourceReplicationHandler
 
 The SourceReplicationHandler sends messages to the SinkReplicationHandler. The SourceReplicationHandler uses a chronicle tailer to read new messages from your chronicle queue, the messages will be written to the queue by your application logic. When the SourceReplicationHandler comes to read the contents of this chronicle queue, it does not deserialize the message in any way, it  just treats the message as a blob of bytes and writes the bytes to the replication event, also known as the `re` in the message below: 
 
