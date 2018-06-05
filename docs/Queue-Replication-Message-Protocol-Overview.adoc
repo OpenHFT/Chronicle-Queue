@@ -67,6 +67,7 @@ ns: 10849029994071
 
 So the handers are as follows
 
+--------------------------
 | from	|	to 	| msg sent
 --------------------------
 | source | sink	    | software.chronicle.enterprise.queue.replication.SinkReplicationHandler
@@ -74,6 +75,7 @@ So the handers are as follows
 
 When using Chronicle Service additional Sink and Source handlers are used to ensure that input queues are replicated before output queues
 
+--------------------------
 | from	|	to 	| msg sent
 -----------------------------------
 | source	| sink	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSourceReplicationHandler
