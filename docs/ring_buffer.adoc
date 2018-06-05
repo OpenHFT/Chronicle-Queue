@@ -10,7 +10,7 @@ which can be used in your application code. Additionally to this, it allows the 
 via two different implementations of the `ChronicleQueue` interface.
 
 .Chronicle Ring Buffer
-image::images/Ring-buffer.svg[]
+image::images/Ring_buffer.svg[]
 
 === The mechanics of Chronicle Ring Buffer
 
