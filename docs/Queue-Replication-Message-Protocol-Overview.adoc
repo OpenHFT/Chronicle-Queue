@@ -1,4 +1,9 @@
 
+= TCP/IP Repliction Protocol
+:toc:
+:toc-title: Contents
+:toclevels: 2
+
 == Overview
 This document covers the high level protocol and handshaking, that is used by chronicle queue enterprise to replicate data via tcp/ip to queues running on different machines.
 
@@ -70,9 +75,8 @@ So the handers are as follows
 [%autowidth]
 |===
 | from	|	to 	| msg sent
-|===
-| source |sink |software.chronicle.enterprise.queue.replication.SinkReplicationHandler
-| sink |source |software.chronicle.enterprise.queue.replication.SourceReplicationHandler
+| source  |sink   | software.chronicle.enterprise.queue.replication.SinkReplicationHandler
+| sink  |source   | software.chronicle.enterprise.queue.replication.SourceReplicationHandler
 |===
 
 When using Chronicle Service additional Sink and Source handlers are used to ensure that input queues are replicated before output queues
@@ -80,7 +84,6 @@ When using Chronicle Service additional Sink and Source handlers are used to ens
 [%autowidth]
 |===
 | from	|	to 	| msg sent
-|===
 | source	| sink	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSourceReplicationHandler
 | sink 	| source	| software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSinkReplicationHandler
 |===
