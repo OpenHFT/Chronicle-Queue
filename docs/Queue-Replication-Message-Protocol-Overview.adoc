@@ -72,8 +72,7 @@ ns: 10849029994071
 
 So the handers are as follows
 
-.A formal table
-link:ex-table.adoc[]
+ 
 [%autowidth]
 |===
 | from	|	to 	| msg sent
