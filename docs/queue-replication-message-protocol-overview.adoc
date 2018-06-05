@@ -15,7 +15,7 @@ Chronicle Queue Enterprise typically sends its messages in binary wire format se
 
 Anyone who wants to get a bit more inside into the data transfered between the remote hosts used by chronicle queue enterprise to do tcp/ip replication. This document is not a queue functionality overview document.
 
-== UberHandler
+== Uber Handler
 
 Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are  serialised locally then sent to the remote host via tcp/ip, The serialised form of UberHandler looks as follows ( see below )
 
