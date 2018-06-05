@@ -83,7 +83,7 @@ idx: 0x451600000000
 ns: 10849029994071
 ```
 
-The handers are as follows:
+The Sink and Source handers are as follows:
 
 [%autowidth]
 |===
