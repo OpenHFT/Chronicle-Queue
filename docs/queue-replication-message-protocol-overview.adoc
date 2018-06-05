@@ -1,5 +1,5 @@
 
-= Overview of Chonicle Queues TCP/IP Repliction Protocol
+= Chonicle Queues Enterpise - TCP/IP Repliction Protocol
 :toc:
 :toc-title: Contents
 :toclevels: 2
