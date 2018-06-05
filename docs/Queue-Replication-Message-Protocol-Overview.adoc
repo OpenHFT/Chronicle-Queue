@@ -56,7 +56,7 @@ handler: !net.openhft.chronicle.network.cluster.handlers.HeartbeatHandler {
 }
 ```
 
-HeartbeatHandlers are set up on both the source and sink machines. Periodically they send a heartbeat message to their corresponding remote machines. If the heartbeatIntervalMs has passed ( and no heartbeat message has been received),  the HeartbeatHandler will close the socket connection and attempt to reconnect.
+HeartbeatHandlers are set up on both the source and sink machines. Periodically ( set via the `heartbeatIntervalMs` field ) they send a heartbeat message to their corresponding remote machines. If the heartbeatTimeoutMs has passed ( and no heartbeat message has been received), the HeartbeatHandler will close the socket connection and attempt to reconnect.
 
 == Source Replication Handler
 
