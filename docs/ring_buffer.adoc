@@ -9,8 +9,8 @@ Chronicle Queue Enterprise Ring Buffer provides a high performance, multi-writer
 which can be used in your application code. Additionally to this, it allows the ring buffer to be accessed
 via two different implementations of the `ChronicleQueue` interface.
 
-.Chronicle Queue Ring Buffer
-image::images/ring-buffer.svg[]
+.Chronicle Ring Buffer
+image::images/Ring-buffer.svg[]
 
 === The mechanics of Chronicle Ring Buffer
 
