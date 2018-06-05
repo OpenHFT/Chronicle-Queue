@@ -188,7 +188,7 @@ public void writeMarshallable(@NotNull WireOut wire) {
 }
 ```
 
-When the message is received by the sink, it send an acknowlodgment to the source:
+When the message is received by the sink, it sends an acknowledgement to the source:
 
 ```
 --- !!meta-data #binary
