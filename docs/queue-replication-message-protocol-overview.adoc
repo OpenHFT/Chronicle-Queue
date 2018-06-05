@@ -109,7 +109,7 @@ handler: !ServiceSinkReplicationHandler {
 }
 ```
 
-and the Sink side of the connection, respond and setup a SourceReplicationHandler to be run on the other host.
+and the Sink side of the connection will respond by setting up a SourceReplicationHandler to be run on the other host.
 
 ```
 --- !!meta-data #binary
