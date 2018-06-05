@@ -60,9 +60,9 @@ HeartbeatHandlers are set up on both the source and sink machines. Periodically 
 
 == Source Replication Handler
 
-Chroncile Queues are repliated using the SourceReplicationHandler, which sends its messages to the SinkReplicationHandler
+Chronicle Queues are repliated using the SourceReplicationHandler, which sends its messages to the SinkReplicationHandler
 
-However handshaking messages are send back from the SinkReplicationHandler to the SourceReplicationHandler, one such message is the acknowledgement  message the sinks sends the source. This also you to added code on your sink machine to ensure that message as received by the remote machine and therefore replicated.
+However handshaking messages are send back from the SinkReplicationHandler to the SourceReplicationHandler, one such message is the acknowledgement message which the sinks sends the source. By inspecting the `idx: 0x451600000000` ( see message below ) this alows you to added code on your source machine to ensure that message was received by the remote machine and therefore replicated.
 
 ```
 --- !!meta-data #binary
