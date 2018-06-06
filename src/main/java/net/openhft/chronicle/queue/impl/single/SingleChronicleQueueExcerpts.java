@@ -36,6 +36,7 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
+import static java.lang.Boolean.getBoolean;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
@@ -69,6 +70,7 @@ public class SingleChronicleQueueExcerpts {
 
         static final int REPEAT_WHILE_ROLLING = 128;
         private static final long PRETOUCHER_PREROLL_TIME_MS = 2_000L;
+        public static final boolean EARLY_ACQUIRE_NEXT_CYCLE = getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
         private final TimeProvider pretouchTimeProvider;
         @NotNull
         private final SingleChronicleQueue queue;
@@ -201,7 +203,7 @@ public class SingleChronicleQueueExcerpts {
                 if (wire != null)
                     pretoucher.pretouch((MappedBytes) wire.bytes());
 
-                if (Boolean.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle"))
+                if (EARLY_ACQUIRE_NEXT_CYCLE)
                     earlyAcquireNextCycle(qCycle);
 
             } catch (Throwable e) {
