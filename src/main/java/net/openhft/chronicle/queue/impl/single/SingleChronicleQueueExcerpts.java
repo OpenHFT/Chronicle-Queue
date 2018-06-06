@@ -43,7 +43,6 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
-
     private static final int MESSAGE_HISTORY_METHOD_ID = -1;
     private static StringBuilderPool SBP = new StringBuilderPool();
 
