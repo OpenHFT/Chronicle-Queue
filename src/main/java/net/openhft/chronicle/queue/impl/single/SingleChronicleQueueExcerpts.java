@@ -202,7 +202,7 @@ public class SingleChronicleQueueExcerpts {
                 if (wire != null)
                     pretoucher.pretouch((MappedBytes) wire.bytes());
 
-                earlyAcquireNextCycle(qCycle);
+                //   earlyAcquireNextCycle(qCycle);
 
             } catch (Throwable e) {
                 Jvm.warn().on(getClass(), e);
