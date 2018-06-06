@@ -52,6 +52,7 @@ public class RollCycleMultiThreadStressTest {
 
     private final SetTimeProvider timeProvider = new SetTimeProvider();
 
+    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
