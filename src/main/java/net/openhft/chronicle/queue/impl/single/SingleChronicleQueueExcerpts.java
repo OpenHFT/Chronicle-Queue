@@ -225,7 +225,8 @@ public class SingleChronicleQueueExcerpts {
                 return;
 
             releasePretouchStore();
-            pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
+            pretouchStore = queue.storeForCycle(pretouchCycle0, queue.epoch(), true);
+
             pretouchCycle = pretouchCycle0;
             pretoucher = null;
             if (Jvm.isDebugEnabled(getClass()))
@@ -238,7 +239,7 @@ public class SingleChronicleQueueExcerpts {
             WireStore pretouchStore = this.pretouchStore;
             if (pretouchStore == null)
                 return;
-            pretouchStore.release();
+            queue.release(pretouchStore);
             pretouchCycle = -1;
             this.pretouchStore = null;
         }
