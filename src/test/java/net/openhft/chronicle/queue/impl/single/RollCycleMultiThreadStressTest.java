@@ -34,6 +34,7 @@ public class RollCycleMultiThreadStressTest {
     private static final int CORES;
     private static final Random random;
     private static final int NUMBER_OF_INTS;
+    private static final boolean PRETOUCH;
 
     static {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 50_000);
@@ -46,11 +47,11 @@ public class RollCycleMultiThreadStressTest {
         CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
+        PRETOUCH = Boolean.getBoolean("pretouch");
     }
 
     private final SetTimeProvider timeProvider = new SetTimeProvider();
 
-    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
@@ -60,6 +61,7 @@ public class RollCycleMultiThreadStressTest {
         System.out.printf("Queue dir: %s at %s%n", path.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
+        final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(new NamedThreadFactory("pretouch"));
         final ExecutorService executorServiceWrite = Executors.newFixedThreadPool(numWriters, new NamedThreadFactory("writer"));
         final ExecutorService executorServiceRead = Executors.newFixedThreadPool(numThreads - numWriters, new NamedThreadFactory("reader"));
 
@@ -76,6 +78,23 @@ public class RollCycleMultiThreadStressTest {
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
+
+        if (PRETOUCH) {
+            System.out.println("Starting pretoucher");
+            executorServicePretouch.submit(() -> {
+                try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                            .testBlockSize()
+                            .timeProvider(timeProvider)
+                            .rollCycle(RollCycles.TEST_SECONDLY)
+                            .build()) {
+                    ExcerptAppender appender = queue.acquireAppender();
+                    while (!Thread.currentThread().isInterrupted()) {
+                        Jvm.pause(50);
+                        appender.pretouch();
+                    }
+                }
+            });
+        }
 
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
             final Writer tempWriter = new Writer(path, wrote, expectedNumberOfMessages);
@@ -172,6 +191,7 @@ public class RollCycleMultiThreadStressTest {
 
         executorServiceWrite.shutdownNow();
         executorServiceRead.shutdownNow();
+        executorServicePretouch.shutdownNow();
 
         results.forEach(f -> {
             try {
