@@ -201,7 +201,8 @@ public class SingleChronicleQueueExcerpts {
                 if (wire != null)
                     pretoucher.pretouch((MappedBytes) wire.bytes());
 
-                //   earlyAcquireNextCycle(qCycle);
+                if (Boolean.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle"))
+                    earlyAcquireNextCycle(qCycle);
 
             } catch (Throwable e) {
                 Jvm.warn().on(getClass(), e);
@@ -232,7 +233,6 @@ public class SingleChronicleQueueExcerpts {
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
                         pretouchStore.file());
-
         }
 
         private void releasePretouchStore() {
