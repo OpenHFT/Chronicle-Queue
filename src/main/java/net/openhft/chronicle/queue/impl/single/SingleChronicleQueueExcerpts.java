@@ -37,6 +37,7 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
+import static java.lang.Boolean.getBoolean;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
@@ -44,7 +45,6 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
-
     private static final int MESSAGE_HISTORY_METHOD_ID = -1;
     private static StringBuilderPool SBP = new StringBuilderPool();
 
@@ -71,6 +71,7 @@ public class SingleChronicleQueueExcerpts {
 
         static final int REPEAT_WHILE_ROLLING = 128;
         private static final long PRETOUCHER_PREROLL_TIME_MS = 2_000L;
+        public static final boolean EARLY_ACQUIRE_NEXT_CYCLE = getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
         private final TimeProvider pretouchTimeProvider;
         @NotNull
         private final SingleChronicleQueue queue;
@@ -203,7 +204,8 @@ public class SingleChronicleQueueExcerpts {
                 if (wire != null)
                     pretoucher.pretouch((MappedBytes) wire.bytes());
 
-                earlyAcquireNextCycle(qCycle);
+                if (EARLY_ACQUIRE_NEXT_CYCLE)
+                    earlyAcquireNextCycle(qCycle);
 
             } catch (Throwable e) {
                 Jvm.warn().on(getClass(), e);
@@ -227,20 +229,20 @@ public class SingleChronicleQueueExcerpts {
                 return;
 
             releasePretouchStore();
-            pretouchStore = queue.storeSupplier().acquire(pretouchCycle0, true);
+            pretouchStore = queue.storeForCycle(pretouchCycle0, queue.epoch(), true);
+
             pretouchCycle = pretouchCycle0;
             pretoucher = null;
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
                         pretouchStore.file());
-
         }
 
         private void releasePretouchStore() {
             WireStore pretouchStore = this.pretouchStore;
             if (pretouchStore == null)
                 return;
-            pretouchStore.release();
+            queue.release(pretouchStore);
             pretouchCycle = -1;
             this.pretouchStore = null;
         }

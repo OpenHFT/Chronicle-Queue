@@ -30,7 +30,7 @@ public EnterpriseChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) 
 ....
 
 == Customer specified encryption
-You can supply a bespoke encyption method to encrpypt your messages using, perhaps, a more complex encryption method.
+You can supply a bespoke encryption method to encrpypt your messages using, perhaps, a more complex encryption method.
 
 For example, you could perhaps combine encryption with salting, and/or compression.
 

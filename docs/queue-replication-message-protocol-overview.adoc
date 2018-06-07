@@ -1,5 +1,5 @@
 
-= Chronicle Queue Enterpise - TCP/IP Replication Protocol
+= Chronicle Queue Enterprise - TCP/IP Replication Protocol
 :toc:
 :toc-title: Contents
 :toclevels: 1
@@ -159,8 +159,6 @@ When all the data has been replicated, an `END_OF_STREAM` message is sent to not
 --- !!meta-data #binary
 cid: 573798926109737
 --- !!data #binary
-DocumentContext:
---- !!data #binary
 eos: !!null "" #  END_OF_STREAM
 ```
 
@@ -175,8 +173,6 @@ The `SourceReplicationHandler` sends messages to the `SinkReplicationHandler`. T
 ```
 --- !!meta-data #binary
 cid: 292323922173575
- --- !!data #binary
-DocumentContext:
 --- !!data #binary
 re: < replication-event> # see below
 ```
@@ -199,7 +195,6 @@ When the message is received by the sink, it sends an acknowledgement to the sou
 ```
 --- !!meta-data #binary
 cid: 292323922173575
-DocumentContext:
 --- !!data #binary
 idx: 0x451600000000
 ns: 10849029994071
