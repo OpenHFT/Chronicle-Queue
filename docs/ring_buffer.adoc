@@ -47,7 +47,7 @@ implementation of `NativeBytesStore`, and must be sized appropriately by using t
   MultiReaderBytesRingBuffer ringBuffer2 = newInstance(nativeStore2, numReaders)
 ```
 
-When created, ot can be written to with `offer` (multiple threads can call `offer` at the same time). If `offer` returns `false` it means that the queue is full, and we are waiting for one or more readers.
+When created, it can be written to with `offer` (multiple threads can call `offer` at the same time). If `offer` returns `false` it means that the queue is full, and we are waiting for one or more readers.
 
 ```
   boolean succeeded = ringBuffer.offer(bytesToWrite);
@@ -94,7 +94,7 @@ the builder's `readBufferMode` and `writeBufferMode`.
 
 ===== Asynchronous writes
 
-If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the queue will be given to the ring buffer. A background task is created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue. Reads are made from the underlying queue. This use-case is designed to help with very "bursty" writes, which cannot afford to be blocked by a slow underlying disk sub-system. The ring buffer's buffer size must be carefully chosen to allow for the maxmimum burst size.
+If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the queue will be given to the ring buffer. A background task is created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue. Reads are made from the underlying queue. This use-case is designed to help with very "bursty" writes, which cannot afford to be blocked by a slow underlying disk sub-system. The ring buffer's buffer size must be carefully chosen to allow for the maximum burst size.
 
 ====== Example:
 
