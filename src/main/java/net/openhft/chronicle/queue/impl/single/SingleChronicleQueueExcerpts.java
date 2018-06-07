@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.UnsafeMemory;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -1032,6 +1033,7 @@ public class SingleChronicleQueueExcerpts {
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
         private boolean shouldUpdateIndex = false;
+        private long address = NoBytesStore.NO_PAGE;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -1157,6 +1159,8 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
+            Jvm.optionalSafepoint();
+
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
             try {
@@ -1169,14 +1173,22 @@ public class SingleChronicleQueueExcerpts {
                         state = TailerState.END_OF_CYCLE;
                     }
                 }
+                Jvm.optionalSafepoint();
+
                 if (tryAgain)
                     next = next0(includeMetaData);
 
+                Jvm.optionalSafepoint();
                 if (context.present(next)) {
-                    context.setStart(context.wire().bytes().readPosition() - 4);
+                    Bytes<?> bytes = context.wire().bytes();
+                    context.setStart(bytes.readPosition() - 4);
                     readingDocumentFound = true;
+                    address = bytes.addressForRead(bytes.readPosition(), 4);
+                    Jvm.optionalSafepoint();
                     return context;
                 }
+                Jvm.optionalSafepoint();
+
                 RollCycle rollCycle = queue.rollCycle();
                 if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
                     int firstCycle = queue.firstCycle();
@@ -1186,6 +1198,12 @@ public class SingleChronicleQueueExcerpts {
                     // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
                     // since we can't find an entry at current index, indicate that we're at the end of a cycle
                     state = TailerState.END_OF_CYCLE;
+                }
+                if (context.wire() == null) {
+                    address = NoBytesStore.NO_PAGE;
+                } else {
+                    Bytes<?> bytes = context.wire().bytes();
+                    address = bytes.addressForRead(bytes.readPosition(), 4);
                 }
             } catch (StreamCorruptedException e) {
                 throw new IllegalStateException(e);
@@ -1202,6 +1220,11 @@ public class SingleChronicleQueueExcerpts {
                 }
             }
             return net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
+        }
+
+        @Override
+        public boolean peekDocument() {
+            return UnsafeMemory.UNSAFE.getIntVolatile(null, address) > 0x0;
         }
 
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
@@ -1359,14 +1382,17 @@ public class SingleChronicleQueueExcerpts {
                     }
 
                 case META_DATA:
+                    Jvm.optionalSafepoint();
                     context.metaData(true);
                     break;
                 case DATA:
+                    Jvm.optionalSafepoint();
                     context.metaData(false);
                     break;
             }
 
             inACycleFound(bytes);
+            Jvm.optionalSafepoint();
             return true;
         }
 
@@ -1399,6 +1425,7 @@ public class SingleChronicleQueueExcerpts {
             wire().readAndSetLength(bytes.readPosition());
             long end = bytes.readLimit();
             context.closeReadPosition(end);
+            Jvm.optionalSafepoint();
         }
 
         private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException, StreamCorruptedException {

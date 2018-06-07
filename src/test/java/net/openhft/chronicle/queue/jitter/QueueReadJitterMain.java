@@ -41,8 +41,16 @@ public class QueueReadJitterMain {
         Thread reader = new Thread(() -> {
             try (ChronicleQueue q = createQueue(path)) {
                 ExcerptTailer tailer = q.createTailer().toEnd();
+                long time = System.currentTimeMillis();
                 while (running) {
                     Jvm.safepoint();
+                    if (!tailer.peekDocument()) {
+                        long now = System.currentTimeMillis();
+                        if (now != time)
+                            time = now;
+                        else
+                            continue;
+                    }
                     try (DocumentContext dc = tailer.readingDocument(false)) {
                         if (!dc.isPresent()) {
                             Jvm.safepoint();
@@ -98,6 +106,6 @@ public class QueueReadJitterMain {
     }
 
     protected SingleChronicleQueue createQueue(String path) {
-        return ChronicleQueueBuilder.single(path).testBlockSize().build();
+        return ChronicleQueueBuilder.single(path).blockSize(1 << 20).build();
     }
 }

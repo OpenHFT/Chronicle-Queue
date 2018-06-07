@@ -15,11 +15,10 @@ import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.locks.LockSupport;
 
 public class BenchmarkMain {
+    static volatile boolean running = true;
     static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 300); // seconds
     static String basePath = System.getProperty("path", OS.TMP);
-
-    static volatile long writeCount;
 
     public static void main(String[] args) {
         System.out.println(
@@ -33,6 +32,14 @@ public class BenchmarkMain {
         for (int size = 64; size <= 16 << 20; size *= 4) {
             benchmark(size);
         }
+    }
+
+    static volatile long readerLoopTime = 0;
+    static volatile long readerEndLoopTime = 0;
+    static int counter = 0;
+
+    static {
+        System.setProperty("jvm.safepoint.enabled", "true");
     }
 
     static void benchmark(int messageSize) {
@@ -54,27 +61,31 @@ public class BenchmarkMain {
         pretoucher.setDaemon(true);
         pretoucher.start();
 
+        Histogram loopTime = new Histogram();
+
         Thread reader = new Thread(() -> {
-            try (ChronicleQueue queue2 = createQueue(path)) {
+//            try (ChronicleQueue queue2 = createQueue(path))
+            ChronicleQueue queue2 = queue;
+            {
                 ExcerptTailer tailer = queue2.createTailer().toEnd();
-                Thread thread = Thread.currentThread();
-                while (!thread.isInterrupted()) {
+                long endLoop = System.nanoTime();
+                while (running) {
+                    loopTime.sample(System.nanoTime() - endLoop);
                     Jvm.safepoint();
-                    try (DocumentContext dc = tailer.readingDocument()) {
-                        Jvm.safepoint();
-                        if (!dc.isPresent()) {
-                            continue;
-                        }
-                        long transport = System.nanoTime();
-                        Jvm.safepoint();
-                        Wire wire = dc.wire();
-                        Bytes<?> bytes = wire.bytes();
-                        long start = readMessage(bytes);
-                        long end = System.nanoTime();
-                        transportTime.sample(transport - start);
-                        readTime.sample(end - transport);
+
+//                    readerLoopTime = System.nanoTime();
+//                    if (readerLoopTime - readerEndLoopTime > 1000)
+//                        System.out.println("r " + (readerLoopTime - readerEndLoopTime));
+                    try {
+                        runInner(transportTime, readTime, tailer);
+                        runInner(transportTime, readTime, tailer);
+                        runInner(transportTime, readTime, tailer);
+                        runInner(transportTime, readTime, tailer);
+                    } finally {
+//                        readerEndLoopTime = System.nanoTime();
                     }
                     Jvm.safepoint();
+                    endLoop = System.nanoTime();
                 }
             }
         });
@@ -83,32 +94,10 @@ public class BenchmarkMain {
         long next = System.nanoTime();
         long end = (long) (next + runtime * 1e9);
 
-//        Thread writer = Thread.currentThread();
-
-/*
-        Thread monitor = new Thread(() -> {
-            Thread thread = Thread.currentThread();
-            while (!thread.isInterrupted()) {
-                long diff = writeTime.totalCount() - readTime.totalCount();
-                if (diff > 100) {
-                    System.out.println("diff=" + diff);
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("Reader: profile of the thread");
-                    Jvm.trimStackTrace(sb, reader.getStackTrace());
-                    System.out.println(sb);
-                    Jvm.pause(50);
-                }
-                Jvm.pause(5);
-            }
-        });
-        monitor.setDaemon(true);
-        monitor.start();
-*/
-
         ExcerptAppender appender = queue.acquireAppender();
         while (end > System.nanoTime()) {
             long start = System.nanoTime();
-            try (DocumentContext dc = appender.writingDocument()) {
+            try (DocumentContext dc = appender.writingDocument(false)) {
                 writeMessage(dc.wire(), messageSize);
             }
             long written = System.nanoTime();
@@ -117,8 +106,11 @@ public class BenchmarkMain {
             writeTime.sample(time);
 
             long diff = writeTime.totalCount() - readTime.totalCount();
-            if (diff > 2) {
-                System.out.println("diff=" + diff);
+            Thread.yield();
+            if (diff >= 200) {
+//                long rlt = readerLoopTime;
+//                long delay = System.nanoTime() - rlt;
+                System.out.println("diff=" + diff /* +" delay= " + delay*/);
                 StringBuilder sb = new StringBuilder();
                 sb.append("Reader: profile of the thread");
                 Jvm.trimStackTrace(sb, reader.getStackTrace());
@@ -136,8 +128,10 @@ public class BenchmarkMain {
 
         pretoucher.interrupt();
         reader.interrupt();
+        running = false;
 //        monitor.interrupt();
 
+        System.out.println("Loop times " + loopTime.toMicrosFormat());
         System.out.println("messageSize " + messageSize);
         System.out.println("messages " + writeTime.totalCount());
         System.out.println("write histogram: " + writeTime.toMicrosFormat());
@@ -145,6 +139,36 @@ public class BenchmarkMain {
         System.out.println("read histogram: " + readTime.toMicrosFormat());
         IOTools.deleteDirWithFiles(path, 2);
         Jvm.pause(1000);
+    }
+
+    private static void runInner(Histogram transportTime, Histogram readTime, ExcerptTailer tailer) {
+        Jvm.safepoint();
+        if (tailer.peekDocument()) {
+            if (counter++ < 1000) {
+                Jvm.safepoint();
+                return;
+            }
+        }
+        if (counter > 0)
+            Jvm.safepoint();
+        else
+            Jvm.safepoint();
+        counter = 0;
+        try (DocumentContext dc = tailer.readingDocument(false)) {
+            Jvm.safepoint();
+            if (!dc.isPresent()) {
+                return;
+            }
+            long transport = System.nanoTime();
+            Jvm.safepoint();
+            Wire wire = dc.wire();
+            Bytes<?> bytes = wire.bytes();
+            long start = readMessage(bytes);
+            long end = System.nanoTime();
+            transportTime.sample(transport - start);
+            readTime.sample(end - transport);
+        }
+        Jvm.safepoint();
     }
 
     @NotNull

@@ -48,6 +48,13 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
+     * @return true if readingDocument should be called, false if most like it's not needed.
+     */
+    default boolean peekDocument() {
+        return true;
+    }
+
+    /**
      * @return if called while within the <code>try (tailer.readingDocument){ }</code> block, returns index of current reading document.
      * Otherwise, the next index to read.
      * Index includes the cycle and the sequence number in that cycle
