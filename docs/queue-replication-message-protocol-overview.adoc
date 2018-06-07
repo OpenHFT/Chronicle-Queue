@@ -1,5 +1,5 @@
 
-= Chronicle Queue Enterpise - TCP/IP Replication Protocol
+= Chronicle Queue Enterprise - TCP/IP Replication Protocol
 :toc:
 :toc-title: Contents
 :toclevels: 1
