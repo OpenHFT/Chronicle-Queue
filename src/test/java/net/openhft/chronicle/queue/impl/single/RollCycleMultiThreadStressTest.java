@@ -370,7 +370,7 @@ public class RollCycleMultiThreadStressTest {
             try (SingleChronicleQueue queue = queueBuilder(path).build()) {
                 ExcerptAppender appender = queue.acquireAppender();
                 System.out.println("Starting pretoucher");
-                while (!Thread.currentThread().isInterrupted()) {
+                while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
                     Jvm.pause(50);
                     appender.pretouch();
                 }
