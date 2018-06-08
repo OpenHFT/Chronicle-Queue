@@ -47,6 +47,7 @@ public class RollCycleMultiThreadStressTest {
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
         PRETOUCH = Boolean.getBoolean("pretouch");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
+        System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");
     }
 
     final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -106,7 +107,7 @@ public class RollCycleMultiThreadStressTest {
             results.add(executorServiceWrite.submit(writer));
         }
 
-        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + 1) + queueBuilder(path).timeoutMS();
+        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + 5) + queueBuilder(path).timeoutMS();
         long startTime = System.currentTimeMillis();
         final long giveUpWritingAt = startTime + maxWritingTime;
         long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
