@@ -279,7 +279,8 @@ public class RollCycleMultiThreadStressTest {
                                 if (lastRead + 1 != v) {
                                     System.out.println(rd.wire());
                                     String failureMessage = "Expected: " + (lastRead + 1) +
-                                            ", actual: " + v + ", pos: " + i + ", index: " + rd.index() +
+                                            ", actual: " + v + ", pos: " + i + ", index: " + Long
+                                            .toHexString(rd.index()) +
                                             ", cycle: " + tailer.cycle();
                                     if (lastTailerCycle != -1) {
                                         failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
