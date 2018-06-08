@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertTrue;
 
-public class PreloaderStressTest extends RollCycleMultiThreadStressTest {
+public class PretoucherStressTest extends RollCycleMultiThreadStressTest {
 
     @Test
     public void stress() {
@@ -38,7 +38,7 @@ public class PreloaderStressTest extends RollCycleMultiThreadStressTest {
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
 
-        final PreloaderThread preloader = new PreloaderThread(path);
+        final PretoucherThread preloader = new PretoucherThread(path);
         executorService.submit(preloader);
 
         {
@@ -141,12 +141,12 @@ public class PreloaderStressTest extends RollCycleMultiThreadStressTest {
         DirectoryUtils.deleteDir(path);
     }
 
-    class PreloaderThread implements Callable<Throwable> {
+    class PretoucherThread implements Callable<Throwable> {
 
         final File path;
         volatile Throwable exception;
 
-        PreloaderThread(File path) {
+        PretoucherThread(File path) {
             this.path = path;
         }
 
