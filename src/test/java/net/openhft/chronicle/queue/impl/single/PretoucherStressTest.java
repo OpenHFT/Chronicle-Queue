@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.threads.NamedThreadFactory;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -20,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 public class PretoucherStressTest extends RollCycleMultiThreadStressTest {
 
     @Test
+    @Ignore("same issue as RollCycleMultiThreadStressTest")
     public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
                 map(s -> new File(s, UUID.randomUUID().toString())).
