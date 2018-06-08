@@ -46,6 +46,7 @@ public class RollCycleMultiThreadStressTest {
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
         PRETOUCH = Boolean.getBoolean("pretouch");
+        System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
     }
 
     final SetTimeProvider timeProvider = new SetTimeProvider();
