@@ -377,7 +377,7 @@ public class RollCycleMultiThreadStressTest {
                     appender.pretouch();
                 }
             } catch (Throwable e) {
-                if (queue0 != null || queue0.isClosed())
+                if (queue0 != null && queue0.isClosed())
                     return null;
                 exception = e;
                 return e;
