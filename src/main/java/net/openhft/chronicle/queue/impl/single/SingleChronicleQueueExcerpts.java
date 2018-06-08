@@ -449,7 +449,14 @@ public class SingleChronicleQueueExcerpts {
                 }*/
 
                 long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
-                long seq2 = pos1 == 0 ? -1 : store.sequenceForPosition(this, pos1, true);
+                long seq2 =-1;
+                try {
+                      seq2 = store.sequenceForPosition(this, pos1, true);
+                } catch (Exception e) {
+                    if (e instanceof EOFException)
+                        // queue has rolled
+                        return true;
+                }
 
                 if (seq1 != seq2) {
 //                    System.out.println(queue.dump());
@@ -462,7 +469,7 @@ public class SingleChronicleQueueExcerpts {
                     throw new AssertionError(message);
                 }
 
-            } catch (IOException e) {
+            } catch (Exception e) {
                 if (e instanceof EOFException) {
                     Jvm.debug().on(getClass(), e);
                 } else {
