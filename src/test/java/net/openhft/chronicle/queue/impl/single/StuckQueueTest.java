@@ -34,7 +34,9 @@ public class StuckQueueTest {
 
     @Test
     public void test() throws FileNotFoundException {
-        assumeFalse(OS.isWindows());
+        // assume not working for some reason?
+        if (OS.isWindows())
+            return;
 
         DumpQueueMain.dump(tmpDir.toString());
 
