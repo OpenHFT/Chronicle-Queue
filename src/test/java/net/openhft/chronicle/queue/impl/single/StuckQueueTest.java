@@ -41,7 +41,7 @@ public class StuckQueueTest {
         // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
         assumeFalse(OS.isWindows());
 
-        Path templatePath = Paths.get(StuckQueueTest.class.getResource("stuck.queue.test/20180508-1249.cq4").getFile());
+        Path templatePath = Paths.get(StuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4").getFile());
         Path to = tmpDir.resolve(templatePath.getFileName());
         Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
 
