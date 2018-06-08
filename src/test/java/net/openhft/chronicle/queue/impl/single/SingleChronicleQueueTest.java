@@ -368,8 +368,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (DocumentContext documentContext = appender.writingDocument()) {
                     documentContext.wire().getValueOut().text("two");
                 }
-                try (DocumentContext documentContext = appender.writingDocument
-                        (true)) {
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
                     documentContext.wire().getValueOut().text("meta1");
                 }
 
@@ -377,12 +376,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     documentContext.wire().getValueOut().text("three");
                 }
 
-                try (DocumentContext documentContext = appender.writingDocument
-                        (true)) {
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
                     documentContext.wire().getValueOut().text("meta2");
                 }
-                try (DocumentContext documentContext = appender.writingDocument
-                        (true)) {
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
                     documentContext.wire().getValueOut().text("meta3");
                 }
                 try (DocumentContext documentContext = appender.writingDocument()) {
@@ -435,13 +432,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     Assert.assertEquals(false, documentContext2.isMetaData());
                     Assert.assertEquals("four", documentContext2.wire().getValueIn().text());
                 }
-
             }
 
-        }
+            {
+                ExcerptTailer tailer = q.createTailer();
 
-        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+                try (DocumentContext documentContext2 = tailer.readingDocument()) {
+                    Assert.assertEquals(0, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(false, documentContext2.isMetaData());
+                    Assert.assertEquals("one", documentContext2.wire().getValueIn().text());
+                }
 
+                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
+                    Assert.assertEquals(1, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(false, documentContext2.isMetaData());
+                    Assert.assertEquals("two", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
+                    Assert.assertEquals(2, toSeq(q, documentContext2.index()));
+                    Assert.assertEquals(false, documentContext2.isMetaData());
+                    Assert.assertEquals("three", documentContext2.wire().getValueIn().text());
+                }
+            }
         }
     }
 
