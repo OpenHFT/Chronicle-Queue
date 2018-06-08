@@ -40,8 +40,8 @@ public class PretoucherStressTest extends RollCycleMultiThreadStressTest {
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
 
-        final PretoucherThread preloader = new PretoucherThread(path);
-        executorService.submit(preloader);
+        final PretoucherThread pretoucherThread = new PretoucherThread(path);
+        executorService.submit(pretoucherThread);
 
         {
             final Reader reader = new Reader(path, expectedNumberOfMessages);
@@ -54,7 +54,7 @@ public class PretoucherStressTest extends RollCycleMultiThreadStressTest {
         }
 
         // TODO: dedupe with super
-        final long maxWritingTime = TimeUnit.SECONDS.toMillis(MAX_WRITING_TIME);
+        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + 1) + queueBuilder(path).timeoutMS();
         long startTime = System.currentTimeMillis();
         final long giveUpWritingAt = startTime + maxWritingTime;
         long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
@@ -78,8 +78,8 @@ public class PretoucherStressTest extends RollCycleMultiThreadStressTest {
                     }
                     throw new AssertionError("Reader is stuck");
                 });
-                if (preloader.exception != null)
-                    throw new AssertionError("Preloader encountered exception", preloader.exception);
+                if (pretoucherThread.exception != null)
+                    throw new AssertionError("Preloader encountered exception", pretoucherThread.exception);
                 nextCheckTime = System.currentTimeMillis() + 10_000L;
             }
             i++;
@@ -141,35 +141,5 @@ public class PretoucherStressTest extends RollCycleMultiThreadStressTest {
 
         System.out.println("Test complete");
         DirectoryUtils.deleteDir(path);
-    }
-
-    class PretoucherThread implements Callable<Throwable> {
-
-        final File path;
-        volatile Throwable exception;
-
-        PretoucherThread(File path) {
-            this.path = path;
-        }
-
-        @Override
-        public Throwable call() throws Exception {
-            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                    .testBlockSize()
-                    .timeProvider(timeProvider)
-                    .rollCycle(RollCycles.TEST_SECONDLY)
-                    .build()) {
-                ExcerptAppender appender = queue.acquireAppender();
-                System.out.println("Starting pretoucher");
-                while (!Thread.currentThread().isInterrupted()) {
-                    Jvm.pause(50);
-                    appender.pretouch();
-                }
-            } catch (Throwable e) {
-                exception = e;
-                return e;
-            }
-            return null;
-        }
     }
 }
