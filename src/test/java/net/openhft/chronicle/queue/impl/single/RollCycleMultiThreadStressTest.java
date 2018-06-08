@@ -367,7 +367,9 @@ public class RollCycleMultiThreadStressTest {
 
         @Override
         public Throwable call() throws Exception {
+            SingleChronicleQueue queue0 = null;
             try (SingleChronicleQueue queue = queueBuilder(path).build()) {
+                queue0 = queue;
                 ExcerptAppender appender = queue.acquireAppender();
                 System.out.println("Starting pretoucher");
                 while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
@@ -375,6 +377,8 @@ public class RollCycleMultiThreadStressTest {
                     appender.pretouch();
                 }
             } catch (Throwable e) {
+                if (queue0 != null || queue0.isClosed())
+                    return null;
                 exception = e;
                 return e;
             }
