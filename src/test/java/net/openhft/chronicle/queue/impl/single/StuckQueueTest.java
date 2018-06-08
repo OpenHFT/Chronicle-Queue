@@ -7,10 +7,17 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.FileNotFoundException;
-import java.nio.file.*;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import static org.junit.Assume.assumeFalse;
 
@@ -22,9 +29,6 @@ public class StuckQueueTest {
     public void setup() throws Exception {
         //noinspection ResultOfMethodCallIgnored
         tmpDir.toFile().mkdirs();
-        Path templatePath = Paths.get(StuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4").getFile());
-        Path to = tmpDir.resolve(templatePath.getFileName());
-        Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
     }
 
     @After
@@ -33,9 +37,13 @@ public class StuckQueueTest {
     }
 
     @Test
-    public void test() throws FileNotFoundException {
-        System.out.println("OS.isWindows()="+OS.isWindows()+" os.name="+System.getProperty("os.name"));
+    public void test() throws IOException {
+        // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
         assumeFalse(OS.isWindows());
+
+        Path templatePath = Paths.get(StuckQueueTest.class.getResource("stuck.queue.test/20180508-1249.cq4").getFile());
+        Path to = tmpDir.resolve(templatePath.getFileName());
+        Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
 
         DumpQueueMain.dump(tmpDir.toString());
 
