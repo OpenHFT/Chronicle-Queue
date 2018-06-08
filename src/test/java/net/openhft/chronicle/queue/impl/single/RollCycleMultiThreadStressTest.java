@@ -23,18 +23,18 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
-    private static final Logger LOG = LoggerFactory.getLogger(RollCycleMultiThreadStressTest.class);
-    private static final long SLEEP_PER_WRITE_NANOS;
-    private static final int TEST_TIME;
-    private static final int MAX_WRITING_TIME;
-    private static final int ROLL_EVERY_MS;
-    private static final int DELAY_READER_RANDOM_MS;
-    private static final int DELAY_WRITER_RANDOM_MS;
-    private static final int WRITE_ONE_THEN_WAIT_MS;
-    private static final int CORES;
-    private static final Random random;
-    private static final int NUMBER_OF_INTS;
-    private static final boolean PRETOUCH;
+    final Logger LOG = LoggerFactory.getLogger(getClass());
+    static final long SLEEP_PER_WRITE_NANOS;
+    static final int TEST_TIME;
+    static final int MAX_WRITING_TIME;
+    static final int ROLL_EVERY_MS;
+    static final int DELAY_READER_RANDOM_MS;
+    static final int DELAY_WRITER_RANDOM_MS;
+    static final int WRITE_ONE_THEN_WAIT_MS;
+    static final int CORES;
+    static final Random random;
+    static final int NUMBER_OF_INTS;
+    static final boolean PRETOUCH;
 
     static {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 50_000);
@@ -50,7 +50,7 @@ public class RollCycleMultiThreadStressTest {
         PRETOUCH = Boolean.getBoolean("pretouch");
     }
 
-    private final SetTimeProvider timeProvider = new SetTimeProvider();
+    final SetTimeProvider timeProvider = new SetTimeProvider();
 
     @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
@@ -209,7 +209,7 @@ public class RollCycleMultiThreadStressTest {
         DirectoryUtils.deleteDir(path);
     }
 
-    private boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
+    static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
         boolean allReadersComplete = true;
 
         int count = 0;
@@ -223,12 +223,12 @@ public class RollCycleMultiThreadStressTest {
         return allReadersComplete;
     }
 
-    private final class Reader implements Callable<Throwable> {
-        private final File path;
-        private final int expectedNumberOfMessages;
-        private volatile int lastRead = -1;
-        private volatile Throwable exception;
-        private int readSequenceAtLastProgressCheck = -1;
+    final class Reader implements Callable<Throwable> {
+        final File path;
+        final int expectedNumberOfMessages;
+        volatile int lastRead = -1;
+        volatile Throwable exception;
+        int readSequenceAtLastProgressCheck = -1;
 
         Reader(final File path, final int expectedNumberOfMessages) {
             this.path = path;
@@ -301,14 +301,14 @@ public class RollCycleMultiThreadStressTest {
         }
     }
 
-    private final class Writer implements Callable<Throwable> {
+    final class Writer implements Callable<Throwable> {
 
-        private final File path;
-        private final AtomicInteger wrote;
-        private final int expectedNumberOfMessages;
-        private volatile Throwable exception;
+        final File path;
+        final AtomicInteger wrote;
+        final int expectedNumberOfMessages;
+        volatile Throwable exception;
 
-        private Writer(final File path, final AtomicInteger wrote,
+        Writer(final File path, final AtomicInteger wrote,
                        final int expectedNumberOfMessages) {
             this.path = path;
             this.wrote = wrote;
@@ -334,7 +334,7 @@ public class RollCycleMultiThreadStressTest {
                         return null;
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 exception = e;
                 return e;
             }
