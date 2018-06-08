@@ -368,7 +368,8 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
-                final long headerNumber = store.sequenceForPosition(this, position, true);
+                final long headerNumber = (position == 0) ? -1 : store.sequenceForPosition(this, position,
+                        true);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
                 assert lazyIndexing || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
@@ -461,8 +462,12 @@ public class SingleChronicleQueueExcerpts {
                 }
 
             } catch (IOException e) {
-                Jvm.fatal().on(getClass(), e);
-                throw Jvm.rethrow(e);
+                if (e instanceof EOFException) {
+                    Jvm.debug().on(getClass(), e);
+                } else {
+                    Jvm.fatal().on(getClass(), e);
+                    throw Jvm.rethrow(e);
+                }
             }
             return true;
         }
