@@ -8,6 +8,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +53,16 @@ public class RollCycleMultiThreadStressTest {
 
     final SetTimeProvider timeProvider = new SetTimeProvider();
 
-//    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
+    @Ignore("run manually")
+    @Test
+    public void repeateStress() {
+        Jvm.setExceptionHandlers(null, null, null);
+        for (int i = 0; i < 100; i++) {
+            stress();
+        }
+    }
+
+    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
