@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -10,6 +11,8 @@ import org.junit.*;
 
 import java.io.FileNotFoundException;
 import java.nio.file.*;
+
+import static org.junit.Assume.assumeFalse;
 
 public class StuckQueueTest {
 
@@ -31,6 +34,7 @@ public class StuckQueueTest {
 
     @Test
     public void test() throws FileNotFoundException {
+        assumeFalse(OS.isWindows());
 
         DumpQueueMain.dump(tmpDir.toString());
 
