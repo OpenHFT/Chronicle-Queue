@@ -176,6 +176,9 @@ public class SingleChronicleQueueExcerpts {
             storePool.close();
         }
 
+        /**
+         * pretouch() has to be run on the same thread, as the thread that created the appender. If you want to use pretouch() in another thread, you must first create or have an appender that was created on this thread, and then use this appender to call the pretouch()
+         */
         @Override
         public void pretouch() {
             setCycle(queue.cycle());
