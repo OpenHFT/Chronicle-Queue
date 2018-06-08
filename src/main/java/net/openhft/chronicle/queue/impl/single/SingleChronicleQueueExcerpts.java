@@ -447,8 +447,9 @@ public class SingleChronicleQueueExcerpts {
                     System.err.println(message);
                     throw new AssertionError(message);
                 }*/
+
                 long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
-                long seq2 = store.sequenceForPosition(this, pos1, true);
+                long seq2 = pos1 == 0 ? -1 : store.sequenceForPosition(this, pos1, true);
 
                 if (seq1 != seq2) {
 //                    System.out.println(queue.dump());
