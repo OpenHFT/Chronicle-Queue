@@ -66,6 +66,7 @@ public class TSQueueLock implements QueueLock {
      */
     @Override
     public void acquireLock() {
+        closeCheck();
         long tid = Thread.currentThread().getId();
         try {
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
@@ -93,6 +94,7 @@ public class TSQueueLock implements QueueLock {
      */
     @Override
     public void waitForLock() {
+        closeCheck();
         if (isLockHeldByCurrentThread())
             return;
 
@@ -106,6 +108,10 @@ public class TSQueueLock implements QueueLock {
             Jvm.warn().on(getClass(), "Queue lock is still held after " + LOCK_WAIT_TIMEOUT
                     + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
             forceUnlock();
+        } catch (NullPointerException ex) {
+            if (!tableStore.isClosed())
+                throw ex;
+            throw new IllegalStateException("The table store is closed!" , ex);
         } finally {
             pauser.reset();
         }
@@ -117,6 +123,7 @@ public class TSQueueLock implements QueueLock {
      */
     @Override
     public void unlock() {
+        closeCheck();
         if (!isLockHeldByCurrentThread())
             throw new IllegalStateException("Can't unlock when lock is not held by this thread");
 
@@ -135,6 +142,12 @@ public class TSQueueLock implements QueueLock {
         long tid = Thread.currentThread().getId();
         Long lockHolderTid = lockHolderTidTL.get();
         return lockHolderTid != null && lockHolderTid == tid;
+    }
+
+    private void closeCheck() {
+        if (tableStore.isClosed()) {
+            throw new IllegalStateException("Underlying TableStore is already closed - was the Queue closed?");
+        }
     }
 
     private void forceUnlock() {
