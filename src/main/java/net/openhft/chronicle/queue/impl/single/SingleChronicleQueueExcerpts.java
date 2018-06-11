@@ -305,12 +305,13 @@ public class SingleChronicleQueueExcerpts {
 
             SingleChronicleQueue queue = this.queue;
 
-            if (this.store != null) {
-                storePool.release(this.store);
+            WireStore store = this.store;
+            if (store != null) {
+                storePool.release(store);
             }
 
             this.store = storePool.acquire(cycle, queue.epoch(), createIfAbsent);
-            closableResources.storeReference = store;
+            closableResources.storeReference = this.store;
             resetWires(queue);
 
             // only set the cycle after the wire is set.
@@ -332,7 +333,7 @@ public class SingleChronicleQueueExcerpts {
                 Wire oldw = this.wire;
                 this.wire = wireType.apply(store.bytes());
                 closableResources.wireReference = this.wire.bytes();
-
+                assert wire != oldw;
                 if (oldw != null) {
                     releaseWireResources(oldw);
                 }
@@ -341,7 +342,7 @@ public class SingleChronicleQueueExcerpts {
                 Wire old = this.wireForIndex;
                 this.wireForIndex = wireType.apply(store.bytes());
                 closableResources.wireForIndexReference = wireForIndex.bytes();
-
+                assert wire != old;
                 if (old != null) {
                     releaseWireResources(old);
                 }
@@ -1130,10 +1131,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void close() {
-            final Wire wire = context.wire();
-            if (wire != null) {
-                wire.bytes().release();
-            }
+            // the wire ref count will be released here by setting it to null
             context.wire(null);
             Wire w0 = wireForIndex;
             if (w0 != null)
@@ -1752,6 +1750,7 @@ public class SingleChronicleQueueExcerpts {
             closableResources.wireForIndexReference = wireForIndex.bytes();
             closableResources.wireReference = wire.bytes();
             assert headerNumberCheck((AbstractWire) wireForIndex);
+            assert wire != wireForIndexOld;
 
             if (wireForIndexOld != null) {
                 releaseWireResources(wireForIndexOld);
@@ -2237,6 +2236,8 @@ public class SingleChronicleQueueExcerpts {
             }
 
             public void wire(@Nullable AbstractWire wire) {
+                if (wire == this.wire)
+                    return;
 
                 AbstractWire oldWire = this.wire;
                 this.wire = wire;
