@@ -9,7 +9,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
 
     @Ignore("run manually")
     @Test
-    public void repeateStress() {
+    public void repeateStress() throws InterruptedException {
         Jvm.setExceptionHandlers(null, null, null);
         for (int i = 0; i < 100; i++) {
             stress();
@@ -17,7 +17,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
     }
     @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/492")
     @Test
-    public void stress() {
+    public void stress() throws InterruptedException {
         System.setProperty("pretouch", "true");
         super.stress();
     }
