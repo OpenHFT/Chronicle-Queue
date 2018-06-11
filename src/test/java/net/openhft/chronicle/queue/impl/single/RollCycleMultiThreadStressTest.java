@@ -48,6 +48,8 @@ public class RollCycleMultiThreadStressTest {
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
         PRETOUCH = Boolean.getBoolean("pretouch");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
+
+        System.setProperty("disableFastForwardHeaderNumber", "true");
         System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
     }
@@ -56,7 +58,7 @@ public class RollCycleMultiThreadStressTest {
 
     @Ignore("run manually")
     @Test
-    public void repeateStress() {
+    public void repeateStress() throws InterruptedException {
         //Jvm.setExceptionHandlers(null, null, null);
         for (int i = 0; i < 100; i++) {
             stress();
@@ -64,7 +66,7 @@ public class RollCycleMultiThreadStressTest {
     }
 
     @Test
-    public void stress() {
+    public void stress() throws InterruptedException {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
                 map(s -> new File(s, UUID.randomUUID().toString())).
                 orElse(DirectoryUtils.tempDir("rollCycleStress"));
@@ -191,9 +193,18 @@ public class RollCycleMultiThreadStressTest {
         assertTrue("Readers did not catch up",
                 areAllReadersComplete(expectedNumberOfMessages, readers));
 
-        executorServiceWrite.shutdown();
         executorServiceRead.shutdown();
+        executorServiceWrite.shutdown();
         executorServicePretouch.shutdown();
+
+        if (!executorServiceRead.awaitTermination(1, TimeUnit.SECONDS))
+            executorServiceRead.shutdownNow();
+
+        if (!executorServiceWrite.awaitTermination(1, TimeUnit.SECONDS))
+            executorServiceWrite.shutdownNow();
+
+        if (!executorServicePretouch.awaitTermination(1, TimeUnit.SECONDS))
+            executorServicePretouch.shutdownNow();
 
         results.forEach(f -> {
             try {
