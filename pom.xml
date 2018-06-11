@@ -251,15 +251,20 @@
         </plugins>
     </build>
 
-    <repositories><!-- added here for windows teamcity build so can grab all dependencies from chronicle nexus -->
-        <repository>
-            <id>chronicle-enterprise-release</id>
-            <url>http://nexus.chronicle.software/content/repositories/releases</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-    </repositories>
+    <profiles>
+        <profile>
+            <id>bundled-nexus-staging</id>
+            <repositories>
+                <repository>
+                    <id>chronicle-enterprise-release</id>
+                    <url>http://nexus.chronicle.software/content/repositories/releases</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
 
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
