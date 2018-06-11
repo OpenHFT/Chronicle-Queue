@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,7 +49,7 @@ public class RollCycleMultiThreadStressTest {
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
         System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");
 
-        System.setProperty("disableFastForwardHeaderNumber", "true");
+        //System.setProperty("disableFastForwardHeaderNumber", "true");
     }
 
     final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -64,14 +63,13 @@ public class RollCycleMultiThreadStressTest {
         }
     }
 
-    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
                 map(s -> new File(s, UUID.randomUUID().toString())).
                 orElse(DirectoryUtils.tempDir("rollCycleStress"));
 
-        System.out.printf("Queue dir: %s at %s%n", path.getAbsolutePath(), Instant.now());
+        //System.out.printf("Queue dir: %s at %s%n", path.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(new NamedThreadFactory("pretouch"));
@@ -83,10 +81,8 @@ public class RollCycleMultiThreadStressTest {
 
         System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
                 numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
-        System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
-                SLEEP_PER_WRITE_NANOS);
-        System.out.printf("Should take ~%dsec%n",
-                TimeUnit.NANOSECONDS.toSeconds(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / numWriters);
+        System.out.printf("Writing %d messages with %dns interval, should take ~%dsec%n", expectedNumberOfMessages,
+                SLEEP_PER_WRITE_NANOS, TimeUnit.NANOSECONDS.toSeconds(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / numWriters);
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
@@ -193,9 +189,9 @@ public class RollCycleMultiThreadStressTest {
         assertTrue("Readers did not catch up",
                 areAllReadersComplete(expectedNumberOfMessages, readers));
 
-        executorServiceWrite.shutdownNow();
-        executorServiceRead.shutdownNow();
-        executorServicePretouch.shutdownNow();
+        executorServiceWrite.shutdown();
+        executorServiceRead.shutdown();
+        executorServicePretouch.shutdown();
 
         results.forEach(f -> {
             try {
