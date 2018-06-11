@@ -251,6 +251,16 @@
         </plugins>
     </build>
 
+    <repositories><!-- added here for windows teamcity build so can grab all dependencies from chronicle nexus -->
+        <repository>
+            <id>chronicle-enterprise-release</id>
+            <url>http://nexus.chronicle.software/content/repositories/releases</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
+
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
