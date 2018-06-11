@@ -49,6 +49,8 @@ public class RollCycleMultiThreadStressTest {
         PRETOUCH = Boolean.getBoolean("pretouch");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
         System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");
+
+        System.setProperty("disableFastForwardHeaderNumber", "true");
     }
 
     final SetTimeProvider timeProvider = new SetTimeProvider();
