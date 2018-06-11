@@ -47,6 +47,8 @@ public enum StoreComponentReferenceHandler implements Closeable {
                 }
             }
         });
+
+        Runtime.getRuntime().addShutdownHook(new Thread(THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE::shutdown));
     }
 
     static ReferenceQueue<ExcerptAppender> appenderQueue() {

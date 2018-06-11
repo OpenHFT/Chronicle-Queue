@@ -37,7 +37,7 @@ public class RollCycleMultiThreadStressTest {
     static final boolean PRETOUCH;
 
     static {
-        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 50_000);
+        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
         DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
@@ -49,6 +49,7 @@ public class RollCycleMultiThreadStressTest {
         PRETOUCH = Boolean.getBoolean("pretouch");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
         System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
     }
 
     final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -56,13 +57,12 @@ public class RollCycleMultiThreadStressTest {
     @Ignore("run manually")
     @Test
     public void repeateStress() {
-        Jvm.setExceptionHandlers(null, null, null);
+        //Jvm.setExceptionHandlers(null, null, null);
         for (int i = 0; i < 100; i++) {
             stress();
         }
     }
 
-    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
@@ -191,9 +191,9 @@ public class RollCycleMultiThreadStressTest {
         assertTrue("Readers did not catch up",
                 areAllReadersComplete(expectedNumberOfMessages, readers));
 
-        executorServiceWrite.shutdownNow();
-        executorServiceRead.shutdownNow();
-        executorServicePretouch.shutdownNow();
+        executorServiceWrite.shutdown();
+        executorServiceRead.shutdown();
+        executorServicePretouch.shutdown();
 
         results.forEach(f -> {
             try {
