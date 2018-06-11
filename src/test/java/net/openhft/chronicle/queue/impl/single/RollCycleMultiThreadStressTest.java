@@ -37,7 +37,7 @@ public class RollCycleMultiThreadStressTest {
     static final boolean PRETOUCH;
 
     static {
-        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
+        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 40_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
         DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
@@ -276,11 +276,11 @@ public class RollCycleMultiThreadStressTest {
                 int lastQueueCycle = -1;
                 Jvm.pause(random.nextInt(DELAY_READER_RANDOM_MS));
                 while (lastRead != expectedNumberOfMessages - 1) {
-                    try (DocumentContext rd = tailer.readingDocument()) {
-                        if (rd.isPresent()) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (dc.isPresent()) {
                             int v = -1;
 
-                            final ValueIn valueIn = rd.wire().getValueIn();
+                            final ValueIn valueIn = dc.wire().getValueIn();
                             final long documentAcquireTimestamp = valueIn.int64();
                             if (documentAcquireTimestamp == 0L) {
                                 throw new AssertionError("No timestamp");
@@ -288,10 +288,10 @@ public class RollCycleMultiThreadStressTest {
                             for (int i = 0; i < NUMBER_OF_INTS; i++) {
                                 v = valueIn.int32();
                                 if (lastRead + 1 != v) {
-                                    System.out.println(rd.wire());
+                                    System.out.println(dc.wire());
                                     String failureMessage = "Expected: " + (lastRead + 1) +
                                             ", actual: " + v + ", pos: " + i + ", index: " + Long
-                                            .toHexString(rd.index()) +
+                                            .toHexString(dc.index()) +
                                             ", cycle: " + tailer.cycle();
                                     if (lastTailerCycle != -1) {
                                         failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
