@@ -61,11 +61,11 @@ header: !SCQStore {
 
 == Configuration File
 
-The host in a cluster are defined in a YAML configuration file. This configuration file below, has just two hosts, but there is no fixed limit to the number of hosts you could include, ultimately it is limited by your hardware resources.
+The hosts in a cluster are defined in a YAML configuration file. The configuration file shown below has two hosts, but there is no fixed limit to the number of hosts you could include; ultimately it is limited by your hardware resources.
 
-Each host is a running an instance of Chronicle. When using Chronicle Queue Enterprise Edition, these engines are likely to each contain a Chronicle queue. In this example below there are two hosts, one running on `localhost:8080`, and the other on `localhost:8081`. The hosts are on the same machine; in a real life example, these hosts would usually be on different machines.
+Each host runs an instance of Chronicle Queue. When using Chronicle Queue Enterprise Edition, these engines are likely to each contain a Chronicle queue. In this example there are two hosts, one running on `localhost:8080`, and the other on `localhost:8081`. The hosts are on the same machine; in a real life example, these hosts would usually be on different machines.
 
-NOTE: The examples given below perform queue replication using established interfaces that are based on the open source Chronicle Engine API.
+NOTE: The examples below perform queue replication using established interfaces that are based on the open source Chronicle Engine API.
 
 [source, yaml]
 ----
@@ -99,7 +99,7 @@ When adding a host, you must provide a unique ID for each host; we refer to this
   }
 ----
 
-It is important that this `hostId` is unique as it is used by Chronicle Engine clustering. For Queue replication, by default, the host with `hostID` of `1` is assumed to be the PRIMARY, and the other hostids are assumed to be the SECONDARYs.
+It is important that this `hostId` is unique, as it is used by Chronicle Engine clustering. For Queue replication, by default, the host with `hostID` of `1` is assumed to be the PRIMARY, and the other hostids are assumed to be the SECONDARYs.
 
 == Creating an instance of the `ChronicleQueueView`
 
@@ -128,13 +128,13 @@ ServerEndpoint serverEndpoint = new ServerEndpoint("localhost:8080", tree);
 
 The code above:
 
-- sets up Chronicle on port `localhost:8080`.
-- uses the configuration file shown. This configuration file should be stored at `config/etc/clusters.yaml`.
+- sets up Chronicle Queue on port `localhost:8080`.
+- uses the specified configuration file. This configuration file should be stored at `config/etc/clusters.yaml`.
 - configures an asset on the Chronicle Engine asset tree at `/the/uri` with a `leafRule`. This `leafRule` is setup to provide a `ChronicleQueueView` when asked for a `ChronicleQueue`. The `ChronicleQueueView` is an implementation of the `ChronicleQueue` interface.
 
-Assuming that both `host1` and `host2` instances of Chronicle Engine were run with the same java code above, then messages added to the chronicle queue on `host1` would be replicated to `host2`.
+Assuming that both the `host1` and `host2` instances of Chronicle Engine were run with the same java code above, then messages added to the Chronicle queue on `host1` would be replicated to `host2`.
 
-The interface of the `ChronicleQueueView`, is as follows:
+The interface of `ChronicleQueueView`, is as follows:
 
 [source, java]
 ----
@@ -189,8 +189,8 @@ public interface QueueView<T, M> extends TopicPublisher<T, M>, KeyedView {
 
 |=======
 |`Excerpt`| In Chronicle we refer to messages as excerpts.
-|`PRIMARY`   | The master of the messages aka `source`; messages are replicated from the PRIMARY to the SECONDARY.
-|`SECONDARY`    | The receiver of the messages aka `sink`; holds an real-time up-to-date copy of the PRIMARY's data.
+|`PRIMARY`   | The master of the messages; this is also known as `source`. Messages are replicated from the PRIMARY to the SECONDARY.
+|`SECONDARY`    | The receiver of the messages; this is also known as `sink`. Holds a real-time, up-to-date copy of the PRIMARY's data.
 |=======
 
 '''
