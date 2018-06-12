@@ -14,6 +14,7 @@ import java.util.function.LongSupplier;
  */
 class PretoucherState {
     private static final int HEAD_ROOM = 256 << 10;
+    @NotNull
     private final LongSupplier posSupplier;
     private int minHeadRoom;
     private long lastTouchedPage = 0,
@@ -22,11 +23,11 @@ class PretoucherState {
     private int lastBytesHashcode = -1;
     private long averageMove = 0;
 
-    public PretoucherState(LongSupplier posSupplier) {
+    public PretoucherState(@NotNull LongSupplier posSupplier) {
         this(posSupplier, HEAD_ROOM);
     }
 
-    public PretoucherState(LongSupplier posSupplier, int minHeadRoom) {
+    public PretoucherState(@NotNull LongSupplier posSupplier, int minHeadRoom) {
         this.posSupplier = posSupplier;
         this.minHeadRoom = minHeadRoom;
     }
@@ -36,12 +37,11 @@ class PretoucherState {
             return new File("none");
 
         MappedFile mappedFile = bytes.mappedFile();
-        if (mappedFile == null)
-            return new File("none");
+        assert (mappedFile != null);
 
         File file = mappedFile.file();
-        if (file == null)
-            return new File("none");
+        assert (file != null);
+
         return file;
     }
 

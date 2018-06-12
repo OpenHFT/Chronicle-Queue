@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.util.function.BooleanSupplier;
@@ -126,7 +127,7 @@ public class PretoucherStateTest {
         boolean first = true;
         private long last;
 
-        DummyPretoucherState(LongSupplier posSupplier, int headRoom, StringBuilder record, BooleanSupplier touched) {
+        DummyPretoucherState(@NotNull LongSupplier posSupplier, int headRoom, StringBuilder record, BooleanSupplier touched) {
             super(posSupplier, headRoom);
             this.record = record;
             this.touched = touched;
