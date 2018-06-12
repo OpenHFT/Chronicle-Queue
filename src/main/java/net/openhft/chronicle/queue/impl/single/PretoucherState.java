@@ -47,7 +47,18 @@ class PretoucherState {
 
     // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null
     public void pretouch(MappedBytes bytes) {
-        long pos = posSupplier.getAsLong();
+        long pos = Long.MIN_VALUE;
+        for (int i = 0; i < SingleChronicleQueueExcerpts.StoreAppender.REPEAT_WHILE_ROLLING; i++) {
+            try {
+                pos = posSupplier.getAsLong();
+                break;
+            } catch (NullPointerException npe) {
+                Jvm.warn().on(getClass(), "Encountered an NPE because the store was released by something else. Re-trying");
+                // in this case posSupplier is pointing to a store which has been released
+                // TODO: consolidate SingleChronicleQueueExcerpts.StoreAppender.pretouch with Pretoucher class
+                Jvm.pause(1);
+            }
+        }
         // don't retain the bytes object when it is head so keep the hashCode instead.
         // small risk of a duplicate hashCode.
         int pageSize = OS.pageSize();

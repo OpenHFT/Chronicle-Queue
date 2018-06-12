@@ -35,6 +35,8 @@ public class RollCycleMultiThreadStressTest {
     static final Random random;
     static final int NUMBER_OF_INTS;
     static final boolean PRETOUCH;
+    static final boolean READERS_READ_ONLY;
+    static final boolean DUMP_QUEUE;
 
     static {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 40_000);
@@ -47,6 +49,8 @@ public class RollCycleMultiThreadStressTest {
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
         PRETOUCH = Boolean.getBoolean("pretouch");
+        READERS_READ_ONLY = Boolean.getBoolean("read_only");
+        DUMP_QUEUE = Boolean.getBoolean("dump_queue");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
 
         System.setProperty("disableFastForwardHeaderNumber", "true");
@@ -58,7 +62,7 @@ public class RollCycleMultiThreadStressTest {
 
     @Ignore("run manually")
     @Test
-    public void repeateStress() throws InterruptedException {
+    public void repeatStress() throws InterruptedException {
         //Jvm.setExceptionHandlers(null, null, null);
         for (int i = 0; i < 100; i++) {
             stress();
@@ -269,7 +273,10 @@ public class RollCycleMultiThreadStressTest {
         @Override
         public Throwable call() {
 
-            try (final SingleChronicleQueue queue = queueBuilder(path).build()) {
+            SingleChronicleQueueBuilder builder = queueBuilder(path);
+            if (READERS_READ_ONLY)
+                builder.readOnly(true);
+            try (final SingleChronicleQueue queue = builder.build()) {
 
                 final ExcerptTailer tailer = queue.createTailer();
                 int lastTailerCycle = -1;
@@ -299,6 +306,8 @@ public class RollCycleMultiThreadStressTest {
                                                 "), queue cycle at last read: " + lastQueueCycle +
                                                 " (current: " + queue.cycle() + ")";
                                     }
+                                    if (DUMP_QUEUE)
+                                        DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
                                     throw new AssertionError(failureMessage);
                                 }
                             }

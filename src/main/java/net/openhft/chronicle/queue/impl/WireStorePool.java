@@ -90,6 +90,7 @@ public class WireStorePool {
                     /// this should never happen,
                     // this method is synchronized
                     // and this remove below, is only any use if the acquire method below that fails
+                    Jvm.warn().on(getClass(), "Logic failure - should never happen "+store);//xxxx
                     stores.remove(rollDetails);
             }
         }

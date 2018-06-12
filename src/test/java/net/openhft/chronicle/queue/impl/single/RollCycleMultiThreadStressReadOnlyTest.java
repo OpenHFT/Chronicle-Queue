@@ -4,7 +4,7 @@ import net.openhft.chronicle.core.Jvm;
 import org.junit.Ignore;
 import org.junit.Test;
 
-public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThreadStressTest {
+public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThreadStressTest {
 
     @Ignore("run manually")
     @Test
@@ -17,7 +17,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
 
     @Test
     public void stress() throws InterruptedException {
-        System.setProperty("pretouch", "true");
+        System.setProperty("read_only", "true");
         super.stress();
     }
 }

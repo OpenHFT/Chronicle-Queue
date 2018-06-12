@@ -66,7 +66,7 @@ public class SingleChronicleQueueStore implements WireStore {
     private LongValue lastAcknowledgedIndexReplicated;
 
     // The last index that has been sent
-    private LongValue lastIndexReplicated;
+    private final LongValue lastIndexReplicated;
     private int sourceId;
 
     @NotNull
