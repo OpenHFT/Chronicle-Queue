@@ -56,7 +56,7 @@ class PretoucherState {
                 Jvm.warn().on(getClass(), "Encountered an NPE because the store was released by something else. Re-trying");
                 // in this case posSupplier is pointing to a store which has been released
                 // TODO: consolidate SingleChronicleQueueExcerpts.StoreAppender.pretouch with Pretoucher class
-                Jvm.pause(1);
+                Thread.yield();
             }
         }
         // don't retain the bytes object when it is head so keep the hashCode instead.
