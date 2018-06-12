@@ -116,7 +116,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Deprecated // Should not be providing accessors to reference-counted objects
         @NotNull
-        WireStore store() {
+        public WireStore store() {
             if (store == null)
                 setCycle(cycle());
             return store;
@@ -681,10 +681,8 @@ public class SingleChronicleQueueExcerpts {
         /**
          * Write an EOF marker on the current cycle if it is about to roll. It would do this any way
          * if a new message was written, but this doesn't create a new cycle or add a message.
-         *
-         * Called by tests only
          */
-        void writeEndOfCycleIfRequired() {
+        public void writeEndOfCycleIfRequired() {
             if (wire != null && queue.cycle() != cycle) {
                 store.writeEOF(wire, timeoutMS());
             }
