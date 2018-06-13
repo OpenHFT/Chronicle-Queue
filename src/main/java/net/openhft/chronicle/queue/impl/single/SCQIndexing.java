@@ -423,7 +423,10 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end, String desc) {
-        Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " + fromKnownIndex + " to " + toIndex);
+        Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " +
+                fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
+                + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
+                (toIndex - fromKnownIndex));
         if (end > start + 250e3)
             Jvm.warn().on(getClass(), new Throwable("This is a profile stack trace, not an ERROR"));
     }
@@ -738,6 +741,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     public long lastSequenceNumber(@NotNull StoreRecovery recovery, @NotNull ExcerptContext ec)
             throws StreamCorruptedException {
+
+        long sequence = this.sequence.getSequence(writePosition.getVolatileValue());
+        if (sequence != Sequence.NOT_FOUND_RETRY)
+            return sequence;
+
         return sequenceForPosition(recovery, ec, Long.MAX_VALUE, false);
     }
 
