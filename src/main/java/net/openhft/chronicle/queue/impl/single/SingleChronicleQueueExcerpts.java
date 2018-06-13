@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.UnsafeMemory;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
-import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.wire.*;
@@ -37,7 +36,6 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
-import static java.lang.Boolean.getBoolean;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
@@ -70,9 +68,6 @@ public class SingleChronicleQueueExcerpts {
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
 
         static final int REPEAT_WHILE_ROLLING = 128;
-        private static final long PRETOUCHER_PREROLL_TIME_MS = 2_000L;
-        public static final boolean EARLY_ACQUIRE_NEXT_CYCLE = getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
-        private final TimeProvider pretouchTimeProvider;
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -83,8 +78,6 @@ public class SingleChronicleQueueExcerpts {
         private final WireStorePool storePool;
         @Nullable
         WireStore store;
-        private WireStore pretouchStore;
-        private int pretouchCycle;
         private int cycle = Integer.MIN_VALUE;
         @Nullable
         private Wire wire;
@@ -100,7 +93,7 @@ public class SingleChronicleQueueExcerpts {
         private long lastPosition;
         private int lastCycle;
         @Nullable
-        private PretoucherState pretoucher = null;
+        private Pretoucher pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
         StoreAppender(@NotNull SingleChronicleQueue queue, boolean progressOnContention, @NotNull WireStorePool storePool) {
@@ -111,12 +104,11 @@ public class SingleChronicleQueueExcerpts {
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
             headerWriteStrategy = progressOnContention ? new HeaderWriteStrategyDefer() : new HeaderWriteStrategyOriginal();
-            pretouchTimeProvider = () -> queue.time().currentTimeMillis() + PRETOUCHER_PREROLL_TIME_MS;
         }
 
         @Deprecated // Should not be providing accessors to reference-counted objects
         @NotNull
-        public WireStore store() {
+        WireStore store() {
             if (store == null)
                 setCycle(cycle());
             return store;
@@ -175,7 +167,9 @@ public class SingleChronicleQueueExcerpts {
                 w.bytes().release();
             }
 
-            releasePretouchStore();
+            if (pretoucher != null)
+                pretoucher.close();
+
             if (store != null) {
                 storePool.release(store);
             }
@@ -197,58 +191,14 @@ public class SingleChronicleQueueExcerpts {
             if (queue.isClosed())
                 throw new RuntimeException("Queue Closed");
             try {
-                int qCycle = queue.cycle();
-                setCycle(qCycle);
-
                 if (pretoucher == null)
-                    pretoucher = new PretoucherState(store()::writePosition);
+                    pretoucher = new Pretoucher(queue());
 
-                Wire wire = this.wire;
-                if (wire != null)
-                    pretoucher.pretouch((MappedBytes) wire.bytes());
-
-                if (EARLY_ACQUIRE_NEXT_CYCLE)
-                    earlyAcquireNextCycle(qCycle);
-
+                pretoucher.execute();
             } catch (Throwable e) {
                 Jvm.warn().on(getClass(), e);
                 Jvm.rethrow(e);
             }
-        }
-
-        /**
-         * used by the pretoucher to early acquire the next cycle file, but does NOT do the roll
-         *
-         * @param qCycle the current queue cycle*
-         */
-        private void earlyAcquireNextCycle(final int qCycle) {
-            if (pretouchStore != null && pretouchCycle == qCycle) {
-                releasePretouchStore();
-                return;
-            }
-
-            int pretouchCycle0 = queue.cycle(pretouchTimeProvider);
-
-            if (pretouchCycle0 == qCycle || pretouchCycle == pretouchCycle0)
-                return;
-
-            releasePretouchStore();
-            pretouchStore = queue.storeForCycle(pretouchCycle0, queue.epoch(), true);
-
-            pretouchCycle = pretouchCycle0;
-            pretoucher = null;
-            if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "Pretoucher ROLLING to next file=" +
-                        pretouchStore.file());
-        }
-
-        private void releasePretouchStore() {
-            WireStore pretouchStore = this.pretouchStore;
-            if (pretouchStore == null)
-                return;
-            queue.release(pretouchStore);
-            pretouchCycle = -1;
-            this.pretouchStore = null;
         }
 
         @Nullable
@@ -681,8 +631,9 @@ public class SingleChronicleQueueExcerpts {
         /**
          * Write an EOF marker on the current cycle if it is about to roll. It would do this any way
          * if a new message was written, but this doesn't create a new cycle or add a message.
+         * Only used by tests.
          */
-        public void writeEndOfCycleIfRequired() {
+        void writeEndOfCycleIfRequired() {
             if (wire != null && queue.cycle() != cycle) {
                 store.writeEOF(wire, timeoutMS());
             }
@@ -2128,8 +2079,9 @@ public class SingleChronicleQueueExcerpts {
             return moveToState.indexMoveCount;
         }
 
+        @Deprecated // Should not be providing accessors to reference-counted objects
         @NotNull
-        public WireStore store() {
+        WireStore store() {
             if (store == null)
                 setCycle(cycle());
             return store;

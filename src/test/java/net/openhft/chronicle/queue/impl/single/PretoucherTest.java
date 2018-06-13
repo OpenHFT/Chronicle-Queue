@@ -2,11 +2,9 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.NewChunkListener;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
@@ -22,7 +20,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class PretoucherTest {
-    private final File path = tempDir(PretoucherTest.class.getSimpleName());
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final List<Integer> capturedCycles = new ArrayList<>();
     private final CapturingChunkListener chunkListener = new CapturingChunkListener();
@@ -39,16 +36,19 @@ public class PretoucherTest {
 
     @Test
     public void shouldHandleCycleRoll() throws Exception {
-        try (final SingleChronicleQueue queue = createQueue(path, clock::get)) {
+        try (final SingleChronicleQueue queue = createQueue(tempDir("shouldHandleCycleRoll"), clock::get)) {
             final Pretoucher pretoucher = new Pretoucher(queue, chunkListener, capturedCycles::add);
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
+                    assertThat(capturedCycles.size(), is(i));
                     ctx.wire().write().int32(i);
                     pretoucher.execute();
                     ctx.wire().write().bytes(new byte[1024]);
                 }
+                assertThat(capturedCycles.size(), is(i + 1));
                 pretoucher.execute();
+                assertThat(capturedCycles.size(), is(i + 1));
                 clock.addAndGet(TimeUnit.SECONDS.toMillis(5L));
             });
 
@@ -57,9 +57,35 @@ public class PretoucherTest {
         }
     }
 
-    @After
-    public void deleteDir() throws Exception {
-        DirectoryUtils.deleteDir(path);
+    @Test
+    public void shouldHandleEarlyCycleRoll() throws Exception {
+        assert System.getProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle") == null;
+        assert System.getProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs") == null;
+        System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
+        System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100");
+        try (final SingleChronicleQueue queue = createQueue(tempDir("shouldHandleEarlyCycleRoll"), clock::get)) {
+            final Pretoucher pretoucher = new Pretoucher(queue, chunkListener, capturedCycles::add);
+
+            range(0, 10).forEach(i -> {
+                try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
+                    assertThat(capturedCycles.size(), is(i == 0 ? 0 : i + 1));
+                    ctx.wire().write().int32(i);
+                    pretoucher.execute();
+                    ctx.wire().write().bytes(new byte[1024]);
+                }
+                assertThat(capturedCycles.size(), is(i + 1));
+                clock.addAndGet(950);
+                pretoucher.execute();
+                clock.addAndGet(50);
+                assertThat(capturedCycles.size(), is(i + 2));
+            });
+
+            assertThat(capturedCycles.size(), is(11));
+            assertThat(chunkListener.chunkMap.isEmpty(), is(false));
+        } finally {
+            System.clearProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
+            System.clearProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs");
+        }
     }
 
     private static final class CapturingChunkListener implements NewChunkListener {

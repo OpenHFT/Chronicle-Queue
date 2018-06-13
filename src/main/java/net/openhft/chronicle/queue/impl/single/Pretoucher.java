@@ -2,8 +2,11 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.NewChunkListener;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.WireStore;
 
+import java.io.Closeable;
 import java.util.function.IntConsumer;
 
 /**
@@ -17,11 +20,14 @@ import java.util.function.IntConsumer;
  * Alternatively, the {@code shutdown()} method can be called to close the supplied queue and release any other resources.
  * Invocation of the {@code execute()} method after {@code shutdown()} has been called with cause an {@code IllegalStateException} to be thrown.
  */
-public final class Pretoucher {
+public final class Pretoucher implements Closeable {
+    private final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", 2_000L);
+    private final boolean EARLY_ACQUIRE_NEXT_CYCLE = Boolean.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
     private final SingleChronicleQueue queue;
     private final NewChunkListener chunkListener;
     private final IntConsumer cycleChangedListener;
     private final PretoucherState pretoucherState;
+    private final TimeProvider pretouchTimeProvider;
     private int currentCycle = Integer.MIN_VALUE;
     private WireStore currentCycleWireStore;
     private MappedBytes currentCycleMappedBytes;
@@ -39,6 +45,7 @@ public final class Pretoucher {
         this.cycleChangedListener = cycleChangedListener;
         queue.addCloseListener(this, Pretoucher::releaseResources);
         pretoucherState = new PretoucherState(this::getStoreWritePosition);
+        pretouchTimeProvider = () -> queue.time().currentTimeMillis() + (EARLY_ACQUIRE_NEXT_CYCLE ? PRETOUCHER_PREROLL_TIME_MS : 0);
     }
 
     public void execute() {
@@ -50,17 +57,27 @@ public final class Pretoucher {
         queue.close();
     }
 
+    /**
+     * used by the pretoucher to acquire the next cycle file, but does NOT do the roll. If configured,
+     * we acquire the cycle file early
+     */
     private void assignCurrentCycle() {
-        if (queue.cycle() != currentCycle) {
+        final int qCycle = queue.cycle(pretouchTimeProvider);
+        if (qCycle != currentCycle) {
             releaseResources();
 
-            currentCycleWireStore = queue.storeForCycle(queue.cycle(), queue.epoch(), true);
+            // TODO: add a parameter to this so we don't write EOF in existing file (when rolling early)
+            currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), true);
             currentCycleMappedBytes = currentCycleWireStore.bytes();
-            currentCycle = queue.cycle();
+            currentCycle = qCycle;
             if (chunkListener != null)
                 currentCycleMappedBytes.setNewChunkListener(chunkListener);
 
-            cycleChangedListener.accept(queue.cycle());
+            cycleChangedListener.accept(qCycle);
+
+            if (EARLY_ACQUIRE_NEXT_CYCLE)
+                if (Jvm.isDebugEnabled(getClass()))
+                    Jvm.debug().on(getClass(), "Pretoucher ROLLING early to next file=" + currentCycleWireStore.file());
         }
     }
 
@@ -71,9 +88,16 @@ public final class Pretoucher {
     private void releaseResources() {
         if (currentCycleWireStore != null) {
             queue.release(currentCycleWireStore);
+            currentCycleWireStore = null;
         }
         if (currentCycleMappedBytes != null) {
             currentCycleMappedBytes.close();
+            currentCycleMappedBytes = null;
         }
+    }
+
+    @Override
+    public void close() {
+        releaseResources();
     }
 }
