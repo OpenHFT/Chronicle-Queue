@@ -414,14 +414,18 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long end = System.nanoTime();
         if (end > start + 50e3) {
             printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
+        } else if (fromKnownIndex > 0x40000000000L) {
+            Jvm.warn().on(getClass(),
+                    "Unexpectedly high fromKnownIndex " + fromKnownIndex + " to " + toIndex,
+                    new Throwable("This is a profile stack trace, not an ERROR"));
         }
         return scanResult;
     }
 
     private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end, String desc) {
         Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " + fromKnownIndex + " to " + toIndex);
-//        if (end > start + 250e3)
-//            Jvm.warn().on(getClass(), new Throwable("This is a profile stack trace, not an ERROR"));
+        if (end > start + 250e3)
+            Jvm.warn().on(getClass(), new Throwable("This is a profile stack trace, not an ERROR"));
     }
 
     @NotNull

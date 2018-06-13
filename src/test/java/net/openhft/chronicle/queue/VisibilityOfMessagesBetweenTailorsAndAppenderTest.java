@@ -26,7 +26,10 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
     @Test
     public void test() throws InterruptedException, ExecutionException {
 
-        SingleChronicleQueue x = SingleChronicleQueueBuilder.binary(getTmpDir()).build();
+        SingleChronicleQueue x = SingleChronicleQueueBuilder
+                .binary(getTmpDir())
+                .rollCycle(RollCycles.MINUTELY)
+                .build();
 
         ExecutorService e1 = Executors.newSingleThreadExecutor();
         e1.submit(() -> {
