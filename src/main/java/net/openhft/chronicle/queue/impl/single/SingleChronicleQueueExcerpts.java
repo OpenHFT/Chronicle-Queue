@@ -1721,7 +1721,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public ExcerptTailer toEnd() {
             if (direction.equals(TailerDirection.BACKWARD))
-                return origionalToEnd();
+                return originalToEnd();
 
             return optimizedToEnd();
         }
@@ -1758,7 +1758,7 @@ public class SingleChronicleQueueExcerpts {
                 // fixes #378
                 if (sequenceNumber == -1L) {
                     // nothing has been written yet, so point to start of cycle
-                    return origionalToEnd();
+                    return originalToEnd();
                 }
 
                 if (Wires.isEndOfFile(wire().bytes().readInt(wire().bytes().readPosition()))) {
@@ -1777,7 +1777,7 @@ public class SingleChronicleQueueExcerpts {
 
         @NotNull
 
-        public ExcerptTailer origionalToEnd() {
+        public ExcerptTailer originalToEnd() {
             long index = approximateLastIndex();
 
             if (index == Long.MIN_VALUE) {

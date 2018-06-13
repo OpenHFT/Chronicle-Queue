@@ -414,7 +414,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long end = System.nanoTime();
         if (end > start + 50e3) {
             printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
-        } else if (fromKnownIndex > 0x40000000000L) {
+        } else if (fromKnownIndex > 0x284d34000000000L) {
             Jvm.warn().on(getClass(),
                     "Unexpectedly high " + TimeUnit.NANOSECONDS.toMicros(end - start) + "us " +
                             "fromKnownIndex 0x" + Long
@@ -754,7 +754,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
                 long address = writePosition.getVolatileValue();
                 if (address == 0)
-                    break;
+                    return -1;
                 long sequence = sequence1.getSequence(address);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
@@ -781,6 +781,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             for (int i = 0; i < 128; i++) {
 
                 long endAddress = writePosition.getVolatileValue();
+                if (endAddress == 0)
+                    return -1;
                 long sequence = sequence1.getSequence(endAddress);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
