@@ -409,6 +409,26 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                                   final long toIndex,
                                   final long fromKnownIndex,
                                   final long knownAddress) {
+        long start = System.nanoTime();
+        ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
+        long end = System.nanoTime();
+        if (end > start + 50e3) {
+            printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
+        }
+        return scanResult;
+    }
+
+    private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end, String desc) {
+        Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " + fromKnownIndex + " to " + toIndex);
+//        if (end > start + 250e3)
+//            Jvm.warn().on(getClass(), new Throwable("This is a profile stack trace, not an ERROR"));
+    }
+
+    @NotNull
+    private ScanResult linearScan0(@NotNull final Wire wire,
+                                   final long toIndex,
+                                   final long fromKnownIndex,
+                                   final long knownAddress) {
         this.linearScanCount++;
         @NotNull final Bytes<?> bytes = wire.bytes();
 
@@ -446,6 +466,20 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
+        long start = System.nanoTime();
+        long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
+        long end = System.nanoTime();
+        if (end > start + 50e3) {
+            printLinearScanTime(toPosition, startAddress, start, end, "linearSCan by position");
+        }
+        return index;
+    }
+
+    long linearScanByPosition0(@NotNull final Wire wire,
+                               final long toPosition,
+                               final long indexOfNext,
+                               final long startAddress,
+                               boolean inclusive) throws EOFException {
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
 

@@ -217,4 +217,14 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     B progressOnContention(boolean progressOnContention);
 
     CycleCalculator cycleCalculator();
+
+    /**
+     * Hold a strong reference to any appender instead of a weak one which prevents GC if the thread and queue exists.
+     *
+     * @param strongAppenders use strong references if true, use weak references is false.
+     * @return this builder.
+     */
+    B strongAppenders(boolean strongAppenders);
+
+    boolean strongAppenders();
 }

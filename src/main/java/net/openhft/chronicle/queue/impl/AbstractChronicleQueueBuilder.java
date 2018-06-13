@@ -85,6 +85,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private boolean readOnly = false;
     private boolean rollCycleSet = false;
     private boolean progressOnContention = false;
+    private boolean strongAppenders = false;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -430,6 +431,17 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
                 rollCycle = rc;
             }
         });
+    }
+
+    @Override
+    public B strongAppenders(boolean strongAppenders) {
+        this.strongAppenders = strongAppenders;
+        return (B) this;
+    }
+
+    @Override
+    public boolean strongAppenders() {
+        return strongAppenders;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
