@@ -742,9 +742,12 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     public long lastSequenceNumber(@NotNull StoreRecovery recovery, @NotNull ExcerptContext ec)
             throws StreamCorruptedException {
 
-        long sequence = this.sequence.getSequence(writePosition.getVolatileValue());
-        if (sequence != Sequence.NOT_FOUND_RETRY)
-            return sequence;
+        Sequence sequence1 = this.sequence;
+        if (sequence1 != null) {
+            long sequence = sequence1.getSequence(writePosition.getVolatileValue());
+            if (sequence != Sequence.NOT_FOUND_RETRY)
+                return sequence;
+        }
 
         return sequenceForPosition(recovery, ec, Long.MAX_VALUE, false);
     }
