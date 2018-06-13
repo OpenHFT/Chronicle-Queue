@@ -84,4 +84,5 @@ public interface WireStore extends CommonStore {
 
     ScanResult linearScanTo(long index, long knownIndex, ExcerptContext ec, long knownAddress);
 
+    long moveToEndForRead(@NotNull Wire w);
 }

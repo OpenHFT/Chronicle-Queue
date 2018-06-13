@@ -1720,6 +1720,64 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
+            if (direction.equals(TailerDirection.BACKWARD))
+                return origionalToEnd();
+
+            return optimizedToEnd();
+        }
+
+        @NotNull
+        private ExcerptTailer optimizedToEnd() {
+            RollCycle rollCycle = queue.rollCycle();
+            final int lastCycle = queue.lastCycle();
+            try {
+                if (lastCycle == Integer.MIN_VALUE) {
+                    if (state() == TailerState.CYCLE_NOT_FOUND)
+                        state = UNINITIALISED;
+                    return this;
+                }
+
+                final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
+                this.setCycle(lastCycle);
+                if (wireStore == null)
+                    throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
+
+                if (store != null)
+                    queue.release(store);
+
+                if (this.store != wireStore) {
+                    this.store = wireStore;
+                    closableResources.storeReference = wireStore;
+                    resetWires();
+                }
+                // give the position of the last entry and
+                // flag we want to count it even though we don't know if it will be meta data or not.
+
+                long sequenceNumber = store.moveToEndForRead(wire());
+
+                // fixes #378
+                if (sequenceNumber == -1L) {
+                    // nothing has been written yet, so point to start of cycle
+                    return origionalToEnd();
+                }
+
+                if (Wires.isEndOfFile(wire().bytes().readInt(wire().bytes().readPosition()))) {
+                    state = END_OF_CYCLE;
+                } else
+                    state = FOUND_CYCLE;
+
+                index = rollCycle.toIndex(lastCycle, sequenceNumber);
+
+            } catch (@NotNull UnrecoverableTimeoutException e) {
+                throw new IllegalStateException(e);
+            }
+
+            return this;
+        }
+
+        @NotNull
+
+        public ExcerptTailer origionalToEnd() {
             long index = approximateLastIndex();
 
             if (index == Long.MIN_VALUE) {
@@ -1767,8 +1825,8 @@ public class SingleChronicleQueueExcerpts {
             }
 
             return this;
-        }
 
+        }
         @Override
         public TailerDirection direction() {
             return direction;

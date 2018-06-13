@@ -750,9 +750,18 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
         Sequence sequence1 = this.sequence;
         if (sequence1 != null) {
-            long sequence = sequence1.getSequence(writePosition.getVolatileValue());
-            if (sequence != Sequence.NOT_FOUND_RETRY)
+            for (int i = 0; i < 128; i++) {
+
+                long address = writePosition.getVolatileValue();
+                if (address == 0)
+                    break;
+                long sequence = sequence1.getSequence(address);
+                if (sequence == Sequence.NOT_FOUND_RETRY)
+                    continue;
+                if (sequence == Sequence.NOT_FOUND)
+                   break;
                 return sequence;
+            }
         }
 
         return sequenceForPosition(recovery, ec, Long.MAX_VALUE, false);
@@ -764,6 +773,39 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     int indexSpacing() {
         return indexSpacing;
+    }
+
+    long moveToEnd(final Wire wire) {
+        Sequence sequence1 = this.sequence;
+        if (sequence1 != null) {
+            for (int i = 0; i < 128; i++) {
+
+                long endAddress = writePosition.getVolatileValue();
+                long sequence = sequence1.getSequence(endAddress);
+                if (sequence == Sequence.NOT_FOUND_RETRY)
+                    continue;
+                if (sequence == Sequence.NOT_FOUND)
+                    return -1;
+
+                Bytes<?> bytes = wire.bytes();
+
+                bytes.readPosition(endAddress);
+
+                for (; ; ) {
+                    int header = bytes.readInt(endAddress);
+                    if (header == 0 || Wires.isNotComplete(header))
+                        return sequence;
+
+                    int len = Wires.lengthOf(header) + 4;
+
+                    bytes.readSkip(len);
+                    endAddress += len;
+                    sequence += 1;
+
+                }
+            }
+        }
+        return -1;
     }
 
     enum IndexingFields implements WireKey {
