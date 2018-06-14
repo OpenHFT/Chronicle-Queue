@@ -500,14 +500,23 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     long linearScanByPosition0(@NotNull final Wire wire,
                                final long toPosition,
-                               final long indexOfNext,
-                               final long startAddress,
+                               long indexOfNext,
+                               long startAddress,
                                boolean inclusive) throws EOFException {
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
+        long i;
+        // optimized if the `toPosition` is the writePosition
+        long lastAddress = writePosition.getVolatileValue();
+        long lastIndex = this.sequence.getSequence(lastAddress);
+        if (lastAddress > 0 && toPosition == lastAddress) {
+            bytes.readPositionUnlimited(toPosition);
+            i = lastIndex-1;
+        } else {
+            bytes.readPositionUnlimited(startAddress);
+            i = indexOfNext - 1;
+        }
 
-        bytes.readPositionUnlimited(startAddress);
-        long i = indexOfNext - 1;
         while (bytes.readPosition() <= toPosition) {
             WireIn.HeaderType headerType;
             try {
@@ -593,7 +602,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     continue;
 
                 long posN = indexValues.getVolatileValueAt(0);
-                assert posN >= 0;
+                assert posN >= 0;                                      
                 if (posN > position)
                     continue;
 

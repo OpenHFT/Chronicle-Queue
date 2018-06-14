@@ -28,21 +28,11 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author Rob Austin.
  */
-@RunWith(Parameterized.class)
+
 public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
-    private final boolean lazyIndexing;
+    private final boolean lazyIndexing = false;
 
-    public RollingChronicleQueueTest(boolean lazyIndexing) {
-        this.lazyIndexing = lazyIndexing;
-    }
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {false},
-                {true}
-        });
-    }
 
     @Test
     public void testCountExcerptsWhenTheCycleIsRolled() {

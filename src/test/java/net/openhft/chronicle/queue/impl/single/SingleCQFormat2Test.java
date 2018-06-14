@@ -47,7 +47,7 @@ import static org.junit.Assert.*;
 /*
  * Created by Peter Lawrey on 05/03/2016.
  */
-@RunWith(Parameterized.class)
+
 public class SingleCQFormat2Test {
 
     static {
@@ -55,21 +55,12 @@ public class SingleCQFormat2Test {
         SingleChronicleQueueBuilder.init();
     }
 
-    private final boolean lazyIndexing;
+    private final boolean lazyIndexing =false;
     private int appendMode;
     private ThreadDump threadDump;
 
-    public SingleCQFormat2Test(String testType, boolean lazyIndexing) {
-        this.lazyIndexing = lazyIndexing;
-    }
 
-    @Parameterized.Parameters(name = "{0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {"eager", false},
-                {"lazy", true}
-        });
-    }
+
 
     private static void assertHexEquals(long a, long b) {
         if (a != b)
