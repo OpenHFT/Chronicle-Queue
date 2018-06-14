@@ -194,27 +194,5 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
 
     B readOnly(boolean readOnly);
 
-    boolean progressOnContention();
-
-    /**
-     * Setting this to true enables new functionality whereby opening the DocumentContext to write to a chronicle
-     * will make only one (very cheap) attempt to grab the header so as to lock the queue for appending. If this
-     * attempt fails then the client code will be given a buffer to write into, and on close of the DocumentContext,
-     * we grab the header (skipping forward as necessary, and CASing the header), and then cheaply copy the
-     * contents of the buffer into the queue's Wire.
-     * Setting this will likely improve throughput if
-     * <ul>
-     * <li>you have multiple concurrent appenders, writing relatively infrequently, and</li>
-     * <li>the appenders are holding the writingContext open for a long time (e.g. large objects
-     * that are slow to serialise)</li>
-     * </ul>
-     * Setting this true means that there is no longer a guarantee of ordering provided by the try block around the
-     * DocumentContext i.e. 2 concurrent appenders can race in the DocumentContext.close.
-     *
-     * @param progressOnContention leave false (default) for existing behaviour
-     * @return this
-     */
-    B progressOnContention(boolean progressOnContention);
-
     CycleCalculator cycleCalculator();
 }

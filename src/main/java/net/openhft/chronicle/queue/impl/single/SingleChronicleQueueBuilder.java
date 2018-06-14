@@ -148,7 +148,6 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
                 queue.epoch(),
                 queue.indexCount(),
                 queue.indexSpacing(),
-                queue.recoverySupplier().apply(queue.wireType()),
                 queue.deltaCheckpointInterval(),
                 queue.sourceId());
 
@@ -355,17 +354,13 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return super.rollTime(time, ZoneId.of("UTC"));
     }
 
-    @Override
-    public SingleChronicleQueueBuilder<S> progressOnContention(boolean progressOnContention) {
-        return super.progressOnContention(progressOnContention);
-    }
-
+    @NotNull
     protected QueueLock queueLock() {
-        return isQueueReplicationAvailable() && !readOnly() ? createTableStoreLock() : new NoopQueueLock();
+        return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(path(), pauserSupplier()) : new NoopQueueLock();
     }
 
     @NotNull
-    private TSQueueLock createTableStoreLock() {
-        return new TSQueueLock(path(), pauserSupplier());
+    protected WriteLock writeLock() {
+        return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(path(), pauserSupplier());
     }
 }

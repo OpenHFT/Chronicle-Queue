@@ -24,22 +24,11 @@ import java.util.concurrent.locks.LockSupport;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
-@RunWith(Parameterized.class)
 public final class DocumentOrderingTest {
     private static final RollCycles ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final AtomicInteger counter = new AtomicInteger(0);
-    private final boolean progressOnContention;
-
-    public DocumentOrderingTest(final String testType, final boolean progressOnContention) {
-        this.progressOnContention = progressOnContention;
-    }
-
-    @Parameterized.Parameters(name = "{0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[]{"progressOnContention", true}, new Object[]{"waitOnContention", false});
-    }
 
     private static void expectValue(final int expectedValue, final ExcerptTailer tailer) {
         try (final DocumentContext documentContext = tailer.readingDocument()) {
@@ -48,16 +37,11 @@ public final class DocumentOrderingTest {
         }
     }
 
-    @Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
+    //@Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws Exception {
         try (final SingleChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
-            Assume.assumeFalse(
-                    "ordering/atomicity is not guaranteed when using progressOnContention = true," +
-                            "as multiple threads can be concurrently executing within a queue's " +
-                            "document context when the queue head is contented",
-                    progressOnContention);
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             // write initial document
@@ -91,11 +75,11 @@ public final class DocumentOrderingTest {
     }
 
     @Test
+    @Ignore("write lock prevents writing")
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws Exception {
         // as below, but don't actually close the initial context
         try (final SingleChronicleQueue queue =
-                     builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).
-                             progressOnContention(progressOnContention).build()) {
+                     builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final Future<RecordInfo> otherDocumentWriter;
@@ -118,12 +102,6 @@ public final class DocumentOrderingTest {
 
     @Test
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws Exception {
-
-        Assume.assumeFalse(
-                "ordering/atomicity is not guaranteed when using progressOnContention = true," +
-                        "as multiple threads can be concurrently executing within a queue's " +
-                        "document context when the queue head is contented",
-                progressOnContention);
         final File dir = DirectoryUtils.tempDir("document-ordering");
         // must be different instances of queue to work around synchronization on acquireStore()
         try (final SingleChronicleQueue queue =
@@ -255,7 +233,6 @@ public final class DocumentOrderingTest {
     private SingleChronicleQueueBuilder builder(final File dir, final long timeoutMS) {
         return SingleChronicleQueueBuilder.binary(dir).
                 testBlockSize().rollCycle(ROLL_CYCLE).
-                progressOnContention(progressOnContention).
                 timeProvider(clock::get).timeoutMS(timeoutMS);
     }
 

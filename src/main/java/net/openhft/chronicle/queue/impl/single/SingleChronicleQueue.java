@@ -107,7 +107,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final DirectoryListing directoryListing;
     @NotNull
     private final QueueLock queueLock;
-    private final boolean progressOnContention;
+    @NotNull
+    private final WriteLock writeLock;
     protected int sourceId;
     long firstAndLastCycleTime = 0;
     int firstAndLastRetry = 0;
@@ -159,8 +160,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         this.directoryListing.refresh();
 
         this.queueLock = builder.queueLock();
+        this.writeLock = builder.writeLock();
         addCloseListener(directoryListing, DirectoryListing::close);
         addCloseListener(queueLock, QueueLock::close);
+        addCloseListener(writeLock, WriteLock::close);
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
             try {
@@ -175,7 +178,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
-        progressOnContention = builder.progressOnContention();
     }
 
     @NotNull
@@ -351,7 +353,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     protected ExcerptAppender newAppender() {
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
-        return new StoreAppender(this, progressOnContention, newPool);
+        return new StoreAppender(this, writeLock, newPool);
     }
 
     StoreFileListener storeFileListener() {
@@ -785,15 +787,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (!dateValue.pathExists && createIfAbsent && !path.exists()) {
                     parentFile.mkdirs();
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
-                    // before we create a new file, we need to ensure previous file has got EOF mark
-                    // but only if we are not in the process of normal rolling
-                    QueueFiles.writeEOFIfNeeded(path.toPath(), wireType(), blockSize(), timeoutMS, pauserSupplier.get());
                 }
                 dateValue.pathExists = true;
 
                 final MappedBytes mappedBytes = mappedFileCache.get(path);
-
-                directoryListing.onFileCreated(path, cycle);
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
                     Jvm.warn().on(getClass(), new Exception("Creating cycle whcih is not the current cycle"));
@@ -831,6 +828,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                         throw new StreamCorruptedException("The first message should be the header, was " + name);
                     }
                 }
+                // do not allow tailer to see the file until it's header is written
+                directoryListing.onFileCreated(path, cycle);
 
                 return wireStore;
 

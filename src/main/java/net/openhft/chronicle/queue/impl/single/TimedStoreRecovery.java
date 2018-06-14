@@ -19,24 +19,19 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.ref.BinaryLongReference;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
-import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -63,94 +58,13 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         return Slf4jExceptionHandler.WARN;
     }
 
-    public static void main(String[] args) {
-        System.out.println(padTo(Integer.toBinaryString(0x80000000), 32));
-        System.out.println(padTo(Integer.toBinaryString(0x40800000), 32));
-        System.out.println(padTo(Integer.toBinaryString(Wires.META_DATA), 32));
-        System.out.println(padTo(Integer.toBinaryString(0x40800000 & ~Wires.META_DATA), 32));
-        System.out.println(Integer.numberOfTrailingZeros(0x40800000));
-        System.out.println(0x40800000 & ~Wires.META_DATA);
-        System.out.println(32 << 10);
-    }
-
-    private static String padTo(final String input, final int length) {
-        if (input.length() < length) {
-            String padded = "";
-            for (int i = 0; i < length - input.length(); i++) {
-                padded += "0";
-            }
-            return padded + input;
-        }
-
-        return input;
-    }
-
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write("timeStamp").int64forBinding(0);
     }
 
-    long acquireLock(long timeoutMS) {
-        long start = System.currentTimeMillis();
-        while (true) {
-            long now = System.currentTimeMillis();
-            long ts = timeStamp.getVolatileValue();
-            final long tsEnd = now + timeoutMS / 2;
-            if (ts < now && timeStamp.compareAndSwapValue(ts, tsEnd))
-                return tsEnd;
-            if (now >= start + timeoutMS) {
-                warn().on(getClass(), "Unable to obtain the global lock in time, retrying");
-                start = now;
-            }
-            Jvm.pause(1);
-        }
-    }
-
-    void releaseLock(long tsEnd) {
-        if (timeStamp.compareAndSwapValue(tsEnd, 0L))
-            return;
-        warn().on(getClass(), "Another thread obtained the lock ??");
-    }
-
     @Override
-    public long recoverIndex2Index(@NotNull LongValue index2Index, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
-        long tsEnd = acquireLock(timeoutMS);
-        if (index2Index.getValue() == BinaryLongReference.LONG_NOT_COMPLETE) {
-            warn().on(getClass(), "Rebuilding the index2index, resetting to 0");
-            index2Index.setValue(0);
-        } else {
-            warn().on(getClass(), "The index2index value has changed, assuming it was recovered");
-        }
-        try {
-            return action.call();
-        } catch (Exception e) {
-            throw Jvm.rethrow(e);
-        } finally {
-            releaseLock(tsEnd);
-        }
-    }
-
-    @Override
-    public long recoverSecondaryAddress(@NotNull LongArrayValues index2indexArr, int index2, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
-        long tsEnd = acquireLock(timeoutMS);
-        if (index2indexArr.getValueAt(index2) == BinaryLongReference.LONG_NOT_COMPLETE) {
-            warn().on(getClass(), "Rebuilding the index2index[" + index2 + "], resetting to 0");
-            index2indexArr.setValueAt(index2, 0L);
-        } else {
-            warn().on(getClass(), "The index2index[" + index2 + "] value has changed, assuming it was recovered");
-        }
-
-        try {
-            return action.call();
-        } catch (Exception e) {
-            throw Jvm.rethrow(e);
-        } finally {
-            releaseLock(tsEnd);
-        }
-    }
-
-    @Override
-    public long recoverAndWriteHeader(@NotNull Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverAndWriteHeader(@NotNull Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException {
         Bytes<?> bytes = wire.bytes();
 
         long offset = bytes.writePosition();
@@ -216,7 +130,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         Closeable.closeQuietly(timeStamp);
     }
 }

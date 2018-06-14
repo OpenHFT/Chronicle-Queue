@@ -37,10 +37,6 @@ import java.util.concurrent.TimeoutException;
  * Created by Peter Lawrey on 21/05/16.
  */
 public interface StoreRecovery extends WriteMarshallable, Closeable {
-    long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
-
-    long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
-
     default long writeHeader(@NotNull Wire wire,
                              int safeLength,
                              long timeoutMS,
@@ -53,12 +49,8 @@ public interface StoreRecovery extends WriteMarshallable, Closeable {
         }
     }
 
-    default long tryWriteHeader(@NotNull Wire wire, int safeLength) {
-        return wire.tryWriteHeader(safeLength);
-    }
+    long recoverAndWriteHeader(Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException;
 
-    long recoverAndWriteHeader(Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException, EOFException;
-
-    default void close() throws IOException {
+    default void close() {
     }
 }
