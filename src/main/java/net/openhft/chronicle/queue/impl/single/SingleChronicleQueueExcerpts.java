@@ -812,6 +812,9 @@ public class SingleChronicleQueueExcerpts {
                                 break;
                             } catch (EOFException theySeeMeRolling) {
                                 cycle = handleRoll(cycle);
+                            } catch (IllegalStateException e) {
+                                if (queue.isClosed())
+                                    return;
                             }
                         }
                         if (!updatedHeader)
@@ -1722,7 +1725,7 @@ public class SingleChronicleQueueExcerpts {
             if (direction.equals(TailerDirection.BACKWARD))
                 return originalToEnd();
 
-            return originalToEnd(); //optimizedToEnd
+            return optimizedToEnd();
         }
 
         @NotNull
@@ -1760,7 +1763,7 @@ public class SingleChronicleQueueExcerpts {
                     return originalToEnd();
                 }
 
-                if (Wires.isEndOfFile(wire().bytes().readInt(wire().bytes().readPosition()))) {
+                if (Wires.isEndOfFile(wire().bytes().readVolatileInt(wire().bytes().readPosition()))) {
                     state = END_OF_CYCLE;
                 } else
                     state = FOUND_CYCLE;
