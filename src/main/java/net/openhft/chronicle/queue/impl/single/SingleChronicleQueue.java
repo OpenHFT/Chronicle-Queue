@@ -353,6 +353,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     protected ExcerptAppender newAppender() {
+        queueLock.waitForLock();
+
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, progressOnContention, newPool);
     }
@@ -373,8 +375,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
         assert !isClosed();
-
-        queueLock.waitForLock();
 
         if (strongAppenders) {
             ExcerptAppender appender = strongExcerptAppenderThreadLocal.get();
@@ -759,8 +759,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long lastAcknowledgedIndexReplicated() {
-        return ((StoreAppender) acquireAppender()).store()
-                .lastAcknowledgedIndexReplicated();
+        return ((StoreAppender) acquireAppender()).store().lastAcknowledgedIndexReplicated();
     }
 
     private static final class CachedCycleTree {
