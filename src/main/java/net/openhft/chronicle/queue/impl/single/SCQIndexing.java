@@ -440,10 +440,20 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     @NotNull
     private ScanResult linearScan0(@NotNull final Wire wire,
                                    final long toIndex,
-                                   final long fromKnownIndex,
-                                   final long knownAddress) {
+                                   long fromKnownIndex,
+                                   long knownAddress) {
         this.linearScanCount++;
         @NotNull final Bytes<?> bytes = wire.bytes();
+
+        // optimized if the `toIndex` is the last sequence
+        long lastAddress = writePosition.getVolatileValue();
+        long lastIndex = this.sequence.getSequence(lastAddress);
+        if (toIndex == lastIndex) {
+            assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
+            knownAddress = lastAddress;
+            fromKnownIndex = lastIndex;
+        }
+
 
         bytes.readPositionUnlimited(knownAddress);
 
