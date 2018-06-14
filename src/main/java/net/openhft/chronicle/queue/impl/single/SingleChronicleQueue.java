@@ -68,7 +68,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private static final boolean SHOULD_CHECK_CYCLE = Boolean.getBoolean("chronicle.queue.checkrollcycle");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 1);
-    protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
+    protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
@@ -109,6 +110,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final QueueLock queueLock;
     @NotNull
     private final WriteLock writeLock;
+    private final boolean strongAppenders;
     protected int sourceId;
     long firstAndLastCycleTime = 0;
     int firstAndLastRetry = 0;
@@ -147,6 +149,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         // add a 10% random element to make it less likely threads will timeout at the same time.
         timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
+        strongAppenders = builder.strongAppenders();
         if (readOnly) {
             this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
         } else {
@@ -352,6 +355,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     protected ExcerptAppender newAppender() {
+        queueLock.waitForLock();
+
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, writeLock, newPool);
     }
@@ -368,20 +373,33 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
-        if (readOnly) 
+        if (readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
         assert !isClosed();
 
-        queueLock.waitForLock();
-
-        if (SHOULD_RELEASE_RESOURCES) {
-            return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
-                    StoreComponentReferenceHandler.appenderQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        if (strongAppenders) {
+            ExcerptAppender appender = strongExcerptAppenderThreadLocal.get();
+            if (appender != null)
+                return appender;
         }
 
-        return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
+        return createExcerptAppender();
+    }
+
+    @NotNull
+    private ExcerptAppender createExcerptAppender() {
+        ExcerptAppender appender;
+        if (SHOULD_RELEASE_RESOURCES) {
+            return ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
+                    StoreComponentReferenceHandler.appenderQueue(),
+                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+        } else {
+            appender = ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
+        }
+        if (strongAppenders)
+            strongExcerptAppenderThreadLocal.set(appender);
+        return appender;
     }
 
     @Override
@@ -743,8 +761,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long lastAcknowledgedIndexReplicated() {
-        return ((StoreAppender) acquireAppender()).store()
-                .lastAcknowledgedIndexReplicated();
+        return ((StoreAppender) acquireAppender()).store().lastAcknowledgedIndexReplicated();
     }
 
     private static final class CachedCycleTree {

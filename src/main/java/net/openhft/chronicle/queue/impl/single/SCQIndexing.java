@@ -36,6 +36,7 @@ import java.io.EOFException;
 import java.io.StreamCorruptedException;
 import java.lang.ref.WeakReference;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
@@ -335,6 +336,39 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                                   final long toIndex,
                                   final long fromKnownIndex,
                                   final long knownAddress) {
+        long start = System.nanoTime();
+        ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
+        long end = System.nanoTime();
+        if (end > start + 50e3) {
+            printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
+        } else if (fromKnownIndex > 0x284d34000000000L) {
+            Jvm.warn().on(getClass(),
+                    "Unexpectedly high " + TimeUnit.NANOSECONDS.toMicros(end - start) + "us " +
+                            "fromKnownIndex 0x" + Long
+                            .toHexString (fromKnownIndex) +
+                            " " +
+                            "to 0x" + Long.toHexString(toIndex) + "= ( 0x" + Long.toHexString
+                            (toIndex) + "- 0x" + Long.toHexString(fromKnownIndex) + ") = " +
+                            (toIndex - fromKnownIndex),
+                    new Throwable("This is a profile stack trace, not an ERROR"));
+        }
+        return scanResult;
+    }
+
+    private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end, String desc) {
+        Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " +
+                fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
+                + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
+                (toIndex - fromKnownIndex));
+        if (end > start + 250e3)
+            Jvm.warn().on(getClass(), new Throwable("This is a profile stack trace, not an ERROR"));
+    }
+
+    @NotNull
+    private ScanResult linearScan0(@NotNull final Wire wire,
+                                   final long toIndex,
+                                   final long fromKnownIndex,
+                                   final long knownAddress) {
         this.linearScanCount++;
         @NotNull final Bytes<?> bytes = wire.bytes();
 
@@ -372,6 +406,20 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
+        long start = System.nanoTime();
+        long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
+        long end = System.nanoTime();
+        if (end > start + 50e3) {
+            printLinearScanTime(toPosition, startAddress, start, end, "linearSCan by position");
+        }
+        return index;
+    }
+
+    long linearScanByPosition0(@NotNull final Wire wire,
+                               final long toPosition,
+                               final long indexOfNext,
+                               final long startAddress,
+                               boolean inclusive) throws EOFException {
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
 
@@ -574,6 +622,23 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     public long lastSequenceNumber(@NotNull ExcerptContext ec)
             throws StreamCorruptedException {
+
+        Sequence sequence1 = this.sequence;
+        if (sequence1 != null) {
+            for (int i = 0; i < 128; i++) {
+
+                long address = writePosition.getVolatileValue();
+                if (address == 0)
+                    return -1;
+                long sequence = sequence1.getSequence(address);
+                if (sequence == Sequence.NOT_FOUND_RETRY)
+                    continue;
+                if (sequence == Sequence.NOT_FOUND)
+                   break;
+                return sequence;
+            }
+        }
+
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
     }
 
@@ -585,7 +650,43 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return indexSpacing;
     }
 
-    @SuppressWarnings("NullableProblems")
+    long moveToEnd(final Wire wire) {
+        Sequence sequence1 = this.sequence;
+        if (sequence1 != null) {
+            for (int i = 0; i < 128; i++) {
+
+                long endAddress = writePosition.getVolatileValue();
+                if (endAddress == 0)
+                    return -1;
+                long sequence = sequence1.getSequence(endAddress);
+                if (sequence == Sequence.NOT_FOUND_RETRY)
+                    continue;
+                if (sequence == Sequence.NOT_FOUND)
+                    return -1;
+
+                Bytes<?> bytes = wire.bytes();
+
+                bytes.readPosition(endAddress);
+
+                for (; ; ) {
+                    int header = bytes.readInt(endAddress);
+                    if (header == 0 || Wires.isNotComplete(header))
+                        return sequence;
+
+                    int len = Wires.lengthOf(header) + 4;
+
+                    bytes.readSkip(len);
+                    endAddress += len;
+
+                    if (Wires.isData(header))
+                        sequence += 1;
+
+                }
+            }
+        }
+        return -1;
+    }
+
     enum IndexingFields implements WireKey {
         indexCount, indexSpacing, index2Index,
         lastIndex // NOTE: the nextEntryToBeIndexed

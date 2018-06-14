@@ -108,6 +108,7 @@ public class SingleChronicleQueueStore implements WireStore {
             }
 
             this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
+            this.indexing.sequence = sequence;
 
             if (wire.bytes().readRemaining() > 0) {
                 lastIndexReplicated = wire.read(MetaDataField.lastIndexReplicated).int64ForBinding(null);
@@ -280,11 +281,8 @@ public class SingleChronicleQueueStore implements WireStore {
     public WireStore writePosition(long position) {
         assert singleThreadedAccess();
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
-        int header = mappedBytes.readVolatileInt(position);
-        if (Wires.isReadyData(header)) {
-            writePosition.setMaxValue(position);
-        } else
-            throw new AssertionError();
+        assert Wires.isReadyData(mappedBytes.readVolatileInt(position));
+        writePosition.setMaxValue(position);
         return this;
     }
 
@@ -312,6 +310,11 @@ public class SingleChronicleQueueStore implements WireStore {
         } catch (@NotNull UnrecoverableTimeoutException | StreamCorruptedException e) {
             return ScanResult.NOT_REACHED;
         }
+    }
+
+    @Override
+    public long moveToEndForRead(@NotNull Wire w) {
+        return indexing.moveToEnd(w);
     }
 
     @Override
