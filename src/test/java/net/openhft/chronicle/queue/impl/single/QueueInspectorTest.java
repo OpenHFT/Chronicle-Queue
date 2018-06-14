@@ -2,16 +2,17 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.affinity.Affinity;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -20,9 +21,6 @@ import static org.junit.Assert.assertThat;
 public final class QueueInspectorTest {
     private static final String PROPERTY_KEY = "wire.encodeTidInHeader";
     private static String previousValue = null;
-
-    @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
 
     @BeforeClass
     public static void enableFeature() {
@@ -41,7 +39,8 @@ public final class QueueInspectorTest {
 
     @Test
     public void shouldDetermineWritingProcessIdWhenDocumentIsNotComplete() throws IOException {
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir.newFolder()).
+
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
                 testBlockSize().
                 build()) {
             final QueueInspector inspector = new QueueInspector(queue);
@@ -58,7 +57,7 @@ public final class QueueInspectorTest {
 
     @Test
     public void shouldIndicateNoProcessIdWhenDocumentIsComplete() throws IOException {
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir.newFolder()).
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
                 testBlockSize().
                 build()) {
             final QueueInspector inspector = new QueueInspector(queue);
@@ -72,4 +71,11 @@ public final class QueueInspectorTest {
             assertThat(QueueInspector.isValidThreadId(writingThreadId), is(false));
         }
     }
+
+    protected File getTmpDir() {
+        final String methodName = "QueueInspectorTest";
+        return DirectoryUtils.tempDir(methodName != null ?
+                methodName.replaceAll("[\\[\\]\\s]+", "_") : "NULL-" + UUID.randomUUID());
+    }
+
 }
