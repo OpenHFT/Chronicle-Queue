@@ -802,7 +802,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
                     bytes.readSkip(len);
                     endAddress += len;
-                    sequence += 1;
+
+                    if (Wires.isData(header))
+                        sequence += 1;
 
                 }
             }
