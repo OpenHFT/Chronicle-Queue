@@ -320,8 +320,7 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
-                final long headerNumber = (position == 0) ? -1 : store.sequenceForPosition(this, position,
-                        true);
+                final long headerNumber = store.sequenceForPosition(this, position, true);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
                 assert lazyIndexing || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
