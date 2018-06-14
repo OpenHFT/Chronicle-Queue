@@ -410,6 +410,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                                   final long fromKnownIndex,
                                   final long knownAddress) {
         long start = System.nanoTime();
+        if (toIndex == fromKnownIndex)
+            return ScanResult.FOUND;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
         long end = System.nanoTime();
         if (end > start + 50e3) {
@@ -429,6 +431,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end, String desc) {
+        if (toIndex == fromKnownIndex)
+            System.out.println("");
         Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " +
                 fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
                 + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
@@ -509,13 +513,14 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         // optimized if the `toPosition` is the writePosition
         long lastAddress = writePosition.getVolatileValue();
         long lastIndex = this.sequence.getSequence(lastAddress);
-        if (lastAddress > 0 && toPosition == lastAddress) {
-            bytes.readPositionUnlimited(toPosition);
-            i = lastIndex-1;
-        } else {
+
+     //   if (lastAddress > 0 && toPosition == lastAddress) {
+       //     bytes.readPositionUnlimited(toPosition);
+         //   i = lastIndex-1;
+       // } else {
             bytes.readPositionUnlimited(startAddress);
             i = indexOfNext - 1;
-        }
+       // }
 
         while (bytes.readPosition() <= toPosition) {
             WireIn.HeaderType headerType;
