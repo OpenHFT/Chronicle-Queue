@@ -435,7 +435,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
                 + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
                 (toIndex - fromKnownIndex));
-        if (end > start + 250e3)
+        // ignored  for the first message
+        if (toIndex > 0 && end > start + 250e3)
             Jvm.warn().on(getClass(), new Throwable("This is a profile stack trace, not an ERROR"));
     }
 
