@@ -6,6 +6,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,23 +43,9 @@ public class DirectoryUtils {
     }
 
     public static void deleteDir(@NotNull File dir) {
-        if (dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        deleteDir(file);
-                    } else if (!file.delete()) {
-                        LOGGER.warn("... unable to delete {}", file);
-                    }
-                }
-            }
-        }
-
-        dir.delete();
+        IOTools.deleteDirWithFiles(dir, 20);
     }
 
-    // TODO: why not deleteOnExit?
     enum DeleteStatic {
         INSTANCE;
         final Set<File> toDeleteList = Collections.synchronizedSet(new LinkedHashSet<>());
