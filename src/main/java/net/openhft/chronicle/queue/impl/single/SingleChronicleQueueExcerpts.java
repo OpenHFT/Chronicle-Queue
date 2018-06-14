@@ -1723,7 +1723,7 @@ public class SingleChronicleQueueExcerpts {
             if (direction.equals(TailerDirection.BACKWARD))
                 return originalToEnd();
 
-            return optimizedToEnd();
+            return originalToEnd(); //optimizedToEnd
         }
 
         @NotNull
