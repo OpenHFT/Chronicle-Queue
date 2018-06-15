@@ -247,9 +247,6 @@ public class SingleCQFormatTest {
                 "    lastIndex: 0\n" +
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: -1,\n" +
-                "  recovery: !TimedStoreRecovery {\n" +
-                "    timeStamp: 0\n" +
-                "  },\n" +
                 "  deltaCheckpointInterval: !byte -1,\n" +
                 "  lastIndexReplicated: -1,\n" +
                 "  sourceId: 0\n" +
@@ -304,6 +301,7 @@ public class SingleCQFormatTest {
     }
 
     @Test
+    @Ignore("We now write index together with header so this test is not using correct file format")
     public void testTwoMessages() throws FileNotFoundException {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
@@ -343,17 +341,14 @@ public class SingleCQFormatTest {
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
                     "  deltaCheckpointInterval: !byte -1,\n" +
                     "  lastIndexReplicated: -1,\n" +
                     "  sourceId: 0\n" +
                     "}\n" +
-                    "# position: 442, header: 0\n" +
+                    "# position: 386, header: 0\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello world\n" +
-                    "# position: 463, header: 1\n" +
+                    "# position: 407, header: 1\n" +
                     "--- !!data #binary\n" +
                     "msg: Also hello world\n", Wires.fromSizePrefixedBlobs(mappedBytes
                     .readPosition(0)));

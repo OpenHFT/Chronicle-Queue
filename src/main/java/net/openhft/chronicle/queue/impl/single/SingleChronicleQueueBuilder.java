@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.StreamCorruptedException;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -356,11 +357,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     @NotNull
     protected QueueLock queueLock() {
-        return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(path(), pauserSupplier()) : new NoopQueueLock();
+        return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(path(), pauserSupplier(), timeoutMS() * 3 / 2) : new NoopQueueLock();
     }
 
     @NotNull
     protected WriteLock writeLock() {
-        return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(path(), pauserSupplier());
+        return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(path(), pauserSupplier(), timeoutMS() * 3 / 2);
     }
 }

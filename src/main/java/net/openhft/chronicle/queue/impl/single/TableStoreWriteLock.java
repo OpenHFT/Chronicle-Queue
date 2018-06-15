@@ -30,26 +30,28 @@ import static net.openhft.chronicle.core.Jvm.warn;
 
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
     private static final String LOCK_KEY = "chronicle.write.lock";
-    private static final long LOCK_WAIT_TIMEOUT = Long.getLong("chronicle.write.lock.timeoutMS", 15_000);
     private static final long PID = getProcessId();
+    private final long timeout;
 
-    public TableStoreWriteLock(File queueDirectoryPath, Supplier<Pauser> pauser) {
+    public TableStoreWriteLock(File queueDirectoryPath, Supplier<Pauser> pauser, Long timeoutMs) {
         super(LOCK_KEY, queueDirectoryPath, pauser);
+        timeout = timeoutMs;
     }
 
     @Override
     public void lock() {
         closeCheck();
+        //new Exception("Try lock " + Thread.currentThread().getName()).printStackTrace(System.err);
         try {
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
 
             // success
         } catch (TimeoutException e) {
-            warn().on(getClass(), "Couldn't acquire write lock after " + LOCK_WAIT_TIMEOUT
+            warn().on(getClass(), "Couldn't acquire write lock after " + timeout
                     + "ms for the lock file:" + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
             forceUnlock();
             lock();
@@ -57,13 +59,13 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             pauser.reset();
 
         }
-        //System.err.println("Lock " + Thread.currentThread().getName());
+        //new Exception("Locked " + Thread.currentThread().getName()).printStackTrace(System.err);
     }
 
     @Override
     public void unlock() {
         closeCheck();
-        //System.err.println("Unlock " + Thread.currentThread().getName());
+        //new Exception("Unlock by " + Thread.currentThread().getName()).printStackTrace(System.err);
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
 
             warn().on(getClass(), "Write lock was unlocked by someone else!");

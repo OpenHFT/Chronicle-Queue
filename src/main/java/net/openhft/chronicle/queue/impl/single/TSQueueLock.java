@@ -34,12 +34,13 @@ import static net.openhft.chronicle.core.Jvm.warn;
 public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
     private static final String LOCK_KEY = "chronicle.queue.lock";
-    private static final long LOCK_WAIT_TIMEOUT = Long.getLong("chronicle.queue.lock.timeoutMS", 15_000);
     private static final long PID = Jvm.getProcessId();
     private final ThreadLocal<Long> lockHolderTidTL = new ThreadLocal<>();
+    private final long timeout;
 
-    public TSQueueLock(File queueDirectoryPath, Supplier<Pauser> pauser) {
+    public TSQueueLock(File queueDirectoryPath, Supplier<Pauser> pauser, Long timeoutMs) {
         super(LOCK_KEY, queueDirectoryPath, pauser);
+        timeout = timeoutMs;
     }
 
     /**
@@ -56,14 +57,14 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
 
             // success
             lockHolderTidTL.set(tid);
         } catch (TimeoutException e) {
-            warn().on(getClass(), "Couldn't acquire lock after " + LOCK_WAIT_TIMEOUT
-                    + "ms for the lock file:" + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
+            warn().on(getClass(), "Couldn't acquire lock after " + timeout + "ms for the lock file:"
+                    + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
             forceUnlock();
             acquireLock();
         } finally {
@@ -86,16 +87,16 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             while (lock.getVolatileValue() != UNLOCKED) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
         } catch (TimeoutException e) {
-            warn().on(getClass(), "Queue lock is still held after " + LOCK_WAIT_TIMEOUT
-                    + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
+            warn().on(getClass(), "Queue lock is still held after " + timeout + "ms for the lock file:"
+                    + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
             forceUnlock();
         } catch (NullPointerException ex) {
             if (!tableStore.isClosed())
                 throw ex;
-            throw new IllegalStateException("The table store is closed!" , ex);
+            throw new IllegalStateException("The table store is closed!", ex);
         } finally {
             pauser.reset();
         }

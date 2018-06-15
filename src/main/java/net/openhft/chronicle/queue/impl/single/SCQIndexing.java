@@ -143,37 +143,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 .write(IndexingFields.indexSpacing).int64(indexSpacing)
                 .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
                 .write(IndexingFields.lastIndex).int64forBinding(0L, nextEntryToBeIndexed);
-        // todo add later.
-//                .writeComment("the NEXT number to be indexed");
-    }
-
-    /**
-     * atomically gets or creates the addressForRead of the first index the index is create and another
-     * except into the queue, however this except is treated as meta data and does not increment the
-     * last index, in other words it is not possible to access this except by calling index(), it
-     * effectively invisible to the end-user
-     *
-     * @param ec       the current wire
-     * @return the position of the index
-     */
-    long indexToIndex(@NotNull final ExcerptContext ec) throws UnrecoverableTimeoutException, StreamCorruptedException {
-        long index2Index = this.index2Index.getVolatileValue();
-        return index2Index > 0 ? index2Index : acquireIndex2Index(ec);
-    }
-
-    long acquireIndex2Index(@NotNull ExcerptContext ec) throws UnrecoverableTimeoutException, StreamCorruptedException {
-        long index2Index = this.index2Index.getVolatileValue();
-
-        if (index2Index != NOT_INITIALIZED)
-            return index2Index;
-
-        long index = NOT_INITIALIZED;
-        try {
-            index = newIndex(ec, true);
-        } finally {
-            this.index2Index.setOrderedValue(index);
-        }
-        return index;
     }
 
     @NotNull
@@ -207,12 +176,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * index only records the addressForRead of every 64th except, the except are linearly scanned from
      * there on.  )
      *
-     * @param ec the current wire
+     * @param wire the current wire
      * @return the addressForRead of the Excerpt containing the usable index, just after the header
      */
-    long newIndex(@NotNull ExcerptContext ec, boolean index2index) throws StreamCorruptedException {
+    long newIndex(@NotNull WireOut wire, boolean index2index) throws StreamCorruptedException {
         long writePosition = this.writePosition.getVolatileValue();
-        Wire wire = ec.wireForIndex();
         Bytes<?> bytes = wire.bytes();
         bytes.writePosition(writePosition);
 
@@ -225,9 +193,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return position;
     }
 
-    long newIndex(@NotNull ExcerptContext ec, @NotNull LongArrayValues index2Index, long index2) throws StreamCorruptedException {
+    long newIndex(@NotNull Wire wire, @NotNull LongArrayValues index2Index, long index2) throws StreamCorruptedException {
         try {
-            long pos = newIndex(ec, false);
+            long pos = newIndex(wire, false);
             if (!index2Index.compareAndSet(index2, NOT_INITIALIZED, pos)) {
                 throw new IllegalStateException("Index " + index2 + " in index2index was altered while we hold the write lock!");
             }
@@ -253,8 +221,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * @return the position of the {@code targetIndex} or -1 if the index can not be found
      */
     @NotNull
-    ScanResult moveToIndex(@NotNull final ExcerptContext ec, final long index) throws StreamCorruptedException {
-        return Optional.ofNullable(moveToIndex0(ec, index)).orElse(moveToIndexFromTheStart(ec, index));
+    ScanResult moveToIndex(@NotNull final ExcerptContext ec, final long index) {
+        return Optional.ofNullable(moveToIndex0(ec, index)).orElseGet(() -> moveToIndexFromTheStart(ec, index));
     }
 
     @NotNull
@@ -272,28 +240,27 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     // visible for testing
     @Nullable
-    ScanResult moveToIndex0(@NotNull final ExcerptContext ec, final long index) throws StreamCorruptedException {
+    ScanResult moveToIndex0(@NotNull final ExcerptContext ec, final long index) {
 
         try {
-            LongArrayValues index2index = getIndex2index(ec);
+            Wire wire = ec.wireForIndex();
+            LongArrayValues index2index = getIndex2index(wire);
             long primaryOffset = toAddress0(index);
 
             long secondaryAddress = 0;
             long startIndex = index & ~(indexSpacing - 1);
             while (primaryOffset >= 0) {
                 secondaryAddress = index2index.getValueAt(primaryOffset);
-                if (secondaryAddress == 0) {
-                    startIndex -= indexCount * indexSpacing;
-                    primaryOffset--;
-                } else {
+                if (secondaryAddress != 0)
                     break;
-                }
+                startIndex -= indexCount * indexSpacing;
+                primaryOffset--;
             }
 
             if (secondaryAddress <= 0) {
                 return null;
             }
-            @NotNull final LongArrayValues array1 = arrayForAddress(ec.wireForIndex(), secondaryAddress);
+            @NotNull final LongArrayValues array1 = arrayForAddress(wire, secondaryAddress);
             long secondaryOffset = toAddress1(index);
 
             do {
@@ -410,7 +377,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
         long end = System.nanoTime();
         if (end > start + 50e3) {
-            printLinearScanTime(toPosition, startAddress, start, end, "linearSCan by position");
+            printLinearScanTime(toPosition, startAddress, start, end, "linearScan by position");
         }
         return index;
     }
@@ -480,21 +447,19 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                              boolean inclusive) throws StreamCorruptedException {
         long indexOfNext = 0;
         long lastKnownAddress = 0;
+        @NotNull Wire wire = ec.wireForIndex();
         try {
-            final LongArrayValues index2indexArr = getIndex2index(ec);
+            final LongArrayValues index2indexArr = getIndex2index(wire);
 
             int used2 = Maths.toUInt31(index2indexArr.getUsed());
-            if (used2 == 0) {
-                // create the first index: eagerly.
-                getSecondaryAddress(ec, index2indexArr, 0);
-            }
+            assert used2 > 0;
             Outer:
             for (int index2 = used2 - 1; index2 >= 0; index2--) {
-                long secondaryAddress = getSecondaryAddress(ec, index2indexArr, index2);
+                long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
                 if (secondaryAddress == 0)
                     continue;
 
-                LongArrayValues indexValues = arrayForAddress(ec.wireForIndex(), secondaryAddress);
+                LongArrayValues indexValues = arrayForAddress(wire, secondaryAddress);
                 // TODO use a binary rather than linear search
 
                 // check the first one to see if any in the index is appropriate.
@@ -528,31 +493,43 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
         }
         try {
-            return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);
+            return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive);
         } catch (EOFException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    private LongArrayValues getIndex2index(@NotNull ExcerptContext ec) throws UnrecoverableTimeoutException, StreamCorruptedException {
+    void initIndex(@NotNull Wire wire) throws StreamCorruptedException {
+        long index2Index = this.index2Index.getVolatileValue();
+
+        if (index2Index != NOT_INITIALIZED)
+            throw new IllegalStateException("Who wrote the index2index?");
+
+        long index = newIndex(wire, true);
+        this.index2Index.compareAndSwapValue(NOT_INITIALIZED, index);
+
+        LongArrayValues index2index = getIndex2index(wire);
+        newIndex(wire, index2index, 0);
+    }
+
+    private LongArrayValues getIndex2index(@NotNull Wire wire) throws UnrecoverableTimeoutException {
 
         LongArrayValuesHolder holder = getIndex2IndexArray();
         LongArrayValues values = holder.values;
         if (((Byteable) values).bytesStore() != null)
             return values;
-        final long indexToIndex = indexToIndex(ec);
+        final long indexToIndex = index2Index.getVolatileValue();
 
-        Wire wire = ec.wireForIndex();
         try (DocumentContext ignored = wire.readingDocument(indexToIndex)) {
             return array(wire, values, true);
         }
     }
 
-    private long getSecondaryAddress(@NotNull ExcerptContext ec, @NotNull LongArrayValues index2indexArr, int index2)
+    private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2)
             throws UnrecoverableTimeoutException, StreamCorruptedException {
         long secondaryAddress = index2indexArr.getVolatileValueAt(index2);
         if (secondaryAddress == 0) {
-            secondaryAddress = newIndex(ec, index2indexArr, index2);
+            secondaryAddress = newIndex(wire, index2indexArr, index2);
             long sa = index2indexArr.getValueAt(index2);
             if (sa != secondaryAddress)
                 throw new AssertionError();
@@ -585,7 +562,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             throw new IllegalArgumentException("pos: " + position);
 
         // find the index2index
-        final LongArrayValues index2indexArr = getIndex2index(ec);
+        final LongArrayValues index2indexArr = getIndex2index(wire);
         if (((Byteable) index2indexArr).bytesStore() == null) {
             assert false;
             return;
@@ -598,7 +575,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             }
             throw new IllegalStateException("Unable to index " + sequenceNumber);
         }
-        long secondaryAddress = getSecondaryAddress(ec, index2indexArr, index2);
+        long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
         if (secondaryAddress > bytes.capacity())
             throw new IllegalStateException("sa2: " + secondaryAddress);
         bytes.readLimit(bytes.capacity());

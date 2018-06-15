@@ -24,7 +24,7 @@ public class SingleChronicleQueueStoreTest {
     public TemporaryFolder tmpDir = new TemporaryFolder();
 
     private static void assertExcerptsAreIndexed(final SingleChronicleQueue queue, final long[] indices,
-                                                 final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) throws Exception {
+                                                 final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {
         final SingleChronicleQueueStore wireStore = (SingleChronicleQueueStore)
                 queue.storeForCycle(queue.cycle(), 0L, true);
         final SCQIndexing indexing = wireStore.indexing;
@@ -59,30 +59,9 @@ public class SingleChronicleQueueStoreTest {
     }
 
     @Test
-    public void shouldNotPerformIndexingOnAppendWhenLazyIndexingIsEnabled() throws Exception {
-        runTest(queue -> {
-            final ExcerptAppender appender = queue.acquireAppender();
-            appender.lazyIndexing(true);
-            final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
-            assertExcerptsAreIndexed(queue, indices, i -> false, ScanResult.NOT_REACHED);
-        });
-    }
-
-    @Test
-    public void shouldPerformIndexingOnRead() throws Exception {
-        runTest(queue -> {
-            final ExcerptAppender appender = queue.acquireAppender();
-            appender.lazyIndexing(true);
-            final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer().indexing(true));
-            assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
-        });
-    }
-
-    @Test
     public void shouldPerformIndexingOnAppend() throws Exception {
         runTest(queue -> {
             final ExcerptAppender appender = queue.acquireAppender();
-            appender.lazyIndexing(false);
             final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
             assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
         });

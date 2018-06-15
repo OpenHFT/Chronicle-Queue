@@ -3255,6 +3255,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             Assert.assertEquals("first", tailer.readText());
             Assert.assertEquals(null, tailer.readText());
+            System.out.println("1: " + q.dump());
 
         }
 
@@ -3272,6 +3273,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext documentContext = tailer.readingDocument()) {
                 Assert.assertFalse(documentContext.isPresent());
             }
+            System.out.println("2: " + q.dump());
         }
 
         clock.addAndGet(50L);
@@ -3281,6 +3283,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .timeProvider(clock::get)
                 .build()) {
 
+            System.out.println("3: " + q.dump());
             ExcerptTailer excerptTailerBeforeAppend = q.createTailer().toEnd();
             q.acquireAppender().writeText("more text");
             ExcerptTailer excerptTailerAfterAppend = q.createTailer().toEnd();

@@ -822,6 +822,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if ((!readOnly) && wire.writeFirstHeader()) {
                     wireStore = storeFactory.apply(that, wire);
                     wire.updateFirstHeader();
+
+                    wireStore.initIndex(wire);
                 } else {
                     wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
 

@@ -26,6 +26,7 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,22 +40,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
 
-@RunWith(Parameterized.class)
 public class NotCompleteTest {
-
-    private final boolean lazyIndexing;
-
-    public NotCompleteTest(final String type, boolean lazyIndexing) {
-        this.lazyIndexing = lazyIndexing;
-    }
-
-    @Parameterized.Parameters(name = "{0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {"eager", false},
-                {"lazy", true}
-        });
-    }
 
     /**
      * tests that when flags are set to not complete we are able to recover
@@ -71,8 +57,7 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.acquireAppender()
-                    .lazyIndexing(lazyIndexing);
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -111,8 +96,7 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.acquireAppender()
-                    .lazyIndexing(lazyIndexing);
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -140,12 +124,11 @@ public class NotCompleteTest {
     }
 
     @Test
-    public void testMessageLeftNotComplete() {
+    public void testMessageNotLeftIncomplete() {
 
         File tmpDir = DirectoryUtils.tempDir("testMessageLeftNotComplete");
         try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).build()) {
-            ExcerptAppender appender = queue.acquireAppender()
-                    .lazyIndexing(lazyIndexing);
+            ExcerptAppender appender = queue.acquireAppender();
 
             // start a message which was not completed.
             DocumentContext dc = appender.writingDocument();
@@ -153,7 +136,6 @@ public class NotCompleteTest {
             // didn't call dc.close();
         }
 
-        final SingleChronicleQueue singleChronicleQueue = null;
         try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().build()) {
             ExcerptTailer tailer = queue.createTailer();
 
@@ -176,65 +158,30 @@ public class NotCompleteTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 442,\n" +
+                    "    index2Index: 386,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
                     "  lastIndexReplicated: -1,\n" +
                     "  sourceId: 0\n" +
                     "}\n" +
-                    "# position: 442, header: -1\n" +
+                    "# position: 386, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  544,\n" +
+                    "  488,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544, header: -1\n" +
+                    "# position: 488, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 0\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 640, header: -1 or 0\n" +
-                    "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 130428 bytes remaining\n";
-            String expectedLazy = "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: [\n" +
-                    "    0,\n" +
-                    "    0\n" +
-                    "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
-                    "}\n" +
-                    "# position: 442, header: -1 or 0\n" +
-                    "--- !!not-ready-data! #binary\n" +
-                    "...\n" +
-                    "# 130626 bytes remaining\n";
-            assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
+                    "# 130484 bytes remaining\n";
+            assertEquals(expectedEager, queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().timeoutMS(500).build()) {
@@ -244,12 +191,12 @@ public class NotCompleteTest {
                 dc.wire().write("some").text("data");
             }
 
-            String expectedEager = "--- !!meta-data #binary\n" +
+            String expected = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    33412,\n" +
-                    "    143503447293952\n" +
+                    "    584,\n" +
+                    "    2508260900864\n" +
                     "  ],\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
@@ -259,97 +206,35 @@ public class NotCompleteTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 442,\n" +
+                    "    index2Index: 386,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
                     "  deltaCheckpointInterval: 0,\n" +
                     "  lastIndexReplicated: -1,\n" +
                     "  sourceId: 0\n" +
                     "}\n" +
-                    "# position: 442, header: -1\n" +
+                    "# position: 386, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  544,\n" +
+                    "  488,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544, header: -1\n" +
+                    "# position: 488, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  33412,\n" +
+                    "  584,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 640, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "\"!! Skipped due to recovery of locked header !!";
-            String expectedEagerFooter =
-                    "# position: 33412, header: 0\n" +
-                            "--- !!data #binary\n" +
-                            "some: data\n" +
-                            "...\n" +
-                            "# 97642 bytes remaining\n";
-            String expectedLazy = "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: [\n" +
-                    "    33408,\n" +
-                    "    143486267424768\n" +
-                    "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 33212,\n" +
-                    "    lastIndex: 1\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
-                    "}\n" +
-                    "# position: 442, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "\"!! Skipped due to recovery of locked header !!";
-            String expectedLazyFooter =
-                    "# position: 33212, header: -1\n" +
-                            "--- !!meta-data #binary\n" +
-                            "index2index: [\n" +
-                            "  # length: 8, used: 1\n" +
-                            "  33312,\n" +
-                            "  0, 0, 0, 0, 0, 0, 0\n" +
-                            "]\n" +
-                            "# position: 33312, header: -1\n" +
-                            "--- !!meta-data #binary\n" +
-                            "index: [\n" +
-                            "  # length: 8, used: 1\n" +
-                            "  33408,\n" +
-                            "  0, 0, 0, 0, 0, 0, 0\n" +
-                            "]\n" +
-                            "# position: 33408, header: 0\n" +
-                            "--- !!data #binary\n" +
-                            "some: data\n" +
-                            "...\n" +
-                            "# 97646 bytes remaining\n";
+                    "# position: 584, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "some: data\n" +
+                    "...\n" +
+                    "# 130470 bytes remaining\n";
 
-            if (lazyIndexing) {
-                assertThat(queue.dump(), containsString(expectedLazy));
-                assertThat(queue.dump(), containsString(expectedLazyFooter));
-            } else {
-                assertThat(queue.dump(), containsString(expectedEager));
-                assertThat(queue.dump(), containsString(expectedEagerFooter));
-            }
+            assertEquals(queue.dump(), expected);
         }
     }
 
@@ -357,7 +242,7 @@ public class NotCompleteTest {
     public void testInterruptedDuringSerialisation()
             throws InterruptedException {
 
-        final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation_" + (lazyIndexing ? "lazy" : "eager"));
+        final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
         DirectoryUtils.deleteDir(tmpDir);
         tmpDir.mkdirs();
 
@@ -424,59 +309,16 @@ public class NotCompleteTest {
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
                 String dump = cleanQueueDump(queue.dump());
-                if (lazyIndexing) {
-                    // reading the queue creates the index, thus changing it, so do a text comparison here
-                    cleanedQueueDump =
-                            "--- !!meta-data #binary\n" +
-                                    "header: !SCQStore {\n" +
-                                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                                    "  writePosition: [\n" +
-                                    "    442,\n" +
-                                    "    0\n" +
-                                    "  ],\n" +
-                                    "  roll: !SCQSRoll {\n" +
-                                    "    length: !int 86400000,\n" +
-                                    "    format: yyyyMMdd,\n" +
-                                    "    epoch: 0\n" +
-                                    "  },\n" +
-                                    "  indexing: !SCQSIndexing {\n" +
-                                    "    indexCount: 8,\n" +
-                                    "    indexSpacing: 1,\n" +
-                                    "    index2Index: 475,\n" +
-                                    "    lastIndex: 0\n" +
-                                    "  },\n" +
-                                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                                    "  recovery: !TimedStoreRecovery {\n" +
-                                    "    timeStamp: 0\n" +
-                                    "  },\n" +
-                                    "  deltaCheckpointInterval: 0,\n" +
-                                    "  lastIndexReplicated: -1,\n" +
-                                    "  sourceId: 0\n" +
-                                    "}\n" +
-                                    "# position: 442, header: 0\n" +
-                                    "--- !!data #binary\n" +
-                                    "accept: {\n" +
-                                    "  age: 40,\n" +
-                                    "  name: Terry\n" +
-                                    "}\n" +
-                                    "# position: 475, header: 0\n" +
-                                    "--- !!meta-data #binary\n" +
-                                    "index2index: [\n" +
-                                    "  # length: 8, used: 0\n" +
-                                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
-                                    "]\n" +
-                                    "...\n" +
-                                    "\n";
-                }
 
                 assertEquals("queue should be unchanged by the failed write", cleanedQueueDump, dump);
+                System.err.println(queue.dump());
             }
 
             // check nothing else written
             assertFalse(reader.readOne());
 
             // do an empty write
-            ExcerptAppender appender = queueWriter.acquireAppender().lazyIndexing(lazyIndexing);
+            ExcerptAppender appender = queueWriter.acquireAppender();
             DocumentContext wd = appender.writingDocument();
             wd.rollbackOnClose();
             wd.close();
@@ -502,12 +344,11 @@ public class NotCompleteTest {
     }
 
     private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
-        ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
+        ExcerptAppender appender = queue.acquireAppender();
         PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
         action.accept(proxy, queue);
     }
 
-    @Ignore("store.writePosition() not set after we recover, but not trivial to fix. Problem only occurs rarely")
     @Test
     public void testSkipSafeLengthOverBlock() {
 
@@ -515,7 +356,7 @@ public class NotCompleteTest {
         // 3rd time will do it
         for (int i = 0; i < 8; i++) {
             try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).timeoutMS(1).build()) {
-                ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
+                ExcerptAppender appender = queue.acquireAppender();
                 // start a message which won't be completed.
                 DocumentContext dc = appender.writingDocument();
                 // 2nd and subsequent times we call this will invoke recovery

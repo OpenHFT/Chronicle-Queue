@@ -34,7 +34,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -307,7 +309,7 @@ public class SingleChronicleQueueStore implements WireStore {
     public ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index) {
         try {
             return indexing.moveToIndex(ec, index);
-        } catch (@NotNull UnrecoverableTimeoutException | StreamCorruptedException e) {
+        } catch (@NotNull UnrecoverableTimeoutException e) {
             return ScanResult.NOT_REACHED;
         }
     }
@@ -402,6 +404,16 @@ public class SingleChronicleQueueStore implements WireStore {
         wire.write(MetaDataField.lastIndexReplicated).int64forBinding(-1L, lastIndexReplicated);
         wire.write(MetaDataField.sourceId).int32(sourceId);
         wire.padToCacheAlign();
+    }
+
+    @Override
+    public void initIndex(@NotNull Wire wire) {
+        try {
+            indexing.initIndex(wire);
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+
     }
 
     @Override

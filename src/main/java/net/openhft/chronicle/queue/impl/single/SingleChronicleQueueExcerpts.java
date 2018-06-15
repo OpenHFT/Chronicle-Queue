@@ -40,9 +40,7 @@ import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
-import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
-import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
-import static net.openhft.chronicle.wire.Wires.lengthOf;
+import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -90,7 +88,6 @@ public class SingleChronicleQueueExcerpts {
         private Wire wireForIndex;
         private long position = 0;
         private long lastIndex = Long.MIN_VALUE;
-        private boolean lazyIndexing = false;
         private long lastPosition;
         private int lastCycle;
         @Nullable
@@ -223,25 +220,6 @@ public class SingleChronicleQueueExcerpts {
             this.lastIndex = index;
         }
 
-        @NotNull
-        @Override
-        public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
-            this.lazyIndexing = lazyIndexing;
-            // resetPosition() may create indexes (that is, write to the file!) so we need to protect it with write lock
-            writeLock.lock();
-            try {
-                resetPosition();
-            } finally {
-                writeLock.unlock();
-            }
-            return this;
-        }
-
-        @Override
-        public boolean lazyIndexing() {
-            return lazyIndexing;
-        }
-
         @Override
         public boolean recordHistory() {
             return sourceId() != 0;
@@ -306,19 +284,9 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 position(store.writePosition());
 
-                Bytes<?> bytes = wire.bytes();
-                int header = bytes.readVolatileInt(position);
+                assert position == 0 || Wires.isReadyData(wire.bytes().readVolatileInt(position));
 
-                if (header == Wires.END_OF_DATA)
-                    throw new IllegalStateException("EOF found while we hold write lock");
-
-                assert position == 0 || Wires.isReadyData(header);
-                if (lazyIndexing) {
-                    wire.headerNumber(Long.MIN_VALUE);
-                    return;
-                }
-
-                final long headerNumber = store.sequenceForPosition(this, position, true);
+                final long headerNumber = store.lastSequenceNumber(this);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
                 assert wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
@@ -340,11 +308,14 @@ public class SingleChronicleQueueExcerpts {
             int cycle = queue.cycle();
 
             if (wire == null) {
-                // we have check it the queue file has rolled due to an early EOF
-                cycle = Math.max(queue.lastCycle(), cycle);
+                int lastCycle = queue.lastCycle();
+                if (lastCycle == Integer.MIN_VALUE)
+                    lastCycle = cycle;
 
-                setCycle2(cycle, true);
-            } else if (this.cycle != cycle)
+                setCycle2(lastCycle, true);
+            }
+
+            if (this.cycle != cycle)
                 rollCycleTo(cycle);
 
             int safeLength = (int) queue.overlapSize();
@@ -355,24 +326,23 @@ public class SingleChronicleQueueExcerpts {
 
         private long writeHeader(@NotNull Wire wire, int safeLength) {
             Bytes<?> bytes = wire.bytes();
-            long pos = bytes.writePosition();
-            int header = bytes.readVolatileInt(pos);
-            if (header != NOT_INITIALIZED) {
-                // someone wrote the data since we last tried to write - fast forward to last entry. We don't need to worry
-                // about roll here as we would have rolled by the time we reach this code
-                long lastPos = store.writePosition();
-                if (lastPos > pos) {
-                    try {
-                        // todo find a cheaper way of finding last header
-                        wire.headerNumber(queue.rollCycle().toIndex(cycle, store.sequenceForPosition(this, lastPos,
-                                true) + 1) - 1);
-                        lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
-                        bytes.writePosition(lastPos);
-                    } catch (StreamCorruptedException ex) {
-                        Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
-                    }
+            // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
+            long pos = position;
+            long lastPos = store.writePosition();
+            if (pos < lastPos) {
+                // queue moved since we last touched it - recalculate header number
+
+                try {
+                    wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                } catch (StreamCorruptedException ex) {
+                    Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
                 }
             }
+            int header = bytes.readVolatileInt(lastPos);
+            assert header != NOT_INITIALIZED;
+            lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
+            bytes.writePosition(lastPos);
+
             return wire.enterHeader(safeLength);
         }
 
@@ -402,7 +372,8 @@ public class SingleChronicleQueueExcerpts {
                             " header: " + wire.headerNumber() +
                             " seq1: " + seq1 +
                             " seq2: " + seq2;
-                    System.err.println(message);
+                    //System.err.println(message);
+                    new AssertionError(message).printStackTrace();
                     throw new AssertionError(message);
                 }
 
@@ -517,7 +488,7 @@ public class SingleChronicleQueueExcerpts {
                 try {
                     context.wire().bytes().write(bytes);
                 } finally {
-                    context.close();
+                    context.close(false);
                 }
 
             } finally {
@@ -585,12 +556,6 @@ public class SingleChronicleQueueExcerpts {
         void beforeAppend(Wire wire, long index) {
         }
 
-        private <T> void append(@NotNull WireWriter<T> wireWriter, T writer) throws
-                UnrecoverableTimeoutException {
-
-
-        }
-
         private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
             if (wire != null) {
                 // only a valid check if the wire was set.
@@ -615,10 +580,8 @@ public class SingleChronicleQueueExcerpts {
         void writeIndexForPosition(long index, long position)
                 throws UnrecoverableTimeoutException, StreamCorruptedException {
 
-            if (!lazyIndexing) {
-                long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-                store.setPositionForSequenceNumber(this, sequenceNumber, position);
-            }
+            long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
+            store.setPositionForSequenceNumber(this, sequenceNumber, position);
         }
 
         boolean checkIndex(long index, long position) {
@@ -655,7 +618,6 @@ public class SingleChronicleQueueExcerpts {
                     ", cycle=" + cycle +
                     ", position=" + position +
                     ", lastIndex=" + lastIndex +
-                    ", lazyIndexing=" + lazyIndexing +
                     ", lastPosition=" + lastPosition +
                     ", lastCycle=" + lastCycle +
                     '}';
@@ -711,6 +673,10 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public void close() {
+                close(true);
+            }
+
+            public void close(boolean unlock) {
 
                 if (isClosed) {
                     LOG.warn("Already Closed, close was called twice.");
@@ -725,6 +691,7 @@ public class SingleChronicleQueueExcerpts {
                         // zero out all contents...
                         for (long i = position; i <= wire.bytes().writePosition(); i++)
                             wire.bytes().writeByte(i, (byte) 0);
+                        position = lastPosition;
                         wire.bytes().writePosition(position);
                         ((AbstractWire) wire).forceNotInsideHeader();
                         return;
@@ -745,7 +712,7 @@ public class SingleChronicleQueueExcerpts {
                             if (lastIndex != Long.MIN_VALUE)
                                 writeIndexForPosition(lastIndex, position);
                             else
-                                assert lazyIndexing || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
+                                assert lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
                         }
                         assert checkWritePositionHeaderNumber();
                     } else if (wire != null) {
@@ -756,11 +723,12 @@ public class SingleChronicleQueueExcerpts {
                 } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
-                    try {
-                        writeLock.unlock();
-                    } catch (Exception ex) {
-                        Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
-                    }
+                    if (unlock)
+                        try {
+                            writeLock.unlock();
+                        } catch (Exception ex) {
+                            Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
+                        }
                 }
             }
 
@@ -768,8 +736,8 @@ public class SingleChronicleQueueExcerpts {
             public long index() throws IORuntimeException {
                 if (this.wire.headerNumber() == Long.MIN_VALUE) {
                     try {
-                        long headerNumber0 = queue.rollCycle().toIndex(cycle, store
-                                .sequenceForPosition(StoreAppender.this, position, false));
+                        wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
+                        long headerNumber0 = wire.headerNumber();
                         assert (((AbstractWire) this.wire).isInsideHeader());
                         return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                     } catch (IOException e) {
@@ -1171,7 +1139,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean inACycle(boolean includeMetaData, boolean first)
-                throws EOFException, StreamCorruptedException {
+                throws EOFException {
             Jvm.optionalSafepoint();
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
@@ -1229,9 +1197,7 @@ public class SingleChronicleQueueExcerpts {
             return false;
         }
 
-        private void inACycleFound(Bytes<?> bytes) throws StreamCorruptedException {
-            indexEntry(bytes);
-
+        private void inACycleFound(Bytes<?> bytes) {
             context.closeReadLimit(bytes.capacity());
             wire().readAndSetLength(bytes.readPosition());
             long end = bytes.readLimit();
@@ -1239,7 +1205,7 @@ public class SingleChronicleQueueExcerpts {
             Jvm.optionalSafepoint();
         }
 
-        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException, StreamCorruptedException {
+        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException {
             // if current time is not the current cycle, then write an EOF marker and
             // re-read from here, you may find that in the mean time an appender writes
             // another message, however the EOF marker will always be at the end.
@@ -1249,41 +1215,15 @@ public class SingleChronicleQueueExcerpts {
             return first
                     && cycleChange2
                     && !isReadOnly(bytes)
-                    && checkMoveToNextCycle(includeMetaData, bytes);
+                    && checkMoveToNextCycle(includeMetaData);
         }
 
-        private void indexEntry(@NotNull Bytes<?> bytes) throws StreamCorruptedException {
-            if (store().indexable(index)
-                    && shouldUpdateIndex
-                    && direction == TailerDirection.FORWARD
-                    && !context.isMetaData())
-                store.setPositionForSequenceNumber(this,
-                        queue.rollCycle().toSequenceNumber(index), bytes
-                                .readPosition());
-        }
-
-        private boolean checkMoveToNextCycle(boolean includeMetaData, @NotNull Bytes<?> bytes)
-                throws EOFException, StreamCorruptedException {
-            if (bytes.readWrite()) {
-                long pos = bytes.readPosition();
-                long lim = bytes.readLimit();
-                long wlim = bytes.writeLimit();
-                try {
-                    bytes.writePosition(pos);
-                    store.writeEOF(wire(), timeoutMS());
-                } finally {
-                    bytes.writeLimit(wlim);
-                    bytes.readLimit(lim);
-                    bytes.readPosition(pos);
-                }
-            } else {
-                Jvm.debug().on(getClass(), "Unable to append EOF to ReadOnly store, skipping");
-                // even though we couldn't write EOF, we still need to indicate we're at EOF to prevent looping forever
-                // only do that if we waited long enough to prevent terminating too early
-                long now = queue.time().currentTimeMillis();
-                if (now >= timeForNextCycle + timeoutMS() * 2)
-                    throw new EOFException();
-            }
+        private boolean checkMoveToNextCycle(boolean includeMetaData) throws EOFException {
+            // even though we couldn't write EOF, we still need to indicate we're at EOF to prevent looping forever
+            // only do that if we waited long enough to prevent terminating too early
+            long now = queue.time().currentTimeMillis();
+            if (now >= timeForNextCycle + timeoutMS() * 2)
+                throw new EOFException();
             return inACycle(includeMetaData, false);
         }
 
@@ -1670,6 +1610,7 @@ public class SingleChronicleQueueExcerpts {
             return this;
 
         }
+
         @Override
         public TailerDirection direction() {
             return direction;

@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
@@ -7,8 +8,7 @@ import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.concurrent.Executors;
@@ -46,12 +46,13 @@ public final class EofMarkerOnEmptyQueueTest {
 
             // ensure that the cycle file will roll
             assertThat(startCycle, is(not(nextCycle)));
+
             Executors.newSingleThreadExecutor().submit(() -> {
                 try (final DocumentContext nextCtx = queue.acquireAppender().writingDocument()) {
                     nextCtx.wire().writeEventName("bar").int32(7);
                 }
 
-            }).get(3, TimeUnit.SECONDS);
+            }).get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);
 
             final WireStore firstCycleStore = queue.storeForCycle(startCycle, 0, false);
             final long firstCycleWritePosition = firstCycleStore.writePosition();
