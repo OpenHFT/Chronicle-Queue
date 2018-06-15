@@ -701,7 +701,12 @@ public class SingleChronicleQueueExcerpts {
                         if (padToCacheAlign)
                             wire.padToCacheAlign();
 
-                        wire.updateHeader(position, metaData, 0);
+                        try {
+                            wire.updateHeader(position, metaData, 0);
+                        } catch (IllegalStateException e) {
+                            if (queue.isClosed())
+                                return;
+                        }
 
                         lastPosition = position;
                         lastCycle = cycle;
@@ -1506,7 +1511,7 @@ public class SingleChronicleQueueExcerpts {
             if (direction.equals(TailerDirection.BACKWARD))
                 return originalToEnd();
 
-            return originalToEnd(); //optimizedToEnd
+            return optimizedToEnd();
         }
 
         @NotNull
@@ -1544,7 +1549,7 @@ public class SingleChronicleQueueExcerpts {
                     return originalToEnd();
                 }
 
-                if (Wires.isEndOfFile(wire().bytes().readInt(wire().bytes().readPosition()))) {
+                if (Wires.isEndOfFile(wire().bytes().readVolatileInt(wire().bytes().readPosition()))) {
                     state = END_OF_CYCLE;
                 } else
                     state = FOUND_CYCLE;

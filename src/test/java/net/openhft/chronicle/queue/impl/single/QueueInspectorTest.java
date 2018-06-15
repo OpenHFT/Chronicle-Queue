@@ -50,7 +50,7 @@ public final class QueueInspectorTest {
             try (final DocumentContext ctx = appender.writingDocument()) {
                 ctx.wire().write("foo").int32(17L);
                 final int writingThreadId = inspector.getWritingThreadId();
-// commented out as fails on Mac OS
+// commentedVanillaMsgSequenceHandler out as fails on Mac OS
 //                assertThat(writingThreadId, is(Affinity.getThreadId()));
                 // we no longer write header before the document is closed
                 // assertThat(QueueInspector.isValidThreadId(writingThreadId), is(true));
