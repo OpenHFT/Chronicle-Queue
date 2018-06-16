@@ -42,7 +42,7 @@ public class TestEmptyFile {
     @Before
     public void setup() throws Exception {
         tmpDir.toFile().mkdirs();
-        Path templatePath = Paths.get(OS.USER_DIR, "src/test/resources/tr2/directory-listing.cq4t");
+        Path templatePath = Paths.get(OS.USER_DIR, "src/test/resources/tr2/" + DirectoryListing.DIRECTORY_LISTING_FILE);
         Path to = tmpDir.resolve(templatePath.getFileName());
         Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
         File file = tmpDir.resolve("20170320.cq4").toFile();
