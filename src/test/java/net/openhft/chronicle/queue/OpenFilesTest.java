@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.impl.single.DirectoryListing;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
@@ -112,7 +113,7 @@ public class OpenFilesTest {
     private void removeDirectoryListing(final List<String> mappedQueueFileCount) {
         Iterator<String> iterator = mappedQueueFileCount.iterator();
         while (iterator.hasNext()) {
-            if (iterator.next().endsWith("directory-listing.cq4t"))
+            if (iterator.next().endsWith(DirectoryListing.DIRECTORY_LISTING_FILE))
                 iterator.remove();
         }
     }
