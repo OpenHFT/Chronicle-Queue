@@ -818,7 +818,6 @@ public class SingleChronicleQueueExcerpts {
         private TailerState state = UNINITIALISED;
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
-        private boolean shouldUpdateIndex = false;
         private long address = NoBytesStore.NO_PAGE;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
@@ -1088,7 +1087,7 @@ public class SingleChronicleQueueExcerpts {
             // We are here because we are waiting for an entry to be written to this file.
             // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
             int nextCycle = queue.rollCycle().toCycle(nextIndex);
-            cycle(nextCycle, false);
+            cycle(nextCycle);
             state = CYCLE_NOT_FOUND;
             return false;
         }
@@ -1097,7 +1096,7 @@ public class SingleChronicleQueueExcerpts {
             // give the position of the last entry and
             // flag we want to count it even though we don't know if it will be meta data or not.
 
-            boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
+            boolean foundCycle = cycle(queue.rollCycle().toCycle(index));
 
             if (foundCycle) {
                 long lastSequenceNumberInThisCycle = store().sequenceForPosition(this, Long.MAX_VALUE, false);
@@ -1272,7 +1271,7 @@ public class SingleChronicleQueueExcerpts {
             }
 
             int nextCycle = cycle + direction.add();
-            boolean found = cycle(nextCycle, false);
+            boolean found = cycle(nextCycle);
             if (found)
                 return nextIndexWithinFoundCycle(nextCycle);
 
@@ -1348,7 +1347,7 @@ public class SingleChronicleQueueExcerpts {
 
             if (cycle != this.cycle || state != FOUND_CYCLE) {
                 // moves to the expected cycle
-                if (!cycle(cycle, false))
+                if (!cycle(cycle))
                     return ScanResult.NOT_REACHED;
             }
 
@@ -1382,7 +1381,7 @@ public class SingleChronicleQueueExcerpts {
             }
             if (firstCycle != this.cycle) {
                 // moves to the expected cycle
-                boolean found = cycle(firstCycle, false);
+                boolean found = cycle(firstCycle);
                 assert found || store == null;
                 if (found)
                     state = FOUND_CYCLE;
@@ -1656,7 +1655,7 @@ public class SingleChronicleQueueExcerpts {
                 case FORWARD:
                     // if it runs out of seq number it will flow over to tomorrows cycle file
                     if (rollCycle.toSequenceNumber(seq) < seq) {
-                        cycle(cycle + 1, false);
+                        cycle(cycle + 1);
                         LOG.warn("we have run out of sequence numbers, so will start to write to " +
                                 "the next .cq4 file, the new cycle=" + cycle);
                         seq = 0;
@@ -1706,11 +1705,11 @@ public class SingleChronicleQueueExcerpts {
             moveToState.reset();
         }
 
-        private boolean cycle(final int cycle, boolean createIfAbsent) {
+        private boolean cycle(final int cycle) {
             if (this.cycle == cycle && state == FOUND_CYCLE)
                 return true;
 
-            WireStore nextStore = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            WireStore nextStore = this.queue.storeForCycle(cycle, queue.epoch(), false);
 
             if (nextStore == null && this.store == null)
                 return false;
@@ -1824,13 +1823,6 @@ public class SingleChronicleQueueExcerpts {
                     tailer.queue().fileAbsolutePath(), Long.toHexString(tailer.index()), WireType.TEXT.asString(messageHistory));
         }
 
-        @NotNull
-        @Override
-        public ExcerptTailer indexing(final boolean indexing) {
-            this.shouldUpdateIndex = indexing;
-            return this;
-        }
-
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
 
             if (Jvm.isDebugEnabled(getClass()))
@@ -1847,7 +1839,7 @@ public class SingleChronicleQueueExcerpts {
             // NOTE: This is a very expensive operation.
             StoreTailer temp = queue.acquireTailer();
             try {
-                if (!temp.cycle(cycle0, false)) {
+                if (!temp.cycle(cycle0)) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
                     return;
                 }
@@ -1880,7 +1872,7 @@ public class SingleChronicleQueueExcerpts {
             StoreTailer temp = queue.acquireTailer();
             try {
 
-                if (!temp.cycle(cycle0, false)) {
+                if (!temp.cycle(cycle0)) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " for a cycle which could not found");
                     return;
                 }
