@@ -12,7 +12,7 @@ image::images/Queue_line.png[width=20%]
 [caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
 image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[]
 
-= Chagnes from Chronicle Queue version 4 to version 5 
+==== Chagnes from Chronicle Queue version 4 to version 5 
 
 Tailers are now always read only and are not allowed to write data, and appenders are now using write lock stored in a queuelock.cq4t table store meaning it's no longer possible for appenders to attempt concurrent writing/rolling/etc. The write lock guards rolls, EOF writing and any other write access. In addition, lazy indexing has been dropped (to facilitate the above), and first index is now written during the new file acquisition.
 
