@@ -112,8 +112,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final WriteLock writeLock;
     private final boolean strongAppenders;
     protected int sourceId;
-    long firstAndLastCycleTime = 0;
-    int firstAndLastRetry = 0;
+    long firstCycleTime = 0;
+    long lastCycleTime = 0;
+    int firstRetry = 0;
+    int lastRetry = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     @NotNull
     private RollCycle rollCycle;
@@ -603,18 +605,30 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return path.list();
     }
 
-    private void setFirstAndLastCycle() {
+    private void setFirstCycle() {
         long now = time.currentTimeMillis();
-        if (now == firstAndLastCycleTime) {
-            if (++firstAndLastRetry > FIRST_AND_LAST_RETRY_MAX)
+        if (now == firstCycleTime) {
+            if (++firstRetry > FIRST_AND_LAST_RETRY_MAX)
                 return;
         }
 
         firstCycle = directoryListing.getMinCreatedCycle();
+
+        firstCycleTime = now;
+        firstRetry = 0;
+    }
+
+    private void setLastCycle() {
+        long now = time.currentTimeMillis();
+        if (now == lastCycleTime) {
+            if (++lastRetry > FIRST_AND_LAST_RETRY_MAX)
+                return;
+        }
+
         lastCycle = directoryListing.getMaxCreatedCycle();
 
-        firstAndLastCycleTime = now;
-        firstAndLastRetry = 0;
+        lastCycleTime = now;
+        lastRetry = 0;
     }
 
     @NotNull
@@ -635,7 +649,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public int firstCycle() {
-        setFirstAndLastCycle();
+        setFirstCycle();
         return firstCycle;
     }
 
@@ -653,7 +667,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public int lastCycle() {
-        setFirstAndLastCycle();
+        setLastCycle();
         return lastCycle;
     }
 

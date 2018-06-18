@@ -1053,8 +1053,7 @@ public class SingleChronicleQueueExcerpts {
             long nextIndex = nextIndexWithNextAvailableCycle(currentCycle);
 
             if (nextIndex != Long.MIN_VALUE) {
-                if (nextEndOfCycle(nextIndex))
-                    return true;
+                return nextEndOfCycle(nextIndex);
             } else {
                 state = END_OF_CYCLE;
             }
