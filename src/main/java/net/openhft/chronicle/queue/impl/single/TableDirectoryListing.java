@@ -10,8 +10,6 @@ import java.nio.file.Path;
 import java.util.function.ToIntFunction;
 
 final class TableDirectoryListing implements DirectoryListing {
-    // visible for testing
-    static final String LOCK = "listing.exclusiveLock";
     private static final Logger LOGGER = LoggerFactory.getLogger(TableDirectoryListing.class);
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
@@ -24,7 +22,6 @@ final class TableDirectoryListing implements DirectoryListing {
     private final boolean readOnly;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
-    private volatile LongValue lock;
     private volatile LongValue modCount;
 
     TableDirectoryListing(
@@ -43,11 +40,7 @@ final class TableDirectoryListing implements DirectoryListing {
             maxCycleValue = ts.acquireValueFor(HIGHEST_CREATED_CYCLE);
             minCycleValue = ts.acquireValueFor(LOWEST_CREATED_CYCLE);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
-            lock = ts.acquireValueFor(LOCK);
             modCount = ts.acquireValueFor(MOD_COUNT);
-            if (lock.getVolatileValue() == Long.MIN_VALUE) {
-                lock.compareAndSwapValue(Long.MIN_VALUE, 0);
-            }
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
             }

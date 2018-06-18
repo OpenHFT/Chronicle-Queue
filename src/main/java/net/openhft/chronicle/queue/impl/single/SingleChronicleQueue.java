@@ -67,7 +67,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     private static final boolean SHOULD_CHECK_CYCLE = Boolean.getBoolean("chronicle.queue.checkrollcycle");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
-    private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 1);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
     final Supplier<Pauser> pauserSupplier;
@@ -112,10 +111,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final WriteLock writeLock;
     private final boolean strongAppenders;
     protected int sourceId;
-    long firstCycleTime = 0;
-    long lastCycleTime = 0;
-    int firstRetry = 0;
-    int lastRetry = 0;
+    long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     @NotNull
     private RollCycle rollCycle;
@@ -452,12 +448,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * Will give you the number of excerpts between 2 index’s ( as exists on the current file
+     * Will give you the number of excerpts between 2 index?s ( as exists on the current file
      * system ). If intermediate chronicle files are removed this will effect the result.
      *
      * @param fromIndex the lower index
      * @param toIndex   the higher index
-     * @return will give you the number of excerpts between 2 index’s. It’s not as simple as just
+     * @return will give you the number of excerpts between 2 index?s. It?s not as simple as just
      * subtracting one number from the other.
      * @throws IllegalStateException if we are not able to read the chronicle files
      */
@@ -477,26 +473,27 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         // some of the sequences maybe at -1 so we will add 1 to the cycle and update the result
         // accordingly
-        long sequenceNotSet = rollCycle().toSequenceNumber(-1);
+        RollCycle rollCycle = rollCycle();
+        long sequenceNotSet = rollCycle.toSequenceNumber(-1);
 
-        if (rollCycle().toSequenceNumber(fromIndex) == sequenceNotSet) {
+        if (rollCycle.toSequenceNumber(fromIndex) == sequenceNotSet) {
             result++;
             fromIndex++;
         }
 
-        if (rollCycle().toSequenceNumber(toIndex) == sequenceNotSet) {
+        if (rollCycle.toSequenceNumber(toIndex) == sequenceNotSet) {
             result--;
             toIndex++;
         }
 
-        int lowerCycle = rollCycle().toCycle(fromIndex);
-        int upperCycle = rollCycle().toCycle(toIndex);
+        int lowerCycle = rollCycle.toCycle(fromIndex);
+        int upperCycle = rollCycle.toCycle(toIndex);
 
         if (lowerCycle == upperCycle)
             return toIndex - fromIndex;
 
-        long upperSeqNum = rollCycle().toSequenceNumber(toIndex);
-        long lowerSeqNum = rollCycle().toSequenceNumber(fromIndex);
+        long upperSeqNum = rollCycle.toSequenceNumber(toIndex);
+        long lowerSeqNum = rollCycle.toSequenceNumber(fromIndex);
 
         if (lowerCycle + 1 == upperCycle) {
             long l = exceptsPerCycle(lowerCycle);
@@ -605,30 +602,16 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return path.list();
     }
 
-    private void setFirstCycle() {
+    private void setFirstAndLastCycle() {
         long now = time.currentTimeMillis();
-        if (now == firstCycleTime) {
-            if (++firstRetry > FIRST_AND_LAST_RETRY_MAX)
-                return;
+        if (now <= firstAndLastCycleTime) {
+            return;
         }
 
         firstCycle = directoryListing.getMinCreatedCycle();
-
-        firstCycleTime = now;
-        firstRetry = 0;
-    }
-
-    private void setLastCycle() {
-        long now = time.currentTimeMillis();
-        if (now == lastCycleTime) {
-            if (++lastRetry > FIRST_AND_LAST_RETRY_MAX)
-                return;
-        }
-
         lastCycle = directoryListing.getMaxCreatedCycle();
 
-        lastCycleTime = now;
-        lastRetry = 0;
+        firstAndLastCycleTime = now;
     }
 
     @NotNull
@@ -649,7 +632,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public int firstCycle() {
-        setFirstCycle();
+        setFirstAndLastCycle();
         return firstCycle;
     }
 
@@ -667,7 +650,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public int lastCycle() {
-        setLastCycle();
+        setFirstAndLastCycle();
         return lastCycle;
     }
 
@@ -838,6 +821,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     wire.updateFirstHeader();
 
                     wireStore.initIndex(wire);
+                    // do not allow tailer to see the file until it's header is written
+                    directoryListing.onFileCreated(path, cycle);
                 } else {
                     wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
 
@@ -861,8 +846,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                         throw new StreamCorruptedException("The first message should be the header, was " + name);
                     }
                 }
-                // do not allow tailer to see the file until it's header is written
-                directoryListing.onFileCreated(path, cycle);
 
                 return wireStore;
 
