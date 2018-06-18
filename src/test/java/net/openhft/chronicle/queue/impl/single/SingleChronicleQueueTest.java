@@ -4194,7 +4194,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
         }
-        assertThat(new File("directory-listing.cq4t").delete(), is(true));
+        assertThat(new File(DirectoryListing.DIRECTORY_LISTING_FILE).delete(), is(true));
     }
 
     @NotNull
