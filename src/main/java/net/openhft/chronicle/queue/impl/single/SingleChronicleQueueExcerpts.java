@@ -68,7 +68,6 @@ public class SingleChronicleQueueExcerpts {
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
 
-        static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -831,11 +830,6 @@ public class SingleChronicleQueueExcerpts {
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
         }
 
-        private static boolean isReadOnly(Bytes bytes) {
-            return bytes instanceof MappedBytes &&
-                    ((MappedBytes) bytes).isBackingFileReadOnly();
-        }
-
         @Nullable
         public static MessageHistory readHistory(final DocumentContext dc, MessageHistory history) {
             final Wire wire = dc.wire();
@@ -1211,20 +1205,16 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException {
-            // if current time is not the current cycle, then write an EOF marker and
-            // re-read from here, you may find that in the mean time an appender writes
-            // another message, however the EOF marker will always be at the end.
             long now = queue.time().currentTimeMillis();
             boolean cycleChange2 = now >= timeForNextCycle;
 
             return first
                     && cycleChange2
-                    && !isReadOnly(bytes)
                     && checkMoveToNextCycle(includeMetaData);
         }
 
         private boolean checkMoveToNextCycle(boolean includeMetaData) throws EOFException {
-            // even though we couldn't write EOF, we still need to indicate we're at EOF to prevent looping forever
+            // even though we are not writing EOF, we still need to indicate we're at EOF to prevent looping forever
             // only do that if we waited long enough to prevent terminating too early
             long now = queue.time().currentTimeMillis();
             if (now >= timeForNextCycle + timeoutMS() * 2)
