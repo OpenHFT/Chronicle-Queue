@@ -59,7 +59,6 @@ public class DumpQueueMainTest {
 
             assertThat(capturedOutput, containsString("listing.highestCycle"));
             assertThat(capturedOutput, containsString("listing.lowestCycle"));
-            assertThat(capturedOutput, containsString("listing.exclusiveLock"));
         }
     }
 

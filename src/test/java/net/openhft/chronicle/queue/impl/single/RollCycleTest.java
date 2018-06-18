@@ -50,6 +50,7 @@ public class RollCycleTest {
 
             // allow parallel tailer to finish iteration
             for (int i = 0; i < 5_000 && observer.documentsRead != 1; i++) {
+                timeProvider.advanceMicros(100);
                 Thread.sleep(1);
             }
 

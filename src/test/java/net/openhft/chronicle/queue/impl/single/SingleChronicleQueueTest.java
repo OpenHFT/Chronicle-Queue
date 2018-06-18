@@ -3724,12 +3724,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         long time = System.currentTimeMillis();
 
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.currentTimeMillis(time);
         try (ChronicleQueue q1 = binary(dir)
-                .timeProvider(() -> time)
+                .timeProvider(timeProvider)
                 .build()) {
 
             try (SingleChronicleQueue q2 = binary(dir)
-                    .timeProvider(() -> time)
+                    .timeProvider(timeProvider)
                     .build()) {
 
                 final ExcerptAppender appender2 = q2.acquireAppender();
@@ -3745,6 +3747,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
 
                 Assert.assertTrue(q1.file().equals(q2.file()));
+                // this is required for queue to re-request last/first cycle
+                timeProvider.advanceMillis(1);
 
                 for (int i = 0; i < 10; i++) {
                     try (DocumentContext dc = tailer1.readingDocument()) {
