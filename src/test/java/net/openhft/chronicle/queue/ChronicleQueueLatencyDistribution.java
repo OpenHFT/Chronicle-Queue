@@ -103,12 +103,12 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     @Nullable
     final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws InterruptedException {
         assert false : "test runs slower with assertions on";
         new ChronicleQueueLatencyDistribution().run();
     }
 
-    public void run() throws IOException, InterruptedException {
+    public void run() throws InterruptedException {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(getTmpDir())
                 .blockSize(128 << 20)
@@ -138,7 +138,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         pretoucher.setDaemon(true);
         pretoucher.start();
 
-        ExcerptAppender appender = queue.acquireAppender().lazyIndexing(true);
+        ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
 
         String name = getClass().getName();

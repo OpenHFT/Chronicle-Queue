@@ -35,7 +35,7 @@ public class PretoucherTest {
     }
 
     @Test
-    public void shouldHandleCycleRoll() throws Exception {
+    public void shouldHandleCycleRoll() {
         try (final SingleChronicleQueue queue = createQueue(tempDir("shouldHandleCycleRoll"), clock::get)) {
             final Pretoucher pretoucher = new Pretoucher(queue, chunkListener, capturedCycles::add);
 
@@ -58,7 +58,7 @@ public class PretoucherTest {
     }
 
     @Test
-    public void shouldHandleEarlyCycleRoll() throws Exception {
+    public void shouldHandleEarlyCycleRoll() {
         assert System.getProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle") == null;
         assert System.getProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs") == null;
         System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");

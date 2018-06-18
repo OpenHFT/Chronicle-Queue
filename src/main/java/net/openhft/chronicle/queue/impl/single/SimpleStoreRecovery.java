@@ -37,34 +37,6 @@ import java.util.concurrent.TimeoutException;
  * Created by Peter Lawrey on 22/05/16.
  */
 public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRecovery {
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleStoreRecovery.class);
-
-    @Override
-    public long recoverIndex2Index(@NotNull LongValue index2Index, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
-        Jvm.warn().on(getClass(), "Rebuilding the index2index");
-        index2Index.setValue(0);
-        try {
-            return action.call();
-        } catch (Exception e) {
-            throw Jvm.rethrow(e);
-        }
-    }
-
-    @Override
-    public long recoverSecondaryAddress(@NotNull LongArrayValues index2indexArr, int index2, @NotNull Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
-        Jvm.warn().on(getClass(), "Timed out trying to get index2index[" + index2 + "]");
-        index2indexArr.setValueAt(index2, 0L);
-        try {
-            return action.call();
-
-        } catch (TimeoutException e) {
-            throw new UnrecoverableTimeoutException(e);
-
-        } catch (Exception e) {
-            throw Jvm.rethrow(e);
-        }
-    }
-
     @Override
     public long recoverAndWriteHeader(@NotNull Wire wire,
                                       long timeoutMS,

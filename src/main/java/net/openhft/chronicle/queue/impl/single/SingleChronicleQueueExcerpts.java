@@ -40,6 +40,7 @@ import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
+import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -67,14 +68,13 @@ public class SingleChronicleQueueExcerpts {
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
 
-        static final int REPEAT_WHILE_ROLLING = 128;
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
+        private final WriteLock writeLock;
+        @NotNull
         private final StoreAppenderContext context;
         private final ClosableResources closableResources;
-        @NotNull
-        private final HeaderWriteStrategy headerWriteStrategy;
         private final WireStorePool storePool;
         @Nullable
         WireStore store;
@@ -86,24 +86,21 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private Wire wireForIndex;
         private long position = 0;
-        @Nullable
-        private volatile Thread appendingThread = null;
         private long lastIndex = Long.MIN_VALUE;
-        private boolean lazyIndexing = false;
         private long lastPosition;
         private int lastCycle;
         @Nullable
         private Pretoucher pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
-        StoreAppender(@NotNull SingleChronicleQueue queue, boolean progressOnContention, @NotNull WireStorePool storePool) {
+        StoreAppender(@NotNull SingleChronicleQueue queue, WriteLock writeLock, @NotNull WireStorePool storePool) {
             this.queue = queue;
+            this.writeLock = writeLock;
             queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
             this.storePool = storePool;
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
-            headerWriteStrategy = progressOnContention ? new HeaderWriteStrategyDefer() : new HeaderWriteStrategyOriginal();
         }
 
         @Deprecated // Should not be providing accessors to reference-counted objects
@@ -222,23 +219,6 @@ public class SingleChronicleQueueExcerpts {
             this.lastIndex = index;
         }
 
-        @NotNull
-        @Override
-        public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
-            this.lazyIndexing = lazyIndexing;
-            try {
-                resetPosition();
-            } catch (EOFException ex) {
-                throw new IllegalStateException("EOF found");
-            }
-            return this;
-        }
-
-        @Override
-        public boolean lazyIndexing() {
-            return lazyIndexing;
-        }
-
         @Override
         public boolean recordHistory() {
             return sourceId() != 0;
@@ -270,12 +250,8 @@ public class SingleChronicleQueueExcerpts {
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
-            try {
-                resetPosition();
-                queue.onRoll(cycle);
-            } catch (EOFException eof) {
-                handleRoll(cycle);
-            }
+            resetPosition();
+            queue.onRoll(cycle);
         }
 
         private void resetWires(@NotNull SingleChronicleQueue queue) {
@@ -301,28 +277,17 @@ public class SingleChronicleQueueExcerpts {
 
         }
 
-        private void resetPosition() throws UnrecoverableTimeoutException, EOFException {
+        private void resetPosition() throws UnrecoverableTimeoutException {
             try {
-
                 if (store == null || wire == null)
                     return;
                 position(store.writePosition());
 
-                Bytes<?> bytes = wire.bytes();
-                int header = bytes.readVolatileInt(position);
-                if (header == Wires.END_OF_DATA) {
-                    throw new EOFException();
-                }
-                assert position == 0 || Wires.isReadyData(header);
-                bytes.writePosition(position + 4 + Wires.lengthOf(header));
-                if (lazyIndexing) {
-                    wire.headerNumber(Long.MIN_VALUE);
-                    return;
-                }
+                assert position == 0 || Wires.isReadyData(wire.bytes().readVolatileInt(position));
 
-                final long headerNumber = store.sequenceForPosition(this, position, true);
+                final long headerNumber = store.lastSequenceNumber(this);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
-                assert lazyIndexing || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
+                assert wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
             } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
                 throw new AssertionError(e);
@@ -333,100 +298,87 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
-            assert checkAppendingThread();
-            assert checkWritePositionHeaderNumber();
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
             if (Thread.currentThread().isInterrupted())
                 throw new IllegalStateException("Queue won't write from an interrupted thread");
-            boolean ok = false;
-            try {
-                int cycle = queue.cycle();
+            writeLock.lock();
+            assert checkWritePositionHeaderNumber();
+            int cycle = queue.cycle();
 
-                if (wire == null) {
-                    // we have check it the queue file has rolled due to an early EOF
-                    cycle = Math.max(queue.lastCycle(), cycle);
+            if (wire == null) {
+                int lastCycle = queue.lastCycle();
+                if (lastCycle == Integer.MIN_VALUE)
+                    lastCycle = cycle;
 
-                    setCycle2(cycle, true);
-                } else if (this.cycle != cycle)
-                    rollCycleTo(cycle);
-
-                int safeLength = (int) queue.overlapSize();
-                ok = headerWriteStrategy.onContextOpen(metaData, safeLength);
-                return context;
-
-            } finally {
-                assert ok || resetAppendingThread();
+                setCycle2(lastCycle, true);
             }
+
+            if (this.cycle != cycle)
+                rollCycleTo(cycle);
+
+            int safeLength = (int) queue.overlapSize();
+
+            openContext(metaData, safeLength);
+            return context;
         }
 
-        private int handleRoll(int cycle) {
-            assert !((AbstractWire) wire).isInsideHeader();
-            int qCycle = queue.cycle();
-            if (cycle < queue.cycle()) {
-                setCycle2(cycle = qCycle, true);
-            } else if (cycle == qCycle) {
-                // for the rare case where the qCycle has just changed in the last
-                // few milliseconds since
-                setCycle2(++cycle, true);
-            } else {
-                throw new IllegalStateException("Found an EOF on the next cycle file," +
-                        " this next file, should not have an EOF as its cycle " +
-                        "number is greater than the current cycle (based on the " +
-                        "current time), this should only happen " +
-                        "if it was written by a different appender set with a different " +
-                        "EPOCH or different roll cycle." +
-                        "All your appenders ( that write to a given directory ) " +
-                        "should have the same EPOCH and roll cycle" +
-                        " qCycle=" + qCycle + ", cycle=" + cycle + ", queue-file=" + queue.fileAbsolutePath());
+        private long writeHeader(@NotNull Wire wire, int safeLength) {
+            Bytes<?> bytes = wire.bytes();
+            // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
+            long pos = position;
+            long lastPos = store.writePosition();
+            if (pos < lastPos) {
+                // queue moved since we last touched it - recalculate header number
+
+                try {
+                    wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                } catch (StreamCorruptedException ex) {
+                    Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
+                }
             }
-            return cycle;
+            int header = bytes.readVolatileInt(lastPos);
+            assert header != NOT_INITIALIZED;
+            lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
+            bytes.writePosition(lastPos);
+
+            return wire.enterHeader(safeLength);
+        }
+
+        private void openContext(boolean metaData, int safeLength) {
+            assert wire != null;
+            position(writeHeader(wire, safeLength));
+            context.isClosed = false;
+            context.rollbackOnClose = false;
+            context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+            context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
+            context.metaData(metaData);
         }
 
         boolean checkWritePositionHeaderNumber() {
             if (wire == null || wire.headerNumber() == Long.MIN_VALUE) return true;
             try {
-                long pos1 = position;
-         /*
-                long posMax = store.writePosition();
-                if (pos1 > posMax+4) {
-                    System.out.println(queue.dump());
-                    String message = "########### " +
-                            "thread: " + Thread.currentThread().getName() +
-                            "  pos1: " + pos1 +
-                            " posMax: " + posMax;
-                    System.err.println(message);
-                    throw new AssertionError(message);
-                }*/
+                long pos = position;
 
                 long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
-                long seq2 =-1;
-                try {
-                      seq2 = store.sequenceForPosition(this, pos1, true);
-                } catch (Exception e) {
-                    if (e instanceof EOFException)
-                        // queue has rolled
-                        return true;
-                }
+                long seq2 = store.sequenceForPosition(this, pos, true);
 
                 if (seq1 != seq2) {
 //                    System.out.println(queue.dump());
                     String message = "~~~~~~~~~~~~~~ " +
                             "thread: " + Thread.currentThread().getName() +
-                            "  pos1: " + pos1 +
+                            " pos: " + pos +
+                            " header: " + wire.headerNumber() +
                             " seq1: " + seq1 +
                             " seq2: " + seq2;
-                    System.err.println(message);
+                    //System.err.println(message);
+                    new AssertionError(message).printStackTrace();
                     throw new AssertionError(message);
                 }
 
             } catch (Exception e) {
-                if (e instanceof EOFException) {
-                    Jvm.debug().on(getClass(), e);
-                } else {
-                    Jvm.fatal().on(getClass(), e);
-                    throw Jvm.rethrow(e);
-                }
+                Jvm.fatal().on(getClass(), e);
+                throw Jvm.rethrow(e);
             }
             return true;
         }
@@ -434,8 +386,8 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public DocumentContext writingDocument(long index) {
+            writeLock.lock();
             context.isClosed = false;
-            assert checkAppendingThread();
             context.wire = acquireBufferWire();
             context.wire.headerNumber(index);
             context.isClosed = false;
@@ -449,7 +401,27 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void writeBytes(@NotNull BytesStore bytes) throws UnrecoverableTimeoutException {
-            append((m, w) -> w.bytes().write(m), bytes);
+            writeLock.lock();
+            try {
+                int cycle = queue.cycle();
+                if (this.cycle != cycle || wire == null)
+                    rollCycleTo(cycle);
+
+                position(writeHeader(wire, (int) queue.overlapSize()));
+                assert ((AbstractWire) wire).isInsideHeader();
+                beforeAppend(wire, wire.headerNumber() + 1);
+                wire.bytes().write(bytes);
+                wire.updateHeader(position, false, 0);
+                lastIndex(wire.headerNumber());
+                lastPosition = position;
+                lastCycle = cycle;
+                store.writePosition(position);
+                writeIndexForPosition(lastIndex, position);
+            } catch (StreamCorruptedException e) {
+                throw new AssertionError(e);
+            } finally {
+                writeLock.unlock();
+            }
         }
 
         @NotNull
@@ -478,32 +450,17 @@ public class SingleChronicleQueueExcerpts {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
 
-            int cycle = queue.rollCycle().toCycle(index);
-
-            if (wire == null)
-                setCycle2(cycle, true);
-            else if (this.cycle != cycle)
-                rollCycleTo(cycle);
-
-            int safeLength = (int) queue.overlapSize();
-
-            assert checkAppendingThread();
-
+            writeLock.lock();
             try {
+                int cycle = queue.rollCycle().toCycle(index);
 
-                long pos = wire.bytes().writePosition();
-
-                // opening the context locks the chronicle
-                headerWriteStrategy.onContextOpen(false, safeLength);
+                if (wire == null) {
+                    setCycle2(cycle, true);
+                } else if (this.cycle < cycle)
+                    rollCycleTo(cycle);
 
                 boolean rollbackDontClose = index != wire.headerNumber() + 1;
                 if (rollbackDontClose) {
-                    wire.bytes().writeSkip(-4);
-                    wire.bytes().writeVolatileInt(wire.bytes().writePosition(), 0);
-                    wire.bytes().writeLimit(wire.bytes().capacity());
-
-                    this.position = pos;
-                    ((AbstractWire) wire).forceNotInsideHeader();
                     if (index > wire.headerNumber() + 1)
                         throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
                     // TODO: assert bytes.equalBytes(wire.bytes() ...);
@@ -511,14 +468,29 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
+                writeBytesInternal(index, bytes);
+            } finally {
+                writeLock.unlock();
+            }
+        }
+
+        private void writeBytesInternal(long index, @NotNull BytesStore bytes) {
+            assert writeLock.locked();
+            try {
+                if (wire == null) {
+                    int cycle = queue.rollCycle().toCycle(index);
+                    setCycle2(cycle, true);
+                }
+                int safeLength = (int) queue.overlapSize();
+                openContext(false, safeLength);
+
                 try {
                     context.wire().bytes().write(bytes);
                 } finally {
-                    context.close();
+                    context.close(false);
                 }
 
             } finally {
-                this.appendingThread = null;
                 context.isClosed = true;
             }
         }
@@ -583,40 +555,6 @@ public class SingleChronicleQueueExcerpts {
         void beforeAppend(Wire wire, long index) {
         }
 
-        private <T> void append(@NotNull WireWriter<T> wireWriter, T writer) throws
-                UnrecoverableTimeoutException {
-
-            assert checkAppendingThread();
-            try {
-                int cycle = queue.cycle();
-                if (this.cycle != cycle || wire == null)
-                    rollCycleTo(cycle);
-
-                try {
-                    position(store.writeHeader(wire, (int) queue.overlapSize(), timeoutMS()));
-                    assert ((AbstractWire) wire).isInsideHeader();
-                    beforeAppend(wire, wire.headerNumber() + 1);
-                    wireWriter.write(writer, wire);
-                    wire.updateHeader(position, false);
-                    lastIndex(wire.headerNumber());
-                    lastPosition = position;
-                    lastCycle = cycle;
-                    store.writePosition(position);
-                    writeIndexForPosition(lastIndex, position);
-                } catch (EOFException theySeeMeRolling) {
-                    try {
-                        append2(wireWriter, writer);
-                    } catch (EOFException e) {
-                        throw new AssertionError(e);
-                    }
-                }
-            } catch (StreamCorruptedException e) {
-                throw new AssertionError(e);
-            } finally {
-                assert resetAppendingThread();
-            }
-        }
-
         private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
             if (wire != null) {
                 // only a valid check if the wire was set.
@@ -638,41 +576,11 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        <T> void append2(@NotNull WireWriter<T> wireWriter, T writer) throws
-                UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
-            setCycle(Math.max(queue.cycle(), cycle + 1));
-            position(store.writeHeader(wire, (int) queue.overlapSize(), timeoutMS()));
-            beforeAppend(wire, wire.headerNumber() + 1);
-            wireWriter.write(writer, wire);
-            wire.updateHeader(position, false);
-        }
-
-        private boolean checkAppendingThread() {
-            Thread appendingThread = this.appendingThread;
-            Thread currentThread = Thread.currentThread();
-            if (appendingThread != null) {
-                if (appendingThread == currentThread)
-                    throw new IllegalStateException("Nested blocks of writingDocument() not supported");
-                throw new IllegalStateException("Attempting to use Appender in " + currentThread + " while used by " + appendingThread);
-            }
-            this.appendingThread = currentThread;
-            return true;
-        }
-
-        private boolean resetAppendingThread() {
-            if (this.appendingThread == null)
-                throw new IllegalStateException("Attempting to release Appender in " + Thread.currentThread() + " but already released");
-            this.appendingThread = null;
-            return true;
-        }
-
         void writeIndexForPosition(long index, long position)
                 throws UnrecoverableTimeoutException, StreamCorruptedException {
 
-            if (!lazyIndexing) {
-                long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-                store.setPositionForSequenceNumber(this, sequenceNumber, position);
-            }
+            long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
+            store.setPositionForSequenceNumber(this, sequenceNumber, position);
         }
 
         boolean checkIndex(long index, long position) {
@@ -694,10 +602,6 @@ public class SingleChronicleQueueExcerpts {
                     assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                     assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
-                } else {
-              /*      System.out.println("checked Thread=" + Thread.currentThread().getName() +
-                            " pos: " + position +
-                            " seq1: " + seq1);*/
                 }
 
             } catch (@NotNull EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
@@ -713,22 +617,14 @@ public class SingleChronicleQueueExcerpts {
                     ", cycle=" + cycle +
                     ", position=" + position +
                     ", lastIndex=" + lastIndex +
-                    ", lazyIndexing=" + lazyIndexing +
                     ", lastPosition=" + lastPosition +
                     ", lastCycle=" + lastCycle +
                     '}';
         }
 
-        private interface HeaderWriteStrategy {
-            void onContextClose();
-
-            boolean onContextOpen(boolean metaData, int safeLength);
-        }
-
         class StoreAppenderContext implements DocumentContext {
 
             boolean isClosed;
-            boolean deferredHeader;
             boolean padToCacheAlign = true;
             private boolean metaData = false;
             private boolean rollbackOnClose = false;
@@ -745,7 +641,6 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             }
 
-            @NotNull
             @Override
             public Wire wire() {
                 return wire;
@@ -777,6 +672,10 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public void close() {
+                close(true);
+            }
+
+            public void close(boolean unlock) {
 
                 if (isClosed) {
                     LOG.warn("Already Closed, close was called twice.");
@@ -789,36 +688,24 @@ public class SingleChronicleQueueExcerpts {
                         if (interrupted)
                             LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
                         // zero out all contents...
-                        for (long i = position + Wires.SPB_HEADER_SIZE; i <= wire.bytes().writePosition(); i++)
+                        for (long i = position; i <= wire.bytes().writePosition(); i++)
                             wire.bytes().writeByte(i, (byte) 0);
-                        // ...and then the header, as if we had never been here
-                        wire.bytes().writeVolatileInt(position, 0);
+                        position = lastPosition;
                         wire.bytes().writePosition(position);
                         ((AbstractWire) wire).forceNotInsideHeader();
                         return;
                     }
 
-                    headerWriteStrategy.onContextClose();
-
                     if (wire == StoreAppender.this.wire) {
                         if (padToCacheAlign)
                             wire.padToCacheAlign();
 
-                        boolean updatedHeader = false;
-                        for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
-                            try {
-                                wire.updateHeader(position, metaData);
-                                updatedHeader = true;
-                                break;
-                            } catch (EOFException theySeeMeRolling) {
-                                cycle = handleRoll(cycle);
-                            } catch (IllegalStateException e) {
-                                if (queue.isClosed())
-                                    return;
-                            }
+                        try {
+                            wire.updateHeader(position, metaData, 0);
+                        } catch (IllegalStateException e) {
+                            if (queue.isClosed())
+                                return;
                         }
-                        if (!updatedHeader)
-                            throw new IllegalStateException("Unable to roll to the current cycle");
 
                         lastPosition = position;
                         lastCycle = cycle;
@@ -829,19 +716,23 @@ public class SingleChronicleQueueExcerpts {
                             if (lastIndex != Long.MIN_VALUE)
                                 writeIndexForPosition(lastIndex, position);
                             else
-                                assert lazyIndexing || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
+                                assert lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
                         }
                         assert checkWritePositionHeaderNumber();
                     } else if (wire != null) {
                         isClosed = true;
-                        assert resetAppendingThread();
-                        writeBytes(wire.headerNumber(), wire.bytes());
+                        writeBytesInternal(wire.headerNumber(), wire.bytes());
                         wire = StoreAppender.this.wire;
                     }
                 } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
-                    assert isClosed || resetAppendingThread();
+                    if (unlock)
+                        try {
+                            writeLock.unlock();
+                        } catch (Exception ex) {
+                            Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
+                        }
                 }
             }
 
@@ -849,8 +740,8 @@ public class SingleChronicleQueueExcerpts {
             public long index() throws IORuntimeException {
                 if (this.wire.headerNumber() == Long.MIN_VALUE) {
                     try {
-                        long headerNumber0 = queue.rollCycle().toIndex(cycle, store
-                                .sequenceForPosition(StoreAppender.this, position, false));
+                        wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
+                        long headerNumber0 = wire.headerNumber();
                         assert (((AbstractWire) this.wire).isInsideHeader());
                         return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                     } catch (IOException e) {
@@ -864,84 +755,6 @@ public class SingleChronicleQueueExcerpts {
             @Override
             public boolean isNotComplete() {
                 throw new UnsupportedOperationException();
-            }
-        }
-
-        /**
-         * Strategise previous behaviour
-         */
-        private class HeaderWriteStrategyOriginal implements HeaderWriteStrategy {
-            @Override
-            public boolean onContextOpen(boolean metaData, int safeLength) {
-                for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
-                    try {
-                        assert wire != null;
-                        long pos = store.writeHeader(wire, safeLength, timeoutMS());
-                        position(pos);
-                        context.isClosed = false;
-                        context.rollbackOnClose = false;
-                        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
-                        context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
-                        context.metaData(metaData);
-                        return true;
-
-                    } catch (EOFException theySeeMeRolling) {
-                        cycle = handleRoll(cycle);
-                    }
-                }
-                throw new IllegalStateException("Unable to roll to the current cycle");
-            }
-
-            @Override
-            public void onContextClose() {
-                // do nothing
-            }
-        }
-
-        /**
-         * Buffered writes while awaiting for other appenders to release the header #403
-         */
-        private class HeaderWriteStrategyDefer implements HeaderWriteStrategy {
-            @Override
-            public boolean onContextOpen(boolean metaData, int safeLength) {
-                assert wire != null;
-                long pos = store.tryWriteHeader(wire, safeLength);
-                if (pos != WireOut.TRY_WRITE_HEADER_FAILED) {
-                    position(pos);
-                    context.wire = wire;
-                    context.deferredHeader = false;
-                } else {
-                    context.wire = acquireBufferWire();
-                    context.deferredHeader = true;
-                }
-
-                context.isClosed = false;
-                context.rollbackOnClose = false;
-                context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
-                context.metaData(metaData);
-                return true;
-            }
-
-            public void onContextClose() {
-                if (context.deferredHeader) {
-                    int safeLength = (int) queue.overlapSize();
-                    assert wire != null;
-                    assert wire != context.wire;
-                    for (int i = 0; i < REPEAT_WHILE_ROLLING; i++) {
-                        try {
-                            // TODO: we should be able to write and update the header in one go
-                            long pos = store.writeHeader(wire, safeLength, timeoutMS());
-                            position(pos);
-                            long length = context.wire.bytes().copyTo(wire.bytes());
-                            wire.bytes().writePosition(length + wire.bytes().writePosition());
-                            context.wire = wire;
-                            return;
-                        } catch (EOFException theySeeMeRolling) {
-                            cycle = handleRoll(cycle);
-                        }
-                    }
-                    throw new IllegalStateException("Unable to roll to the current cycle");
-                }
             }
         }
     }
@@ -1005,7 +818,6 @@ public class SingleChronicleQueueExcerpts {
         private TailerState state = UNINITIALISED;
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
-        private boolean shouldUpdateIndex = false;
         private long address = NoBytesStore.NO_PAGE;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
@@ -1015,11 +827,6 @@ public class SingleChronicleQueueExcerpts {
             queue.addCloseListener(this, StoreTailer::close);
             closableResources = new ClosableResources(queue);
             queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
-        }
-
-        private static boolean isReadOnly(Bytes bytes) {
-            return bytes instanceof MappedBytes &&
-                    ((MappedBytes) bytes).isBackingFileReadOnly();
         }
 
         @Nullable
@@ -1280,7 +1087,7 @@ public class SingleChronicleQueueExcerpts {
             // We are here because we are waiting for an entry to be written to this file.
             // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
             int nextCycle = queue.rollCycle().toCycle(nextIndex);
-            cycle(nextCycle, false);
+            cycle(nextCycle);
             state = CYCLE_NOT_FOUND;
             return false;
         }
@@ -1289,7 +1096,7 @@ public class SingleChronicleQueueExcerpts {
             // give the position of the last entry and
             // flag we want to count it even though we don't know if it will be meta data or not.
 
-            boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
+            boolean foundCycle = cycle(queue.rollCycle().toCycle(index));
 
             if (foundCycle) {
                 long lastSequenceNumberInThisCycle = store().sequenceForPosition(this, Long.MAX_VALUE, false);
@@ -1330,7 +1137,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean inACycle(boolean includeMetaData, boolean first)
-                throws EOFException, StreamCorruptedException {
+                throws EOFException {
             Jvm.optionalSafepoint();
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
@@ -1388,9 +1195,7 @@ public class SingleChronicleQueueExcerpts {
             return false;
         }
 
-        private void inACycleFound(Bytes<?> bytes) throws StreamCorruptedException {
-            indexEntry(bytes);
-
+        private void inACycleFound(Bytes<?> bytes) {
             context.closeReadLimit(bytes.capacity());
             wire().readAndSetLength(bytes.readPosition());
             long end = bytes.readLimit();
@@ -1398,51 +1203,21 @@ public class SingleChronicleQueueExcerpts {
             Jvm.optionalSafepoint();
         }
 
-        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException, StreamCorruptedException {
-            // if current time is not the current cycle, then write an EOF marker and
-            // re-read from here, you may find that in the mean time an appender writes
-            // another message, however the EOF marker will always be at the end.
+        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException {
             long now = queue.time().currentTimeMillis();
             boolean cycleChange2 = now >= timeForNextCycle;
 
             return first
                     && cycleChange2
-                    && !isReadOnly(bytes)
-                    && checkMoveToNextCycle(includeMetaData, bytes);
+                    && checkMoveToNextCycle(includeMetaData);
         }
 
-        private void indexEntry(@NotNull Bytes<?> bytes) throws StreamCorruptedException {
-            if (store().indexable(index)
-                    && shouldUpdateIndex
-                    && direction == TailerDirection.FORWARD
-                    && !context.isMetaData())
-                store.setPositionForSequenceNumber(this,
-                        queue.rollCycle().toSequenceNumber(index), bytes
-                                .readPosition());
-        }
-
-        private boolean checkMoveToNextCycle(boolean includeMetaData, @NotNull Bytes<?> bytes)
-                throws EOFException, StreamCorruptedException {
-            if (bytes.readWrite()) {
-                long pos = bytes.readPosition();
-                long lim = bytes.readLimit();
-                long wlim = bytes.writeLimit();
-                try {
-                    bytes.writePosition(pos);
-                    store.writeEOF(wire(), timeoutMS());
-                } finally {
-                    bytes.writeLimit(wlim);
-                    bytes.readLimit(lim);
-                    bytes.readPosition(pos);
-                }
-            } else {
-                Jvm.debug().on(getClass(), "Unable to append EOF to ReadOnly store, skipping");
-                // even though we couldn't write EOF, we still need to indicate we're at EOF to prevent looping forever
-                // only do that if we waited long enough to prevent terminating too early
-                long now = queue.time().currentTimeMillis();
-                if (now >= timeForNextCycle + timeoutMS() * 2)
-                    throw new EOFException();
-            }
+        private boolean checkMoveToNextCycle(boolean includeMetaData) throws EOFException {
+            // even though we are not writing EOF, we still need to indicate we're at EOF to prevent looping forever
+            // only do that if we waited long enough to prevent terminating too early
+            long now = queue.time().currentTimeMillis();
+            if (now >= timeForNextCycle + timeoutMS() * 2)
+                throw new EOFException();
             return inACycle(includeMetaData, false);
         }
 
@@ -1496,7 +1271,7 @@ public class SingleChronicleQueueExcerpts {
             }
 
             int nextCycle = cycle + direction.add();
-            boolean found = cycle(nextCycle, false);
+            boolean found = cycle(nextCycle);
             if (found)
                 return nextIndexWithinFoundCycle(nextCycle);
 
@@ -1572,7 +1347,7 @@ public class SingleChronicleQueueExcerpts {
 
             if (cycle != this.cycle || state != FOUND_CYCLE) {
                 // moves to the expected cycle
-                if (!cycle(cycle, false))
+                if (!cycle(cycle))
                     return ScanResult.NOT_REACHED;
             }
 
@@ -1606,7 +1381,7 @@ public class SingleChronicleQueueExcerpts {
             }
             if (firstCycle != this.cycle) {
                 // moves to the expected cycle
-                boolean found = cycle(firstCycle, false);
+                boolean found = cycle(firstCycle);
                 assert found || store == null;
                 if (found)
                     state = FOUND_CYCLE;
@@ -1829,6 +1604,7 @@ public class SingleChronicleQueueExcerpts {
             return this;
 
         }
+
         @Override
         public TailerDirection direction() {
             return direction;
@@ -1879,7 +1655,7 @@ public class SingleChronicleQueueExcerpts {
                 case FORWARD:
                     // if it runs out of seq number it will flow over to tomorrows cycle file
                     if (rollCycle.toSequenceNumber(seq) < seq) {
-                        cycle(cycle + 1, false);
+                        cycle(cycle + 1);
                         LOG.warn("we have run out of sequence numbers, so will start to write to " +
                                 "the next .cq4 file, the new cycle=" + cycle);
                         seq = 0;
@@ -1929,11 +1705,11 @@ public class SingleChronicleQueueExcerpts {
             moveToState.reset();
         }
 
-        private boolean cycle(final int cycle, boolean createIfAbsent) {
+        private boolean cycle(final int cycle) {
             if (this.cycle == cycle && state == FOUND_CYCLE)
                 return true;
 
-            WireStore nextStore = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            WireStore nextStore = this.queue.storeForCycle(cycle, queue.epoch(), false);
 
             if (nextStore == null && this.store == null)
                 return false;
@@ -2047,13 +1823,6 @@ public class SingleChronicleQueueExcerpts {
                     tailer.queue().fileAbsolutePath(), Long.toHexString(tailer.index()), WireType.TEXT.asString(messageHistory));
         }
 
-        @NotNull
-        @Override
-        public ExcerptTailer indexing(final boolean indexing) {
-            this.shouldUpdateIndex = indexing;
-            return this;
-        }
-
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
 
             if (Jvm.isDebugEnabled(getClass()))
@@ -2070,7 +1839,7 @@ public class SingleChronicleQueueExcerpts {
             // NOTE: This is a very expensive operation.
             StoreTailer temp = queue.acquireTailer();
             try {
-                if (!temp.cycle(cycle0, false)) {
+                if (!temp.cycle(cycle0)) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
                     return;
                 }
@@ -2103,7 +1872,7 @@ public class SingleChronicleQueueExcerpts {
             StoreTailer temp = queue.acquireTailer();
             try {
 
-                if (!temp.cycle(cycle0, false)) {
+                if (!temp.cycle(cycle0)) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " for a cycle which could not found");
                     return;
                 }

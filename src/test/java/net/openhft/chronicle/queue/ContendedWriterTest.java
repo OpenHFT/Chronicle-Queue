@@ -131,7 +131,6 @@ public class ContendedWriterTest {
                 queues[i] = SingleChronicleQueueBuilder
                         .binary(path)
                         .testBlockSize()
-                        .progressOnContention(configs[i].progressOnContention)
                         .build();
                 startAndMonitors[i] = new StartAndMonitor(queues[i], Integer.toString(i), configs[i].writePause, configs[i].pauseBetweenWrites);
             }

@@ -195,13 +195,13 @@ public class SingleTableStore implements TableStore {
     }
 
     @Override
-    public long writeHeader(@NotNull Wire wire, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException {
-        return recovery.writeHeader(wire, safeLength, timeoutMS, null, null);
-    }
-
-    @Override
-    public long tryWriteHeader(@NotNull Wire wire, int safeLength) {
-        return recovery.tryWriteHeader(wire, safeLength);
+    public long writeHeader(@NotNull Wire wire, int safeLength, long timeoutMS) throws UnrecoverableTimeoutException {
+        try {
+            return recovery.writeHeader(wire, safeLength, timeoutMS, null, null);
+        } catch (EOFException th) {
+            // this will never happen for TableStore
+            throw Jvm.rethrow(th);
+        }
     }
 
     /**
@@ -249,7 +249,7 @@ public class SingleTableStore implements TableStore {
      */
     @Override
     public <R> R doWithExclusiveLock(Function<TableStore, ? extends R> code) {
-        final long timeoutAt = System.currentTimeMillis() + 2 * timeoutMS;
+        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
         boolean warnedOnFailure = false;
         try (final FileChannel channel = FileChannel.open(file().toPath(), StandardOpenOption.WRITE)) {
             while (System.currentTimeMillis() < timeoutAt) {

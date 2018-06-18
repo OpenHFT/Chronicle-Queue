@@ -395,17 +395,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
-    @Override
-    public boolean progressOnContention() {
-        return progressOnContention;
-    }
-
-    @Override
-    public B progressOnContention(boolean progressOnContention) {
-        this.progressOnContention = progressOnContention;
-        return (B) this;
-    }
-
     @NotNull
     public AbstractChronicleQueueBuilder encryptSupplier(Supplier<Cipher> encryptSupplier) {
         throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");

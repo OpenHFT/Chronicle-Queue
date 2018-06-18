@@ -18,9 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.impl.TableStore;
-import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.Pauser;
 
 import java.io.File;
@@ -28,34 +26,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+import static net.openhft.chronicle.core.Jvm.warn;
+
 /**
  * Implements queue lock via TableStore mechanism.
  */
-public class TSQueueLock implements QueueLock {
+public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
-    private static final String QUEUE_LOCK_FILE = "queue-lock" + SingleTableBuilder.SUFFIX;
     private static final String LOCK_KEY = "chronicle.queue.lock";
-    private static final long LOCK_WAIT_TIMEOUT = Long.getLong("chronicle.queue.lock.timeoutMS", 15_000);
-    private static final long UNLOCKED = Long.MIN_VALUE;
     private static final long PID = Jvm.getProcessId();
-    private final LongValue lock;
-    private final Pauser pauser;
     private final ThreadLocal<Long> lockHolderTidTL = new ThreadLocal<>();
-    private final String path;
-    private final TableStore tableStore;
+    private final long timeout;
 
-    public TSQueueLock(File queueDirectoryPath, Supplier<Pauser> pauser) {
-        final File storeFilePath;
-        if ("".equals(queueDirectoryPath.getPath())) {
-            storeFilePath = new File(QUEUE_LOCK_FILE);
-        } else {
-            storeFilePath = new File(queueDirectoryPath, QUEUE_LOCK_FILE);
-            queueDirectoryPath.mkdirs();
-        }
-        this.tableStore = SingleTableBuilder.binary(storeFilePath).build();
-        this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(LOCK_KEY));
-        this.pauser = pauser.get();
-        this.path = storeFilePath.getPath();
+    public TSQueueLock(File queueDirectoryPath, Supplier<Pauser> pauser, Long timeoutMs) {
+        super(LOCK_KEY, queueDirectoryPath, pauser);
+        timeout = timeoutMs;
     }
 
     /**
@@ -72,14 +57,14 @@ public class TSQueueLock implements QueueLock {
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
 
             // success
             lockHolderTidTL.set(tid);
         } catch (TimeoutException e) {
-            Jvm.warn().on(getClass(), "Couldn't acquire lock after " + LOCK_WAIT_TIMEOUT
-                    + "ms for the lock file:" + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
+            warn().on(getClass(), "Couldn't acquire lock after " + timeout + "ms for the lock file:"
+                    + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
             forceUnlock();
             acquireLock();
         } finally {
@@ -102,16 +87,16 @@ public class TSQueueLock implements QueueLock {
             while (lock.getVolatileValue() != UNLOCKED) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
         } catch (TimeoutException e) {
-            Jvm.warn().on(getClass(), "Queue lock is still held after " + LOCK_WAIT_TIMEOUT
-                    + "ms for the lock file:" + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
+            warn().on(getClass(), "Queue lock is still held after " + timeout + "ms for the lock file:"
+                    + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
             forceUnlock();
         } catch (NullPointerException ex) {
             if (!tableStore.isClosed())
                 throw ex;
-            throw new IllegalStateException("The table store is closed!" , ex);
+            throw new IllegalStateException("The table store is closed!", ex);
         } finally {
             pauser.reset();
         }
@@ -128,14 +113,10 @@ public class TSQueueLock implements QueueLock {
             throw new IllegalStateException("Can't unlock when lock is not held by this thread");
 
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
-            net.openhft.chronicle.core.Jvm.warn().on(getClass(), "Queue lock was unlocked by someone else!");
+            warn().on(getClass(), "Queue lock was unlocked by someone else!");
         }
 
         lockHolderTidTL.remove();
-    }
-
-    public void close() {
-        this.tableStore.close();
     }
 
     private boolean isLockHeldByCurrentThread() {
@@ -144,13 +125,4 @@ public class TSQueueLock implements QueueLock {
         return lockHolderTid != null && lockHolderTid == tid;
     }
 
-    private void closeCheck() {
-        if (tableStore.isClosed()) {
-            throw new IllegalStateException("Underlying TableStore is already closed - was the Queue closed?");
-        }
-    }
-
-    private void forceUnlock() {
-        lock.setValue(UNLOCKED);
-    }
 }

@@ -9,7 +9,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -25,16 +24,13 @@ public class SingleChronicleQueueStoreTest {
     public TemporaryFolder tmpDir = new TemporaryFolder();
 
     private static void assertExcerptsAreIndexed(final SingleChronicleQueue queue, final long[] indices,
-                                                 final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) throws Exception {
-        final Field field = SingleChronicleQueueStore.class.getDeclaredField("recovery");
-        field.setAccessible(true);
+                                                 final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {
         final SingleChronicleQueueStore wireStore = (SingleChronicleQueueStore)
                 queue.storeForCycle(queue.cycle(), 0L, true);
-        final TimedStoreRecovery recovery = (TimedStoreRecovery) field.get(wireStore);
         final SCQIndexing indexing = wireStore.indexing;
         for (int i = 0; i < RECORD_COUNT; i++) {
             final int startLinearScanCount = indexing.linearScanCount;
-            final ScanResult scanResult = indexing.moveToIndex(recovery, (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer(), indices[i]);
+            final ScanResult scanResult = indexing.moveToIndex((SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer(), indices[i]);
             assertThat(scanResult, is(expectedScanResult));
 
             if (shouldBeIndexed.apply(i)) {
@@ -63,30 +59,9 @@ public class SingleChronicleQueueStoreTest {
     }
 
     @Test
-    public void shouldNotPerformIndexingOnAppendWhenLazyIndexingIsEnabled() throws Exception {
-        runTest(queue -> {
-            final ExcerptAppender appender = queue.acquireAppender();
-            appender.lazyIndexing(true);
-            final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
-            assertExcerptsAreIndexed(queue, indices, i -> false, ScanResult.NOT_REACHED);
-        });
-    }
-
-    @Test
-    public void shouldPerformIndexingOnRead() throws Exception {
-        runTest(queue -> {
-            final ExcerptAppender appender = queue.acquireAppender();
-            appender.lazyIndexing(true);
-            final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer().indexing(true));
-            assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
-        });
-    }
-
-    @Test
     public void shouldPerformIndexingOnAppend() throws Exception {
         runTest(queue -> {
             final ExcerptAppender appender = queue.acquireAppender();
-            appender.lazyIndexing(false);
             final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
             assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
         });

@@ -52,7 +52,8 @@ public final class QueueInspectorTest {
                 final int writingThreadId = inspector.getWritingThreadId();
 // commentedVanillaMsgSequenceHandler out as fails on Mac OS
 //                assertThat(writingThreadId, is(Affinity.getThreadId()));
-                assertThat(QueueInspector.isValidThreadId(writingThreadId), is(true));
+                // we no longer write header before the document is closed
+                // assertThat(QueueInspector.isValidThreadId(writingThreadId), is(true));
             }
         }
     }

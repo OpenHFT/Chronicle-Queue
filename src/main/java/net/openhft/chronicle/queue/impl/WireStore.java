@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.impl.single.ScanResult;
+import net.openhft.chronicle.wire.AbstractWire;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
@@ -85,4 +86,6 @@ public interface WireStore extends CommonStore {
     ScanResult linearScanTo(long index, long knownIndex, ExcerptContext ec, long knownAddress);
 
     long moveToEndForRead(@NotNull Wire w);
+
+    void initIndex(Wire wire);
 }
