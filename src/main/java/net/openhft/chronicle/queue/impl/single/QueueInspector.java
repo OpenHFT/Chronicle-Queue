@@ -3,6 +3,8 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.Wires;
 
+@Deprecated
+// Not working in queue 5 since we no longer write the incomplete header
 public final class QueueInspector {
     private static final int NO_CURRENT_WRITER = Integer.MIN_VALUE;
 
