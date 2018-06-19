@@ -28,7 +28,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -99,7 +98,8 @@ import java.util.Map;
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static final boolean SAMPLING = Boolean.getBoolean("sampling");
-    static final int warmup = 500_000;
+    static final int ITERATIONS = Integer.getInteger("iterations", 20_000_000);
+    static final int WARMUP = 500_000;
     @Nullable
     final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
@@ -159,7 +159,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                             found = dc.isPresent();
                             if (found) {
                                 int count = counter++;
-                                if (count == warmup) {
+                                if (count == WARMUP) {
                                     histogramCo.reset();
                                     histogramIn.reset();
                                     histogramWr.reset();
@@ -210,7 +210,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
                 NativeBytesStore bytes24 = NativeBytesStore.from(new byte[24]);
-                for (int i = -warmup; i < 20_000_000; i++) {
+                for (int i = -WARMUP; i < ITERATIONS; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
                         busyLoop:
