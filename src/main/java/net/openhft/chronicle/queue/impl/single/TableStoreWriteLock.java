@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
+import net.openhft.chronicle.threads.BusyPauser;
 import net.openhft.chronicle.threads.Pauser;
 
 import java.io.File;
@@ -46,7 +47,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                if (pauser != BusyPauser.INSTANCE)
+                    pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
 
             // success
