@@ -36,7 +36,6 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
 
-import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.*;
 
 public class ToEndTest {
