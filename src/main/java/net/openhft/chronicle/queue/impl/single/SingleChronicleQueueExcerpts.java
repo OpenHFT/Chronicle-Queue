@@ -93,9 +93,9 @@ public class SingleChronicleQueueExcerpts {
         private Pretoucher pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
-        StoreAppender(@NotNull SingleChronicleQueue queue, WriteLock writeLock, @NotNull WireStorePool storePool) {
+        StoreAppender(@NotNull SingleChronicleQueue queue, @NotNull WireStorePool storePool) {
             this.queue = queue;
-            this.writeLock = writeLock;
+            this.writeLock = queue.writeLock();
             queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
             this.storePool = storePool;
