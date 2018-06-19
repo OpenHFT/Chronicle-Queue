@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
+import net.openhft.chronicle.threads.BusyPauser;
 import net.openhft.chronicle.threads.Pauser;
 
 import java.io.File;
@@ -87,7 +88,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             while (lock.getVolatileValue() != UNLOCKED) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                if (pauser != BusyPauser.INSTANCE)
+                    pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
         } catch (TimeoutException e) {
             warn().on(getClass(), "Queue lock is still held after " + timeout + "ms for the lock file:"
