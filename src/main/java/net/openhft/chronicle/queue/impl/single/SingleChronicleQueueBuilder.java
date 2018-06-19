@@ -34,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.StreamCorruptedException;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -191,9 +190,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     public SingleChronicleQueue build() {
         if (buffered())
             onlyAvailableInEnterprise("Buffering");
-
         super.preBuild();
-
         return new SingleChronicleQueue(this);
     }
 
