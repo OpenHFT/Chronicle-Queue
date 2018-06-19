@@ -28,7 +28,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -99,22 +98,23 @@ import java.util.Map;
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static final boolean SAMPLING = Boolean.getBoolean("sampling");
-    static final int warmup = 500_000;
+    static final int ITERATIONS = Integer.getInteger("iterations", 20_000_000);
+    static final int WARMUP = 500_000;
     @Nullable
     final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
     public static void main(String[] args) throws InterruptedException {
         assert false : "test runs slower with assertions on";
-        new ChronicleQueueLatencyDistribution().run();
+        new ChronicleQueueLatencyDistribution().run(args);
     }
 
-    public void run() throws InterruptedException {
+    public void run(String[] args) throws InterruptedException {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(getTmpDir())
                 .blockSize(128 << 20)
                 .build()) {
 
-            runTest(queue, 1_200_000);
+            runTest(queue, args.length>0 ? Integer.parseInt(args[0]) : 1_200_000);
         }
     }
 
@@ -159,7 +159,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                             found = dc.isPresent();
                             if (found) {
                                 int count = counter++;
-                                if (count == warmup) {
+                                if (count == WARMUP) {
                                     histogramCo.reset();
                                     histogramIn.reset();
                                     histogramWr.reset();
@@ -170,6 +170,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                                 long now = System.nanoTime();
                                 histogramCo.sample(now - startCo);
                                 histogramIn.sample(now - startIn);
+                                if (count % 1_000_000 == 0) System.out.println("read  "+count);
                             }
                         }
 /*
@@ -210,7 +211,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
                 NativeBytesStore bytes24 = NativeBytesStore.from(new byte[24]);
-                for (int i = -warmup; i < 20_000_000; i++) {
+                for (int i = -WARMUP; i < ITERATIONS; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
                         busyLoop:
@@ -242,6 +243,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                         }
                     }
                     next += interval;
+                    if (i % 1_000_000 == 0) System.out.println("wrote "+i);
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)

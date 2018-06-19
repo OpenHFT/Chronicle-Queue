@@ -356,7 +356,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         queueLock.waitForLock();
 
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
-        return new StoreAppender(this, writeLock, newPool);
+        return new StoreAppender(this, newPool);
     }
 
     StoreFileListener storeFileListener() {
@@ -404,6 +404,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     public QueueLock queueLock() {
         return queueLock;
+    }
+
+    @NotNull
+    WriteLock writeLock() {
+        return writeLock;
     }
 
     @NotNull
