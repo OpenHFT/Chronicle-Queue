@@ -277,8 +277,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }, 1, 1, TimeUnit.MICROSECONDS);
 
             final Bytes poll = result.poll(10, TimeUnit.SECONDS);
-            final String actual = this.wireType.apply(poll).read(() -> "key")
-                    .text();
+            if (poll == null) {
+                // troubleshoot failed test http://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
+                f.get(1, TimeUnit.SECONDS);
+                throw new NullPointerException("nothing in result");
+            }
+            final String actual = this.wireType.apply(poll).read(() -> "key").text();
             Assert.assertEquals(expected, actual);
             f.get(1, TimeUnit.SECONDS);
             service1.shutdown();
