@@ -31,7 +31,7 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
-import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -69,7 +69,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
-    final Supplier<Pauser> pauserSupplier;
+    final Supplier<TimingPauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
     final File path;

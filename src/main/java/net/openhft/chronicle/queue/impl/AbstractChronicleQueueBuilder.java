@@ -27,8 +27,8 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.RollCycleRetriever;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
-import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -75,7 +75,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
-    private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(500_000);
+    private Supplier<TimingPauser> pauserSupplier = () -> new TimeoutPauser(500_000);
     private long timeoutMS = 10_000; // 10 seconds.
     private WireStoreFactory storeFactory;
     private int sourceId = 0;
@@ -320,11 +320,11 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
-    public Supplier<Pauser> pauserSupplier() {
+    public Supplier<TimingPauser> pauserSupplier() {
         return pauserSupplier;
     }
 
-    public B pauserSupplier(Supplier<Pauser> pauser) {
+    public B pauserSupplier(Supplier<TimingPauser> pauser) {
         this.pauserSupplier = pauser;
         return (B) this;
     }

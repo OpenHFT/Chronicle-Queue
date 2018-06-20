@@ -21,7 +21,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
-import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
 
 import java.io.File;
 import java.util.function.Supplier;
@@ -31,11 +31,11 @@ public abstract class AbstractTSQueueLock implements Closeable {
     private static final String QUEUE_LOCK_FILE = "queue-lock" + SingleTableBuilder.SUFFIX;
 
     protected final LongValue lock;
-    protected final Pauser pauser;
+    protected final TimingPauser pauser;
     protected final String path;
     protected final TableStore tableStore;
 
-    public AbstractTSQueueLock(final String lockKey, final File queueDirectoryPath, final Supplier<Pauser> pauser) {
+    public AbstractTSQueueLock(final String lockKey, final File queueDirectoryPath, final Supplier<TimingPauser> pauser) {
         final File storeFilePath;
         if ("".equals(queueDirectoryPath.getPath())) {
             storeFilePath = new File(QUEUE_LOCK_FILE);

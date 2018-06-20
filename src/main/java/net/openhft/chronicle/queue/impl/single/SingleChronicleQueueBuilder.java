@@ -25,7 +25,7 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -320,7 +320,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> pauserSupplier(Supplier<Pauser> pauser) {
+    public SingleChronicleQueueBuilder<S> pauserSupplier(Supplier<TimingPauser> pauser) {
         return super.pauserSupplier(pauser);
     }
 

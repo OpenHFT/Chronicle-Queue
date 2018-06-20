@@ -18,8 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
-import net.openhft.chronicle.threads.BusyPauser;
-import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +33,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     private static final long PID = getProcessId();
     private final long timeout;
 
-    public TableStoreWriteLock(File queueDirectoryPath, Supplier<Pauser> pauser, Long timeoutMs) {
+    public TableStoreWriteLock(File queueDirectoryPath, Supplier<TimingPauser> pauser, Long timeoutMs) {
         super(LOCK_KEY, queueDirectoryPath, pauser);
         timeout = timeoutMs;
     }
@@ -47,8 +46,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                if (pauser != BusyPauser.INSTANCE)
-                    pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
 
             // success
