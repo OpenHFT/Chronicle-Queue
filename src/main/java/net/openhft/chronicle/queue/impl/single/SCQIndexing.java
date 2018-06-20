@@ -360,7 +360,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     if (i == toIndex) {
                         return ScanResult.FOUND;
                     }
-                    int header = bytes.readInt();
+                    int header = bytes.readVolatileInt();
                     if (Wires.isNotComplete(header)) { // or isEndOfFile
                         return ScanResult.NOT_REACHED;
                     }
