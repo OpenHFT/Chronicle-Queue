@@ -179,38 +179,6 @@ Never the less, there is less maintenance overhead if the Chronicle logs rotate 
 Chronicle Queue is designed for replay.  While it can be used as an off-heap persisted cache, it does not do this very easily.
 Chronicle Map is likely to be a better choice for this requirement.
 
-== Thread safety
-
-=== Can I have multiple readers?
-
-A given Chronicle queue can safely have many readers, both inside and outside of the process creating it.
-
-To have multiple readers of a Chronicle queue, you should generally create a new Chronicle queue per-reader, pointing at the same underlying journal. On each of these Chronicle queues, you will call `createTailer` and get a new tailer that can be used to read it. These tailers should never be shared.
-A less performant option, is to share a single Chronicle queue and tailer, and lock access with synchronized or `ReentrantLock`. Only one tailer should ever be active at the same time.
-
-=== Can I have multiple writers?
-
-You can have any number of writers. However, you may get higher throughput if you have only one writer at a time. Having multiple writers increases contention, but works as you would expect.
-
-== Replication
-
-=== Does Chronicle Queue support replication?
-
-Replication features are availabler in Chronicle Queue Enterprise.  Replication supports:
-
-- replication of a single master to multiple slave nodes.
-- writers can wait for replication to be acknowledged.
-- readers can wait to only read acknowledged messages.
-- throttling and traffic shaping.
-
-=== Does Chronicle Queue support UDP replication?
-
-No. Chronicle Queue is designed to be both reliable and deterministic.  UDP is not designed for this.  A hybrid UDP/TCP system is possible in the future.
-
-=== How do I know the consumer is up to date?
-
-For the tailer, either replicated or notreplicated, you can assume you are up-to-date when either `isPresent()` is `false`, or your read method returns `false`
-
 
 === Can records be updated?
 
@@ -285,6 +253,38 @@ We would suggest you read these https://vanilla-java.github.io/tag/Microservices
 It could be a race condition. When a memory mapping is truly freed, it cannot be accessed, or it will trigger a segmentation fault.
 The reason to suspect this, is that it should be free on a roll from one cycle to the next.
 
+== Thread Safety
+
+=== Can I have multiple readers?
+
+A given Chronicle queue can safely have many readers, both inside and outside of the process creating it.
+
+To have multiple readers of a Chronicle queue, you should generally create a new Chronicle queue per-reader, pointing at the same underlying journal. On each of these Chronicle queues, you will call `createTailer` and get a new tailer that can be used to read it. These tailers should never be shared.
+A less performant option, is to share a single Chronicle queue and tailer, and lock access with synchronized or `ReentrantLock`. Only one tailer should ever be active at the same time.
+
+=== Can I have multiple writers?
+
+You can have any number of writers. However, you may get higher throughput if you have only one writer at a time. Having multiple writers increases contention, but works as you would expect.
+
+== Replication
+
+=== Does Chronicle Queue support replication?
+
+Replication features are availabler in Chronicle Queue Enterprise.  Replication supports:
+
+- replication of a single master to multiple slave nodes.
+- writers can wait for replication to be acknowledged.
+- readers can wait to only read acknowledged messages.
+- throttling and traffic shaping.
+
+=== Does Chronicle Queue support UDP replication?
+
+No. Chronicle Queue is designed to be both reliable and deterministic.  UDP is not designed for this.  A hybrid UDP/TCP system is possible in the future.
+
+=== How do I know the consumer is up to date?
+
+For the tailer, either replicated or notreplicated, you can assume you are up-to-date when either `isPresent()` is `false`, or your read method returns `false`
+
 
 '''
-<<../README.adoc#,Back to ReadMe>>
+<<../ReadMe.adoc#,Back to ReadMe>>
