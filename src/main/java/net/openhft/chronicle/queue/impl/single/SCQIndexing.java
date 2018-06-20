@@ -670,7 +670,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 bytes.readPosition(endAddress);
 
                 for (; ; ) {
-                    int header = bytes.readInt(endAddress);
+                    int header = bytes.readVolatileInt(endAddress);
                     if (header == 0 || Wires.isNotComplete(header))
                         return sequence;
 

@@ -215,7 +215,7 @@ public class SingleTableStore implements TableStore {
             mappedBytes.readPosition(0);
             mappedBytes.readLimit(mappedBytes.realCapacity());
             while (mappedWire.readDataHeader()) {
-                int header = mappedBytes.readInt();
+                int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
                     break;
                 long readPosition = mappedBytes.readPosition();
