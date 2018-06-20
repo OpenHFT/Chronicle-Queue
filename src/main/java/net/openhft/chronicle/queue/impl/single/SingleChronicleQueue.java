@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreTailer;
@@ -159,12 +160,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         this.directoryListing.refresh();
-
         this.queueLock = builder.queueLock();
         this.writeLock = builder.writeLock();
-        addCloseListener(directoryListing, DirectoryListing::close);
-        addCloseListener(queueLock, QueueLock::close);
-        addCloseListener(writeLock, WriteLock::close);
 
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
             try {
@@ -555,6 +552,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public void close() {
+        closeQuietly(directoryListing, queueLock, writeLock);
+
         if (isClosed.getAndSet(true))
             return;
         synchronized (closers) {
