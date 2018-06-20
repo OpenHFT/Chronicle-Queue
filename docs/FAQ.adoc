@@ -253,7 +253,7 @@ We would suggest you read these https://vanilla-java.github.io/tag/Microservices
 It could be a race condition. When a memory mapping is truly freed, it cannot be accessed, or it will trigger a segmentation fault.
 The reason to suspect this, is that it should be free on a roll from one cycle to the next.
 
-== Thread Safety
+== Thread safety
 
 === Can I have multiple readers?
 
@@ -287,4 +287,4 @@ For the tailer, either replicated or notreplicated, you can assume you are up-to
 
 
 '''
-<<../ReadMe.adoc#,Back to ReadMe>>
+<<../README.adoc#,Back to ReadMe>>
