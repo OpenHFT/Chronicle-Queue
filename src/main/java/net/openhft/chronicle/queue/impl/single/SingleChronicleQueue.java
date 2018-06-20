@@ -552,10 +552,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public void close() {
-        closeQuietly(directoryListing, queueLock, writeLock);
 
         if (isClosed.getAndSet(true))
             return;
+
+        closeQuietly(directoryListing, queueLock, writeLock);
+
         synchronized (closers) {
             closers.forEach((k, v) -> v.accept(k));
             closers.clear();
