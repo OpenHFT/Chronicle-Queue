@@ -6,7 +6,7 @@
 
 
 == Overview
-This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP from queues that are on different machines. Chronicle Queue Enterprise is a licenced product, if you are interested in obtaining more information about this please contact sales@chronicle.software 
+This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP from queues that are on different machines. Chronicle Queue Enterprise is a licenced product; if you are interested in obtaining more information about this please contact sales@chronicle.software 
 
 === Message format in this document
 
@@ -16,7 +16,7 @@ In order to make the messages human-readable in this document, the messages are 
 
 === Who should read this document
 
-Anyone who wants to get more information into the data that is transfered between the remote hosts used by Chronicle Queue Enterprise to do TCP/IP replication. This document is not a queue functionality overview document.
+Anyone who wants to get more information into the data that is transfered between the remote hosts, used by Chronicle Queue Enterprise, to do TCP/IP replication. This document is not a queue functionality overview document.
 
 == UberHandler
 
@@ -164,7 +164,7 @@ eos: !!null "" #  END_OF_STREAM
 
 The sink replication handler then receives new messages from the SourceReplicationHandler. When it receives these new messages it uses a chronicle queue appender to write them to a chronicle queue. 
 
-NOTE: When the messages are written to the chronicle queue by the SinkReplicationHandler, we write the message and take account of the source index, to guarantee that the order of messages from the source exactly matches the order of messages on the sink, in addition, using the index also ensures that the message has always been written to the correct queue file. This is even if events such has roll over have occured, which typically would cause a normal appender to write the message to the next queue file, which is not what we want here because we creaete an exact copy, of messages from the source to the sink.
+NOTE: When the messages are written to the chronicle queue by the `SinkReplicationHandler`, we write the message and take account of the source index, to guarantee that the order of messages from the source exactly matches the order of messages on the sink. In addition, using the index also ensures that the message has always been written to the correct queue file. This is even if events such has roll-over have occured. This would typically cause a normal appender to write the message to the next queue file. This is not what we want, because we create an exact copy of messages, from the source to the sink.
 
 == Sending data with the SourceReplicationHandler
 
@@ -199,3 +199,6 @@ cid: 292323922173575
 idx: 0x451600000000
 ns: 10849029994071
 ```
+
+'''
+<<../README.adoc#,Back to ReadMe>>
