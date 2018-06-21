@@ -8,7 +8,6 @@ import net.openhft.chronicle.wire.AbstractBytesMarshallable;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -18,7 +17,6 @@ import java.io.File;
  */
 public class DtoBytesMarshallableTest {
 
-    @Ignore("see https://github.com/OpenHFT/Chronicle-Queue/issues/474")
     @Test
     public void testDtoBytesMarshallable() {
 
@@ -36,13 +34,12 @@ public class DtoBytesMarshallableTest {
             }
 
             try (DocumentContext dc = q.createTailer().readingDocument()) {
-                String yaml = dc.toString();
-                System.out.println(yaml);
 
                 DtoBytesMarshallable who = (DtoBytesMarshallable) dc.wire().read("who").object();
-                System.out.println(who);
-
-                Assert.assertTrue(yaml.contains(who.toString()));
+                Assert.assertEquals("!net.openhft.chronicle.queue.DtoBytesMarshallableTest$DtoBytesMarshallable {\n" +
+                        "  name: rob,\n" +
+                        "  age: 45\n" +
+                        "}\n", who.toString());
             }
 
         }
