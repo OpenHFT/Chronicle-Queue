@@ -170,6 +170,7 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
+    //   @Ignore("https://github.com/OpenHFT/Chronicle-Bytes/issues/68")
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws Exception {
         System.gc();
@@ -220,6 +221,8 @@ public final class AppenderFileHandleLeakTest {
             assertThat(storeFileListener.toString(),
                     storeFileListener.releasedCount,
                     is(withinDelta(storeFileListener.acquiredCount, 3)));
+
+            System.gc();
 
             waitForFileHandleCountToDrop(tailerOpenFileHandleCount, fileHandlesAtStart);
         }
