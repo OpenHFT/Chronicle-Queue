@@ -170,7 +170,6 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
-    //   @Ignore("https://github.com/OpenHFT/Chronicle-Bytes/issues/68")
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws Exception {
         System.gc();
@@ -222,8 +221,6 @@ public final class AppenderFileHandleLeakTest {
                     storeFileListener.releasedCount,
                     is(withinDelta(storeFileListener.acquiredCount, 3)));
 
-            System.gc();
-
             waitForFileHandleCountToDrop(tailerOpenFileHandleCount, fileHandlesAtStart);
         }
     }
@@ -240,9 +237,12 @@ public final class AppenderFileHandleLeakTest {
             final List<Path> fileHandlesAtStart) throws IOException {
         final long failAt = System.currentTimeMillis() + 60_000L;
         while (System.currentTimeMillis() < failAt) {
+            // the cleaner thread uses weak references, so are only likely to be cleaned after a GC
+            System.gc();
             if (countFileHandlesOfCurrentProcess() < startFileHandleCount + 5) {
                 return;
             }
+            Thread.yield();
         }
 
         final List<Path> fileHandlesAtEnd = new ArrayList<>(lastFileHandles);
