@@ -115,6 +115,8 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return priority;
     }
 
+    PretoucherTest
+
     @NotNull
     public ServiceWrapperBuilder<O> priority(HandlerPriority priority) {
         this.priority = priority;
