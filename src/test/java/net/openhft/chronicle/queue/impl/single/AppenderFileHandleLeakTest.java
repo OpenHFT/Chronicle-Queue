@@ -17,6 +17,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -170,6 +171,7 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Bytes/issues/68")
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws Exception {
         System.gc();
