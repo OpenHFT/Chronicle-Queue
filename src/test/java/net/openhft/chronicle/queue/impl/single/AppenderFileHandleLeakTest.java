@@ -171,12 +171,11 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Bytes/issues/68")
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws Exception {
+        assumeThat(OS.isLinux(), is(true));
         System.gc();
         Thread.sleep(100);
-        assumeThat(OS.isLinux(), is(true));
         final int messagesPerThread = 10;
         try (SingleChronicleQueue queue = createQueue(currentTime::get)) {
 
@@ -195,7 +194,7 @@ public final class AppenderFileHandleLeakTest {
             }
 
             for (Future<Boolean> future : futures) {
-                assertThat(future.get(1, TimeUnit.MINUTES), is(true));
+                assertTrue(future.get(1, TimeUnit.MINUTES));
             }
 
             waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);
@@ -218,7 +217,7 @@ public final class AppenderFileHandleLeakTest {
                 }
             }
 
-            assertThat(messageCount, is(expectedMessageCount));
+            assertEquals(expectedMessageCount, messageCount);
             assertThat(storeFileListener.toString(),
                     storeFileListener.releasedCount,
                     is(withinDelta(storeFileListener.acquiredCount, 3)));
@@ -241,7 +240,7 @@ public final class AppenderFileHandleLeakTest {
         while (System.currentTimeMillis() < failAt) {
             // the cleaner thread uses weak references, so are only likely to be cleaned after a GC
             System.gc();
-            if (countFileHandlesOfCurrentProcess() < startFileHandleCount + 5) {
+            if (countFileHandlesOfCurrentProcess() <= startFileHandleCount + 1) {
                 return;
             }
             Thread.yield();
