@@ -307,31 +307,43 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         if (toIndex == fromKnownIndex)
             return ScanResult.FOUND;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
+        assert checkLinearScanTime(toIndex, fromKnownIndex, start);
+        return scanResult;
+    }
+
+    private boolean checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
+            start) {
         long end = System.nanoTime();
         if (end > start + 50e3) {
-            printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
+
+            assert printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
         } else if (fromKnownIndex > 0x284d34000000000L) {
             Jvm.warn().on(getClass(),
                     "Unexpectedly high " + TimeUnit.NANOSECONDS.toMicros(end - start) + "us " +
                             "fromKnownIndex 0x" + Long
-                            .toHexString (fromKnownIndex) +
+                            .toHexString(fromKnownIndex) +
                             " " +
                             "to 0x" + Long.toHexString(toIndex) + "= ( 0x" + Long.toHexString
                             (toIndex) + "- 0x" + Long.toHexString(fromKnownIndex) + ") = " +
                             (toIndex - fromKnownIndex),
                     new Throwable("This is a profile stack trace, not an ERROR"));
+
         }
-        return scanResult;
+        return true;
     }
 
-    private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end, String desc) {
+    private boolean printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end,
+                                        String desc) {
         Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " +
                 fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
                 + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
                 (toIndex - fromKnownIndex));
         // ignored  for the first message
         if (toIndex > 0 && end > start + 250e3)
-            Jvm.warn().on(getClass(), new Throwable("This is a profile stack trace, not an ERROR"));
+            // has to be change to debug because is being reported as an an
+            Jvm.debug().on(getClass(), new Throwable("This is a profile stack trace, not an " +
+                    "ERROR"));
+        return true;
     }
 
     @NotNull
