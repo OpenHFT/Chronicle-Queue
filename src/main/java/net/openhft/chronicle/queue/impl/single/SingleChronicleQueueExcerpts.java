@@ -705,7 +705,7 @@ public class SingleChronicleQueueExcerpts {
                         } catch (IllegalStateException e) {
                             if (queue.isClosed())
                                 return;
-                        }
+                        } 
 
                         lastPosition = position;
                         lastCycle = cycle;
