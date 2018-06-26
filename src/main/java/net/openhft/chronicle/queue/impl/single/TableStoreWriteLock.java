@@ -45,7 +45,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         try {
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 if (Thread.interrupted())
-                    throw new IllegalStateException("Interrupted");
+                    throw new IllegalStateException("Interrupted for the lock file:" + path);
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
 
@@ -67,8 +67,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         closeCheck();
         //new Exception("Unlock by " + Thread.currentThread().getName()).printStackTrace(System.err);
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
-
-            warn().on(getClass(), "Write lock was unlocked by someone else!");
+            warn().on(getClass(), "Write lock was unlocked by someone else! For the lock file:" + path);
         }
     }
 
