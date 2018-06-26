@@ -94,22 +94,21 @@ public final class AppenderFileHandleLeakTest {
 
     private static void writeMessage(final int j, final SingleChronicleQueue queue) {
         final ExcerptAppender appender = queue.acquireAppender();
-        appender.writeBytes(b -> {
-            b.writeInt(j);
-        });
+        appender.writeBytes(b -> b.writeInt(j));
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         queuePath = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName());
     }
 
     @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws Exception {
-        // this might help the test be more stable when there is multiple tests.
-        System.gc();
-        Thread.sleep(100);
         assumeThat(OS.isLinux(), is(true));
+
+        // this might help the test be more stable when there is multiple tests.
+        GcControls.requestGcCycle();
+        Thread.sleep(100);
         final List<ExcerptTailer> gcGuard = new LinkedList<>();
         long openFileHandleCount = countFileHandlesOfCurrentProcess();
         List<Path> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
@@ -128,7 +127,7 @@ public final class AppenderFileHandleLeakTest {
             }
 
             for (Future<Boolean> future : futures) {
-                assertThat(future.get(1, TimeUnit.MINUTES), is(true));
+                assertTrue(future.get(1, TimeUnit.MINUTES));
             }
             assertFalse(gcGuard.isEmpty());
             gcGuard.clear();
@@ -142,9 +141,10 @@ public final class AppenderFileHandleLeakTest {
 
     @Test
     public void tailerResourcesCanBeReleasedManually() throws Exception {
-        System.gc();
-        Thread.sleep(100);
         assumeThat(OS.isLinux(), is(true));
+
+        GcControls.requestGcCycle();
+        Thread.sleep(100);
         try (SingleChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
             final List<Path> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
@@ -222,7 +222,7 @@ public final class AppenderFileHandleLeakTest {
                     storeFileListener.releasedCount,
                     is(withinDelta(storeFileListener.acquiredCount, 3)));
 
-            waitForFileHandleCountToDrop(tailerOpenFileHandleCount, fileHandlesAtStart);
+            waitForFileHandleCountToDrop(tailerOpenFileHandleCount - 1, fileHandlesAtStart);
         }
     }
 
@@ -240,7 +240,7 @@ public final class AppenderFileHandleLeakTest {
         while (System.currentTimeMillis() < failAt) {
             // the cleaner thread uses weak references, so are only likely to be cleaned after a GC
             System.gc();
-            if (countFileHandlesOfCurrentProcess() <= startFileHandleCount + 1) {
+            if (countFileHandlesOfCurrentProcess() <= startFileHandleCount + 2) {
                 return;
             }
             Thread.yield();

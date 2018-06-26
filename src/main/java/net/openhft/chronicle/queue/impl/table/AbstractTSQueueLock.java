@@ -61,7 +61,7 @@ public abstract class AbstractTSQueueLock implements Closeable {
     }
 
     protected void forceUnlock() {
-        Jvm.warn().on(getClass(), "Forced unlock", new Exception());
+        Jvm.warn().on(getClass(), "Forced unlock for the lock file:" + path, new Exception());
         lock.setValue(UNLOCKED);
     }
 }
