@@ -2114,6 +2114,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore("flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/507")
     @Test
     public void testAppendedBeforeToEnd() {
         File dir = getTmpDir();
