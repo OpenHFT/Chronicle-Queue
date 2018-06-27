@@ -5,35 +5,28 @@
 
 == Chronicle Queue Enterprise Replication
 
-Chronicle Queue Enterprise replication performs simple unidirectional multi-way replication by copying a chronicle queue
-from one host to one or more others via TCP/IP.
+Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle queue from one host, to one or more other hosts using TCP/IP.
 
 .Chronicle Queue Replication
 image::images/queue-replication.png[]
 
-NOTE: for Chronicle-Engine based replication, see link:engine-replication.adoc[here]
+NOTE: For Chronicle Engine-based replication, see link:engine-replication.adoc[engine-replication.adoc].
 
 === The mechanics of Chronicle Queue Replication
 
-The queue that we write to we refer to as the source queue and the copy(-ies) we refer to as the sink queue.
+The queue that we write to is known as the `source` queue. The copy(ies) is the `sink` queue.
 
-IMPORTANT: Chronicle requires exclusive write access to the Sink. Sink should be treated as read-only, and never manually written to.
+IMPORTANT: Chronicle requires exclusive write access to the `sink`. The `sink` should be treated as read-only, and never written to manually.
 
-If we allowed messages to be written to the sink, its not hard to imagine a case where different messages are written to a source
-and sink at the same time, the messages on the source queue and sink queue could now be in a very different order,
-as such we don’t allow messages to be written to the sync queue. Or putting it another way Queues must maintain message
-ordering and the source queue and sink queue are identical. One of the reasons we enforce this is that in a microservices
-architecture, in order that you can get true replay-ability you should be able to guarantee the consistency and ordering of
-the messages in the queues, hence any service that's running on the source machine must receive the same events,
-and in the same order, as the service running on the sink machine.
+If we allowed messages to be written to the sink, it is easy to imagine a case where different messages are written to a `source` and `sink` at the same time. The messages on the `source` queue and `sink` queue could now be in a very different order. Because of this situation we do not allow messages to be written to the `sync` queue, Queues must maintain message ordering, and ensure that the `source` queue and `sink` queue are identical. 
 
-So in summary, any message written to source is copied to sink. The sink therefore becomes a mirror image of the source.
+One of the reasons that we enforce this is that, in a microservices architecture, in order that you can get true 'replay-ability', you should be able to guarantee the consistency, and ordering, of the messages in queues. Therefore, any service that is running on the `source` machine must receive the same events, and in the same order, as the service running on the `sink` machine.
 
-At startup, replication locks Source queue and waits for Sink(s) to report the number of records it has, and if Sink has
-more records, they are replayed back to Source before it is unlocked and usable again. This is done to provide
-automatic data re-sync after failover to Sink.
+Any message that is written to the `source` is copied to the `sink`. The `sink` therefore becomes a mirror image of the `source`.
 
-The set of hosts onto which the queue is replicated is defined as a cluster. The config for that looks as follows:
+At startup, replication locks the `source` queue, and waits for the `sink`(s) to report the number of records it has. If the `sink` has more records, they are replayed back to `source` before it is unlocked and made usable again. This is done to provide automatic data re-synchronisation after a failover to the `sink`.
+
+The set of hosts onto which the queue is replicated, is defined as a `cluster`. The configuration for a cluster is as follows:
 
 ```
 !QueueReplicationCfg {
@@ -69,14 +62,13 @@ The set of hosts onto which the queue is replicated is defined as a cluster. The
 }
 ```
 
-In the above configuration, the queue "queue1" is set to be replicated from host1 (as indicated by `masterId`) to all other hosts
-defined for cluster "cluster1". Queues will use storage paths defined by `baseSourcePath`/`baseSinkPath` for source and
-sink, respectively, followed by queue name. So for this example, source queue will be at `replica/source/queue1` while
-sink will be written to `replica/sink/queue1`.
+In the configuration shown above, the queue, `queue1`, is set to be replicated from `host1` (as indicated by `masterId`) to all other hosts defined for the cluster, `cluster1`.
+
+Queues will use storage paths defined by `baseSourcePath` and `baseSinkPath` for `source` and `sink`, respectively, followed by the queue name. For this example, the `source` queue will be at `replica/source/queue1`, while the `sink` will be written to `replica/sink/queue1`.
 
 === Using Enterprise Queue Replication
 
-In order to start replicating data, user needs to create an instance of ReplicatedQueue per host. This is done as follows:
+To start replicating data, the user must create an instance of `ReplicatedQueue` for each host. This is done as follows:
 
 ```
 ReplicatedQueue repl = new ReplicatedQueue(config());
@@ -145,3 +137,7 @@ public void shouldReplicate() throws Exception {
     readerThread.join();
 }
 ```
+
+'''
+
+<<../README.adoc#,Back to Chronicle Queue>>
