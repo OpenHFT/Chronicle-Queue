@@ -1178,13 +1178,16 @@ public class SingleChronicleQueueExcerpts {
                     // after toEnd() call, index is past the end of the queue
                     // so try to go back one (to the last record in the queue)
                     if (!moveToIndexInternal(index - 1)) {
+                        Jvm.optionalSafepoint();
                         return true;
                     }
                 } catch (RuntimeException e) {
                     // can happen if index goes negative
+                    Jvm.optionalSafepoint();
                     return true;
                 }
             }
+            Jvm.optionalSafepoint();
             return false;
         }
 
