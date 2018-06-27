@@ -43,6 +43,7 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueueExcerpts {
+    private static final boolean CHECK_INTERRUPTS = !Boolean.getBoolean("chronicle.queue.ignoreInterrupts");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
     private static final int MESSAGE_HISTORY_METHOD_ID = -1;
     private static StringBuilderPool SBP = new StringBuilderPool();
@@ -56,11 +57,6 @@ public class SingleChronicleQueueExcerpts {
     // APPENDERS
     //
     // *************************************************************************
-
-    @FunctionalInterface
-    interface WireWriter<T> {
-        void write(T message, WireOut wireOut);
-    }
 
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
@@ -300,8 +296,6 @@ public class SingleChronicleQueueExcerpts {
         public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
-            if (Thread.currentThread().isInterrupted())
-                throw new IllegalStateException("Queue won't write from an interrupted thread");
             writeLock.lock();
             assert checkWritePositionHeaderNumber();
             int cycle = queue.cycle();
@@ -683,7 +677,7 @@ public class SingleChronicleQueueExcerpts {
                 }
 
                 try {
-                    final boolean interrupted = Thread.currentThread().isInterrupted();
+                    final boolean interrupted = CHECK_INTERRUPTS && Thread.currentThread().isInterrupted();
                     if (rollbackOnClose || interrupted) {
                         if (interrupted)
                             LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");

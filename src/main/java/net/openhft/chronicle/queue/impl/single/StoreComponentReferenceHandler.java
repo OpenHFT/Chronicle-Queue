@@ -22,8 +22,8 @@ public enum StoreComponentReferenceHandler implements Closeable {
     private static final ReferenceQueue<ExcerptAppender> EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE = new ReferenceQueue<>();
     private static final ReferenceQueue<SingleChronicleQueueExcerpts.StoreTailer>
             EXPIRED_THREAD_LOCAL_TAILERS_QUEUE = new ReferenceQueue<>();
-    private static final ExecutorService THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE =
-            Threads.acquireExecutorService(THREAD_NAME, 1, true);
+    private static final ScheduledExecutorService THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE =
+            Threads.acquireScheduledExecutorService(THREAD_NAME, true);
 
     private static final Queue<Wire> WIRES_TO_RELEASE = new ConcurrentLinkedQueue<>();
     private static final ConcurrentMap<Reference<?>, Runnable> CLOSE_ACTIONS = new ConcurrentHashMap<>();
@@ -35,18 +35,15 @@ public enum StoreComponentReferenceHandler implements Closeable {
     private static final AtomicBoolean MAX_BATCH_WARNING_LOGGED = new AtomicBoolean(false);
 
     static {
-        THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.submit(() -> {
-            Thread thread = Thread.currentThread();
-            while (!thread.isInterrupted()) {
-                boolean workDone = processReferenceQueue(EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE);
+        THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.scheduleWithFixedDelay(() -> {
+
+            boolean workDone;
+            do {
+                workDone = processReferenceQueue(EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE);
                 workDone |= processReferenceQueue(EXPIRED_THREAD_LOCAL_TAILERS_QUEUE);
                 workDone |= processWireQueue();
-
-                if (!workDone) {
-                    LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(1L));
-                }
-            }
-        });
+            } while (workDone);
+        }, 0, 1, TimeUnit.SECONDS);
 
         Runtime.getRuntime().addShutdownHook(new Thread(THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE::shutdown));
     }
