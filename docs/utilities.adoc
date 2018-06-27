@@ -12,7 +12,7 @@ This document describes Chronicle Queue utility programs that have been created 
 
 == Chronicle Reader utility
 
-Chronicle Reader allows you to specify a Chronicle Queue folder and export the queue message data to text in standard output (`stdout`).
+Chronicle Reader allows you to specify a Chronicle Queue folder, and export the queue message data to text in standard output (`stdout`).
 
 To run the Chronicle Reader utility using Maven:
 
@@ -33,13 +33,13 @@ The following table lists the available command line option arguments:
 |`-d`
 |Mandatory. The directory containing the source chronicle queue files.
 |`-i`
-|Displays data containing this regular expression.
+|Display data containing this regular expression.
 |`-e`
 |Do not display data containing this regular expression.
 |`-f`
 |Follow. Wait for new data to arrive.
 |`-m`
-|Show a maximum of this many messages from the end of the data set.
+|Show a maximum of this many messages from the end of the dataset.
 |`-n`
 |Start reading from this index point.
 |`-r`
@@ -68,7 +68,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 ==== Follow a queue
 
-Following a queue ensures that the latest messages are written out to Standard-Out. It will wait, and append new messages as they arrive on the queue.
+Following a queue ensures that the latest messages are written out to `Standard-Out`. It will wait, and append new messages as they arrive on the queue.
 
 To follow a queue:
 
@@ -88,13 +88,13 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 To display records that contain certain string values: For example:
 
-===== `USD`, *and* `CHI-X` - Include
+===== `USD`, *and* `CHI-X` (Include)
 [source, java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD" -i "CHI-X"
 ....
 
-===== `USD`, *but not* `CHI-X` - Exclude
+===== `USD`, *but not* `CHI-X` (Exclude)
 [source, java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD" -e "CHI-X"
@@ -102,7 +102,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 ==== Maximum message history
 
-To export (up to) the last `1000` messages from a queue:
+To export up to the last `1000` messages from a queue:
 
 [source, java]
 ....
@@ -111,7 +111,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 ==== Index points
 
-To follow a queue from the index point `0x123ABE`:
+To follow a queue from the index point, `0x123ABE`:
 
 [source, java]
 ....
@@ -120,7 +120,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 ==== Method Reader
 
-When reading from a queue that has been created using a MethodWriter:
+When reading from a queue that has been created using a `MethodWriter`:
 
 [source, java]
 ....
@@ -130,12 +130,11 @@ StringEvents events = methodWriterBuilder.build();
 events.say("hello");
 ....
 
-Using `-r` will cause the Reader to treat each event within a Document Excerpt as a single message
-for the purposes of applying regular expressions.
+Using `-r` will cause the reader to treat each event within a document excerpt as a single message for the purposes of applying regular expressions.
 
 ==== Help
 
-To display the help message:
+To display the help documentation:
 
 [source, java]
 ....
@@ -144,9 +143,9 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 == Packaging
 
-For convenience, this tool back be packaged for deployment to a server environment.
+For convenience, this tool can be packaged for deployment to a server environment.
 
-To create an archive for deployment, run the following from the project root:
+To create an archive `tar` file for deployment, run the following commands from the project root:
 
 [source,bash]
 ....
@@ -154,9 +153,9 @@ $ ./bin/package_scripts.sh
 Created /tmp/chronicle-queue-tools.tar
 ....
 
-The resulting tar file can be copied to another location & expanded.
+The resulting `tar` file can be copied to another location, and expanded.
 Once unpacked, invoke the `queue_reader.sh` script in order to execute the
-ChronicleReader utility:
+`ChronicleReader` utility:
 
 [source,bash]
 ....
@@ -166,3 +165,7 @@ Please specify the directory with -d
 usage: ChronicleReaderMain [-d <directory>] [-e <exclude-regex>] [-f]
     [-h] [-i <include-regex>] [-m <max-history>] [-n <from-index>] [-r]
 ....
+
+'''
+
+<<../README.adoc#,Back to Chronicle Queue>>
