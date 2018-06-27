@@ -939,7 +939,10 @@ public class SingleChronicleQueueExcerpts {
                 boolean next = false, tryAgain = true;
                 if (state == FOUND_CYCLE) {
                     try {
+                        Jvm.optionalSafepoint();
                         next = inACycle(includeMetaData);
+                        Jvm.optionalSafepoint();
+
                         tryAgain = false;
                     } catch (EOFException eof) {
                         state = TailerState.END_OF_CYCLE;
