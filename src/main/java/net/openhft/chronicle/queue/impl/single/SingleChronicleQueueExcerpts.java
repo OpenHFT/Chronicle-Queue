@@ -935,6 +935,7 @@ public class SingleChronicleQueueExcerpts {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
             try {
+                Jvm.optionalSafepoint();
                 boolean next = false, tryAgain = true;
                 if (state == FOUND_CYCLE) {
                     try {
