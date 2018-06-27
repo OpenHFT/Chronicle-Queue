@@ -1135,9 +1135,12 @@ public class SingleChronicleQueueExcerpts {
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
+            Jvm.optionalSafepoint();
             if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
+            Jvm.optionalSafepoint();
             if (direction != TailerDirection.FORWARD && inACycleNotForward()) return false;
+            Jvm.optionalSafepoint();
 
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
@@ -1154,6 +1157,7 @@ public class SingleChronicleQueueExcerpts {
                     break;
             }
 
+            Jvm.optionalSafepoint();
             inACycleFound(bytes);
             Jvm.optionalSafepoint();
             return true;
@@ -1166,8 +1170,10 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean inACycleNotForward() {
+            Jvm.optionalSafepoint();
             if (!moveToIndexInternal(index)) {
                 try {
+                    Jvm.optionalSafepoint();
                     // after toEnd() call, index is past the end of the queue
                     // so try to go back one (to the last record in the queue)
                     if (!moveToIndexInternal(index - 1)) {
@@ -1343,7 +1349,9 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean moveToIndexInternal(final long index) {
             moveToState.indexMoveCount++;
+            Jvm.optionalSafepoint();
             final ScanResult scanResult = moveToIndexResult(index);
+            Jvm.optionalSafepoint();
             return scanResult == FOUND;
         }
 
