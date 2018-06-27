@@ -31,6 +31,7 @@ import static net.openhft.chronicle.core.Jvm.warn;
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
     private static final String LOCK_KEY = "chronicle.write.lock";
     private static final long PID = getProcessId();
+    private final ThreadLocal<Boolean> lockedByCurrentThread = ThreadLocal.withInitial(() -> false);
     private final long timeout;
 
     public TableStoreWriteLock(File queueDirectoryPath, Supplier<TimingPauser> pauser, Long timeoutMs) {
@@ -40,8 +41,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @Override
     public void lock() {
+        assert !lockedByCurrentThread.get() : "Lock is already acquired by current thread and is not reentrant - nested document context?";
         closeCheck();
-        //new Exception("Try lock " + Thread.currentThread().getName()).printStackTrace(System.err);
         try {
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 if (Thread.interrupted())
@@ -59,16 +60,22 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             pauser.reset();
 
         }
-        //new Exception("Locked " + Thread.currentThread().getName()).printStackTrace(System.err);
+        assert setLock(true);
     }
+
+    private boolean setLock(boolean lock) {
+        lockedByCurrentThread.set(lock);
+        return true;
+    }
+
 
     @Override
     public void unlock() {
         closeCheck();
-        //new Exception("Unlock by " + Thread.currentThread().getName()).printStackTrace(System.err);
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
             warn().on(getClass(), "Write lock was unlocked by someone else! For the lock file:" + path);
         }
+        assert setLock(false);
     }
 
     @Override

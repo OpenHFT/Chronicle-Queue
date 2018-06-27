@@ -2141,6 +2141,31 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Test(expected = AssertionError.class)
+    public void testReentrant() {
+
+        boolean assertsEnabled = false;
+        //noinspection ConstantConditions
+        assert assertsEnabled = true;
+        //noinspection ConstantConditions
+        assumeTrue(assertsEnabled);
+        File tmpDir = DirectoryUtils.tempDir("testReentrant");
+        try (final ChronicleQueue queue = binary(tmpDir)
+                .testBlockSize()
+                .rollCycle(RollCycles.TEST_DAILY)
+                .build()) {
+            ExcerptAppender appender = queue.acquireAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("some").text("data");
+
+                try (DocumentContext dc2 = appender.writingDocument()) {
+                    dc2.wire().write("some2").text("other");
+                }
+            }
+        }
+    }
+
     @Test
     public void testToEnd() {
         File dir = getTmpDir();
