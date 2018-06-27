@@ -66,7 +66,6 @@ public final class Pretoucher implements Closeable {
         if (qCycle != currentCycle) {
             releaseResources();
 
-            // TODO: add a parameter to this so we don't write EOF in existing file (when rolling early)
             currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), true);
             currentCycleMappedBytes = currentCycleWireStore.bytes();
             currentCycle = qCycle;
