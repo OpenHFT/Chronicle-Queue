@@ -1,6 +1,6 @@
 = Timezone Queue Rollover (Enterprise Edition Feature)
 
-In Chronicle Queue the time at which queues are rolled over is based on the UTC time; Chronicle Queue uses `System.currentTimeMillis()`.
+In Chronicle Queue, the time at which queues are rolled over is based on the UTC time; Chronicle Queue uses `System.currentTimeMillis()`.
 
 The Timezone Rollover Enterprise feature extends Chronicle Queue's ability to specify the time and periodicity of queue rollovers, to take account of the user's location timezone, rather than UTC.
 
