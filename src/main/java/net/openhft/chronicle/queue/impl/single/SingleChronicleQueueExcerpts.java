@@ -699,7 +699,7 @@ public class SingleChronicleQueueExcerpts {
                         } catch (IllegalStateException e) {
                             if (queue.isClosed())
                                 return;
-                        } 
+                        }
 
                         lastPosition = position;
                         lastCycle = cycle;
@@ -938,7 +938,7 @@ public class SingleChronicleQueueExcerpts {
                 boolean next = false, tryAgain = true;
                 if (state == FOUND_CYCLE) {
                     try {
-                        next = inACycle(includeMetaData, true);
+                        next = inACycle(includeMetaData);
                         tryAgain = false;
                     } catch (EOFException eof) {
                         state = TailerState.END_OF_CYCLE;
@@ -1011,7 +1011,7 @@ public class SingleChronicleQueueExcerpts {
 
                     case FOUND_CYCLE: {
                         try {
-                            return inACycle(includeMetaData, true);
+                            return inACycle(includeMetaData);
                         } catch (EOFException eof) {
                             state = TailerState.END_OF_CYCLE;
                         }
@@ -1129,7 +1129,7 @@ public class SingleChronicleQueueExcerpts {
             return false;
         }
 
-        private boolean inACycle(boolean includeMetaData, boolean first)
+        private boolean inACycle(boolean includeMetaData)
                 throws EOFException {
             Jvm.optionalSafepoint();
             Wire wire = wire();
@@ -1142,15 +1142,8 @@ public class SingleChronicleQueueExcerpts {
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
                     Jvm.optionalSafepoint();
-                    // don't need to busy poll this relatively expensive operation.
-                    if ((notPresentCounter++ & 0xFF) == 0) {
-                        boolean inACycleNone = inACycleNone(includeMetaData, first, bytes);
-                        Jvm.optionalSafepoint();
-                        return inACycleNone;
-                    } else {
-                        return false;
-                    }
-
+                    // no more polling - appender will always write (or recover) EOF
+                    return false;
                 case META_DATA:
                     Jvm.optionalSafepoint();
                     context.metaData(true);
@@ -1196,89 +1189,50 @@ public class SingleChronicleQueueExcerpts {
             Jvm.optionalSafepoint();
         }
 
-        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException {
-            long now = queue.time().currentTimeMillis();
-            boolean cycleChange2 = now >= timeForNextCycle;
-
-            return first
-                    && cycleChange2
-                    && checkMoveToNextCycle(includeMetaData);
-        }
-
-        private boolean checkMoveToNextCycle(boolean includeMetaData) throws EOFException {
-            // even though we are not writing EOF, we still need to indicate we're at EOF to prevent looping forever
-            // only do that if we waited long enough to prevent terminating too early
-            long now = queue.time().currentTimeMillis();
-            if (now >= timeForNextCycle + timeoutMS() * 2)
-                throw new EOFException();
-            return inACycle(includeMetaData, false);
-        }
-
         private long nextIndexWithNextAvailableCycle(int cycle) {
-            if (cycle == Integer.MIN_VALUE)
-                throw new AssertionError("cycle == Integer.MIN_VALUE");
+            assert cycle != Integer.MIN_VALUE : "cycle == Integer.MIN_VALUE";
 
-            long nextIndex, doubleCheck;
-
-            // DON'T REMOVE THIS DOUBLE CHECK - ESPECIALLY WHEN USING SECONDLY THE
-            // FIRST RESULT CAN DIFFER FROM THE DOUBLE CHECK, AS THE APPENDER CAN RACE WITH THE
-            // TAILER
-            do {
-
-                nextIndex = nextIndexWithNextAvailableCycle0(cycle);
-
-                if (nextIndex != Long.MIN_VALUE) {
-                    int nextCycle = queue.rollCycle().toCycle(nextIndex);
-                    if (nextCycle == cycle + 1) {
-                        // don't do the double check if the next cycle is adjacent to the current
-                        return nextIndex;
-                    }
-                }
-
-                doubleCheck = nextIndexWithNextAvailableCycle0(cycle);
-            } while (nextIndex != doubleCheck);
-
-            if (nextIndex != Long.MIN_VALUE && queue.rollCycle().toCycle(nextIndex) - 1 != cycle) {
-
-                /*
-                 * lets say that you were using a roll cycle of TEST_SECONDLY
-                 * and you wrote a message to the queue, if you created a tailer and read the first message,
-                 * then waited around 22 seconds before writing the next message, when the tailer
-                 * came to read the next message, there would be a gap of 22 cycle files
-                 * that did not exist, that is what this is reporting. If you are using daily rolling,
-                 * and writing every day, you should not see this message.
-                 */
-
-                LOG.debug("Rolled " + (queue
-                        .rollCycle().toCycle(nextIndex) - cycle) + " " + "times to find the " +
-                        "next cycle file. This can occur if your appenders have not written " +
-                        "anything for a while, leaving the cycle files with a gap.");
-            }
-
-            return nextIndex;
-        }
-
-        private long nextIndexWithNextAvailableCycle0(int cycle) {
             if (cycle > queue.lastCycle() || direction == TailerDirection.NONE) {
                 return Long.MIN_VALUE;
             }
 
+            long nextIndex;
             int nextCycle = cycle + direction.add();
             boolean found = cycle(nextCycle);
             if (found)
-                return nextIndexWithinFoundCycle(nextCycle);
+                nextIndex = nextIndexWithinFoundCycle(nextCycle);
+            else
+                try {
+                    int nextCycle0 = queue.nextCycle(this.cycle, direction);
+                    if (nextCycle0 == -1)
+                        return Long.MIN_VALUE;
 
-            try {
-                int nextCycle0 = queue.nextCycle(this.cycle, direction);
-                if (nextCycle0 == -1)
-                    return Long.MIN_VALUE;
+                    nextIndex = nextIndexWithinFoundCycle(nextCycle0);
 
-                return nextIndexWithinFoundCycle(nextCycle0);
+                } catch (ParseException e) {
+                    throw new IllegalStateException(e);
+                }
 
-            } catch (ParseException e) {
-                throw new IllegalStateException(e);
+            if (LOG.isDebugEnabled()) {
+                int nextIndexCycle = queue.rollCycle().toCycle(nextIndex);
+                if (nextIndex != Long.MIN_VALUE && nextIndexCycle - 1 != cycle) {
+
+                    /*
+                     * lets say that you were using a roll cycle of TEST_SECONDLY
+                     * and you wrote a message to the queue, if you created a tailer and read the first message,
+                     * then waited around 22 seconds before writing the next message, when the tailer
+                     * came to read the next message, there would be a gap of 22 cycle files
+                     * that did not exist, that is what this is reporting. If you are using daily rolling,
+                     * and writing every day, you should not see this message.
+                     */
+
+                    LOG.debug("Rolled " + (nextIndexCycle - cycle) + " " + "times to find the " +
+                            "next cycle file. This can occur if your appenders have not written " +
+                            "anything for a while, leaving the cycle files with a gap.");
+                }
             }
 
+            return nextIndex;
         }
 
         private long nextIndexWithinFoundCycle(int nextCycle) {
