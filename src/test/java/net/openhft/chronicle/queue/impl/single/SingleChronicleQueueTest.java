@@ -2136,6 +2136,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             append.writeDocument(w -> w.write(() -> "test").text("text2"));
             try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
                 assertEquals("text2", dc.wire().read("test").text());
             }
         }
