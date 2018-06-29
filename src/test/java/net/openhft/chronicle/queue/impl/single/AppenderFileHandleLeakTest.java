@@ -102,7 +102,6 @@ public final class AppenderFileHandleLeakTest {
         queuePath = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName());
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Bytes/issues/68")
     @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws Exception {
         assumeThat(OS.isLinux(), is(true));
@@ -177,7 +176,7 @@ public final class AppenderFileHandleLeakTest {
         assumeThat(OS.isLinux(), is(true));
         System.gc();
         Thread.sleep(100);
-        final int messagesPerThread = 10;
+        final int messagesPerThread = 20;
         try (SingleChronicleQueue queue = createQueue(currentTime::get)) {
 
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
@@ -208,9 +207,12 @@ public final class AppenderFileHandleLeakTest {
             final int expectedMessageCount = THREAD_COUNT * messagesPerThread;
             int messageCount = 0;
             storeFileListener.reset();
+            int notFoundAttempts = 5;
             while (true) {
                 try (final DocumentContext ctx = tailer.readingDocument()) {
                     if (!ctx.isPresent()) {
+                        if (--notFoundAttempts > 0)
+                            continue;
                         break;
                     }
 
