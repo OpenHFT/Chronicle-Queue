@@ -556,7 +556,14 @@ public class SingleChronicleQueueExcerpts {
                     throw new AssertionError();
                 store.writeEOF(wire, timeoutMS());
             }
-            setCycle2(cycle, true);
+            int lastCycle = queue.lastCycle;
+
+            if (lastCycle != cycle && lastCycle > this.cycle) {
+                setCycle2(lastCycle, false);
+                rollCycleTo(cycle);
+            } else {
+                setCycle2(cycle, true);
+            }
         }
 
         /**
