@@ -102,6 +102,7 @@ public final class AppenderFileHandleLeakTest {
         queuePath = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName());
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Bytes/issues/68")
     @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws Exception {
         assumeThat(OS.isLinux(), is(true));
