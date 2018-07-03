@@ -61,6 +61,12 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     // visible for testing
     int linearScanCount;
 
+    private static Boolean REPORT_LINEAR_SCAN;
+
+    static {
+        REPORT_LINEAR_SCAN = Boolean.getBoolean("chronicle.queue.report.linear.scan.latency");
+    }
+
     /**
      * used by {@link Demarshallable}
      *
@@ -307,7 +313,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         if (toIndex == fromKnownIndex)
             return ScanResult.FOUND;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
-        assert checkLinearScanTime(toIndex, fromKnownIndex, start);
+        if (REPORT_LINEAR_SCAN)
+            checkLinearScanTime(toIndex, fromKnownIndex, start);
         return scanResult;
     }
 
