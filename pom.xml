@@ -44,7 +44,6 @@
                 </artifactId> <!-- PLEASE DON'T LEAVE THIS ON A SNAPSHOT because they get missed in a release  -->
                 <type>pom</type>
                 <version>3.6.2</version>
-                EnterpriseSingleChronicleQueueTest.checkMultipleQueues22
                 <scope>import</scope>
             </dependency>
             <dependency>
