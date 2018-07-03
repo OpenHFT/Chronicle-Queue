@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.NewChunkListener;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.WireStore;
 
@@ -48,9 +49,16 @@ public final class Pretoucher implements Closeable {
         pretouchTimeProvider = () -> queue.time().currentTimeMillis() + (EARLY_ACQUIRE_NEXT_CYCLE ? PRETOUCHER_PREROLL_TIME_MS : 0);
     }
 
-    public void execute() {
+    public void execute() throws InvalidEventHandlerException {
         assignCurrentCycle();
-        pretoucherState.pretouch(currentCycleMappedBytes);
+        try {
+            pretoucherState.pretouch(currentCycleMappedBytes);
+        } catch (IllegalStateException e) {
+            if (queue.isClosed())
+                throw new InvalidEventHandlerException(e);
+            else
+                Jvm.warn().on(getClass(), e);
+        }
     }
 
     public void shutdown() {

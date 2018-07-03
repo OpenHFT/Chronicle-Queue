@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.core.threads.HandlerPriority;
+import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
@@ -14,7 +15,7 @@ public final class PretouchHandler implements EventHandler {
     }
 
     @Override
-    public boolean action() {
+    public boolean action() throws InvalidEventHandlerException {
         pretoucher.execute();
         return false;
     }
