@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
@@ -10,12 +11,8 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -203,7 +200,11 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testTailingWithEmptyCycles() {
         testTailing(p -> {
-            p.execute();
+            try {
+                p.execute();
+            } catch (InvalidEventHandlerException e) {
+                e.printStackTrace();
+            }
             return 1;
         });
     }
