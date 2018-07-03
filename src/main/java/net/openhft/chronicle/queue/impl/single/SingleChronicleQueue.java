@@ -829,6 +829,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     wireStore.initIndex(wire);
                     // do not allow tailer to see the file until it's header is written
                     directoryListing.onFileCreated(path, cycle);
+                    // allow directoryListing to pick up the file immediately
+                    firstAndLastCycleTime = 0;
                 } else {
                     wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
 

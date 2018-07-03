@@ -2035,7 +2035,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
-    
+
     @Test
     public void testReadingDocumentWithFirstAMoveWithEpoch() {
         Instant hourly = Instant.parse("2018-02-12T00:59:59.999Z");
@@ -2120,7 +2120,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (ChronicleQueue chronicle = builder(dir, this.wireType)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .build();
-
              ChronicleQueue chronicle2 = builder(dir, this.wireType)
                      .rollCycle(RollCycles.TEST_SECONDLY)
                      .build()) {
@@ -2129,14 +2128,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptAppender append = chronicle2.acquireAppender();
             append.writeDocument(w -> w.write(() -> "test").text("text"));
 
-            tailer.toEnd();
+            while (tailer.state() == TailerState.UNINITIALISED)
+                tailer.toEnd();
+
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(dc.isPresent());
+                assertFalse(tailer.index() + " " + tailer.state(), dc.isPresent());
             }
 
             append.writeDocument(w -> w.write(() -> "test").text("text2"));
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
+
                 assertEquals("text2", dc.wire().read("test").text());
             }
         }
