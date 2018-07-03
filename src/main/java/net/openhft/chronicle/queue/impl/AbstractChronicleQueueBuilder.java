@@ -62,6 +62,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     protected RollCycle rollCycle;
     protected long epoch; // default is 1970-01-01 00:00:00.000 UTC
     protected BufferMode writeBufferMode = BufferMode.None, readBufferMode = BufferMode.None;
+    protected boolean enableRingBufferMonitoring;
     @Nullable
     protected EventLoop eventLoop;
     @NotNull
@@ -286,6 +287,18 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public B eventLoop(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
+        return (B) this;
+    }
+
+    /**
+     * @return if the ring buffer's monitoring capability is turned on. Not available in OSS
+     */
+    public boolean enableRingBufferMonitoring() {
+        return enableRingBufferMonitoring;
+    }
+
+    public B enableRingBufferMonitoring(boolean enableRingBufferMonitoring) {
+        this.enableRingBufferMonitoring = enableRingBufferMonitoring;
         return (B) this;
     }
 
