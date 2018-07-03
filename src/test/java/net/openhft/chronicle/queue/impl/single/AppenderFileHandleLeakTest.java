@@ -17,7 +17,6 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -176,7 +175,7 @@ public final class AppenderFileHandleLeakTest {
         assumeThat(OS.isLinux(), is(true));
         System.gc();
         Thread.sleep(100);
-        final int messagesPerThread = 20;
+        final int messagesPerThread = 10;
         try (SingleChronicleQueue queue = createQueue(currentTime::get)) {
 
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
@@ -187,14 +186,14 @@ public final class AppenderFileHandleLeakTest {
                 futures.add(threadPool.submit(() -> {
                     for (int j = 0; j < messagesPerThread; j++) {
                         writeMessage(j, queue);
-                        currentTime.addAndGet(100);
+                        currentTime.addAndGet(500);
                     }
                     return Boolean.TRUE;
                 }));
             }
 
             for (Future<Boolean> future : futures) {
-                assertTrue(future.get(1, TimeUnit.MINUTES));
+                assertTrue(future.get(10, TimeUnit.SECONDS));
             }
 
             waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);
