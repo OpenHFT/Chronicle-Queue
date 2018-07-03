@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.NewChunkListener;
+import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -46,9 +47,15 @@ public class PretoucherTest {
                     ctx.wire().write().int32(i);
                     pretoucher.execute();
                     ctx.wire().write().bytes(new byte[1024]);
+                } catch (InvalidEventHandlerException e) {
+                    e.printStackTrace();
                 }
                 assertThat(capturedCycles.size(), is(i + 1));
-                pretoucher.execute();
+                try {
+                    pretoucher.execute();
+                } catch (InvalidEventHandlerException e) {
+                    e.printStackTrace();
+                }
                 assertThat(capturedCycles.size(), is(i + 1));
                 clock.addAndGet(TimeUnit.SECONDS.toMillis(5L));
             });
@@ -74,10 +81,16 @@ public class PretoucherTest {
                     ctx.wire().write().int32(i);
                     pretoucher.execute();
                     ctx.wire().write().bytes(new byte[1024]);
+                } catch (InvalidEventHandlerException e) {
+                    e.printStackTrace();
                 }
                 assertThat(capturedCycles.size(), is(i + 1));
                 clock.addAndGet(950);
-                pretoucher.execute();
+                try {
+                    pretoucher.execute();
+                } catch (InvalidEventHandlerException e) {
+                    e.printStackTrace();
+                }
                 clock.addAndGet(50);
                 assertThat(capturedCycles.size(), is(i + 2));
             });
