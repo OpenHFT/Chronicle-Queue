@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>5.16.8-SNAPSHOT</version>
+    <version>5.16.9-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
 
@@ -49,7 +49,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.16.97</version>
+                <version>1.16.98</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
