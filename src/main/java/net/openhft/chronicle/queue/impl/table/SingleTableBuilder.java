@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -29,7 +30,6 @@ import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
@@ -98,43 +98,47 @@ public class SingleTableBuilder {
 
     @NotNull
     public TableStore build() {
-        if (readOnly && !file.exists()) {
+        if (readOnly && !file.exists())
             throw new IORuntimeException("File not found in readOnly mode");
-        }
+
         try {
             MappedBytes bytes = MappedBytes.mappedBytes(file, 64 << 10, 0, readOnly);
+            // eagerly initialize backing MappedFile page - otherwise wire.writeFirstHeader() will try to lock the file
+            // to allocate the first byte store and that will cause lock overlap
+            bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
             StoreRecovery recovery = recoverySupplier.apply(wireType);
-            try {
-                TableStore tableStore;
-                if ((!readOnly) && wire.writeFirstHeader()) {
-                    tableStore = writeTableStore(bytes, wire, recovery);
+            return SingleTableStore.doWithExclusiveLock(file, (v) -> {
+                try {
+                    if ((!readOnly) && wire.writeFirstHeader()) {
+                        return writeTableStore(bytes, wire, recovery);
 
-                } else {
-                    wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
-
-                    StringBuilder name = Wires.acquireStringBuilder();
-                    ValueIn valueIn = wire.readEventName(name);
-                    if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                        tableStore = valueIn.typedMarshallable();
                     } else {
-                        //noinspection unchecked
-                        throw new StreamCorruptedException("The first message should be the header, was " + name);
-                    }
-                }
-                return tableStore;
+                        wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
 
-            } catch (TimeoutException e) {
-                recovery.recoverAndWriteHeader(wire, 10_000, null, null);
-                return writeTableStore(bytes, wire, recovery);
-            }
+                        StringBuilder name = Wires.acquireStringBuilder();
+                        ValueIn valueIn = wire.readEventName(name);
+                        if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+                            return valueIn.typedMarshallable();
+                        } else {
+                            //noinspection unchecked
+                            throw new StreamCorruptedException("The first message should be the header, was " + name);
+                        }
+                    }
+                } catch (IOException ex) {
+                    throw Jvm.rethrow(ex);
+                } catch (TimeoutException ex) {
+                    recovery.recoverAndWriteHeader(wire, 10_000, null, null);
+                    return writeTableStore(bytes, wire, recovery);
+                }
+            }, () -> null);
         } catch (IOException e) {
             throw new IORuntimeException(e);
         }
     }
 
     @NotNull
-    private TableStore writeTableStore(MappedBytes bytes, Wire wire, StoreRecovery recovery) throws EOFException, StreamCorruptedException {
+    private TableStore writeTableStore(MappedBytes bytes, Wire wire, StoreRecovery recovery) {
         TableStore store = new SingleTableStore(wireType, bytes, recovery);
         wire.writeEventName("header").object(store);
         wire.updateFirstHeader();
