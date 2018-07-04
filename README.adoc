@@ -1249,7 +1249,7 @@ http://kafka.apache.org/documentation.html[Kafka Documentation]
 
 Chronicle Queue Enterprise supports TCP replication, with optional filtering so that only the required record, or even fields, are transmitted. This improves performance and reduces bandwidth requirements.
 
-image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png[]
+image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/images/queue-replication.png[]
 
 ==  Support
 
