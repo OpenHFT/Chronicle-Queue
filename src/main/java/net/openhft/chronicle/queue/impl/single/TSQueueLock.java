@@ -18,10 +18,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
 
-import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -38,8 +38,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     private final ThreadLocal<Long> lockHolderTidTL = new ThreadLocal<>();
     private final long timeout;
 
-    public TSQueueLock(File queueDirectoryPath, Supplier<TimingPauser> pauser, Long timeoutMs) {
-        super(LOCK_KEY, queueDirectoryPath, pauser);
+    public TSQueueLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
+        super(LOCK_KEY, tableStore, pauser);
         timeout = timeoutMs;
     }
 

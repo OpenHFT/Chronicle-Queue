@@ -18,13 +18,18 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
+import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -41,6 +46,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
@@ -50,11 +56,14 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     static {
         CLASS_ALIASES.addAlias(WireType.class);
+        CLASS_ALIASES.addAlias(SCQMeta.class, "SCQMeta");
         CLASS_ALIASES.addAlias(SCQRoll.class, "SCQSRoll");
         CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
         CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
+
+    private TableStore<SCQMeta> metaStore;
 
     @SuppressWarnings("unchecked")
     @Deprecated
@@ -145,11 +154,8 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
                 queue.rollCycle(),
                 queue.wireType(),
                 (MappedBytes) wire.bytes(),
-                queue.epoch(),
                 queue.indexCount(),
-                queue.indexSpacing(),
-                queue.deltaCheckpointInterval(),
-                queue.sourceId());
+                queue.indexSpacing());
 
         wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
 
@@ -352,13 +358,78 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return super.rollTime(time, ZoneId.of("UTC"));
     }
 
+    @Override
+    protected void initializeMetadata() {
+        File metapath = metapath();
+        validateRollCycle(metapath);
+        SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle, epoch), deltaCheckpointInterval(), sourceId());
+        try {
+
+            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly()).validateMetadata(!readOnly()).build();
+            // check if metadata was overridden
+            if (readOnly() && !metaStore.metadata().roll().format().equals(rollCycle.format())) {
+                // roll cycle changed
+                overrideRollCycleForFileNameLength(metaStore.metadata().roll().format().length());
+            }
+        } catch (IORuntimeException ex) {
+            // readonly=true and file doesn't exist
+            metaStore = new ReadonlyTableStore<>(metadata);
+        }
+    }
+
+    private void validateRollCycle(File metapath) {
+        if (!metapath.exists()) {
+            // no metadata, so we need to check if there're cq4 files and if so try to validate roll cycle
+            // the code is slightly brutal and crude but should work for most cases. It will NOT work if files were created with
+            // the following cycles: LARGE_HOURLY_SPARSE LARGE_HOURLY_XSPARSE LARGE_DAILY XLARGE_DAILY HUGE_DAILY HUGE_DAILY_XSPARSE
+            // for such cases user MUST use correct roll cycle when creating the queue
+            String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+            if (list != null && list.length > 0) {
+                String filename = list[0];
+                if (rollCycle.format().length() + 4 != filename.length()) {
+                    // probably different roll cycle used
+                    overrideRollCycleForFileNameLength(filename.length() - 4);
+                }
+            }
+        }
+    }
+
+    private void overrideRollCycleForFileNameLength(int patternLength) {
+        for (RollCycles cycle : RollCycles.values()) {
+            if (cycle.format().length() == patternLength) {
+                LOGGER.warn("Overriding roll cycle to " + cycle);
+                rollCycle = cycle;
+                break;
+            }
+        }
+    }
+
+    private File metapath() {
+        final File storeFilePath;
+        if ("".equals(path.getPath())) {
+            storeFilePath = new File(QUEUE_METADATA_FILE);
+        } else {
+            storeFilePath = new File(path, QUEUE_METADATA_FILE);
+            path.mkdirs();
+        }
+        return storeFilePath;
+    }
+
     @NotNull
     protected QueueLock queueLock() {
-        return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(path(), pauserSupplier(), timeoutMS() * 3 / 2) : new NoopQueueLock();
+        return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2) : new NoopQueueLock();
     }
 
     @NotNull
     protected WriteLock writeLock() {
-        return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(path(), pauserSupplier(), timeoutMS() * 3 / 2);
+        return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2);
+    }
+
+    protected int deltaCheckpointInterval() {
+        return -1;
+    }
+
+    protected TableStore<SCQMeta> metaStore() {
+        return metaStore;
     }
 }

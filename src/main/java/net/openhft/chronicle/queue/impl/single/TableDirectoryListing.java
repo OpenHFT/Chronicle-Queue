@@ -1,7 +1,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +18,7 @@ final class TableDirectoryListing implements DirectoryListing {
     private static final String MOD_COUNT = "listing.modCount";
     private static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
     private static final int UNSET_MIN_CYCLE = Integer.MAX_VALUE;
-    private final TableStore tableStore;
+    private final TableStore<?> tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
     private final boolean readOnly;
@@ -25,7 +27,7 @@ final class TableDirectoryListing implements DirectoryListing {
     private volatile LongValue modCount;
 
     TableDirectoryListing(
-            final TableStore tableStore, final Path queuePath,
+            @NotNull TableStore<?> tableStore, final Path queuePath,
             final ToIntFunction<File> fileToCycleFunction,
             final boolean readOnly) {
         this.tableStore = tableStore;
@@ -97,7 +99,7 @@ final class TableDirectoryListing implements DirectoryListing {
     }
 
     public void close() {
-        tableStore.close();
+        Closeable.closeQuietly(minCycleValue, maxCycleValue, modCount);
     }
 
     private void closeCheck() {

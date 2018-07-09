@@ -41,14 +41,19 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class SingleTableStore implements TableStore {
+public class SingleTableStore<T extends Metadata> implements TableStore<T> {
+    public static final String SUFFIX = ".cq4t";
+
     private static final Logger LOG = LoggerFactory.getLogger(SingleTableStore.class);
     private static final long timeoutMS = Long.getLong("chronicle.table.store.timeoutMS", 10_000);
     @NotNull
     private final WireType wireType;
+    @NotNull
+    private final T metadata;
     @NotNull
     private final MappedBytes mappedBytes;
     @NotNull
@@ -71,18 +76,23 @@ public class SingleTableStore implements TableStore {
     private SingleTableStore(@NotNull WireIn wire) {
         assert wire.startUse();
         try {
-            this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
-            assert wireType != null;
-
+            this.wireType = Objects.requireNonNull(wire.read(MetaDataField.wireType).object(WireType.class));
             this.mappedBytes = (MappedBytes) (wire.bytes());
             this.mappedFile = mappedBytes.mappedFile();
             this.refCount = ReferenceCounter.onReleased(this::onCleanup);
 
             if (wire.bytes().readRemaining() > 0) {
-                this.recovery = wire.read(MetaDataField.recovery).typedMarshallable();
+                this.recovery = Objects.requireNonNull(wire.read(MetaDataField.recovery).typedMarshallable());
             } else {
                 this.recovery = new SimpleStoreRecovery(); // disabled.
             }
+
+            if (wire.bytes().readRemaining() > 0) {
+                this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
+            } else {
+                this.metadata = (T) Metadata.NoMeta.INSTANCE;
+            }
+
             mappedWire = wireType.apply(mappedBytes);
         } finally {
             assert wire.endUse();
@@ -96,9 +106,11 @@ public class SingleTableStore implements TableStore {
      */
     public SingleTableStore(@NotNull final WireType wireType,
                             @NotNull MappedBytes mappedBytes,
-                            @NotNull StoreRecovery recovery) {
-        this.recovery = recovery;
+                            @NotNull StoreRecovery recovery,
+                            @NotNull T metadata) {
         this.wireType = wireType;
+        this.metadata = metadata;
+        this.recovery = recovery;
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
         this.refCount = ReferenceCounter.onReleased(this::onCleanup);
@@ -108,15 +120,6 @@ public class SingleTableStore implements TableStore {
     @Override
     public boolean isClosed() {
         return isClosed;
-    }
-
-    /**
-     * @return the type of wire used
-     */
-    @NotNull
-    @Override
-    public WireType wireType() {
-        return wireType;
     }
 
     @NotNull
@@ -193,19 +196,14 @@ public class SingleTableStore implements TableStore {
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
 
-        wire.write(MetaDataField.wireType).object(wireType);
-        wire.write(MetaDataField.recovery).typedMarshallable(recovery);
-        wire.padToCacheAlign();
-    }
+        wire
+                .write(MetaDataField.wireType).object(wireType)
+                .write(MetaDataField.recovery).typedMarshallable(recovery);
 
-    @Override
-    public long writeHeader(@NotNull Wire wire, int safeLength, long timeoutMS) throws UnrecoverableTimeoutException {
-        try {
-            return recovery.writeHeader(wire, safeLength, timeoutMS, null, null);
-        } catch (EOFException th) {
-            // this will never happen for TableStore
-            throw Jvm.rethrow(th);
-        }
+        if (metadata != Metadata.NoMeta.INSTANCE)
+            wire.write(MetaDataField.metadata).typedMarshallable(this.metadata);
+
+        wire.padToCacheAlign();
     }
 
     /**
@@ -252,8 +250,13 @@ public class SingleTableStore implements TableStore {
      * {@inheritDoc}
      */
     @Override
-    public <R> R doWithExclusiveLock(Function<TableStore, ? extends R> code) {
+    public <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code) {
         return doWithExclusiveLock(file(), code, () -> this);
+    }
+
+    @Override
+    public T metadata() {
+        return metadata;
     }
 
     public static <T, R> R doWithExclusiveLock(File file, Function<T, ? extends R> code, Supplier<T> target) {

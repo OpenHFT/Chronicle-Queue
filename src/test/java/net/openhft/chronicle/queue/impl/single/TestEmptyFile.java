@@ -38,7 +38,7 @@ import static org.junit.Assert.*;
 public class TestEmptyFile {
     Path tmpDir = DirectoryUtils.tempDir(TestEmptyFile.class.getSimpleName()).toPath();
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
+    /*@SuppressWarnings("ResultOfMethodCallIgnored")
     @Before
     public void setup() throws Exception {
         tmpDir.toFile().mkdirs();
@@ -47,7 +47,7 @@ public class TestEmptyFile {
         Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
         File file = tmpDir.resolve("20170320.cq4").toFile();
         new FileOutputStream(file).close();
-    }
+    }*/
 
     @After
     public void cleanup() {

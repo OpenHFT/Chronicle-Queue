@@ -96,7 +96,6 @@ public class SingleChronicleQueueExcerpts {
             context = new StoreAppenderContext();
             this.storePool = storePool;
             closableResources = new ClosableResources(queue);
-            queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
         }
 
         @Deprecated // Should not be providing accessors to reference-counted objects
@@ -827,7 +826,6 @@ public class SingleChronicleQueueExcerpts {
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
             closableResources = new ClosableResources(queue);
-            queue.ensureThatRollCycleDoesNotConflictWithExistingQueueFiles();
         }
 
         @Nullable

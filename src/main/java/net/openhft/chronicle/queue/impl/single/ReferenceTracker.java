@@ -1,23 +1,19 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 
 import java.util.Arrays;
-import java.util.function.Function;
 
 public final class ReferenceTracker {
     private static final int CACHE_SIZE = 64;
     private static final int INDEX_MASK = CACHE_SIZE - 1;
-    private final TableStore backingStore;
+    private final TableStore<?> backingStore;
     private final ReverseCharSequenceIntegerEncoder encoder = new ReverseCharSequenceIntegerEncoder();
     private final CachedLongValue[] cache = new CachedLongValue[CACHE_SIZE];
-    private final Function<TableStore, LongValue> safeAcquireFunction = this::safelyGetLongValue;
 
-    public ReferenceTracker(final TableStore backingStore) {
+    public ReferenceTracker(final TableStore<?> backingStore) {
         this.backingStore = backingStore;
         Arrays.setAll(cache, i -> new CachedLongValue());
     }
@@ -45,7 +41,7 @@ public final class ReferenceTracker {
         if (cachedValue.cycle != cycle) {
             encoder.encode(cycle);
             cachedValue.cycle = cycle;
-            cachedValue.value = backingStore.doWithExclusiveLock(safeAcquireFunction);
+            cachedValue.value = backingStore.doWithExclusiveLock(this::safelyGetLongValue);
             if (cachedValue.value.getVolatileValue() == Long.MIN_VALUE) {
                 cachedValue.value.compareAndSwapValue(Long.MIN_VALUE, 0);
             }

@@ -19,9 +19,8 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.impl.single.DirectoryListing;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireDumper;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,9 +33,6 @@ import java.util.Arrays;
 
 import static java.lang.System.err;
 
-/*
- * Created by Peter Lawrey on 07/03/2016.
- */
 public class DumpQueueMain {
     private static final String FILE = System.getProperty("file");
     private static final int LENGTH = ", 0".length();
@@ -54,12 +50,7 @@ public class DumpQueueMain {
 
     public static void dump(@NotNull File path, @NotNull PrintStream out, long upperLimit) {
         if (path.isDirectory()) {
-            File[] directoryListing = path.
-                    listFiles((d, n) -> n.equals(DirectoryListing.DIRECTORY_LISTING_FILE));
-            if (directoryListing != null && directoryListing.length == 1) {
-                out.println(SingleTableBuilder.binary(directoryListing[0]).build().dump());
-            }
-            File[] files = path.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
+            File[] files = path.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX));
             if (files == null) {
                 err.println("Directory not found " + path);
                 System.exit(1);
@@ -69,46 +60,44 @@ public class DumpQueueMain {
             for (File file : files)
                 dumpFile(file, out, upperLimit);
 
-        } else {
+        } else if (path.getName().endsWith(SingleChronicleQueue.SUFFIX) || path.getName().endsWith(SingleTableStore.SUFFIX)) {
             dumpFile(path, out, upperLimit);
         }
     }
 
     private static void dumpFile(@NotNull File file, @NotNull PrintStream out, long upperLimit) {
-        if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
-            Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
-            try {
-                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows());
-                bytes.readLimit(bytes.realCapacity());
-                StringBuilder sb = new StringBuilder();
-                WireDumper dumper = WireDumper.of(bytes);
-                while (bytes.readRemaining() >= 4) {
-                    sb.setLength(0);
-                    boolean last = dumper.dumpOne(sb, buffer);
-                    if (sb.indexOf("\nindex2index:") != -1 || sb.indexOf("\nindex:") != -1) {
-                        // truncate trailing zeros
-                        if (sb.indexOf(", 0\n]\n") == sb.length() - 6) {
-                            int i = indexOfLastZero(sb);
-                            if (i < sb.length())
-                                sb.setLength(i - 5);
-                            sb.append(" # truncated trailing zeros\n]");
-                        }
-                    }
-
-                    out.println(sb);
-
-                    if (last)
-                        break;
-                    if (bytes.readPosition() > upperLimit) {
-                        out.println("# limit reached.");
-                        return;
+        Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
+        try {
+            MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows());
+            bytes.readLimit(bytes.realCapacity());
+            StringBuilder sb = new StringBuilder();
+            WireDumper dumper = WireDumper.of(bytes);
+            while (bytes.readRemaining() >= 4) {
+                sb.setLength(0);
+                boolean last = dumper.dumpOne(sb, buffer);
+                if (sb.indexOf("\nindex2index:") != -1 || sb.indexOf("\nindex:") != -1) {
+                    // truncate trailing zeros
+                    if (sb.indexOf(", 0\n]\n") == sb.length() - 6) {
+                        int i = indexOfLastZero(sb);
+                        if (i < sb.length())
+                            sb.setLength(i - 5);
+                        sb.append(" # truncated trailing zeros\n]");
                     }
                 }
-            } catch (IOException ioe) {
-                err.println("Failed to read " + file + " " + ioe);
-            } finally {
-                buffer.release();
+
+                out.println(sb);
+
+                if (last)
+                    break;
+                if (bytes.readPosition() > upperLimit) {
+                    out.println("# limit reached.");
+                    return;
+                }
             }
+        } catch (IOException ioe) {
+            err.println("Failed to read " + file + " " + ioe);
+        } finally {
+            buffer.release();
         }
     }
 

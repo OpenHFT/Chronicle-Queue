@@ -65,182 +65,155 @@ public class RollingCycleTest {
             }
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    674,\n" +
-                    "    2894807957506\n" +
+                    "    554,\n" +
+                    "    2379411881986\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 3\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 3\n" +
-                    "  584,\n" +
-                    "  629,\n" +
-                    "  674,\n" +
+                    "  464,\n" +
+                    "  509,\n" +
+                    "  554,\n" +
                     "  0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
-                    "00000240                                      10 6e 61 6d              ·nam\n" +
-                    "00000250 65 5f 2d 31 31 35 35 34  38 34 35 37 36 7a cb 93 e_-11554 84576z··\n" +
-                    "00000260 3d 38 51 d9 d4 f6 c9 2d  a3 bd 70 39 9b b7 70 e9 =8Q····- ··p9··p·\n" +
-                    "00000270 8c 39 f0 1d 4f                                   ·9··O            \n" +
-                    "# position: 629, header: 1\n" +
+                    "000001d0             10 6e 61 6d  65 5f 2d 31 31 35 35 34     ·nam e_-11554\n" +
+                    "000001e0 38 34 35 37 36 7a cb 93  3d 38 51 d9 d4 f6 c9 2d 84576z·· =8Q····-\n" +
+                    "000001f0 a3 bd 70 39 9b b7 70 e9  8c 39 f0 1d 4f          ··p9··p· ·9··O   \n" +
+                    "# position: 509, header: 1\n" +
                     "--- !!data #binary\n" +
-                    "00000270                             10 6e 61 6d 65 5f 2d           ·name_-\n" +
-                    "00000280 31 31 35 35 38 36 39 33  32 35 6f 0e fb 68 d8 9c 11558693 25o··h··\n" +
-                    "00000290 b8 19 fc cc 2c 35 92 f9  4d 68 e5 f1 2c 55 f0 b8 ····,5·· Mh··,U··\n" +
-                    "000002a0 46 09                                            F·               \n" +
-                    "# position: 674, header: 2\n" +
+                    "00000200    10 6e 61 6d 65 5f 2d  31 31 35 35 38 36 39 33  ·name_- 11558693\n" +
+                    "00000210 32 35 6f 0e fb 68 d8 9c  b8 19 fc cc 2c 35 92 f9 25o··h·· ····,5··\n" +
+                    "00000220 4d 68 e5 f1 2c 55 f0 b8  46 09                   Mh··,U·· F·      \n" +
+                    "# position: 554, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "000002a0                   10 6e  61 6d 65 5f 2d 31 31 35       ·n ame_-115\n" +
-                    "000002b0 34 37 31 35 30 37 39 90  45 c5 e6 f7 b9 1a 4b ea 4715079· E·····K·\n" +
-                    "000002c0 c3 2f 7f 17 5f 10 01 5c  6e 62 fc cc 5e cc da    ·/··_··\\ nb··^·· \n" +
-                    "# position: 719, header: 2 EOF\n" +
+                    "00000220                                            10 6e                ·n\n" +
+                    "00000230 61 6d 65 5f 2d 31 31 35  34 37 31 35 30 37 39 90 ame_-115 4715079·\n" +
+                    "00000240 45 c5 e6 f7 b9 1a 4b ea  c3 2f 7f 17 5f 10 01 5c E·····K· ·/··_··\\\n" +
+                    "00000250 6e 62 fc cc 5e cc da                             nb··^··          \n" +
+                    "# position: 599, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130349 bytes remaining\n" +
+                    "# 130469 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    674,\n" +
-                    "    2894807957506\n" +
+                    "    554,\n" +
+                    "    2379411881986\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 3\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 3\n" +
-                    "  584,\n" +
-                    "  629,\n" +
-                    "  674,\n" +
+                    "  464,\n" +
+                    "  509,\n" +
+                    "  554,\n" +
                     "  0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
-                    "00000240                                      10 6e 61 6d              ·nam\n" +
-                    "00000250 65 5f 2d 31 31 35 35 34  38 34 35 37 36 7a cb 93 e_-11554 84576z··\n" +
-                    "00000260 3d 38 51 d9 d4 f6 c9 2d  a3 bd 70 39 9b b7 70 e9 =8Q····- ··p9··p·\n" +
-                    "00000270 8c 39 f0 1d 4f                                   ·9··O            \n" +
-                    "# position: 629, header: 1\n" +
+                    "000001d0             10 6e 61 6d  65 5f 2d 31 31 35 35 34     ·nam e_-11554\n" +
+                    "000001e0 38 34 35 37 36 7a cb 93  3d 38 51 d9 d4 f6 c9 2d 84576z·· =8Q····-\n" +
+                    "000001f0 a3 bd 70 39 9b b7 70 e9  8c 39 f0 1d 4f          ··p9··p· ·9··O   \n" +
+                    "# position: 509, header: 1\n" +
                     "--- !!data #binary\n" +
-                    "00000270                             10 6e 61 6d 65 5f 2d           ·name_-\n" +
-                    "00000280 31 31 35 35 38 36 39 33  32 35 6f 0e fb 68 d8 9c 11558693 25o··h··\n" +
-                    "00000290 b8 19 fc cc 2c 35 92 f9  4d 68 e5 f1 2c 55 f0 b8 ····,5·· Mh··,U··\n" +
-                    "000002a0 46 09                                            F·               \n" +
-                    "# position: 674, header: 2\n" +
+                    "00000200    10 6e 61 6d 65 5f 2d  31 31 35 35 38 36 39 33  ·name_- 11558693\n" +
+                    "00000210 32 35 6f 0e fb 68 d8 9c  b8 19 fc cc 2c 35 92 f9 25o··h·· ····,5··\n" +
+                    "00000220 4d 68 e5 f1 2c 55 f0 b8  46 09                   Mh··,U·· F·      \n" +
+                    "# position: 554, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "000002a0                   10 6e  61 6d 65 5f 2d 31 31 35       ·n ame_-115\n" +
-                    "000002b0 34 37 31 35 30 37 39 90  45 c5 e6 f7 b9 1a 4b ea 4715079· E·····K·\n" +
-                    "000002c0 c3 2f 7f 17 5f 10 01 5c  6e 62 fc cc 5e cc da    ·/··_··\\ nb··^·· \n" +
-                    "# position: 719, header: 2 EOF\n" +
+                    "00000220                                            10 6e                ·n\n" +
+                    "00000230 61 6d 65 5f 2d 31 31 35  34 37 31 35 30 37 39 90 ame_-115 4715079·\n" +
+                    "00000240 45 c5 e6 f7 b9 1a 4b ea  c3 2f 7f 17 5f 10 01 5c E·····K· ·/··_··\\\n" +
+                    "00000250 6e 62 fc cc 5e cc da                             nb··^··          \n" +
+                    "# position: 599, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130349 bytes remaining\n" +
+                    "# 130469 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    674,\n" +
-                    "    2894807957506\n" +
+                    "    554,\n" +
+                    "    2379411881986\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 3\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 3\n" +
-                    "  584,\n" +
-                    "  629,\n" +
-                    "  674,\n" +
+                    "  464,\n" +
+                    "  509,\n" +
+                    "  554,\n" +
                     "  0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
-                    "00000240                                      10 6e 61 6d              ·nam\n" +
-                    "00000250 65 5f 2d 31 31 35 35 34  38 34 35 37 36 7a cb 93 e_-11554 84576z··\n" +
-                    "00000260 3d 38 51 d9 d4 f6 c9 2d  a3 bd 70 39 9b b7 70 e9 =8Q····- ··p9··p·\n" +
-                    "00000270 8c 39 f0 1d 4f                                   ·9··O            \n" +
-                    "# position: 629, header: 1\n" +
+                    "000001d0             10 6e 61 6d  65 5f 2d 31 31 35 35 34     ·nam e_-11554\n" +
+                    "000001e0 38 34 35 37 36 7a cb 93  3d 38 51 d9 d4 f6 c9 2d 84576z·· =8Q····-\n" +
+                    "000001f0 a3 bd 70 39 9b b7 70 e9  8c 39 f0 1d 4f          ··p9··p· ·9··O   \n" +
+                    "# position: 509, header: 1\n" +
                     "--- !!data #binary\n" +
-                    "00000270                             10 6e 61 6d 65 5f 2d           ·name_-\n" +
-                    "00000280 31 31 35 35 38 36 39 33  32 35 6f 0e fb 68 d8 9c 11558693 25o··h··\n" +
-                    "00000290 b8 19 fc cc 2c 35 92 f9  4d 68 e5 f1 2c 55 f0 b8 ····,5·· Mh··,U··\n" +
-                    "000002a0 46 09                                            F·               \n" +
-                    "# position: 674, header: 2\n" +
+                    "00000200    10 6e 61 6d 65 5f 2d  31 31 35 35 38 36 39 33  ·name_- 11558693\n" +
+                    "00000210 32 35 6f 0e fb 68 d8 9c  b8 19 fc cc 2c 35 92 f9 25o··h·· ····,5··\n" +
+                    "00000220 4d 68 e5 f1 2c 55 f0 b8  46 09                   Mh··,U·· F·      \n" +
+                    "# position: 554, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "000002a0                   10 6e  61 6d 65 5f 2d 31 31 35       ·n ame_-115\n" +
-                    "000002b0 34 37 31 35 30 37 39 90  45 c5 e6 f7 b9 1a 4b ea 4715079· E·····K·\n" +
-                    "000002c0 c3 2f 7f 17 5f 10 01 5c  6e 62 fc cc 5e cc da    ·/··_··\\ nb··^·· \n" +
+                    "00000220                                            10 6e                ·n\n" +
+                    "00000230 61 6d 65 5f 2d 31 31 35  34 37 31 35 30 37 39 90 ame_-115 4715079·\n" +
+                    "00000240 45 c5 e6 f7 b9 1a 4b ea  c3 2f 7f 17 5f 10 01 5c E·····K· ·/··_··\\\n" +
+                    "00000250 6e 62 fc cc 5e cc da                             nb··^··          \n" +
                     "...\n" +
-                    "# 130349 bytes remaining\n";
+                    "# 130469 bytes remaining\n";
             assertEquals(expectedEager, queue.dump());
 
             System.out.println("Wrote: " + numWritten + " messages");

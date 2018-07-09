@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 public class PretoucherStressTest extends RollCycleMultiThreadStressTest {
 
     @Test
-    @Ignore("same issue as RollCycleMultiThreadStressTest")
     public void stress() {
         final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
                 map(s -> new File(s, UUID.randomUUID().toString())).

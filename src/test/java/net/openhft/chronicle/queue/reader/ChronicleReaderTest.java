@@ -9,7 +9,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static net.openhft.chronicle.queue.impl.single.GcControls.waitForGcCycle;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
@@ -52,7 +53,7 @@ public class ChronicleReaderTest {
     }
 
     @Before
-    public void before() throws Exception {
+    public void before() {
         dataDir = DirectoryUtils.tempDir(ChronicleReaderTest.class.getSimpleName()).toPath();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -66,7 +67,7 @@ public class ChronicleReaderTest {
         }
     }
 
-    @Test
+    @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
@@ -87,7 +88,30 @@ public class ChronicleReaderTest {
     }
 
     @Test(timeout = 10_000L)
-    public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws IOException, InterruptedException {
+    public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
+        Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
+        path.toFile().mkdirs();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+                testBlockSize().build()) {
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            methodWriterBuilder.recordHistory(true);
+            final StringEvents events = methodWriterBuilder.build();
+
+            for (int i = 0; i < 24; i++) {
+                events.say(i % 2 == 0 ? "hello" : "goodbye");
+            }
+        }
+        Files.list(path).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(p -> p.toFile().delete());
+        waitForGcCycle();
+
+        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        assertFalse(capturedOutput.isEmpty());
+    }
+
+    @Test(timeout = 10_000L)
+    @Ignore("Not sure if this is a valid usecase")
+    public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws InterruptedException {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader").toPath();
         path.toFile().mkdirs();
 
@@ -146,21 +170,21 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldFailWhenNoDirectoryListing() throws IOException {
-        Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableBuilder.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
+    public void shouldNotFailWhenNoMetadata() throws IOException {
+        Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
         basicReader().execute();
         assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
     }
 
     @Test
-    public void shouldIncludeMessageHistoryByDefault() throws Exception {
+    public void shouldIncludeMessageHistoryByDefault() {
         basicReader().execute();
 
         assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
     }
 
     @Test
-    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() throws Exception {
+    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
         basicReader().
                 // matches goodbye, but not hello or history
                         withInclusionRegex("goodbye").

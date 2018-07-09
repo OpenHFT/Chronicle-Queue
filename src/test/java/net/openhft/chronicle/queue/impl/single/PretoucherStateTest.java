@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class PretoucherStateTest {
     @Test
-    public void pretouch() throws Exception {
+    public void pretouch() {
         long[] pos = {0};
         final StringBuilder record = new StringBuilder();
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 4096, 64 << 10, record, () -> false);
@@ -43,7 +43,7 @@ public class PretoucherStateTest {
     }
 
     @Test
-    public void pretouchLeap() throws Exception {
+    public void pretouchLeap() {
         long[] pos = {1 << 20};
         final StringBuilder record = new StringBuilder();
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 4 << 10, 16 << 10, record, () -> true);
@@ -75,7 +75,7 @@ public class PretoucherStateTest {
     }
 
     @Test
-    public void pretouchLongBreak() throws Exception {
+    public void pretouchLongBreak() {
         long[] pos = {0};
         final StringBuilder record = new StringBuilder();
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 1024, 16 << 10, record, () -> true);

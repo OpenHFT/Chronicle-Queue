@@ -21,15 +21,14 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
-import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
+import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -41,8 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -60,14 +57,15 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerp
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
+    public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
 
-    private static final boolean SHOULD_RELEASE_RESOURCES =
-            Boolean.valueOf(System.getProperty("chronicle.queue.release.weakRef.resources",
-                    Boolean.TRUE.toString()));
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Boolean.getBoolean("chronicle.queue.checkrollcycle");
-    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
+    private static final boolean SHOULD_RELEASE_RESOURCES = Boolean.valueOf(
+            System.getProperty("chronicle.queue.release.weakRef.resources", Boolean.TRUE.toString()));
+
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
     final Supplier<TimingPauser> pauserSupplier;
@@ -103,7 +101,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final CycleCalculator cycleCalculator;
     @NotNull
-    private final Function<String, File> nameToFile;
+    private final TableStore<SCQMeta> metaStore;
     @NotNull
     private final DirectoryListing directoryListing;
     @NotNull
@@ -117,23 +115,24 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private RollCycle rollCycle;
     @NotNull
-    private RollingResourcesCache dateCache;
+    private final RollingResourcesCache dateCache;
     private int deltaCheckpointInterval;
-    private boolean persistedRollCycleCheckPerformed = false;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder<?> builder) {
         readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
         cycleCalculator = builder.cycleCalculator();
         epoch = builder.epoch();
-        nameToFile = textToFile(builder);
-        assignRollCycleDependentFields();
+        dateCache = new RollingResourcesCache(rollCycle, epoch, textToFile(builder), fileToText());
 
         storeFileListener = builder.storeFileListener();
         storeSupplier = new StoreSupplier();
         pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         isBuffered = builder.buffered();
         path = builder.path();
+        if (!readOnly)
+            //noinspection ResultOfMethodCallIgnored
+            path.mkdirs();
         fileAbsolutePath = path.getAbsolutePath();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
@@ -149,13 +148,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
         strongAppenders = builder.strongAppenders();
+        metaStore = builder.metaStore();
+
         if (readOnly) {
             this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
         } else {
-            final File listingPath = createDirectoryListingFile();
-            this.directoryListing = new TableDirectoryListing(SingleTableBuilder.
-                    binary(listingPath).readOnly(builder.readOnly()).build(),
-                    path.toPath(), fileToCycleFunction(), builder.readOnly());
+            this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction(), false);
             directoryListing.init();
         }
 
@@ -176,19 +174,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
-    }
-
-    @NotNull
-    public static File directoryListingPath(final File queueFolder) throws IOException {
-        final File listingPath;
-        if ("".equals(queueFolder.getPath())) {
-            listingPath = new File(DirectoryListing.DIRECTORY_LISTING_FILE);
-        } else {
-            listingPath = new File(queueFolder, DirectoryListing.DIRECTORY_LISTING_FILE);
-            Path dir = Paths.get(listingPath.getAbsoluteFile().getParent());
-            IOTools.createDirectories(dir);
-        }
-        return listingPath;
     }
 
     @NotNull
@@ -557,6 +542,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             return;
 
         closeQuietly(directoryListing, queueLock, writeLock);
+        closeQuietly(metaStore);
 
         synchronized (closers) {
             closers.forEach((k, v) -> v.accept(k));
@@ -618,22 +604,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         lastCycle = directoryListing.getMaxCreatedCycle();
 
         firstAndLastCycleTime = now;
-    }
-
-    @NotNull
-    private File createDirectoryListingFile() {
-        final File listingPath;
-        try {
-            listingPath = directoryListingPath(this.path);
-            if (!readOnly && listingPath.createNewFile()) {
-                if (!listingPath.canWrite()) {
-                    throw new IllegalStateException("Cannot write to listing file " + path);
-                }
-            }
-        } catch (IOException e) {
-            throw new IORuntimeException("Unable to create listing file " + path, e);
-        }
-        return listingPath;
     }
 
     @Override
@@ -722,32 +692,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return time;
     }
 
-    void ensureThatRollCycleDoesNotConflictWithExistingQueueFiles() {
-        if (!persistedRollCycleCheckPerformed) {
-            final Optional<RollCycle> existingRollCycle =
-                    RollCycleRetriever.getRollCycle(path.toPath(), wireType, blockSize);
-            existingRollCycle.ifPresent(rc -> {
-                if (rc != rollCycle) {
-                    LOG.warn("Queue created with roll-cycle {}, but files on disk use roll-cycle {}. " +
-                            "Overriding this queue to use {}", rollCycle, rc, rc);
-                    overrideRollCycle(rc);
-                }
-            });
-
-            persistedRollCycleCheckPerformed = true;
-        }
-    }
-
-    private void overrideRollCycle(final RollCycle rollCycle) {
-        this.rollCycle = rollCycle;
-        assignRollCycleDependentFields();
-    }
-
-    private void assignRollCycleDependentFields() {
-        dateCache = new RollingResourcesCache(this.rollCycle, epoch, nameToFile,
-                fileToText());
-    }
-
     @NotNull
     private ToIntFunction<File> fileToCycleFunction() {
         return f -> {
@@ -799,13 +743,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     return null;
                 }
 
-                final File parentFile = dateValue.parentPath;
-
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
 
                 if (!dateValue.pathExists && createIfAbsent && !path.exists()) {
-                    parentFile.mkdirs();
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
                 }
                 dateValue.pathExists = true;
@@ -813,7 +754,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 final MappedBytes mappedBytes = mappedFileCache.get(path);
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
-                    Jvm.warn().on(getClass(), new Exception("Creating cycle whcih is not the current cycle"));
+                    LOG.warn("", new Exception("Creating cycle which is not the current cycle"));
                 }
                 queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
@@ -838,17 +779,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     ValueIn valueIn = wire.readEventName(name);
                     if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
                         wireStore = valueIn.typedMarshallable();
-                        int queueInstanceSourceId = SingleChronicleQueue.this.sourceId;
-                        int cq4FileSourceId = wireStore.sourceId();
-
-                        assert queueInstanceSourceId == 0 || cq4FileSourceId == 0 || queueInstanceSourceId ==
-                                cq4FileSourceId : "inconsistency with the source id's, the " +
-                                "cq4FileSourceId=" +
-                                cq4FileSourceId + " != " +
-                                "queueInstanceSourceId=" + queueInstanceSourceId;
-
-                        if (cq4FileSourceId != 0)
-                            SingleChronicleQueue.this.sourceId = cq4FileSourceId;
                     } else {
                         //noinspection unchecked
                         throw new StreamCorruptedException("The first message should be the header, was " + name);

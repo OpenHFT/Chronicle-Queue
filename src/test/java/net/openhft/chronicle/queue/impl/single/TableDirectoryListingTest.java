@@ -1,7 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,6 +16,7 @@ import static org.junit.Assert.assertThat;
 
 public class TableDirectoryListingTest {
     private TableDirectoryListing listing;
+    private TableStore<Metadata.NoMeta> tablestore;
     private File testDirectory;
     private File tempFile;
 
@@ -25,9 +29,10 @@ public class TableDirectoryListingTest {
     public void setUp() throws Exception {
         testDirectory = testDirectory();
         testDirectory.mkdirs();
-        File tableFile = new File(testDirectory, "dir-list" + SingleTableBuilder.SUFFIX);
-        listing = new TableDirectoryListing(SingleTableBuilder.
-                binary(tableFile).build(),
+        File tableFile = new File(testDirectory, "dir-list" + SingleTableStore.SUFFIX);
+        tablestore = SingleTableBuilder.
+                binary(tableFile, Metadata.NoMeta.INSTANCE).build();
+        listing = new TableDirectoryListing(tablestore,
                 testDirectory.toPath(),
                 f -> Integer.parseInt(f.getName().split("\\.")[0]),
                 false);
@@ -38,12 +43,12 @@ public class TableDirectoryListingTest {
 
     @Test(expected = IllegalStateException.class)
     public void shouldBlowUpIfClosed() {
-        listing.close();
+        tablestore.close();
         listing.getMaxCreatedCycle();
     }
 
     @Test
-    public void shouldTrackMaxValue() throws Exception {
+    public void shouldTrackMaxValue() {
         listing.refresh();
 
         listing.onFileCreated(tempFile, 7);

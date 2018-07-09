@@ -22,12 +22,4 @@ public interface CommonStore extends ReferenceCounted, Demarshallable, WriteMars
 
     @NotNull
     String dump();
-
-    long writeHeader(@NotNull Wire wire, int safeLength, long timeoutMS);
-
-    /**
-     * @return the type of wire used
-     */
-    @NotNull
-    WireType wireType();
 }

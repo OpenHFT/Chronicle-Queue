@@ -34,12 +34,6 @@ public interface WireStore extends CommonStore {
     WireStore writePosition(long position);
 
     /**
-     * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
-     * 00:00:00 GMT, if you set the epoch to the current time, then the cycle will be ZERO
-     */
-    long epoch();
-
-    /**
      * when using replication to another host, this is the last index that has been sent to the remote host.
      */
     long lastIndexReplicated();
@@ -71,15 +65,11 @@ public interface WireStore extends CommonStore {
 
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
-    int sourceId();
-
     long lastAcknowledgedIndexReplicated();
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
     void writeEOF(Wire wire, long timeoutMS);
-
-    int deltaCheckpointInterval();
 
     boolean indexable(long index);
 

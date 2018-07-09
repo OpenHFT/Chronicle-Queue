@@ -145,42 +145,34 @@ public class NotCompleteTest {
 
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
                     "    0,\n" +
                     "    0\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 0\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
-                    "# 130484 bytes remaining\n";
+                    "# 327212 bytes remaining\n";
             assertEquals(expectedEager, queue.dump());
         }
 
@@ -193,48 +185,40 @@ public class NotCompleteTest {
 
             String expected = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    584,\n" +
-                    "    2508260900864\n" +
+                    "    464,\n" +
+                    "    1992864825344\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  584,\n" +
+                    "  464,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "some: data\n" +
                     "...\n" +
-                    "# 130470 bytes remaining\n";
+                    "# 327198 bytes remaining\n";
 
-            assertEquals(queue.dump(), expected);
+            assertEquals(expected, queue.dump());
         }
     }
 

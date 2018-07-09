@@ -65,6 +65,10 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
         return this.epoch;
     }
 
+    public String format() {
+        return this.format;
+    }
+
     int length() {
         return length;
     }

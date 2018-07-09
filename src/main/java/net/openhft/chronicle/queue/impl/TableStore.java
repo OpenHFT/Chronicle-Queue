@@ -1,10 +1,11 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.queue.impl.table.Metadata;
 
 import java.util.function.Function;
 
-public interface TableStore extends CommonStore {
+public interface TableStore<T extends Metadata> extends CommonStore {
 
     /**
      * Acquire {@link LongValue} mapped to underlying file, providing atomic operations on the value that is shared
@@ -31,5 +32,7 @@ public interface TableStore extends CommonStore {
      * @param <R>  result type
      * @return result of code block execution
      */
-    <R> R doWithExclusiveLock(Function<TableStore, ? extends R> code);
+    <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code);
+
+    T metadata();
 }

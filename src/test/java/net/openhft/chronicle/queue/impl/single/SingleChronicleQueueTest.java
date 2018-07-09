@@ -52,6 +52,7 @@ import java.util.stream.IntStream;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.*;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.hamcrest.CoreMatchers.is;
@@ -87,13 +88,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Parameters(name = "{0}")
     public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                //  {WireType.TEXT},
+        return Arrays.asList(//  {WireType.TEXT},
                 testConfiguration(WireType.BINARY, false),
-                testConfiguration(WireType.BINARY_LIGHT, false),
+                testConfiguration(WireType.BINARY_LIGHT, false)
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
-        });
+        );
     }
 
     private static List<String> getMappedQueueFileCount() throws IOException, InterruptedException {
@@ -290,7 +290,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = IllegalStateException.class)
     public void shouldBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).build()) {
@@ -299,43 +299,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
 
-        try (final ChronicleQueue recreated = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+        try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
 
-        }
-    }
-
-    @Test
-    public void shouldOverrideRollCycleOnPreCreatedAppender() {
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue minuteRollCycleQueue = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
-
-            try (final ChronicleQueue hourlyRollCycleQueue = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-
-                try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
-                    documentContext.wire().write("somekey").text("somevalue");
-                }
-            }
-
-            try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
-                documentContext2.wire().write("otherkey").text("othervalue");
-            }
-        }
-    }
-
-    @Test
-    public void shouldOverrideRollCycleOnPreCreatedTailer() {
-
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue qTailer = builder(tmpDir, wireType).rollCycle(MINUTELY).build()) {
-            try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-                try (DocumentContext documentContext = qAppender.acquireAppender().writingDocument()) {
-                    documentContext.wire().write("somekey").text("somevalue");
-                }
-            }
-            try (DocumentContext documentContext2 = qTailer.createTailer().readingDocument()) {
-                String str = documentContext2.wire().read("somekey").text();
-                Assert.assertEquals("somevalue", str);
-            }
         }
     }
 
@@ -827,578 +792,482 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 0\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 1\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 2\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 3\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 4\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 5\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n";
+                    "# 130581 bytes remaining\n";
 
         if (wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 0\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 1\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 2\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 3\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 4\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
-                    "# position: 607, header: 1 EOF\n" +
+                    "# position: 487, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n" +
+                    "# 130581 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    594,\n" +
-                    "    2551210573825\n" +
+                    "    474,\n" +
+                    "    2035814498305\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  584,\n" +
-                    "  594,\n" +
+                    "  464,\n" +
+                    "  474,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 5\n" +
-                    "# position: 594, header: 1\n" +
+                    "# position: 474, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
-                    "# 130461 bytes remaining\n";
+                    "# 130581 bytes remaining\n";
 
         throw new IllegalStateException("unsupported wire-type=" + wireType);
     }
@@ -2300,6 +2169,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 ExcerptAppender appender = chronicle2.acquireAppender();
                 appender.writeDocument(w -> w.write(() -> "test - message").text("text"));
 
+                while (tailer.state() == TailerState.UNINITIALISED)
+                    tailer.toStart();
+
                 // DocumentContext should not be empty as we know what the wire type will be.
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
@@ -2371,153 +2243,129 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         if (wireType == WireType.BINARY)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    736,\n" +
-                    "    3161095929856\n" +
+                    "    616,\n" +
+                    "    2645699854336\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  552,\n" +
+                    "  432,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 552, header: -1\n" +
+                    "# position: 432, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  736,\n" +
+                    "  616,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 712, header: -1\n" +
+                    "# position: 592, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Quartilla\n" +
-                    "# position: 736, header: 0\n" +
+                    "# position: 616, header: 0\n" +
                     "--- !!data #binary\n" +
                     "FirstName: Helen\n" +
-                    "# position: 756, header: 0\n" +
+                    "# position: 636, header: 0\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Steve\n" +
                     "...\n" +
-                    "# 130292 bytes remaining\n";
+                    "# 130412 bytes remaining\n";
 
         if (wireType == WireType.BINARY_LIGHT) {
             if (encryption)
                 return "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
-                        "  wireType: !WireType BINARY_LIGHT,\n" +
                         "  writePosition: [\n" +
-                        "    736,\n" +
-                        "    3161095929856\n" +
+                        "    616,\n" +
+                        "    2645699854336\n" +
                         "  ],\n" +
-                        "  roll: !SCQSRoll {\n" +
-                        "    length: !int 86400000,\n" +
-                        "    format: yyyyMMdd,\n" +
-                        "    epoch: 0\n" +
-                        "  },\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 16,\n" +
                         "    indexSpacing: 2,\n" +
-                        "    index2Index: 386,\n" +
+                        "    index2Index: 264,\n" +
                         "    lastIndex: 2\n" +
                         "  },\n" +
                         "  lastAcknowledgedIndexReplicated: -1,\n" +
-                        "  deltaCheckpointInterval: 0,\n" +
-                        "  lastIndexReplicated: -1,\n" +
-                        "  sourceId: 0\n" +
+                        "  lastIndexReplicated: -1\n" +
                         "}\n" +
-                        "# position: 386, header: -1\n" +
+                        "# position: 264, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 16, used: 1\n" +
-                        "  552,\n" +
+                        "  432,\n" +
                         "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
-                        "# position: 552, header: -1\n" +
+                        "# position: 432, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 16, used: 1\n" +
-                        "  736,\n" +
+                        "  616,\n" +
                         "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
-                        "# position: 712, header: -1\n" +
+                        "# position: 592, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "FirstName: Quartilla\n" +
-                        "# position: 736, header: 0\n" +
+                        "# position: 616, header: 0\n" +
                         "--- !!data #binary\n" +
                         "FirstName: Helen\n" +
-                        "# position: 756, header: 0\n" +
+                        "# position: 636, header: 0\n" +
                         "--- !!meta-data #binary\n" +
                         "FirstName: Steve\n" +
                         "...\n" +
-                        "# 130292 bytes remaining\n";
+                        "# 130412 bytes remaining\n";
 
             else
                 return "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
-                        "  wireType: !WireType BINARY_LIGHT,\n" +
                         "  writePosition: [\n" +
-                        "    736,\n" +
-                        "    3161095929856\n" +
+                        "    616,\n" +
+                        "    2645699854336\n" +
                         "  ],\n" +
-                        "  roll: !SCQSRoll {\n" +
-                        "    length: !int 86400000,\n" +
-                        "    format: yyyyMMdd,\n" +
-                        "    epoch: 0\n" +
-                        "  },\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 16,\n" +
                         "    indexSpacing: 2,\n" +
-                        "    index2Index: 386,\n" +
+                        "    index2Index: 264,\n" +
                         "    lastIndex: 2\n" +
                         "  },\n" +
                         "  lastAcknowledgedIndexReplicated: -1,\n" +
-                        "  deltaCheckpointInterval: 0,\n" +
-                        "  lastIndexReplicated: -1,\n" +
-                        "  sourceId: 0\n" +
+                        "  lastIndexReplicated: -1\n" +
                         "}\n" +
-                        "# position: 386, header: -1\n" +
+                        "# position: 264, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 16, used: 1\n" +
-                        "  552,\n" +
+                        "  432,\n" +
                         "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
-                        "# position: 552, header: -1\n" +
+                        "# position: 432, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 16, used: 1\n" +
-                        "  736,\n" +
+                        "  616,\n" +
                         "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
-                        "# position: 712, header: -1\n" +
+                        "# position: 592, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "FirstName: Quartilla\n" +
-                        "# position: 736, header: 0\n" +
+                        "# position: 616, header: 0\n" +
                         "--- !!data #binary\n" +
                         "FirstName: Helen\n" +
-                        "# position: 756, header: 0\n" +
+                        "# position: 636, header: 0\n" +
                         "--- !!meta-data #binary\n" +
                         "FirstName: Steve\n" +
                         "...\n" +
-                        "# 130292 bytes remaining\n";
+                        "# 130412 bytes remaining\n";
 
         } else if (wireType == WireType.DEFAULT_ZERO_BINARY) {
             return "--- !!meta-data #binary\n" +
@@ -3131,148 +2979,132 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         if (wireType == WireType.BINARY)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
-                    "    676,\n" +
-                    "    2903397892101\n" +
+                    "    556,\n" +
+                    "    2388001816581\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 6\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
-                    "  584,\n" +
-                    "  596,\n" +
-                    "  624,\n" +
-                    "  636,\n" +
-                    "  664,\n" +
-                    "  676,\n" +
+                    "  464,\n" +
+                    "  476,\n" +
+                    "  504,\n" +
+                    "  516,\n" +
+                    "  544,\n" +
+                    "  556,\n" +
                     "  0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data\n" +
                     "hello A0\n" +
-                    "# position: 596, header: 1\n" +
+                    "# position: 476, header: 1\n" +
                     "--- !!data\n" +
                     "hello B0\n" +
-                    "# position: 608, header: 1\n" +
+                    "# position: 488, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 624, header: 2\n" +
+                    "# position: 504, header: 2\n" +
                     "--- !!data\n" +
                     "hello A1\n" +
-                    "# position: 636, header: 3\n" +
+                    "# position: 516, header: 3\n" +
                     "--- !!data\n" +
                     "hello B1\n" +
-                    "# position: 648, header: 3\n" +
+                    "# position: 528, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 664, header: 4\n" +
+                    "# position: 544, header: 4\n" +
                     "--- !!data\n" +
                     "hello A2\n" +
-                    "# position: 676, header: 5\n" +
+                    "# position: 556, header: 5\n" +
                     "--- !!data\n" +
                     "hello B2\n" +
-                    "# position: 688, header: 5\n" +
+                    "# position: 568, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 130364 bytes remaining\n";
+                    "# 130484 bytes remaining\n";
 
         if (wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: [\n" +
-                    "    676,\n" +
-                    "    2903397892101\n" +
+                    "    556,\n" +
+                    "    2388001816581\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 386,\n" +
+                    "    index2Index: 264,\n" +
                     "    lastIndex: 6\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: 0,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
-                    "# position: 386, header: -1\n" +
+                    "# position: 264, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  488,\n" +
+                    "  368,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 488, header: -1\n" +
+                    "# position: 368, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
-                    "  584,\n" +
-                    "  596,\n" +
-                    "  624,\n" +
-                    "  636,\n" +
-                    "  664,\n" +
-                    "  676,\n" +
+                    "  464,\n" +
+                    "  476,\n" +
+                    "  504,\n" +
+                    "  516,\n" +
+                    "  544,\n" +
+                    "  556,\n" +
                     "  0, 0\n" +
                     "]\n" +
-                    "# position: 584, header: 0\n" +
+                    "# position: 464, header: 0\n" +
                     "--- !!data\n" +
                     "hello A0\n" +
-                    "# position: 596, header: 1\n" +
+                    "# position: 476, header: 1\n" +
                     "--- !!data\n" +
                     "hello B0\n" +
-                    "# position: 608, header: 1\n" +
+                    "# position: 488, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 624, header: 2\n" +
+                    "# position: 504, header: 2\n" +
                     "--- !!data\n" +
                     "hello A1\n" +
-                    "# position: 636, header: 3\n" +
+                    "# position: 516, header: 3\n" +
                     "--- !!data\n" +
                     "hello B1\n" +
-                    "# position: 648, header: 3\n" +
+                    "# position: 528, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 664, header: 4\n" +
+                    "# position: 544, header: 4\n" +
                     "--- !!data\n" +
                     "hello A2\n" +
-                    "# position: 676, header: 5\n" +
+                    "# position: 556, header: 5\n" +
                     "--- !!data\n" +
                     "hello B2\n" +
-                    "# position: 688, header: 5\n" +
+                    "# position: 568, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 130364 bytes remaining\n";
+                    "# 130484 bytes remaining\n";
         throw new IllegalStateException("unknown wiretype=" + wireType);
     }
 
@@ -3876,9 +3708,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
         }
 
-        Files.list(queueDir.toPath()).forEach(p -> {
-            assertTrue(p.toFile().setWritable(false));
-        });
+        Files.list(queueDir.toPath()).filter(p -> p.endsWith(SingleChronicleQueue.SUFFIX)).forEach(p -> assertTrue(p.toFile().setWritable(false)));
 
         try (final SingleChronicleQueue queue = builder(queueDir, wireType).
                 readOnly(true).
@@ -3889,17 +3719,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldCreateQueueInCurrentDirectory() {
-        try (final SingleChronicleQueue queue =
+        if (OS.isWindows()) {
+            System.err.println("#460 Cannot test delete after close on windows");
+            return;
+        }
+
+        try (final SingleChronicleQueue ignored =
                      builder(new File(""), wireType).
                              testBlockSize().build()) {
 
         }
 
-        if (OS.isWindows()) {
-            System.err.println("#460 Cannot test delete after close on windows");
-            return;
-        }
-        assertThat(new File(DirectoryListing.DIRECTORY_LISTING_FILE).delete(), is(true));
+        assertThat(new File(QUEUE_METADATA_FILE).delete(), is(true));
     }
 
     @NotNull
@@ -3982,19 +3813,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 System.out.println(queue.dump());
                 Assert.assertTrue(queue.dump().contains("--- !!data #binary\n" +
                         "hello: world0\n" +
-                        "# position: 985, header: 1\n" +
+                        "# position: 865, header: 1\n" +
                         "--- !!data #binary\n" +
                         "hello: world1\n" +
-                        "# position: 1002, header: 2\n" +
+                        "# position: 882, header: 2\n" +
                         "--- !!data #binary\n" +
                         "hello: world2\n" +
-                        "# position: 1019, header: 3\n" +
+                        "# position: 899, header: 3\n" +
                         "--- !!data #binary\n" +
                         "hello: world3\n" +
-                        "# position: 1036, header: 4\n" +
+                        "# position: 916, header: 4\n" +
                         "--- !!data #binary\n" +
                         "hello: world4\n" +
-                        "# position: 1053, header: 5\n" +
+                        "# position: 933, header: 5\n" +
                         "--- !!data\n" +
                         "hello\n"));
 
@@ -4037,19 +3868,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 String dump = queue.dump();
                 Assert.assertEquals(before, dump);
                 System.out.println(dump);
-                Assert.assertTrue(dump.contains("# position: 968, header: 0\n" +
+                Assert.assertTrue(dump.contains("# position: 848, header: 0\n" +
                         "--- !!data #binary\n" +
                         "hello: world0\n" +
-                        "# position: 985, header: 1\n" +
+                        "# position: 865, header: 1\n" +
                         "--- !!data #binary\n" +
                         "hello: world1\n" +
-                        "# position: 1002, header: 2\n" +
+                        "# position: 882, header: 2\n" +
                         "--- !!data #binary\n" +
                         "hello: world2\n" +
-                        "# position: 1019, header: 3\n" +
+                        "# position: 899, header: 3\n" +
                         "--- !!data #binary\n" +
                         "hello: world3\n" +
-                        "# position: 1036, header: 4\n" +
+                        "# position: 916, header: 4\n" +
                         "--- !!data #binary\n" +
                         "hello: world4"));
             }
@@ -4164,9 +3995,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         long midnight = now - (now % ONE_DAY_IN_MILLIS);
         AtomicLong clock = new AtomicLong(now);
 
-        boolean passed = true;
         StringBuilder builder = new StringBuilder();
-        passed = passed && doMappedSegmentUnmappedRollTest(clock, builder);
+        boolean passed = doMappedSegmentUnmappedRollTest(clock, builder);
         passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight), builder);
         for (int i = 1; i < 24; i += 2)
             passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * ONE_HOUR_IN_MILLIS)), builder);

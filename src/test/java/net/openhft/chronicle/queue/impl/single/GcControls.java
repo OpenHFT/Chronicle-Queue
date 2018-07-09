@@ -4,12 +4,12 @@ import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
-final class GcControls {
+public final class GcControls {
     static void requestGcCycle() {
         System.gc();
     }
 
-    static void waitForGcCycle() {
+    public static void waitForGcCycle() {
         final long gcCount = getGcCount();
         System.gc();
         final long timeoutAt = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(1L);

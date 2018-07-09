@@ -24,9 +24,7 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.single.RollCycleRetriever;
-import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
-import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
+import net.openhft.chronicle.queue.impl.single.*;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.WireType;
@@ -39,21 +37,16 @@ import javax.crypto.Cipher;
 import java.io.File;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 
-/*
- * Created by Peter Lawrey on 05/03/2016.
- */
-@SuppressWarnings("ALL")
+@SuppressWarnings("unchecked")
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>
         implements ChronicleQueueBuilder<B> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractChronicleQueueBuilder.class);
     protected final File path;
     protected long blockSize;
     @NotNull
@@ -84,8 +77,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private StoreFileListener storeFileListener;
 
     private boolean readOnly = false;
-    private boolean rollCycleSet = false;
-    private boolean progressOnContention = false;
     private boolean strongAppenders = false;
 
     public AbstractChronicleQueueBuilder(File path) {
@@ -175,7 +166,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public B rollCycle(@NotNull RollCycle rollCycle) {
         this.rollCycle = rollCycle;
-        rollCycleSet = true;
         return (B) this;
     }
 
@@ -419,21 +409,10 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     protected void preBuild() {
-        assignRollCycleFromExistingQueueFile();
+        initializeMetadata();
     }
 
-    private void assignRollCycleFromExistingQueueFile() {
-        final Optional<RollCycle> existingRollCycle = RollCycleRetriever.getRollCycle(path.toPath(), wireType, blockSize);
-        existingRollCycle.ifPresent(rc -> {
-            if (rollCycleSet && rc != rollCycle) {
-                throw new IllegalArgumentException(String.format(
-                        "Trying to create queue with roll cycle %s, but existing queue files use %s",
-                        rollCycle, rc));
-            } else if (rc != rollCycle) {
-                rollCycle = rc;
-            }
-        });
-    }
+    protected abstract void initializeMetadata();
 
     @Override
     public B strongAppenders(boolean strongAppenders) {

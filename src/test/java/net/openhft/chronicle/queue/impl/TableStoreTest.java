@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import org.junit.Test;
 
@@ -15,7 +16,7 @@ public class TableStoreTest {
     public void acquireValueFor() {
         String file = OS.TARGET + "/table-" + System.nanoTime() + ".cq4t";
         new File(file).deleteOnExit();
-        try (TableStore table = SingleTableBuilder.binary(file).build()) {
+        try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
 
             LongValue a = table.acquireValueFor("a");
             LongValue b = table.acquireValueFor("b");
@@ -40,7 +41,7 @@ public class TableStoreTest {
                     "# 65388 bytes remaining\n", table.dump());
         }
 
-        try (TableStore table = SingleTableBuilder.binary(file).build()) {
+        try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
 
             LongValue c = table.acquireValueFor("c");
             LongValue b = table.acquireValueFor("b");

@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import org.junit.Before;
 import org.junit.Rule;
@@ -30,12 +31,12 @@ public class ReferenceTrackerTest {
 
     @Before
     public void setUp() throws Exception {
-        tableStore = SingleTableBuilder.binary(tmpDir.newFile("table-store.cq4t")).build();
+        tableStore = SingleTableBuilder.binary(tmpDir.newFile("table-store.cq4t"), Metadata.NoMeta.INSTANCE).build();
         tracker = new ReferenceTracker(tableStore);
     }
 
     @Test
-    public void shouldTrackReferencesCycles() throws IOException {
+    public void shouldTrackReferencesCycles() {
         tracker.acquired(17);
         tracker.acquired(17);
 

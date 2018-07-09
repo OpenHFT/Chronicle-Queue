@@ -28,30 +28,21 @@ import java.util.function.Supplier;
 
 public abstract class AbstractTSQueueLock implements Closeable {
     protected static final long UNLOCKED = Long.MIN_VALUE;
-    private static final String QUEUE_LOCK_FILE = "queue-lock" + SingleTableBuilder.SUFFIX;
 
     protected final LongValue lock;
     protected final TimingPauser pauser;
-    protected final String path;
+    protected final File path;
     protected final TableStore tableStore;
 
-    public AbstractTSQueueLock(final String lockKey, final File queueDirectoryPath, final Supplier<TimingPauser> pauser) {
-        final File storeFilePath;
-        if ("".equals(queueDirectoryPath.getPath())) {
-            storeFilePath = new File(QUEUE_LOCK_FILE);
-        } else {
-            storeFilePath = new File(queueDirectoryPath, QUEUE_LOCK_FILE);
-            queueDirectoryPath.mkdirs();
-        }
-        this.tableStore = SingleTableBuilder.binary(storeFilePath).build();
+    public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauser) {
+        this.tableStore = tableStore;
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(lockKey));
         this.pauser = pauser.get();
-        this.path = storeFilePath.getPath();
+        this.path = tableStore.file();
     }
 
     public void close() {
         Closeable.closeQuietly(lock);
-        this.tableStore.close();
     }
 
     protected void closeCheck() {

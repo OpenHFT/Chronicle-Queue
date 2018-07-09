@@ -34,13 +34,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 
-public class SingleTableBuilder {
-    public static final String SUFFIX = ".cq4t";
+public class SingleTableBuilder<T extends Metadata> {
 
     static {
         CLASS_ALIASES.addAlias(WireType.class);
@@ -50,46 +50,45 @@ public class SingleTableBuilder {
 
     @NotNull
     private final File file;
+    @NotNull
+    private T metadata;
 
     private WireType wireType;
     private boolean readOnly;
+    private boolean validateMetadata;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private long timeoutMS = TimeUnit.SECONDS.toMillis(5);
 
-    private SingleTableBuilder(@NotNull File path) {
+    private SingleTableBuilder(@NotNull File path, @NotNull T metadata) {
         this.file = path;
+        this.metadata = metadata;
     }
 
     @NotNull
-    public static SingleTableBuilder builder(@NotNull Path path, @NotNull WireType wireType) {
-        return builder(path.toFile(), wireType);
-    }
-
-    @NotNull
-    public static SingleTableBuilder builder(@NotNull File file, @NotNull WireType wireType) {
+    public static <T extends Metadata> SingleTableBuilder<T> builder(@NotNull File file, @NotNull WireType wireType, @NotNull T metadata) {
         if (file.isDirectory()) {
             throw new IllegalArgumentException("Tables should be configured with the table file, not a directory. Actual file used: " + file.getParentFile());
         }
-        if (!file.getName().endsWith(SUFFIX)) {
+        if (!file.getName().endsWith(SingleTableStore.SUFFIX)) {
             throw new IllegalArgumentException("Invalid file type: " + file.getName());
         }
 
-        return new SingleTableBuilder(file).wireType(wireType);
+        return new SingleTableBuilder<>(file, metadata).wireType(wireType);
     }
 
     @NotNull
-    public static SingleTableBuilder binary(@NotNull Path path) {
-        return binary(path.toFile());
+    public static <T extends Metadata> SingleTableBuilder<T> binary(@NotNull Path path, @NotNull T metadata) {
+        return binary(path.toFile(), metadata);
     }
 
     @NotNull
-    public static SingleTableBuilder binary(@NotNull String file) {
-        return binary(new File(file));
+    public static <T extends Metadata> SingleTableBuilder<T> binary(@NotNull String file, @NotNull T metadata) {
+        return binary(new File(file), metadata);
     }
 
     @NotNull
-    public static SingleTableBuilder binary(@NotNull File basePathFile) {
-        return builder(basePathFile, WireType.BINARY_LIGHT);
+    public static <T extends Metadata> SingleTableBuilder<T> binary(@NotNull File basePathFile, @NotNull T metadata) {
+        return builder(basePathFile, WireType.BINARY_LIGHT, metadata);
     }
 
     // *************************************************************************
@@ -97,11 +96,13 @@ public class SingleTableBuilder {
     // *************************************************************************
 
     @NotNull
-    public TableStore build() {
+    public TableStore<T> build() {
         if (readOnly && !file.exists())
             throw new IORuntimeException("File not found in readOnly mode");
 
         try {
+            if (!readOnly && file.createNewFile() && !file.canWrite())
+                throw new IllegalStateException("Cannot write to tablestore file " + file);
             MappedBytes bytes = MappedBytes.mappedBytes(file, 64 << 10, 0, readOnly);
             // eagerly initialize backing MappedFile page - otherwise wire.writeFirstHeader() will try to lock the file
             // to allocate the first byte store and that will cause lock overlap
@@ -119,7 +120,12 @@ public class SingleTableBuilder {
                         StringBuilder name = Wires.acquireStringBuilder();
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                            return valueIn.typedMarshallable();
+                            @NotNull TableStore<T> existing = Objects.requireNonNull(valueIn.typedMarshallable());
+                            if (validateMetadata)
+                                metadata.ensureSame(existing.metadata());
+                            else
+                                metadata = existing.metadata();
+                            return existing;
                         } else {
                             //noinspection unchecked
                             throw new StreamCorruptedException("The first message should be the header, was " + name);
@@ -138,8 +144,8 @@ public class SingleTableBuilder {
     }
 
     @NotNull
-    private TableStore writeTableStore(MappedBytes bytes, Wire wire, StoreRecovery recovery) {
-        TableStore store = new SingleTableStore(wireType, bytes, recovery);
+    private TableStore<T> writeTableStore(MappedBytes bytes, Wire wire, StoreRecovery recovery) {
+        TableStore<T> store = new SingleTableStore<>(wireType, bytes, recovery, metadata);
         wire.writeEventName("header").object(store);
         wire.updateFirstHeader();
         return store;
@@ -148,10 +154,10 @@ public class SingleTableBuilder {
     @NotNull
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     @Override
-    public SingleTableBuilder clone() {
+    public SingleTableBuilder<T> clone() {
         try {
             @SuppressWarnings("unchecked")
-            SingleTableBuilder clone = (SingleTableBuilder) super.clone();
+            SingleTableBuilder<T> clone = (SingleTableBuilder) super.clone();
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
@@ -167,7 +173,7 @@ public class SingleTableBuilder {
         return wireType;
     }
 
-    public SingleTableBuilder wireType(WireType wireType) {
+    public SingleTableBuilder<T> wireType(WireType wireType) {
         this.wireType = wireType;
         return this;
     }
@@ -176,8 +182,13 @@ public class SingleTableBuilder {
         return readOnly;
     }
 
-    public SingleTableBuilder readOnly(boolean readOnly) {
+    public SingleTableBuilder<T> readOnly(boolean readOnly) {
         this.readOnly = readOnly;
+        return this;
+    }
+
+    public SingleTableBuilder<T> validateMetadata(boolean validateMetadata) {
+        this.validateMetadata = validateMetadata;
         return this;
     }
 
@@ -185,7 +196,7 @@ public class SingleTableBuilder {
         return recoverySupplier;
     }
 
-    public SingleTableBuilder recoverySupplier(StoreRecoveryFactory recoverySupplier) {
+    public SingleTableBuilder<T> recoverySupplier(StoreRecoveryFactory recoverySupplier) {
         this.recoverySupplier = recoverySupplier;
         return this;
     }
@@ -194,7 +205,7 @@ public class SingleTableBuilder {
         return timeoutMS;
     }
 
-    public SingleTableBuilder timeoutMS(long timeoutMS) {
+    public SingleTableBuilder<T> timeoutMS(long timeoutMS) {
         this.timeoutMS = timeoutMS;
         return this;
     }

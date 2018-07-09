@@ -223,23 +223,15 @@ public class SingleCQFormatTest {
         @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typedMarshallable(
-                    new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 60 *
-                            60 * 1000, 4 << 10, 4,
-                            -1, 0));
+                    new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4));
         }
 
         assertEquals("--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
-                "  wireType: !WireType BINARY,\n" +
                 "  writePosition: [\n" +
                 "    0,\n" +
                 "    0\n" +
                 "  ],\n" +
-                "  roll: !SCQSRoll {\n" +
-                "    length: !int 3600000,\n" +
-                "    format: yyyyMMdd-HH,\n" +
-                "    epoch: !int 3600000\n" +
-                "  },\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: !short 4096,\n" +
                 "    indexSpacing: 4,\n" +
@@ -247,9 +239,7 @@ public class SingleCQFormatTest {
                 "    lastIndex: 0\n" +
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: -1,\n" +
-                "  deltaCheckpointInterval: !byte -1,\n" +
-                "  lastIndexReplicated: -1,\n" +
-                "  sourceId: 0\n" +
+                "  lastIndexReplicated: -1\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
@@ -312,8 +302,7 @@ public class SingleCQFormatTest {
             @NotNull Wire wire = new BinaryWire(mappedBytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName(() -> "header").typedMarshallable(
-                        new SingleChronicleQueueStore(cycle, WireType.BINARY, mappedBytes, 0,
-                                cycle.defaultIndexCount(), cycle.defaultIndexSpacing(), -1, 0));
+                        new SingleChronicleQueueStore(cycle, WireType.BINARY, mappedBytes, cycle.defaultIndexCount(), cycle.defaultIndexSpacing()));
             }
             try (DocumentContext dc = wire.writingDocument(false)) {
                 dc.wire().writeEventName("msg").text("Hello world");
@@ -324,16 +313,10 @@ public class SingleCQFormatTest {
 
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
                     "  writePosition: [\n" +
                     "    0,\n" +
                     "    0\n" +
                     "  ],\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 32,\n" +
                     "    indexSpacing: 4,\n" +
@@ -341,9 +324,7 @@ public class SingleCQFormatTest {
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  deltaCheckpointInterval: !byte -1,\n" +
-                    "  lastIndexReplicated: -1,\n" +
-                    "  sourceId: 0\n" +
+                    "  lastIndexReplicated: -1\n" +
                     "}\n" +
                     "# position: 386, header: 0\n" +
                     "--- !!data #binary\n" +

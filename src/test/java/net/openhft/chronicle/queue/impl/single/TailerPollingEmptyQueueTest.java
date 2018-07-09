@@ -11,7 +11,7 @@ import static org.junit.Assert.assertThat;
 public final class TailerPollingEmptyQueueTest {
 
     @Test
-    public void shouldNotGenerateExcessGarbage() throws Exception {
+    public void shouldNotGenerateExcessGarbage() {
         try (final SingleChronicleQueue queue = createQueue()) {
             queue.path.mkdirs();
             assertThat(queue.path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length, is(0));

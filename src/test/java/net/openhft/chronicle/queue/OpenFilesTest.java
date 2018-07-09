@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.impl.single.DirectoryListing;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
@@ -13,7 +12,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
@@ -73,13 +71,12 @@ public class OpenFilesTest {
             System.out.println("-----");
             List<String> mappedQueueFileCount = listOpenFiles(tmp);
             Assert.assertTrue(!mappedQueueFileCount.isEmpty());
-            removeDirectoryListing(mappedQueueFileCount);
 
             for (final String s : mappedQueueFileCount) {
                 System.out.println(s);
             }
 
-            System.out.println("");
+            System.out.println();
             long pause = 1000 - (System.currentTimeMillis() - start);
             if (pause > 0)
                 Thread.sleep(pause);
@@ -93,8 +90,7 @@ public class OpenFilesTest {
         System.runFinalization();
 
         List<String> listFileHandles = listOpenFiles(tmp);
-        Assert.assertTrue(listFileHandles.isEmpty());
-        System.out.println(listFileHandles);
+        Assert.assertTrue(listFileHandles.toString(), listFileHandles.isEmpty());
 
     }
 
@@ -107,14 +103,6 @@ public class OpenFilesTest {
                 }
                 Assert.assertEquals("world", dc.wire().read("hello").text());
             }
-        }
-    }
-
-    private void removeDirectoryListing(final List<String> mappedQueueFileCount) {
-        Iterator<String> iterator = mappedQueueFileCount.iterator();
-        while (iterator.hasNext()) {
-            if (iterator.next().endsWith(DirectoryListing.DIRECTORY_LISTING_FILE))
-                iterator.remove();
         }
     }
 
