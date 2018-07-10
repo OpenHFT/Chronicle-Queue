@@ -372,7 +372,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
             if (sourceId() == 0)
                 sourceId(newMeta.sourceId());
 
-            if (readOnly() && !newMeta.roll().format().equals(rollCycle.format())) {
+            if (readOnly && !newMeta.roll().format().equals(rollCycle.format())) {
                 // roll cycle changed
                 overrideRollCycleForFileNameLength(newMeta.roll().format().length());
             }
