@@ -368,7 +368,9 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
             metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly()).validateMetadata(!readOnly()).build();
             // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
-            sourceId(newMeta.sourceId());
+            if (sourceId() == 0)
+                sourceId(newMeta.sourceId());
+
             if (readOnly() && !newMeta.roll().format().equals(rollCycle.format())) {
                 // roll cycle changed
                 overrideRollCycleForFileNameLength(newMeta.roll().format().length());

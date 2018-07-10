@@ -43,7 +43,7 @@ import static org.junit.Assert.*;
 /*
  * Created by Peter Lawrey on 05/03/2016.
  */
-public class SingleCQFormat2Test {
+public class SingleCQFormat2Test extends ChronicleQueueTestBase {
 
     static {
         // init class
@@ -60,7 +60,7 @@ public class SingleCQFormat2Test {
 
     @Test
     public void testMyData() {
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = getTmpDir();
         ClassAliasPool.CLASS_ALIASES.addAlias(MyData.class);
 
         try (@NotNull SingleChronicleQueue queue = binary(dir)
@@ -91,7 +91,7 @@ public class SingleCQFormat2Test {
         for (int m = 0; m <= 2; m++) {
             appendMode = m;
 
-            @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+            @NotNull File dir = getTmpDir();
             dir.mkdir();
 
             try (@NotNull SingleChronicleQueue queue = binary(dir)
@@ -241,9 +241,9 @@ public class SingleCQFormat2Test {
     }
 
     @Test
-    public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException, TimeoutException {
+    public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException {
         for (int spacing : new int[]{1, 2, 4}) {
-            @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+            @NotNull File dir = getTmpDir();
             dir.mkdir();
 
             try (@NotNull SingleChronicleQueue queue = binary(dir)
@@ -692,7 +692,7 @@ public class SingleCQFormat2Test {
         map.put("hello", "world");
         map.put("number", 1L);
         map.put("double", 1.28);
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -761,7 +761,7 @@ public class SingleCQFormat2Test {
     @Test
     public void writeMarshallable() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Order.class);
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
@@ -821,7 +821,7 @@ public class SingleCQFormat2Test {
 
     @Test
     public void testWritingIndex() {
-        @NotNull String dir = OS.TARGET + "/testWritingIndex-" + System.nanoTime();
+        @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = ChronicleQueueBuilder.single(dir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)

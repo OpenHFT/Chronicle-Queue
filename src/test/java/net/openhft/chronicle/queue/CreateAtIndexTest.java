@@ -29,6 +29,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -36,13 +38,13 @@ import static org.junit.Assert.fail;
 /**
  * @author Rob Austin.
  */
-public class CreateAtIndexTest {
+public class CreateAtIndexTest extends ChronicleQueueTestBase {
 
     public static final Bytes<byte[]> HELLO_WORLD = Bytes.from("hello world");
 
     @Test
-    public void testWriteBytesWithIndex() throws Exception {
-        String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+    public void testWriteBytesWithIndex() {
+        File tmp = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
@@ -119,7 +121,7 @@ public class CreateAtIndexTest {
 
     @Test
     public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() throws Exception {
-        String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        File tmp = getTmpDir();
 
         long expected;
 

@@ -727,7 +727,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     long index = tailer.index();
-                    System.out.println(i + " index: " + Long.toHexString(index));
                     assertEquals(appender.cycle(), tailer.cycle());
                     assertEquals(cycle + i, DAILY.toCycle(index));
                 }
@@ -1286,7 +1285,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertEquals(i, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
 
-//            System.out.println(queue.dump());
             final ExcerptTailer tailer = queue.createTailer();
             for (int i = 0; i < 5; i++) {
                 final long index = queue.rollCycle().toIndex(appender.cycle(), i);
@@ -1538,8 +1536,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeBytes(steve);
             Bytes jobs = Bytes.allocateDirect("Jobs".getBytes());
             appender.writeBytes(jobs);
-
-//            System.out.println(chronicle.dump());
 
             final ExcerptTailer tailer = chronicle.createTailer();
             Bytes bytes = Bytes.elasticByteBuffer();
@@ -2612,7 +2608,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(w -> {
             });
-            System.out.println(chronicle.dump());
+            // System.out.println(chronicle.dump());
             ExcerptTailer tailer = chronicle.createTailer();
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertFalse(dc.wire().hasMore());
@@ -2804,7 +2800,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             Assert.assertEquals("first", tailer.readText());
             Assert.assertEquals(null, tailer.readText());
-            System.out.println("1: " + q.dump());
 
         }
 
@@ -2822,7 +2817,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext documentContext = tailer.readingDocument()) {
                 Assert.assertFalse(documentContext.isPresent());
             }
-            System.out.println("2: " + q.dump());
         }
 
         clock.addAndGet(50L);
@@ -2832,7 +2826,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .timeProvider(clock::get)
                 .build()) {
 
-            System.out.println("3: " + q.dump());
             ExcerptTailer excerptTailerBeforeAppend = q.createTailer().toEnd();
             q.acquireAppender().writeText("more text");
             ExcerptTailer excerptTailerAfterAppend = q.createTailer().toEnd();
@@ -2910,14 +2903,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
-            System.out.println(queue.dump());
-
             for (String expected : stringsToPut) {
                 try (DocumentContext readingContext = tailer.readingDocument()) {
                     if (!readingContext.isPresent())
                         Assert.fail();
                     String text = readingContext.wire().read().text();
-                    System.out.println("read=" + text);
                     Assert.assertEquals(expected, text);
 
                 }
@@ -3472,7 +3462,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                         try (DocumentContext wdc = appender.writingDocument(rdc.index())) {
                             final Bytes<?> bytes = rdc.wire().bytes();
-                            System.out.println(bytes);
                             wdc.wire().bytes().write(bytes);
                         }
 
@@ -3508,7 +3497,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 if (seq >= 52) {
                     final int v = value++;
-                    System.out.println("stored => sequence-number=" + seq + ", value=" + v);
                     dc.wire().write("value").int64(v);
                 } else {
                     dc.wire().write("value").int64(0);
@@ -3546,10 +3534,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
         final long nextSeq = rollCycle.toSequenceNumber(tailer1.index());
-        System.out.println("Return-value=" + readvalue +
+        /*System.out.println("Return-value=" + readvalue +
                 ", seq=" + rollCycle.toSequenceNumber(seqNumRead) +
                 ", next-seq=" + nextSeq + "(" + Long.toHexString(nextSeq) + "x0)" + ",direction="
-                + tailer1.direction());
+                + tailer1.direction());*/
 
         return readvalue;
     }
@@ -3810,8 +3798,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     closeQuietly(bytesWithIndies);
                 }
 
-                System.out.println(queue.dump());
-                Assert.assertTrue(queue.dump().contains("--- !!data #binary\n" +
+                Assert.assertTrue(queue.dump(), queue.dump().contains("--- !!data #binary\n" +
                         "hello: world0\n" +
                         "# position: 865, header: 1\n" +
                         "--- !!data #binary\n" +
@@ -3867,8 +3854,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 String dump = queue.dump();
                 Assert.assertEquals(before, dump);
-                System.out.println(dump);
-                Assert.assertTrue(dump.contains("# position: 848, header: 0\n" +
+                Assert.assertTrue(dump, dump.contains("# position: 848, header: 0\n" +
                         "--- !!data #binary\n" +
                         "hello: world0\n" +
                         "# position: 865, header: 1\n" +
@@ -4003,9 +3989,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         if (!passed) {
             fail(builder.toString());
-        } else {
+        }/* else {
             System.out.println(builder.toString());
-        }
+        }*/
     }
 
     private AtomicLong setTime(AtomicLong clock, long newValue) {
