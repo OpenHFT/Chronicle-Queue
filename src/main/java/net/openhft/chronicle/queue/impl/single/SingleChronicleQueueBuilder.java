@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -365,7 +366,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle, epoch), deltaCheckpointInterval(), sourceId());
         try {
 
-            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly()).validateMetadata(!readOnly()).build();
+            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly()).validateMetadata(!readOnly).build();
             // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
             if (sourceId() == 0)

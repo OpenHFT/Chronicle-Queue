@@ -76,7 +76,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private StoreFileListener storeFileListener;
 
-    private boolean readOnly = false;
+    protected boolean readOnly = false;
     private boolean strongAppenders = false;
 
     public AbstractChronicleQueueBuilder(File path) {
@@ -383,7 +383,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public boolean readOnly() {
-        return readOnly;
+        return readOnly && !OS.isWindows();
     }
 
     @Override
@@ -391,10 +391,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         if (OS.isWindows() && readOnly) {
             Jvm.warn().on(AbstractChronicleQueueBuilder.class,
                     "Read-only mode is not supported on Windows® platforms, defaulting to read/write.");
-            this.readOnly = false;
-        } else {
-            this.readOnly = readOnly;
         }
+        this.readOnly = readOnly;
         return (B) this;
     }
 
