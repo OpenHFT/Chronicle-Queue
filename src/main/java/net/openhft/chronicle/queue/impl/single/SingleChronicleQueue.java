@@ -27,7 +27,6 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
-import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -542,13 +541,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             return;
 
         closeQuietly(directoryListing, queueLock, writeLock);
-        closeQuietly(metaStore);
 
         synchronized (closers) {
             closers.forEach((k, v) -> v.accept(k));
             closers.clear();
         }
         this.pool.close();
+        closeQuietly(metaStore);
     }
 
     @Override

@@ -63,7 +63,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
 
-    private TableStore<SCQMeta> metaStore;
+    protected TableStore<SCQMeta> metaStore;
 
     @SuppressWarnings("unchecked")
     @Deprecated
