@@ -367,9 +367,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
             metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly()).validateMetadata(!readOnly()).build();
             // check if metadata was overridden
-            if (readOnly() && !metaStore.metadata().roll().format().equals(rollCycle.format())) {
+            SCQMeta newMeta = metaStore.metadata();
+            sourceId(newMeta.sourceId());
+            if (readOnly() && !newMeta.roll().format().equals(rollCycle.format())) {
                 // roll cycle changed
-                overrideRollCycleForFileNameLength(metaStore.metadata().roll().format().length());
+                overrideRollCycleForFileNameLength(newMeta.roll().format().length());
             }
         } catch (IORuntimeException ex) {
             // readonly=true and file doesn't exist
