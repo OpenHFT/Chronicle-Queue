@@ -17,10 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MarshallableOut;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -67,9 +64,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * We suggest this code is called from a background thread [ not you main
      * business thread ], it must be called from the same thread that created it, as the call to
      * pretouch() is not thread safe. For example :
-     *
+     * <p>
      * newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> queue.acquireAppender().pretouch(), 0, 1, TimeUnit.SECONDS);
-     *
      */
     default void pretouch() {
     }
@@ -104,4 +100,10 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
         return queue().methodWriterBuilder(tClass);
     }
 
+    /**
+     * Obtain the raw wire for low level direct access.
+     *
+     * @return the raw wire.
+     */
+    Wire wire();
 }

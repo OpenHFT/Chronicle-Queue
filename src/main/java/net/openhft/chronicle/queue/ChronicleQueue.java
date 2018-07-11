@@ -176,4 +176,6 @@ public interface ChronicleQueue extends Closeable {
     }
 
     long lastAcknowledgedIndexReplicated();
+
+    RollCycle rollCycle();
 }
