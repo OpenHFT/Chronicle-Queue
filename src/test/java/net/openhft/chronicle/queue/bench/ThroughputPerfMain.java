@@ -11,8 +11,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 
 public class ThroughputPerfMain {
-    static final int time = Integer.getInteger("time", 10);
-    static final int size = Integer.getInteger("size", 64);
+    static final int time = Integer.getInteger("time", 60);
+    static final int size = Integer.getInteger("size", 48);
     static final String path = System.getProperty("path", OS.TMP);
 
     public static void main(String[] args) {
@@ -21,13 +21,15 @@ public class ThroughputPerfMain {
         long count = 0;
         NativeBytesStore nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base).blockSize(512 << 20).build()) {
+        long blockSize = 4L << 30;
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base).blockSize(blockSize).build()) {
             ExcerptAppender appender = q.acquireAppender();
             do {
                 int batch = Math.max(1, (128 << 10) / size);
                 for (int i = 0; i < batch; i++) {
                     try (DocumentContext dc = appender.writingDocument()) {
-                        dc.wire().bytes().write(nbs);
+                        dc.wire().bytes()
+                                .write(nbs);
                     }
                 }
                 count += batch;
@@ -38,7 +40,7 @@ public class ThroughputPerfMain {
         long time1 = mid - start;
 
         Bytes bytes = Bytes.allocateElasticDirect(64);
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base).blockSize(1 << 30).build()) {
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base).blockSize(blockSize).build()) {
             ExcerptTailer tailer = q.createTailer();
             for (long i = 0; i < count; i++) {
                 try (DocumentContext dc = tailer.readingDocument()) {

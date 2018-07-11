@@ -18,7 +18,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -262,6 +261,12 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @NotNull
     @Override
     public SingleChronicleQueueBuilder<S> blockSize(int blockSize) {
+        return super.blockSize(blockSize);
+    }
+
+    @NotNull
+    @Override
+    public SingleChronicleQueueBuilder<S> blockSize(long blockSize) {
         return super.blockSize(blockSize);
     }
 

@@ -68,6 +68,8 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     B blockSize(int blockSize);
 
+    B blockSize(long blockSize);
+
     /**
      * THIS IS FOR TESTING ONLY.
      * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.

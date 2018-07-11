@@ -24,7 +24,8 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.single.*;
+import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
+import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.WireType;
@@ -136,10 +137,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     @Override
-    @NotNull
-    public B blockSize(int blockSize) {
+    public B blockSize(long blockSize) {
         this.blockSize = Math.max(TEST_BLOCK_SIZE, blockSize);
         return (B) this;
+    }
+
+    @Override
+    @NotNull
+    public B blockSize(int blockSize) {
+        return blockSize((long) blockSize);
     }
 
     @Override

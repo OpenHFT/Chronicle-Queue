@@ -292,6 +292,12 @@ public class SingleChronicleQueueExcerpts {
 
         @NotNull
         @Override
+        public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
+            return writingDocument(false); // avoid overhead of a default method.
+        }
+
+        @NotNull
+        @Override
         public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
@@ -299,13 +305,8 @@ public class SingleChronicleQueueExcerpts {
             assert checkWritePositionHeaderNumber();
             int cycle = queue.cycle();
 
-            if (wire == null) {
-                int lastCycle = queue.lastCycle();
-                if (lastCycle == Integer.MIN_VALUE)
-                    lastCycle = cycle;
-
-                setCycle2(lastCycle, true);
-            }
+            if (wire == null)
+                setWireIfNull(cycle);
 
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
@@ -314,6 +315,14 @@ public class SingleChronicleQueueExcerpts {
 
             openContext(metaData, safeLength);
             return context;
+        }
+
+        private void setWireIfNull(int cycle) {
+            int lastCycle = queue.lastCycle();
+            if (lastCycle == Integer.MIN_VALUE)
+                lastCycle = cycle;
+
+            setCycle2(lastCycle, true);
         }
 
         private long writeHeader(@NotNull Wire wire, int safeLength) {
