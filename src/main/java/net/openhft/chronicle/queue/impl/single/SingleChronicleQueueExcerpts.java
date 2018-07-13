@@ -714,6 +714,7 @@ public class SingleChronicleQueueExcerpts {
                         } catch (IllegalStateException e) {
                             if (queue.isClosed())
                                 return;
+                            throw e;
                         }
 
                         lastPosition = position;
