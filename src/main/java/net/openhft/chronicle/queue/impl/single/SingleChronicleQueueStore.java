@@ -305,8 +305,7 @@ public class SingleChronicleQueueStore implements WireStore {
     public String toString() {
         return "SingleChronicleQueueStore{" +
                 "indexing=" + indexing +
-                ", writePosition=" + writePosition.getValue() +
-                ", lastSequence=" + Long.toHexString(((TwoLongValue) writePosition).getValue2()) +
+                ", writePosition/seq=" + writePosition.toString() +
                 ", mappedFile=" + mappedFile +
                 ", refCount=" + refCount +
                 ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
