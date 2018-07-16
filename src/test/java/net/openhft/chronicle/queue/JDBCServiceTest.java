@@ -24,13 +24,10 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /*
@@ -38,17 +35,17 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class JDBCServiceTest {
     @Test
-    public void testCreateTable() throws SQLException, IOException {
+    public void testCreateTable() {
         doCreateTable(4, 5000);
     }
 
-    @Test
-    @Ignore("Long running")
-    public void perfCreateTable() throws SQLException, IOException {
+    //@Test
+    //@Ignore("Long running")
+    public void perfCreateTable() {
         doCreateTable(5, 200000);
     }
 
-    public void doCreateTable(int repeats, int noUpdates) throws SQLException {
+    private void doCreateTable(int repeats, int noUpdates) {
         for (int t = 0; t < repeats; t++) {
             long start = System.nanoTime(), written;
             File path1 = DirectoryUtils.tempDir("createTable1");

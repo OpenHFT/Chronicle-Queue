@@ -1590,13 +1590,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Ignore("long running test")
     @Test
     public void testReadAtIndex4MB() {
-        try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), this.wireType).rollCycle(SMALL_DAILY)
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
             System.out.print("Percent written=");
 
-            // create 100 documents
             for (long i = 0; i < TIMES; i++) {
                 final long j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
@@ -2482,7 +2481,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldReadBackwardFromEndOfQueueWhenDirectionIsSetAfterMoveToEnd() {
-        assumeTrue(wireType == WireType.BINARY);
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
                 .build()) {
