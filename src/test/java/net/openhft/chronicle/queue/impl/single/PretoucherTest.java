@@ -66,7 +66,6 @@ public class PretoucherTest {
     }
 
     @Test
-    @Ignore("flaky")
     public void shouldHandleEarlyCycleRoll() {
         assert System.getProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle") == null;
         assert System.getProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs") == null;
