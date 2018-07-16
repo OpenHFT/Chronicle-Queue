@@ -25,7 +25,7 @@ import net.openhft.chronicle.bytes.Bytes;
  * When you come to write each message you must start by skipping 4 bytes in other words leaving them as byte[]{0,0,0,0} [ which will become the length later ( as a java int ) ], first write the data, then go back and set the 4 byte length, the data must be written first and then the length to ensure that a tailer does not attempt to read a half written message.
  *
  * The appending thread must make sure that it does not exceed the rawMaxMessage() or rawMaxBytes().
- * If no more data be written directly, the next call must be to:
+ * If no more can data be written directly, the next call must be to:
  *
  * {@link net.openhft.chronicle.queue.BatchAppender#update(net.openhft.chronicle.bytes.Bytes, long, long)}
  *
