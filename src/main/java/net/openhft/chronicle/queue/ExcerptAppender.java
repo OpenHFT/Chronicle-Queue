@@ -108,7 +108,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     Wire wire();
 
-    void batchAppend(final int time, final int size, BatchAppender batchAppender);
+    long batchAppend(final int time, final int size, BatchAppender batchAppender);
 
 
 }

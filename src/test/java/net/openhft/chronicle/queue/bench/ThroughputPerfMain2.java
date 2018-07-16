@@ -31,9 +31,9 @@ public class ThroughputPerfMain2 {
                 .build()) {
 
             ExcerptAppender appender = q.acquireAppender();
-            appender.batchAppend(time, size, (address, canWrite, writeCount) -> {
+            count += appender.batchAppend(time, size, (address, canWrite, writeCount) -> {
                 long length = 0;
-
+                long count0 = 0;
                 //        writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
                 long fromAddress = nbs.addressForRead(0);
                 while (writeCount > count && length + 4 + size <= canWrite) {
@@ -41,10 +41,10 @@ public class ThroughputPerfMain2 {
                     UnsafeMemory.UNSAFE.putOrderedInt(null, address, size);
                     address += 4 + size;
                     length += 4 + size;
-                    count++;
+                    count0++;
                 }
                 //      System.out.println("w "+count+" "+length);
-                return (count << 32) | length;
+                return (count0 << 32) | length;
             });
         }
 

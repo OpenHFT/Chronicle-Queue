@@ -202,7 +202,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void batchAppend(final int timeout, final int size, BatchAppender batchAppender) {
+        public long batchAppend(final int timeout, final int size, BatchAppender batchAppender) {
 
             NativeBytesStore<Void> nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
             long startTime = System.nanoTime();
@@ -236,6 +236,7 @@ public class SingleChronicleQueueExcerpts {
                     }
                 }
             } while (startTime + timeout * 1e9 > System.nanoTime());
+            return count;
         }
 
         @Nullable
