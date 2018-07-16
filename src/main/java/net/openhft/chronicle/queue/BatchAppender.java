@@ -5,22 +5,33 @@ import net.openhft.chronicle.bytes.Bytes;
 /**
  * Created by Rob Austin
  *
- * This API is and Advanced API that should be used with care, an only used if you are exactly
- * sure you know what you are doing, miss use of this API could cause the JVM or your application.
+ * This API is and Advanced Chronicle Queue API that should be used with care, an only used if you
+ * are exactly
+ * sure you know what you are doing, misuse of this API could cause the JVM or your application
+ * to crash.
  *
  *
  * You should only consider this API if :
- * - you have a batch of messages that you wish to write to a chronicle queue and  you wish to write them directly to the off heap memory
+ * - you have a batch of messages that you wish to write to a chronicle queue and you wish to write them directly to the off heap memory
  * - you only have a single appender thread
- * - you dont care about queue roll [ in other words this API wont take account of Queue Roll]
+ * - you don't care about queue roll [ in other words this API wont take account of Queue Roll]
  *
- * before writing messages directly to off heap memory checks have to be made to ensure that the batch fits into the existing block, or that an individual message does not have to be indexed. There is more on this below.
+ * Before writing messages directly to off heap memory checks have to be made to ensure that the
+ * batch fits into the existing memory block, or that an individual message does not have to be
+ * indexed. There is more on this below.
+ *
+ * Writing each message
+ * --------------------
+ *
  * When you come to write each message you must start by skipping 4 bytes in other words leaving them as byte[]{0,0,0,0} [ which will become the length later ( as a java int ) ], first write the data, then go back and set the 4 byte length, the data must be written first and then the length to ensure that a tailer does not attempt to read a half written message.
  *
- * The single threaded appending thread must make sure that it does not exceed any of of the
- * conditions below ( see java doc below for more detail ), periodically it will have to call
- * into chronicle queues appender, this is because some messages are indexes or future message
- * may be written to a different block of off heap memory
+ * The appending thread must make sure that it does not exceed the rawMaxMessage() or rawMaxBytes().
+ * If no more data be writen direcly, the next call must be to:
+ *
+ * {@link net.openhft.chronicle.queue.BatchAppender#update(net.openhft.chronicle.bytes.Bytes, long, long)}
+ *
+ * This is because some messages periodically must indexed or written to a different block of off
+ * heap memory
  */
 public interface BatchAppender {
 
