@@ -1,7 +1,5 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.Bytes;
-
 /**
  * Created by Rob Austin
  *
@@ -56,11 +54,11 @@ public interface BatchAppender {
      * messages  in this batch is now equal to rawMaxMessage() or there is no sufficient space to
      * write any more data based on the rawMaxBytes(). You should also add the 4 byte length to
      * the size of each message.
-     *
-     * @param bytes            the data to be written to the chronicle-queue
-     * @param address          the address of the last message written.
-     * @param numberOfMessages the number of messages that where written in the last batch
+     * @param addressSourceBytes            the address of the data to be written to the queue
+     * @param sourceByteSize                the size in bytes of the source
+     * @param addressEndOfQueue             the address of the last message written to the queue
+     * @param numberOfMessages              the number of messages that where written in the last batch
      */
-    void write(Bytes bytes, long address, long numberOfMessages);
+    void write(long addressSourceBytes, final int sourceByteSize, long addressEndOfQueue, long numberOfMessages);
 
 }
