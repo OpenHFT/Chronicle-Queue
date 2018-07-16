@@ -54,7 +54,9 @@ public interface BatchAppender {
     /**
      * you should make this call at the end of each batch, the reason for this call, is that the
      * next message must be written by chronicle-queue, either because the next message requires
-     * indexing or the next message has to be written to
+     * indexing or the next message has to be written to a different block, if you can not
+     * complete writing a full message + the 4 byte len directly to the off heap memory then you
+     * shuld call this method instead.
      *
      * @param bytes            the data to be written to the chronicle-queue
      * @param address          the address of the last message written.
