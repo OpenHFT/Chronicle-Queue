@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.queue.batch.BatchAppender;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -109,7 +110,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     Wire wire();
 
     default BatchAppender batchAppender() {
-        throw new UnsupportedOperationException();
+        return new SingleChronicleQueueExcerpts.VanillaBatchAppender(queue());
     }
 
 }

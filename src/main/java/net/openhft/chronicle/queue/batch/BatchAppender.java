@@ -28,7 +28,7 @@ package net.openhft.chronicle.queue.batch;
  * The appending thread must make sure that it does not exceed the rawMaxMessage() or rawMaxBytes().
  * If no more data can be written to the off heap memory, then the next call must be to:
  *
- * {@link BatchAppender#write(long, int, long, long)}
+ * {@link BatchAppender#write(long, long, long, long)}
  *
  * This is because periodically, some messages must be indexed or written to a different block of
  * off heap memory
@@ -37,15 +37,15 @@ public interface BatchAppender {
 
     /**
      * @return the maximum number of messages that can be written directly to the off heap memory
-     * before calling {@link BatchAppender#write(long, int, long, long)}, this is based on the indexing used.
+     * before calling {@link BatchAppender#write(long, long, long, long)}, this is based on the indexing used.
      */
-    int rawMaxMessage();
+    long rawMaxMessage();
 
     /**
      * @return the maximum number of bytes that can be written directly to the off heap memory
-     * before calling {@link BatchAppender#write(long, int, long, long)}, this is based on the block size used.
+     * before calling {@link BatchAppender#write(long, long, long, long)}, this is based on the block size used.
      */
-    int rawMaxBytes();
+    long rawMaxBytes();
 
     /**
      * @return the address of where to start to write a batch of messages to the off heap memory.
@@ -58,14 +58,17 @@ public interface BatchAppender {
      * write any more data based on the rawMaxBytes(). You should also add the 4 byte length to
      * the size of each message.
      * @param sourceBytesAddress            the address of the data to be written to the queue
-     * @param sourceByteSize                the size in bytes of the source
-     * @param endOfQueueAddress             the address of the last message written to the queue
-     * @param numberOfMessagesInLastBatch              the number of messages that where written in the last
-     *                                     batch excluding this message.
+     * @param sourceByteSize                the size in bytes of the source message without the
+     *                                          4 byte length
+     * @param sizeOfLastBatch               the number of bytes in the last batch, including the 4
+     *                                             bytes length of each message
+     * @param numberOfMessagesInLastBatch   the number of messages that where written in the last
+     *                                     batch
+     * @return the address of the next write position
      */
-    void write(long sourceBytesAddress,
-               final int sourceByteSize,
-               long endOfQueueAddress,
+    long write(long sourceBytesAddress,
+               long sourceByteSize,
+               long sizeOfLastBatch,
                long numberOfMessagesInLastBatch);
 
 }

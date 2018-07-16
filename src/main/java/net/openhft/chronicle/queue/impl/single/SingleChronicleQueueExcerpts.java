@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.UnsafeMemory;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -43,6 +44,7 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueueExcerpts {
+
     private static final boolean CHECK_INTERRUPTS = !Boolean.getBoolean("chronicle.queue.ignoreInterrupts");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
     private static final int MESSAGE_HISTORY_METHOD_ID = -1;
@@ -60,6 +62,69 @@ public class SingleChronicleQueueExcerpts {
 
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
+    }
+
+    public static class VanillaBatchAppender implements BatchAppender {
+
+        private final ChronicleQueue q;
+        private final ExcerptAppender excerptAppender;
+        private final int defaultIndexSpacing;
+        private final MappedBytes bytes;
+        private final NativeBytes sourceBytes = Bytes.allocateElasticDirect();
+
+        public VanillaBatchAppender(ChronicleQueue q) {
+            this.q = q;
+            excerptAppender = q.acquireAppender();
+            defaultIndexSpacing = q.rollCycle().defaultIndexSpacing();
+            bytes = (MappedBytes) excerptAppender.wire().bytes();
+        }
+
+        @Override
+        public long rawMaxMessage() {
+            long lastIndex = excerptAppender.lastIndexAppended();
+            return (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
+        }
+
+        @Override
+        public long rawMaxBytes() {
+            long bstart = bytes.start();
+            long bcap = bytes.realCapacity();
+            return bcap - (bytes.writePosition() - bstart);
+        }
+
+        @Override
+        public long rawAddress() {
+            return bytes.addressForWrite(bytes.writePosition());
+        }
+
+        @Override
+        public long write(final long sourceBytesAddress,
+                          final long sourceByteSize,
+                          final long sizeOfLastBatch,
+                          final long numberOfMessagesInLastBatch) {
+
+            excerptAppender.wire().bytes().writeSkip(sizeOfLastBatch);
+            long index = excerptAppender.lastIndexAppended();
+            long headerNumber = ((StoreAppender) excerptAppender).wire.headerNumber();
+            ((StoreAppender) excerptAppender).lastIndex = index + numberOfMessagesInLastBatch;
+            ((StoreAppender) excerptAppender).wire.headerNumber(headerNumber +
+                    numberOfMessagesInLastBatch);
+
+            try (DocumentContext dc = excerptAppender.writingDocument()) {
+                dc.wire().bytes().write(sourceBytes(sourceBytesAddress, sourceByteSize));
+                return dc.wire().bytes().writePosition();
+            }
+
+        }
+
+        private NativeBytes sourceBytes(final long sourceBytesAddress, final long sourceByteSize) {
+            BytesStore bytesStore = sourceBytes.bytesStore();
+            ((MappedBytesStore) bytesStore).setAddress(sourceBytesAddress);
+            sourceBytes.writeLimit(sourceByteSize);
+            sourceBytes.readPosition(0);
+            sourceBytes.readLimit(sourceByteSize);
+            return sourceBytes;
+        }
     }
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
