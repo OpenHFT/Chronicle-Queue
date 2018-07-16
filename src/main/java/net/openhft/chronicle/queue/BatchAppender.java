@@ -7,7 +7,6 @@ package net.openhft.chronicle.queue;
  * are sure you know what you are doing, misuse of this API could corrupt your data or even
  * worst cause the JVM or your application to crash.
  *
- *
  * You should only consider this API if :
  * - you have a batch of messages that you wish to write to a chronicle queue and you wish to write
  *      them directly to the off heap memory
