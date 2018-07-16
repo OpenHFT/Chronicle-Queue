@@ -106,4 +106,9 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @return the raw wire.
      */
     Wire wire();
+
+    default BatchAppender batchAppender() {
+        throw new UnsupportedOperationException();
+    }
+
 }
