@@ -6,8 +6,7 @@ import net.openhft.chronicle.bytes.Bytes;
  * Created by Rob Austin
  *
  * This API is and Advanced Chronicle Queue API that should be used with care, an only used if you
- * are exactly
- * sure you know what you are doing, misuse of this API could cause the JVM or your application
+ * are sure you know what you are doing, misuse of this API could cause the JVM or your application
  * to crash.
  *
  *
