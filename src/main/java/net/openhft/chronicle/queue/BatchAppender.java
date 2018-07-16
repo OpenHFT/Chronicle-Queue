@@ -9,7 +9,8 @@ package net.openhft.chronicle.queue;
  *
  *
  * You should only consider this API if :
- * - you have a batch of messages that you wish to write to a chronicle queue and you wish to write them directly to the off heap memory
+ * - you have a batch of messages that you wish to write to a chronicle queue and you wish to write
+ *      them directly to the off heap memory
  * - you only have a single appender thread
  * - you don't care about queue roll [ in other words this API wont take account of Queue Roll]
  *
@@ -20,7 +21,10 @@ package net.openhft.chronicle.queue;
  * Writing Each Message
  * --------------------
  *
- * When you come to write each message you must start by skipping 4 bytes in other words leaving them as byte[]{0,0,0,0} [ which will become the length later ( as a java int ) ], first write the data, then go back and set the 4 byte length, the data must be written first and then the length to ensure that a tailer does not attempt to read a half written message.
+ * When you come to write each message you must start by skipping 4 bytes in other words leaving
+ * them as byte[]{0,0,0,0} [ which will become the length later ( as a java int ) ],
+ * first write the data, then go back and set the 4 byte length, the data must be written first
+ * and then the length to ensure that a tailer does not attempt to read a half written message.
  *
  * The appending thread must make sure that it does not exceed the rawMaxMessage() or rawMaxBytes().
  * If no more data can be written to the off heap memory, then the next call must be to:
@@ -60,6 +64,9 @@ public interface BatchAppender {
      * @param numberOfMessagesInLastBatch              the number of messages that where written in the last
      *                                     batch excluding this message.
      */
-    void write(long sourceBytesAddress, final int sourceByteSize, long endOfQueueAddress, long numberOfMessagesInLastBatch);
+    void write(long sourceBytesAddress,
+               final int sourceByteSize,
+               long endOfQueueAddress,
+               long numberOfMessagesInLastBatch);
 
 }
