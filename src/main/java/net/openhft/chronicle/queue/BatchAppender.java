@@ -47,7 +47,7 @@ public interface BatchAppender {
     int rawMaxBytes();
 
     /**
-     * @return the address of the next message
+     * @return the address of where to start to write a batch of messages to the off heap memory.
      */
     long rawAddress();
 
