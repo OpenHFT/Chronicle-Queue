@@ -34,7 +34,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class Queue36Test extends ChronicleQueueTestBase {
     @Test
-    public void testTail() throws IOException {
+    public void testTail() {
         File basePath = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
                 .testBlockSize()

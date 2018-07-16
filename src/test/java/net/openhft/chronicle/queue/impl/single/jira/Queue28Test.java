@@ -61,7 +61,7 @@ public class Queue28Test extends ChronicleQueueTestBase {
      */
 
     @Test
-    public void test() throws IOException, InterruptedException {
+    public void test() {
         File dir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(dir, wireType)
                 .testBlockSize()

@@ -37,7 +37,6 @@ public final class DocumentOrderingTest {
         }
     }
 
-    //@Ignore("Flaky test - https://github.com/OpenHFT/Chronicle-Queue/issues/459")
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws Exception {
         try (final SingleChronicleQueue queue =
@@ -75,7 +74,6 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    @Ignore("write lock prevents writing")
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws Exception {
         // as below, but don't actually close the initial context
         try (final SingleChronicleQueue queue =

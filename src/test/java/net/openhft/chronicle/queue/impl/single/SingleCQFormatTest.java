@@ -133,18 +133,19 @@ public class SingleCQFormatTest {
         }
     }
 
-    // TODO add controls on how to wait, for how long and what action to take to fix it.
     @Test(expected = TimeoutException.class)
-    @Ignore("Long running")
-    public void testDeadHeader() throws FileNotFoundException {
+    public void testDeadHeader() throws IOException {
         @NotNull File dir = DirectoryUtils.tempDir("testDeadHeader");
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        dir.mkdirs();
+        File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
+        file.createNewFile();
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
         bytes.release();
         @Nullable SingleChronicleQueue queue = null;
         try {
-            queue = binary(dir)
+            queue = binary(dir).timeoutMS(1_000L)
                     .testBlockSize()
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .build();
@@ -290,90 +291,6 @@ public class SingleCQFormatTest {
         }
     }
 
-    @Test
-    @Ignore("We now write index together with header so this test is not using correct file format")
-    public void testTwoMessages() throws FileNotFoundException {
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
-        dir.mkdir();
-        @NotNull RollCycles cycle = RollCycles.TEST4_DAILY;
-
-        {
-            @NotNull MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), 64 << 10);
-            @NotNull Wire wire = new BinaryWire(mappedBytes);
-            try (DocumentContext dc = wire.writingDocument(true)) {
-                dc.wire().writeEventName(() -> "header").typedMarshallable(
-                        new SingleChronicleQueueStore(cycle, WireType.BINARY, mappedBytes, cycle.defaultIndexCount(), cycle.defaultIndexSpacing()));
-            }
-            try (DocumentContext dc = wire.writingDocument(false)) {
-                dc.wire().writeEventName("msg").text("Hello world");
-            }
-            try (DocumentContext dc = wire.writingDocument(false)) {
-                dc.wire().writeEventName("msg").text("Also hello world");
-            }
-
-            assertEquals("--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  writePosition: [\n" +
-                    "    0,\n" +
-                    "    0\n" +
-                    "  ],\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 32,\n" +
-                    "    indexSpacing: 4,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  lastIndexReplicated: -1\n" +
-                    "}\n" +
-                    "# position: 386, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "msg: Hello world\n" +
-                    "# position: 407, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "msg: Also hello world\n", Wires.fromSizePrefixedBlobs(mappedBytes
-                    .readPosition(0)));
-            mappedBytes.release();
-        }
-
-        @NotNull SingleChronicleQueue queue = binary(dir)
-                .rollCycle(cycle)
-                .testBlockSize()
-                .build();
-        @NotNull ExcerptTailer tailer = queue.createTailer();
-        readTwo(tailer);
-        tailer.toStart();
-        readTwo(tailer);
-
-        // TODO no direction
-        tailer.direction(TailerDirection.NONE).toStart();
-
-        long start = queue.firstIndex();
-        assertEquals(start, tailer.index());
-        expected(tailer, "msg: Hello world\n");
-        assertEquals(start, tailer.index());
-        expected(tailer, "msg: Hello world\n");
-
-/* TODO FIX.
-        assertEquals(start + 1, queue.lastIndex());
-
-        tailer.direction(TailerDirection.BACKWARD).toEnd();
-
-        assertEquals(start + 1, tailer.index());
-        expected(tailer, "msg: Also hello world\n");
-        assertEquals(start, tailer.index());
-        expected(tailer, "msg: Hello world\n");
-        assertEquals(start - 1, tailer.index());
-*/
-
-        queue.close();
-        try {
-            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
@@ -384,19 +301,6 @@ public class SingleCQFormatTest {
     @After
     public void checkThreadDump() {
         threadDump.assertNoNewThreads();
-    }
-
-    public void readTwo(@NotNull ExcerptTailer tailer) {
-        long start = RollCycles.DAILY.toIndex(1, 0L);
-        assertEquals(start, tailer.index());
-        expected(tailer, "msg: Hello world\n");
-        assertEquals(start + 1, tailer.index());
-        expected(tailer, "msg: Also hello world\n");
-        assertEquals(start + 2, tailer.index());
-        try (DocumentContext dc = tailer.readingDocument()) {
-            assertFalse(dc.isPresent());
-        }
-        assertEquals(start + 2, tailer.index());
     }
 
     @After

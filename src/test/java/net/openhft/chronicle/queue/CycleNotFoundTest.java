@@ -44,8 +44,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     // reduced so that it runs quicker for the continuous integration (CI)
 
     @Test(timeout = 50_000L)
-    @Ignore("TODO FIX")
-    public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
+    public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
         File path = DirectoryUtils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make
 
         ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG);

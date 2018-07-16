@@ -54,9 +54,9 @@ public class TestEmptyFile {
         DirectoryUtils.deleteDir(tmpDir.toFile());
     }
 
-    @Test
+    /*@Test
     @Ignore("This test  crashes JVM, but even with obvious fixes it will not pass as the queue doesn't know how to progress " +
-            "past the empty/truncated file. Needs investigation if this is a supported situation - see issue #470")
+            "past the empty/truncated file. Needs investigation if this is a supported situation - see issue #470")*/
     public void shouldHandleEmptyFile() {
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(tmpDir)

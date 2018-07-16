@@ -50,7 +50,7 @@ public class OvertakeTest {
     }
 
     @Before
-    public void before() throws Exception {
+    public void before() {
         path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (SingleChronicleQueue appender_queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
@@ -96,7 +96,6 @@ public class OvertakeTest {
     }
 
     @Test
-    @Ignore("TODO FIX")
     public void threadingTest() throws Exception {
         System.out.println("Continue appending");
         ExecutorService execService = Executors.newFixedThreadPool(2);
