@@ -64,69 +64,6 @@ public class SingleChronicleQueueExcerpts {
         void writeBytes(long index, BytesStore bytes);
     }
 
-    public static class VanillaBatchAppender implements BatchAppender {
-
-        private final ChronicleQueue q;
-        private final ExcerptAppender excerptAppender;
-        private final int defaultIndexSpacing;
-        private final MappedBytes bytes;
-        private final NativeBytes sourceBytes = Bytes.allocateElasticDirect();
-
-        public VanillaBatchAppender(ChronicleQueue q) {
-            this.q = q;
-            excerptAppender = q.acquireAppender();
-            defaultIndexSpacing = q.rollCycle().defaultIndexSpacing();
-            bytes = (MappedBytes) excerptAppender.wire().bytes();
-        }
-
-        @Override
-        public long rawMaxMessage() {
-            long lastIndex = excerptAppender.lastIndexAppended();
-            return (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
-        }
-
-        @Override
-        public long rawMaxBytes() {
-            long bstart = bytes.start();
-            long bcap = bytes.realCapacity();
-            return bcap - (bytes.writePosition() - bstart);
-        }
-
-        @Override
-        public long rawAddress() {
-            return bytes.addressForWrite(bytes.writePosition());
-        }
-
-        @Override
-        public long write(final long sourceBytesAddress,
-                          final long sourceByteSize,
-                          final long sizeOfLastBatch,
-                          final long numberOfMessagesInLastBatch) {
-
-            excerptAppender.wire().bytes().writeSkip(sizeOfLastBatch);
-            long index = excerptAppender.lastIndexAppended();
-            long headerNumber = ((StoreAppender) excerptAppender).wire.headerNumber();
-            ((StoreAppender) excerptAppender).lastIndex = index + numberOfMessagesInLastBatch;
-            ((StoreAppender) excerptAppender).wire.headerNumber(headerNumber +
-                    numberOfMessagesInLastBatch);
-
-            try (DocumentContext dc = excerptAppender.writingDocument()) {
-                dc.wire().bytes().write(sourceBytes(sourceBytesAddress, sourceByteSize));
-                return dc.wire().bytes().writePosition();
-            }
-
-        }
-
-        private NativeBytes sourceBytes(final long sourceBytesAddress, final long sourceByteSize) {
-            BytesStore bytesStore = sourceBytes.bytesStore();
-            ((MappedBytesStore) bytesStore).setAddress(sourceBytesAddress);
-            sourceBytes.writeLimit(sourceByteSize);
-            sourceBytes.readPosition(0);
-            sourceBytes.readLimit(sourceByteSize);
-            return sourceBytes;
-        }
-    }
-
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
 
         @NotNull
@@ -262,6 +199,43 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public Wire wire() {
             return wire;
+        }
+
+        @Override
+        public void batchAppend(final int timeout, final int size, BatchAppender batchAppender) {
+
+            NativeBytesStore<Void> nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
+            long startTime = System.nanoTime();
+            long count = 0;
+            long lastIndex = -1;
+            do
+
+            {
+                int batch = Math.max(1, (128 << 10) / size);
+                int defaultIndexSpacing = this.queue.rollCycle().defaultIndexSpacing();
+                for (int i = 0; i < batch; i++) {
+                    Wire wire = wire();
+                    int writeCount = (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
+                    if (wire != null && writeCount > 0) {
+                        MappedBytes bytes = (MappedBytes) wire.bytes();
+                        long address = bytes.addressForWrite(bytes.writePosition());
+                        long bstart = bytes.start();
+                        long bcap = bytes.realCapacity();
+                        long canWrite = bcap - (bytes.writePosition() - bstart);
+                        long lengthCount = batchAppender.writeMessages(address, canWrite, writeCount);
+                        bytes.writeSkip((int) lengthCount);
+                        lastIndex += lengthCount >> 32;
+                        count += lengthCount >> 32;
+
+                    } else {
+                        try (DocumentContext dc = writingDocument()) {
+                            dc.wire().bytes().write(nbs);
+                        }
+                        lastIndex = lastIndexAppended();
+                        count++;
+                    }
+                }
+            } while (startTime + timeout * 1e9 > System.nanoTime());
         }
 
         @Nullable

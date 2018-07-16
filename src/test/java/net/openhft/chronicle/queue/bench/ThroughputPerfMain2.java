@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.bench;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.UnsafeMemory;
@@ -12,13 +11,11 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wire;
 
-public class ThroughputPerfMain {
+public class ThroughputPerfMain2 {
     static final int time = Integer.getInteger("time", 20);
     static final int size = Integer.getInteger("size", 48);
     static final String path = System.getProperty("path", OS.TMP);
-
     static NativeBytesStore nbs;
 
     public static void main(String[] args) {
@@ -33,34 +30,23 @@ public class ThroughputPerfMain {
                 .blockSize(blockSize)
                 .build()) {
             ExcerptAppender appender = q.acquireAppender();
-            long lastIndex = -1;
-            do {
-                int batch = Math.max(1, (128 << 10) / size);
-                int defaultIndexSpacing = q.rollCycle().defaultIndexSpacing();
-                for (int i = 0; i < batch; i++) {
-                    Wire wire = appender.wire();
-                    int writeCount = (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
-                    if (wire != null && writeCount > 0) {
-                        MappedBytes bytes = (MappedBytes) wire.bytes();
-                        long address = bytes.addressForWrite(bytes.writePosition());
-                        long bstart = bytes.start();
-                        long bcap = bytes.realCapacity();
-                        long canWrite = bcap - (bytes.writePosition() - bstart);
-                        long lengthCount = writeMessages(address, canWrite, writeCount);
-                        bytes.writeSkip((int) lengthCount);
-                        lastIndex += lengthCount >> 32;
-                        count += lengthCount >> 32;
-
-                    } else {
-                        try (DocumentContext dc = appender.writingDocument()) {
-                            dc.wire().bytes().write(nbs);
-                        }
-                        lastIndex = appender.lastIndexAppended();
-                        count++;
-                    }
+            appender.batchAppend(time, size, (address, canWrite, writeCount) -> {
+                long length = 0;
+                long count1 = 0;
+                //        writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
+                long fromAddress = nbs.addressForRead(0);
+                while (writeCount > count1 && length + 4 + size <= canWrite) {
+                    UnsafeMemory.UNSAFE.copyMemory(fromAddress, address + 4, size);
+                    UnsafeMemory.UNSAFE.putOrderedInt(null, address, size);
+                    address += 4 + size;
+                    length += 4 + size;
+                    count1++;
                 }
-            } while (start + time * 1e9 > System.nanoTime());
+                //      System.out.println("w "+count+" "+length);
+                return (count1 << 32) | length;
+            });
         }
+
         nbs.release();
         long mid = System.nanoTime();
         long time1 = mid - start;
@@ -91,19 +77,4 @@ public class ThroughputPerfMain {
         IOTools.deleteDirWithFiles(base, 2);
     }
 
-    private static long writeMessages(long address, long canWrite, int writeCount) {
-        long length = 0;
-        long count = 0;
-//        writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
-        long fromAddress = nbs.addressForRead(0);
-        while (writeCount > count && length + 4 + size <= canWrite) {
-            UnsafeMemory.UNSAFE.copyMemory(fromAddress, address + 4, size);
-            UnsafeMemory.UNSAFE.putOrderedInt(null, address, size);
-            address += 4 + size;
-            length += 4 + size;
-            count++;
-        }
-//        System.out.println("w "+count+" "+length);
-        return (count << 32) | length;
-    }
 }

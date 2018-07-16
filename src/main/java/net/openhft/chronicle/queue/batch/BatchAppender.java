@@ -25,50 +25,18 @@ package net.openhft.chronicle.queue.batch;
  * first write the data, then go back and set the 4 byte length, the data must be written first
  * and then the length to ensure that a tailer does not attempt to read a half written message.
  *
- * The appending thread must make sure that it does not exceed the rawMaxMessage() or rawMaxBytes().
- * If no more data can be written to the off heap memory, then the next call must be to:
- *
- * {@link BatchAppender#write(long, long, long, long)}
- *
- * This is because periodically, some messages must be indexed or written to a different block of
- * off heap memory
  */
+@FunctionalInterface
 public interface BatchAppender {
 
     /**
-     * @return the maximum number of messages that can be written directly to the off heap memory
-     * before calling {@link BatchAppender#write(long, long, long, long)}, this is based on the indexing used.
-     */
-    long rawMaxMessage();
+     * @param rawAddress      the address of where to start to write a batch of messages to the off heap memory.
+     * @param rawMaxBytes     the maximum number of bytes that can be written directly to the off heap memory
+     * @param rawMaxMessages  the maximum number of messages that can be written directly to the off heap memory
 
-    /**
-     * @return the maximum number of bytes that can be written directly to the off heap memory
-     * before calling {@link BatchAppender#write(long, long, long, long)}, this is based on the block size used.
+     * @return the count and the length as ( count << 32) | length
      */
-    long rawMaxBytes();
+    long writeMessages(long rawAddress, long rawMaxBytes, int rawMaxMessages);
 
-    /**
-     * @return the address of where to start to write a batch of messages to the off heap memory.
-     */
-    long rawAddress();
-
-    /**
-     * You should make this call at the end of each batch, in other words if the number of
-     * messages  in this batch is now equal to rawMaxMessage() or there is no sufficient space to
-     * write any more data based on the rawMaxBytes(). You should also add the 4 byte length to
-     * the size of each message.
-     * @param sourceBytesAddress            the address of the data to be written to the queue
-     * @param sourceByteSize                the size in bytes of the source message without the
-     *                                          4 byte length
-     * @param sizeOfLastBatch               the number of bytes in the last batch, including the 4
-     *                                             bytes length of each message
-     * @param numberOfMessagesInLastBatch   the number of messages that where written in the last
-     *                                     batch
-     * @return the address of the next write position
-     */
-    long write(long sourceBytesAddress,
-               long sourceByteSize,
-               long sizeOfLastBatch,
-               long numberOfMessagesInLastBatch);
 
 }
