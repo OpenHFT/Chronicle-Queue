@@ -17,13 +17,13 @@ public class ThroughputPerfMain2 {
     static final int size = Integer.getInteger("size", 48);
     static final String path = System.getProperty("path", OS.TMP);
     static NativeBytesStore nbs;
-    static long count = 0;
+
     public static void main(String[] args) {
         String base = path + "/delete-" + System.nanoTime() + ".me";
         long start = System.nanoTime();
 
         nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
-
+        long count = 0;
         long blockSize = 4L << 30;
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base)
                 .rollCycle(RollCycles.LARGE_HOURLY_SPARSE)
@@ -36,7 +36,7 @@ public class ThroughputPerfMain2 {
                 long count0 = 0;
                 //        writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
                 long fromAddress = nbs.addressForRead(0);
-                while (writeCount > count && length + 4 + size <= canWrite) {
+                while (writeCount > count0 && length + 4 + size <= canWrite) {
                     UnsafeMemory.UNSAFE.copyMemory(fromAddress, address + 4, size);
                     UnsafeMemory.UNSAFE.putOrderedInt(null, address, size);
                     address += 4 + size;
