@@ -35,15 +35,14 @@ import net.openhft.chronicle.bytes.Bytes;
 public interface BatchAppender {
 
     /**
-     * @return the maximum number of message that can be written directly to the off heap memory before
-     * * calling using the chronicle queue appender, this is based on the indexing used.
+     * @return the maximum number of messages that can be written directly to the off heap memory
+     * before calling {@link net.openhft.chronicle.queue.BatchAppender#update(net.openhft.chronicle.bytes.Bytes, long, long)}, this is based on the indexing used.
      */
     int rawMaxMessage();
 
     /**
      * @return the maximum number of bytes that can be written directly to the off heap memory
-     * before
-     * * calling using the chronicle queue appender, this is based on the block size used.
+     * before calling {@link net.openhft.chronicle.queue.BatchAppender#update(net.openhft.chronicle.bytes.Bytes, long, long)}, this is based on the block size used.
      */
     int rawMaxBytes();
 
