@@ -61,6 +61,6 @@ public interface BatchAppender {
      * @param address          the address of the last message written.
      * @param numberOfMessages the number of messages that where written in the last batch
      */
-    void update(Bytes bytes, long address, long numberOfMessages);
+    void write(Bytes bytes, long address, long numberOfMessages);
 
 }
