@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.batch;
 
 /**
  * Created by Rob Austin

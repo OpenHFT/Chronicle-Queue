@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
