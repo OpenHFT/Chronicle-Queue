@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.bench;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.batch.BatchAppenderNative;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -19,6 +20,8 @@ public class BatchAppenderNativeTest {
 
     @Test
     public void testNative() {
+        if (!OS.isMacOSX())
+            return;
         Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
         BatchAppenderNative batchAppenderNative = new BatchAppenderNative();
 
