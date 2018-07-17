@@ -1486,7 +1486,7 @@ public class SingleChronicleQueueExcerpts {
         private void resetWires() {
             WireType wireType = queue.wireType();
 
-            final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store().bytes()));
+            final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
             assert headerNumberCheck(wire);
             this.context.wire(wire);
             wire.parent(this);
