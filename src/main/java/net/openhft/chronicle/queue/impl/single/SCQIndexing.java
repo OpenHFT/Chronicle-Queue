@@ -219,7 +219,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * of the tree is at index2index ( this first level targetIndex is 1MB in size and there is only
      * one of them, it only holds the addresses of the second level indexes, there will be many
      * second level indexes ( created on demand ), each is about 1MB in size  (this second level
-     * targetIndex only stores the position of every 64th excerpt), so from every 64th excerpt a
+     * targetIndex only stores the position of every 64th excerpt (depending on RollCycle)), so from every 64th excerpt a
      * linear scan occurs.
      *
      * @param ec    the data structure we are navigating

@@ -428,7 +428,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     private long toSeq(final ChronicleQueue q, final long index) {
-        return ((SingleChronicleQueue) q).rollCycle().toSequenceNumber(index);
+        return q.rollCycle().toSequenceNumber(index);
     }
 
     @Test
@@ -467,7 +467,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         Assert.assertFalse(methodReader.readOne());
 
                         tp.advanceMillis(1000);
-                        // this writes the EOF marker but doesn't create a new file
                         Assert.assertFalse(methodReader.readOne());
                     }
 
