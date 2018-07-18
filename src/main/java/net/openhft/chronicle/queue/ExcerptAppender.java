@@ -108,6 +108,12 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     Wire wire();
 
+    /**
+     * @param time
+     * @param size
+     * @param batchAppender
+     * @return the number of messages written in call the batches
+     */
     long batchAppend(final int time, final int size, BatchAppender batchAppender);
 
 
