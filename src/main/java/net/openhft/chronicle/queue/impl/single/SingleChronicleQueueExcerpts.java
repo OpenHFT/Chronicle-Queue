@@ -1796,7 +1796,7 @@ public class SingleChronicleQueueExcerpts {
 
             while (true) {
                 try (DocumentContext context = tailer.readingDocument()) {
-                    if (!context.isData()) {
+                    if (!context.isPresent()) {
                         toStart();
                         return this;
                     }
