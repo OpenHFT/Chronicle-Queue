@@ -225,7 +225,6 @@ public class SingleChronicleQueueExcerpts {
                         long canWrite = bcap - (bytes.writePosition() - bstart);
                         long lengthCount = batchAppender.writeMessages(address, canWrite, writeCount);
                         bytes.writeSkip((int) lengthCount);
-                        QuickFIXUtilslen
                         lastIndex += lengthCount >> 32;
                         count += lengthCount >> 32;
 
