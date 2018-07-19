@@ -23,6 +23,8 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.core.util.ObjectUtils;
+import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.RollCycleRetriever;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
@@ -52,8 +54,9 @@ import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 @SuppressWarnings("ALL")
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>
         implements ChronicleQueueBuilder<B> {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractChronicleQueueBuilder.class);
+    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
+
     protected final File path;
     protected long blockSize;
     @NotNull
@@ -87,7 +90,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private boolean progressOnContention = false;
 
     public AbstractChronicleQueueBuilder(File path) {
-        this.rollCycle = RollCycles.DAILY;
+        this.rollCycle = loadDefaultRollCycle();
+
+
         this.blockSize = OS.is64Bit() ? 64L << 20 : TEST_BLOCK_SIZE;
         this.path = path;
         this.wireType = WireType.BINARY_LIGHT;
@@ -99,6 +104,44 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "File released " + file);
         };
+    }
+
+    private RollCycle loadDefaultRollCycle(){
+        if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
+            return RollCycles.DAILY;
+        }
+
+        String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
+        String[] rollCyclePropertyParts = rollCycleProperty.split(":");
+        if(rollCyclePropertyParts.length > 0) {
+            try {
+                Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
+                if (Enum.class.isAssignableFrom(rollCycleClass)) {
+                    if(rollCyclePropertyParts.length < 2){
+                        LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
+                    } else {
+                        Class<Enum> eClass = (Class<Enum>) rollCycleClass;
+                        Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
+                        if(instance instanceof RollCycle) {
+                            return (RollCycle) instance;
+                        } else {
+                            LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                        }
+                    }
+                } else {
+                    Object instance = ObjectUtils.newInstance(rollCycleClass);
+                    if(instance instanceof RollCycle) {
+                        return (RollCycle) instance;
+                    } else {
+                        LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                    }
+                }
+            } catch (ClassNotFoundException ignored) {
+                LOGGER.warn("Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
+            }
+        }
+
+        return RollCycles.DAILY;
     }
 
     protected Logger getLogger() {
