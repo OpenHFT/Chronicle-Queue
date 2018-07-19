@@ -107,7 +107,9 @@ public class RollingResourcesCache {
         try {
             TemporalAccessor parse = formatter.parse(name);
 
-            long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
+        long epochDay = 0;
+        if (parse.isSupported(ChronoField.EPOCH_DAY))
+            epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
             if (parse.isSupported(ChronoField.SECOND_OF_DAY))
                 epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
 
