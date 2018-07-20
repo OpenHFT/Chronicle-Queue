@@ -194,7 +194,9 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @Override
     @NotNull
     public SingleChronicleQueue build() {
-        if (buffered())
+        if (readBufferMode() != BufferMode.None)
+            onlyAvailableInEnterprise("Buffering");
+        if (writeBufferMode() != BufferMode.None)
             onlyAvailableInEnterprise("Buffering");
         super.preBuild();
         return new SingleChronicleQueue(this);
