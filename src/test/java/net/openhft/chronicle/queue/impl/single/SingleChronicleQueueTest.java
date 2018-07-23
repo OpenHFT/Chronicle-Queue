@@ -2696,7 +2696,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testAppendedSkipToEndMultiThreaded() {
+    public void testAppendedSkipToEndMultiThreaded() throws InterruptedException {
 
         // some text to simulate load.
         StringBuilder sb = new StringBuilder();
@@ -2711,8 +2711,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
 
             int size = 50_000;
+            int threadCount = 8;
+            int sizePerThread = size/threadCount;
+            CountDownLatch latch = new CountDownLatch(threadCount);
 
-            IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl, text));
+            for (int j = 0; j < threadCount; j++) {
+                new Thread(() -> {
+                    for (int i = 0; i < sizePerThread; i++)
+                        writeTestDocument(tl, text);
+                    latch.countDown();
+                }).start();
+            }
+
+            latch.await();
 
             ExcerptTailer tailer = q.createTailer();
             for (int i = 0; i < size; i++) {
