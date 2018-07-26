@@ -56,6 +56,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         implements ChronicleQueueBuilder<B> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractChronicleQueueBuilder.class);
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
+    public static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
 
     protected final File path;
     protected long blockSize;
@@ -96,7 +97,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.blockSize = OS.is64Bit() ? 64L << 20 : TEST_BLOCK_SIZE;
         this.path = path;
         this.wireType = WireType.BINARY_LIGHT;
-        this.epoch = 0;
+        this.epoch = Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L);
         this.bufferCapacity = -1;
         this.indexSpacing = -1;
         this.indexCount = -1;
