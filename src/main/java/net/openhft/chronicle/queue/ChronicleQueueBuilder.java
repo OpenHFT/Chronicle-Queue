@@ -20,6 +20,7 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,6 +29,7 @@ import java.io.File;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * @author Rob Austin.
@@ -209,4 +211,12 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     boolean strongAppenders();
 
     Object clone();
+
+    B pauserSupplier(Supplier<TimingPauser> timedBusy);
+
+    default B path(String path) {
+        return path(new File(path));
+    }
+
+    B path(File path);
 }

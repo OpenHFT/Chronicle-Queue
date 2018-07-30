@@ -48,7 +48,7 @@ import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>
         implements ChronicleQueueBuilder<B> {
 
-    protected final File path;
+    protected File path;
     protected long blockSize;
     @NotNull
     protected WireType wireType;
@@ -103,6 +103,11 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public CycleCalculator cycleCalculator() {
         return cycleCalculator;
+    }
+
+    public B path(final File path) {
+        this.path = path;
+        return (B) this;
     }
 
     @Override
@@ -427,6 +432,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     public boolean strongAppenders() {
         return strongAppenders;
+    }
+
+    @Override
+    public B clone() {
+        try {
+            return (B) super.clone();
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

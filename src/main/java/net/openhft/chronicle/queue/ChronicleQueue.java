@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
@@ -178,4 +179,6 @@ public interface ChronicleQueue extends Closeable {
     long lastAcknowledgedIndexReplicated();
 
     RollCycle rollCycle();
+
+    TimeProvider time();
 }

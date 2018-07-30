@@ -207,19 +207,6 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
                 "If you would like to use this feature, please contact sales@chronicle.software for more information.");
     }
 
-    @NotNull
-    @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
-    @Override
-    public SingleChronicleQueueBuilder<S> clone() {
-        try {
-            @SuppressWarnings("unchecked")
-            SingleChronicleQueueBuilder<S> clone = (SingleChronicleQueueBuilder<S>) super.clone();
-            return clone;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError(e);
-        }
-    }
-
     @Nullable
     public Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier() {
         return null;
@@ -336,6 +323,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @Override
     public SingleChronicleQueueBuilder<S> pauserSupplier(Supplier<TimingPauser> pauser) {
         return super.pauserSupplier(pauser);
+    }
+
+    @Override
+    public SingleChronicleQueueBuilder<S> path(final String path) {
+        return super.path(path);
     }
 
     @Override
