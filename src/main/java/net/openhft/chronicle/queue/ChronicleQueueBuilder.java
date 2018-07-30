@@ -21,6 +21,7 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,7 +35,8 @@ import java.util.function.Supplier;
 /**
  * @author Rob Austin.
  */
-public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends Cloneable {
+public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
+        extends Cloneable, Marshallable {
 
     static SingleChronicleQueueBuilder single(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
