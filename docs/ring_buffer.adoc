@@ -94,7 +94,11 @@ the builder's `readBufferMode` and `writeBufferMode`.
 
 ===== Asynchronous writes
 
-If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the queue will be given to the ring buffer. A background task is created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue. Reads are made from the underlying queue. This use-case is designed to help with very "bursty" writes, which cannot afford to be blocked by a slow underlying disk sub-system. The ring buffer's buffer size must be carefully chosen to allow for the maximum burst size.
+If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the queue will be given to the ring buffer.
+A background task is created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed)
+chronicle queue. Reads are made from the underlying queue. This use-case is designed to help with very "bursty" writes,
+which cannot afford to be blocked by a slow underlying disk sub-system. The ring buffer's buffer size must be carefully
+chosen to allow for the maximum burst size.
 
 ====== Example:
 
@@ -113,7 +117,10 @@ If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the 
 
 ===== Writes and reads using ring buffer
 
-If both `writeBufferMode` and `readBufferMode` are set to `BufferMode.Asynchronous` then any writes to the queue will be given to the ring buffer and reads will read from the ring buffer. This gives the lowest possible latency as the disk subsystem is not involved at all. As with asynchronous writes, a background task is created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue.
+If both `writeBufferMode` and `readBufferMode` are set to `BufferMode.Asynchronous` then any writes to the queue will
+be given to the ring buffer and reads will read from the ring buffer. This gives the lowest possible latency as the
+disk subsystem is not involved at all. As with asynchronous writes, a background task is created in the builder's event
+loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue.
 
 ====== Example for asynchronous reads and writes using a memory-mapped file and two processes
 
@@ -145,3 +152,7 @@ If both `writeBufferMode` and `readBufferMode` are set to `BufferMode.Asynchrono
         ...
     }
 ```
+
+===== Drainer thread
+When the queue's event loop is closed, the drainer thread will wait up to 5 seconds to finish draining
+to the underlying queue. If draining can not complete, a warning message is logged
