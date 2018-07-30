@@ -207,4 +207,6 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     B strongAppenders(boolean strongAppenders);
 
     boolean strongAppenders();
+
+    Object clone();
 }
