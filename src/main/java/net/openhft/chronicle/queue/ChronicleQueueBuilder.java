@@ -239,7 +239,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
         for (final FieldInfo fieldInfo : Wires.fieldInfos(this.getClass())) {
             if (!sourceFieldInfo.contains(fieldInfo))
                 continue;
-            Object resultV = fieldInfo.get(fieldInfo);
+            Object resultV = fieldInfo.get(this);
             Object parentV = fieldInfo.get(source);
             if (resultV == null && parentV != null)
                 fieldInfo.set(this, parentV);

@@ -344,7 +344,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     /**
      * @return if the ring buffer's monitoring capability is turned on. Not available in OSS
      */
-    public Boolean enableRingBufferMonitoring() {
+    public boolean enableRingBufferMonitoring() {
         return enableRingBufferMonitoring == null ? false : enableRingBufferMonitoring;
     }
 
