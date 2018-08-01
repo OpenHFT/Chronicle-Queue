@@ -21,14 +21,17 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.wire.FieldInfo;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -221,4 +224,32 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
     }
 
     B path(File path);
+
+    /**
+     * updates all the fields in {@code this} that are null, from the {@param source}
+     *
+     * @param source the source Chronicle Queue Builder
+     * @return that
+     */
+
+    default B setAllNullFields(@NotNull ChronicleQueueBuilder source) {
+
+        List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(source.getClass());
+
+        for (final FieldInfo fieldInfo : Wires.fieldInfos(this.getClass())) {
+            if (!sourceFieldInfo.contains(fieldInfo))
+                continue;
+            Object resultV = fieldInfo.get(fieldInfo);
+            Object parentV = fieldInfo.get(source);
+            if (resultV == null && parentV != null)
+                fieldInfo.set(this, parentV);
+
+        }
+        return (B) this;
+    }
+
+    /**
+     * @return true if the bockSize has been set, Hence is non null
+     */
+    boolean hasBlockSize();
 }

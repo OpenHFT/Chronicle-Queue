@@ -362,16 +362,19 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     protected void initializeMetadata() {
         File metapath = metapath();
         validateRollCycle(metapath);
-        SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle, epoch), deltaCheckpointInterval(), sourceId());
+        SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle(), epoch()), deltaCheckpointInterval(),
+                sourceId());
         try {
 
-            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly()).validateMetadata(!readOnly).build();
+            boolean readOnly = readOnly();
+            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS())
+                    .readOnly(readOnly).validateMetadata(!readOnly).build();
             // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
             if (sourceId() == 0)
                 sourceId(newMeta.sourceId());
 
-            if (readOnly && !newMeta.roll().format().equals(rollCycle.format())) {
+            if (readOnly && !newMeta.roll().format().equals(rollCycle().format())) {
                 // roll cycle changed
                 overrideRollCycleForFileNameLength(newMeta.roll().format().length());
             }
@@ -390,7 +393,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
             String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
             if (list != null && list.length > 0) {
                 String filename = list[0];
-                if (rollCycle.format().length() + 4 != filename.length()) {
+                if (rollCycle().format().length() + 4 != filename.length()) {
                     // probably different roll cycle used
                     overrideRollCycleForFileNameLength(filename.length() - 4);
                 }
