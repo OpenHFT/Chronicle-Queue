@@ -360,7 +360,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public int indexCount() {
-        return indexCount <= 0 ? rollCycle.defaultIndexCount() : indexCount;
+        return indexCount == null || indexCount <= 0 ? rollCycle.defaultIndexCount() : indexCount;
     }
 
     @Override
