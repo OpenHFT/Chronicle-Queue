@@ -23,6 +23,8 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.core.util.ObjectUtils;
+import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
@@ -52,6 +54,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     protected File path;
     protected Long blockSize;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractChronicleQueueBuilder.class);
+    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
+    public static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
+
+    protected long blockSize;
+    @NotNull
     protected WireType wireType;
 
     protected RollCycle rollCycle;
@@ -88,20 +96,53 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     public AbstractChronicleQueueBuilder(File path) {
         this.path = path;
-        this.bufferCapacity = -1L;
-        this.indexSpacing = -1;
-        this.indexCount = -1;
-
         storeFileListener = (cycle, file) -> {
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "File released " + file);
         };
     }
 
+    private RollCycle loadDefaultRollCycle(){
+        if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
+            return RollCycles.DAILY;
+        }
+
+        String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
+        String[] rollCyclePropertyParts = rollCycleProperty.split(":");
+        if(rollCyclePropertyParts.length > 0) {
+            try {
+                Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
+                if (Enum.class.isAssignableFrom(rollCycleClass)) {
+                    if(rollCyclePropertyParts.length < 2){
+                        LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
+                    } else {
+                        Class<Enum> eClass = (Class<Enum>) rollCycleClass;
+                        Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
+                        if(instance instanceof RollCycle) {
+                            return (RollCycle) instance;
+                        } else {
+                            LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                        }
+                    }
+                } else {
+                    Object instance = ObjectUtils.newInstance(rollCycleClass);
+                    if(instance instanceof RollCycle) {
+                        return (RollCycle) instance;
+                    } else {
+                        LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                    }
+                }
+            } catch (ClassNotFoundException ignored) {
+                LOGGER.warn("Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
+            }
+        }
+
+        return RollCycles.DAILY;
+    }
+
     protected Logger getLogger() {
         return LoggerFactory.getLogger(getClass().getName());
     }
-
 
     @Override
     @NotNull
@@ -229,13 +270,13 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      */
     @Override
     public long epoch() {
-        return epoch == null ? 0L : epoch;
+        return epoch == null ?  Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
     }
 
     @Override
     @NotNull
     public RollCycle rollCycle() {
-        return this.rollCycle == null ? RollCycles.DAILY : rollCycle;
+        return this.rollCycle == null ? loadDefaultRollCycle() : rollCycle;
     }
 
     /**
@@ -322,7 +363,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public int indexCount() {
-        return indexCount == null || indexCount <= 0 ? rollCycle().defaultIndexCount() : indexCount;
+        return indexCount <= 0 ? rollCycle.defaultIndexCount() : indexCount;
     }
 
     @Override
@@ -442,7 +483,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     @Override
-    public Boolean strongAppenders() {
+    public boolean strongAppenders() {
         return strongAppenders;
     }
 
