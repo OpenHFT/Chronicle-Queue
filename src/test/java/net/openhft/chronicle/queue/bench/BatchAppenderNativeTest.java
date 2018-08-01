@@ -22,25 +22,31 @@ public class BatchAppenderNativeTest {
     public void testNative() {
         if (!OS.isMacOSX())
             return;
+
         Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
-        BatchAppenderNative batchAppenderNative = new BatchAppenderNative();
+        try {
 
-        // this will append a message in wire of hello world
-        long result = batchAppenderNative.writeMessages(bytes.addressForWrite(0), bytes.realCapacity(), 1);
+            BatchAppenderNative batchAppenderNative = new BatchAppenderNative();
 
-        int len = (int) result;
-        int count = (int) (result >> 32);
-        bytes.readLimit(len);
+            // this will append a message in wire of hello world
+            long result = batchAppenderNative.writeMessages(bytes.addressForWrite(0), bytes.realCapacity(), 1);
 
-        Assert.assertEquals(16, len);
-        Assert.assertEquals(1, count);
+            int len = (int) result;
+            int count = (int) (result >> 32);
+            bytes.readLimit(len);
 
-        Wire w = WireType.BINARY.apply(bytes);
+            Assert.assertEquals(16, len);
+            Assert.assertEquals(1, count);
 
-        for (int i = 0; i < count; i++) {
-            try (DocumentContext dc = w.readingDocument()) {
-                Assert.assertEquals("hello world", dc.wire().getValueIn().text());
+            Wire w = WireType.BINARY.apply(bytes);
+
+            for (int i = 0; i < count; i++) {
+                try (DocumentContext dc = w.readingDocument()) {
+                    Assert.assertEquals("hello world", dc.wire().getValueIn().text());
+                }
             }
+        } finally {
+            bytes.release();
         }
 
     }
