@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
-import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
@@ -58,8 +57,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
     public static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
 
-    protected long blockSize;
-    @NotNull
     protected WireType wireType;
 
     protected RollCycle rollCycle;
