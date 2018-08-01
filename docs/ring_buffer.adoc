@@ -5,7 +5,9 @@
 
 == Chronicle Queue Enterprise Ring Buffer
 
-Chronicle Queue Enterprise Ring Buffer provides a high performance, multi-writer, multi-reader, ring buffer implementation which can be used in your application code.
+Chronicle Queue Enterprise Ring Buffer provides a high performance, multi-writer, multi-reader, ring buffer implementation
+which can be used in your application code. https://jerryshea.github.io/2018/07/27/RingBuffer.html[This article]
+gives some examples of how high-percentile latencies can be reduced.
 
 Additionally, it allows the ring buffer to be accessed
 through two different implementations of the `ChronicleQueue` interface.
@@ -15,15 +17,19 @@ image::images/Ring_buffer.svg[]
 
 === The mechanics of Chronicle Ring Buffer
 
-The Chronicle Queue Enterprise Ring Buffer is a multi-writer, multi-reader, zero-garbage collection, monitored ring buffer implementation which takes `Bytes`.
+The Chronicle Queue Enterprise Ring Buffer is a multi-writer, multi-reader, zero-garbage collection, monitored ring buffer
+implementation which takes `Bytes`.
 
-As the Chronicle stack is built on `Bytes`, you can use the ring buffer for byte arrays, packed objects, or you can serialise (or de-serialise objects out of, or into, it using
-https://github.com/OpenHFT/Chronicle-Wire[Chronicle Wire].
+As the Chronicle stack is built on `Bytes`, you can use the ring buffer for byte arrays, packed objects, or you can serialise
+(or de-serialise objects out of, or into, it using https://github.com/OpenHFT/Chronicle-Wire[Chronicle Wire].
 
 When you create a ring buffer then any reader can block all writers. If a reader stops reading
-then this will eventually block writers. The number of readers is fixed, and they are all created when the ring buffer is created; when the underlying BytesStore is first written-to. The readers will live for as long as the ring buffer; until you stop using the BytesStore.
+then this will eventually block writers. The number of readers is fixed, and they are all created when the ring buffer is
+created; when the underlying BytesStore is first written-to. The readers will live for as long as the ring buffer; until
+you stop using the BytesStore.
 
-Backing the ring buffer with a persistent BytesStore (that is, one backed with a memory-mapped file) means it will be visible to multiple processes. All processes can write to, and read from, the ring buffer.
+Backing the ring buffer with a persistent BytesStore (that is, one backed with a memory-mapped file) means it will be
+visible to multiple processes. All processes can write to, and read from, the ring buffer.
 
 ==== Common scenarios:
 - Back the ring buffer with an in-memory BytesStore. +
@@ -66,23 +72,8 @@ TODO: add this in
 
 There are two types of Chronicle Queue which are backed by the ring buffer:
 
-- `software.chronicle.enterprise.queue.RingBufferChronicleQueue`
 - `software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue`
-
-==== software.chronicle.enterprise.queue.RingBufferChronicleQueue
-
-This queue does not implement the full contract of `ChronicleQueue`, and will throw a `UnsupportedOperationException`
-from some methods. It is created as in the example below, where:
-
-- `ringBuffer` is the ring buffer to back this queue with,
-- `wireType` is the wire type to use when appending and tailing,
-- `pauser` is the pauser to use by the appender when waiting for readers.
-
-```
-    ChronicleQueue rbq = new RingBufferChronicleQueue(ringBuffer, wireType, pauser);
-```
-
-It can be used in the same way as any other Chronicle Queue implementation.
+- `software.chronicle.enterprise.queue.RingBufferChronicleQueue`
 
 ==== software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue
 
@@ -156,3 +147,19 @@ loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue
 ===== Drainer thread
 When the queue's event loop is closed, the drainer thread will wait up to 5 seconds to finish draining
 to the underlying queue. If draining can not complete, a warning message is logged
+
+
+==== software.chronicle.enterprise.queue.RingBufferChronicleQueue
+
+This queue does not implement the full contract of `ChronicleQueue`, and will throw a `UnsupportedOperationException`
+from some methods. It is created as in the example below, where:
+
+- `ringBuffer` is the ring buffer to back this queue with,
+- `wireType` is the wire type to use when appending and tailing,
+- `pauser` is the pauser to use by the appender when waiting for readers.
+
+```
+    ChronicleQueue rbq = new RingBufferChronicleQueue(ringBuffer, wireType, pauser);
+```
+
+It can be used in the same way as any other Chronicle Queue implementation.
