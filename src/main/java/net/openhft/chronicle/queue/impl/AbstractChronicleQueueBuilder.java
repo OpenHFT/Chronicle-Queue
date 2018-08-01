@@ -273,7 +273,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     @NotNull
     public RollCycle rollCycle() {
-        return this.rollCycle == null ? loadDefaultRollCycle() : rollCycle;
+        RollCycle defaultRollCycle = loadDefaultRollCycle();
+        return this.rollCycle == null ? defaultRollCycle : this.rollCycle;
     }
 
     /**
