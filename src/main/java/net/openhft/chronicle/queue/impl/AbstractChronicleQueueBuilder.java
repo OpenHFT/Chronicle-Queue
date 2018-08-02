@@ -316,8 +316,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     /**
      * @return BufferMode to use for reads. Only None is available is the OSS
      */
+    @Override
     public BufferMode readBufferMode() {
-        return readBufferMode;
+        return readBufferMode == null ? BufferMode.None : readBufferMode;
     }
 
     public B readBufferMode(BufferMode readBufferMode) {
