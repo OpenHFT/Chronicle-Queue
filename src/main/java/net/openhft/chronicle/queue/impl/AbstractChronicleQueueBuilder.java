@@ -61,7 +61,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     protected RollCycle rollCycle;
     protected Long epoch; // default is 1970-01-01 00:00:00.000 UTC
-    public BufferMode writeBufferMode = BufferMode.None, readBufferMode = BufferMode.None;
+    public BufferMode writeBufferMode;
+    public BufferMode readBufferMode;
     protected Boolean enableRingBufferMonitoring;
     @Nullable
     protected EventLoop eventLoop;
@@ -83,7 +84,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
     private Supplier<TimingPauser> pauserSupplier = () -> new TimeoutPauser(500_000);
     private Long timeoutMS; // 10 seconds.
-    private WireStoreFactory storeFactory;
+    protected WireStoreFactory storeFactory;
     private Integer sourceId;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private StoreFileListener storeFileListener;
@@ -93,10 +94,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     public AbstractChronicleQueueBuilder(File path) {
         this.path = path;
-        storeFileListener = (cycle, file) -> {
-            if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "File released " + file);
-        };
     }
 
     private RollCycle loadDefaultRollCycle(){
@@ -403,14 +400,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return timeoutMS == null ? 10_000L : timeoutMS;
     }
 
-    public void storeFactory(WireStoreFactory storeFactory) {
-        this.storeFactory = storeFactory;
-    }
 
-    @Override
-    public WireStoreFactory storeFactory() {
-        return storeFactory;
-    }
 
     @Override
     public B storeFileListener(StoreFileListener storeFileListener) {
@@ -420,7 +410,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public StoreFileListener storeFileListener() {
-        return storeFileListener;
+        return storeFileListener == null ?
+                (cycle, file) -> {
+                    if (Jvm.isDebugEnabled(getClass()))
+                        Jvm.debug().on(getClass(), "File released " + file);
+                } : storeFileListener;
+
     }
 
     public B sourceId(int sourceId) {

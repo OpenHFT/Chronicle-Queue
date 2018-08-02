@@ -24,10 +24,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.StoreFileListener;
-import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -53,7 +50,7 @@ import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
-
+    private WireStoreFactory storeFactory;
     static {
         CLASS_ALIASES.addAlias(WireType.class);
         CLASS_ALIASES.addAlias(SCQMeta.class, "SCQMeta");
@@ -75,7 +72,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     @Deprecated
     public SingleChronicleQueueBuilder(@NotNull File path) {
         super(path);
-        storeFactory(SingleChronicleQueueBuilder::createStore);
+    }
+
+    @Override
+    public WireStoreFactory storeFactory() {
+        return storeFactory == null ? SingleChronicleQueueBuilder::createStore : storeFactory;
     }
 
     public static void addAliases() {
@@ -149,7 +150,8 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     // *************************************************************************
 
     @NotNull
-    static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue, @NotNull Wire wire) {
+    static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue,
+                                                 @NotNull Wire wire) {
         final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
                 queue.rollCycle(),
                 queue.wireType(),
