@@ -126,7 +126,7 @@ In addition, you will be fully supported by our technical experts.
 
 For more information on Chronicle Queue (Enterprise Edition), please contact mailto:sales@chronicle.software[sales@chronicle.software].
 
-== How does Chronicle Queue v4 work
+== How does Chronicle Queue work
 
 === Terminology
 
