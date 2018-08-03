@@ -62,6 +62,9 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     protected TableStore<SCQMeta> metaStore;
 
+    public SingleChronicleQueueBuilder() {
+    }
+
     @SuppressWarnings("unchecked")
     @Deprecated
     public SingleChronicleQueueBuilder(@NotNull String path) {

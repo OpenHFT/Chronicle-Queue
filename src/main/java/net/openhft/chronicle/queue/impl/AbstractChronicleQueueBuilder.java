@@ -67,6 +67,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Nullable
     protected EventLoop eventLoop;
 
+    protected AbstractChronicleQueueBuilder() {
+    }
+
     @Override
     public boolean hasBlockSize() {
         return blockSize != null;
