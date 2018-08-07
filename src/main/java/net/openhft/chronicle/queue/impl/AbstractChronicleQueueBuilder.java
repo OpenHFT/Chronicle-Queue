@@ -99,23 +99,23 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.path = path;
     }
 
-    private RollCycle loadDefaultRollCycle(){
+    private RollCycle loadDefaultRollCycle() {
         if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
             return RollCycles.DAILY;
         }
 
         String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
-        if(rollCyclePropertyParts.length > 0) {
+        if (rollCyclePropertyParts.length > 0) {
             try {
                 Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
                 if (Enum.class.isAssignableFrom(rollCycleClass)) {
-                    if(rollCyclePropertyParts.length < 2){
+                    if (rollCyclePropertyParts.length < 2) {
                         LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
                     } else {
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
-                        if(instance instanceof RollCycle) {
+                        if (instance instanceof RollCycle) {
                             return (RollCycle) instance;
                         } else {
                             LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
@@ -123,7 +123,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
                     }
                 } else {
                     Object instance = ObjectUtils.newInstance(rollCycleClass);
-                    if(instance instanceof RollCycle) {
+                    if (instance instanceof RollCycle) {
                         return (RollCycle) instance;
                     } else {
                         LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
@@ -267,7 +267,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      */
     @Override
     public long epoch() {
-        return epoch == null ?  Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
+        return epoch == null ? Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
     }
 
     @Override
@@ -404,8 +404,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return timeoutMS == null ? 10_000L : timeoutMS;
     }
 
-
-
     @Override
     public B storeFileListener(StoreFileListener storeFileListener) {
         this.storeFileListener = storeFileListener;
@@ -449,11 +447,13 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public B readOnly(boolean readOnly) {
-        if (OS.isWindows() && readOnly) {
+        if (OS.isWindows() && readOnly)
             Jvm.warn().on(AbstractChronicleQueueBuilder.class,
-                    "Read-only mode is not supported on Windows® platforms, defaulting to read/write.");
-        }
-        this.readOnly = readOnly;
+                    "Read-only mode is not supported on Windows® platforms, defaulting to " +
+                            "read/write.");
+        else
+            this.readOnly = readOnly;
+
         return (B) this;
     }
 
