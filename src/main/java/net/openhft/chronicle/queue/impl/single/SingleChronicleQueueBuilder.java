@@ -107,14 +107,14 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
     /**
      * @return an empty builder
      */
-    public static SingleChronicleQueueBuilder builder() {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> builder() {
 
         try {
             return ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR.newInstance();
         } catch (Exception ignore) {
         }
 
-        return new SingleChronicleQueueBuilder();
+        return new SingleChronicleQueueBuilder<>();
     }
 
     protected SingleChronicleQueueBuilder() {

@@ -36,11 +36,19 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.builder;
+
 /**
  * @author Rob Austin.
  */
 public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue>
         extends Cloneable, Marshallable {
+
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> single() {
+        SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> builder = builder();
+        builder.wireType(WireType.BINARY_LIGHT);
+        return builder;
+    }
 
     static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> single(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
