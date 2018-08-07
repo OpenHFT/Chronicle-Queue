@@ -18,9 +18,12 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.core.util.ThrowingBiFunction;
+import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
@@ -36,10 +39,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
@@ -47,10 +52,19 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
-public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, Q extends SingleChronicleQueue>
+public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, Q extends
+        SingleChronicleQueue>
         extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S, Q>, Q> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
+    private static final String ENTERPRISE_ONLY = "this is only supported in the enterprise version";
     private WireStoreFactory storeFactory;
+
+    private final static Constructor<SingleChronicleQueue> ENTERPISE_QUEUE_CONSTRUCTOR;
+    private final static Constructor<SingleChronicleQueueBuilder>
+            ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR;
+    public final static boolean IS_ENTERPRISE_QUEUE_ON_CLASSPATH;
+    protected TableStore<SCQMeta> metaStore;
+
     static {
         CLASS_ALIASES.addAlias(WireType.class);
         CLASS_ALIASES.addAlias(SCQMeta.class, "SCQMeta");
@@ -58,11 +72,52 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
         CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
+
+        {
+            Constructor co;
+            try {
+                co = ((Class) Class.forName("software.chronicle.enterprise.queue" +
+                        ".EnterpriseSingleChronicleQueue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
+                co.setAccessible(true);
+            } catch (Exception e) {
+                co = null;
+            }
+            ENTERPISE_QUEUE_CONSTRUCTOR = co;
+            IS_ENTERPRISE_QUEUE_ON_CLASSPATH = (co != null);
+        }
+        {
+            Constructor co;
+            try {
+                Class<?> aClass = Class.forName("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder");
+                co = ((Class) aClass).getDeclaredConstructors()[0];
+                co.setAccessible(true);
+                CLASS_ALIASES.addAlias(aClass, "QueueBuilder");
+            } catch (Exception e) {
+                co = null;
+                CLASS_ALIASES.addAlias(SingleChronicleQueueBuilder.class, "QueueBuilder");
+            }
+
+            ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR = co;
+
+        }
+
     }
 
-    protected TableStore<SCQMeta> metaStore;
+    /**
+     * @return an empty builder
+     */
+    public static SingleChronicleQueueBuilder builder() {
 
-    public SingleChronicleQueueBuilder() {
+        try {
+            return ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR.newInstance();
+        } catch (Exception ignore) {
+        }
+
+        return new SingleChronicleQueueBuilder();
+    }
+
+    protected SingleChronicleQueueBuilder() {
+
     }
 
     @SuppressWarnings("unchecked")
@@ -97,6 +152,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
 
     @NotNull
     public static SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
+        SingleChronicleQueueBuilder result = builder().wireType(wireType);
         if (file.isFile()) {
             if (!file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
                 throw new IllegalArgumentException("Invalid file type: " + file.getName());
@@ -105,11 +161,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
             LOGGER.warn("Queues should be configured with the queue directory, not a specific filename. Actual file used: {}",
                     file.getParentFile());
 
-            return new SingleChronicleQueueBuilder<>(file.getParentFile())
-                    .wireType(wireType);
-        }
-        return new SingleChronicleQueueBuilder<>(file)
-                .wireType(wireType);
+            result.path(file.getParentFile());
+        } else
+            result.path(file);
+
+        return result;
     }
 
     @NotNull
@@ -204,12 +260,29 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         if (writeBufferMode() != BufferMode.None)
             onlyAvailableInEnterprise("Buffering");
         super.preBuild();
+
+        Q result = buildEnterprise();
+        if (result != null)
+            return result;
+
         return (Q) new SingleChronicleQueue((SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue>) this);
     }
 
     private void onlyAvailableInEnterprise(final String feature) {
         getLogger().warn(feature + " is only supported in Chronicle Queue Enterprise. " +
                 "If you would like to use this feature, please contact sales@chronicle.software for more information.");
+    }
+
+    private Q buildEnterprise() {
+        if (IS_ENTERPRISE_QUEUE_ON_CLASSPATH)
+            return null;
+
+        try {
+            return (Q) ENTERPISE_QUEUE_CONSTRUCTOR.newInstance(this, null);
+        } catch (Exception e) {
+            return null;
+        }
+
     }
 
     @Nullable
@@ -385,6 +458,9 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
             }
         } catch (IORuntimeException ex) {
             // readonly=true and file doesn't exist
+            if (OS.isWindows())
+                throw ex; // we cant have a read-only table store on windows so we have no option
+            // but to throw the ex.
             metaStore = new ReadonlyTableStore<>(metadata);
         }
     }
@@ -428,12 +504,12 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
     }
 
     @NotNull
-    protected QueueLock queueLock() {
+    QueueLock queueLock() {
         return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2) : new NoopQueueLock();
     }
 
     @NotNull
-    protected WriteLock writeLock() {
+    WriteLock writeLock() {
         return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2);
     }
 
@@ -441,7 +517,45 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         return -1;
     }
 
-    protected TableStore<SCQMeta> metaStore() {
+    public S enablePreloader(final long pretouchIntervalMillis) {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    private boolean startPreloader() {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    TableStore<SCQMeta> metaStore() {
         return metaStore;
+    }
+
+    public Updater<Bytes> messageInitializer() {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    public Consumer<Bytes> messageHeaderReader() {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    public S messageHeader(Updater<Bytes> messageInitializer,
+                           Consumer<Bytes> messageHeaderReader) {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    public S maxTailers(int maxTailers) {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    public int maxTailers() {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    public S bufferBytesStoreCreator(ThrowingBiFunction<Long,
+            Integer, BytesStore, Exception> bufferBytesStoreCreator) {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
     }
 }

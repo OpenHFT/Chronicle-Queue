@@ -26,7 +26,6 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MessageHistory;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -228,9 +227,16 @@ public class OrderManagerTest {
         } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
-                IOTools.shallowDeleteDirWithFiles(queuePath2);
-            } catch (Exception e) {
+
+            } catch (Exception ignore) {
             }
+
+            try {
+
+                IOTools.shallowDeleteDirWithFiles(queuePath2);
+            } catch (Exception ignore) {
+            }
+
         }
     }
 }

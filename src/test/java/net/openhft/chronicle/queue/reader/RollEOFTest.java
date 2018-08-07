@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.reader;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.DirectoryUtils;
@@ -44,7 +45,6 @@ import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
@@ -52,83 +52,98 @@ import static org.junit.Assert.*;
 
 public class RollEOFTest {
 
-    private final File path = DirectoryUtils.tempDir(getClass().getName());
-
     @Test(timeout = 5000L)
     public void testRollWritesEOF() throws Exception {
+        final File path = DirectoryUtils.tempDir(getClass().getName());
+        try {
+            path.mkdirs();
+            final SetTimeProvider timeProvider = new SetTimeProvider();
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_MONTH, -1);
+            timeProvider.currentTimeMillis(cal.getTimeInMillis());
+            createQueueAndWriteData(timeProvider, path);
+            assertEquals(1, getNumberOfQueueFiles(path));
 
-        final SetTimeProvider timeProvider = new SetTimeProvider();
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_MONTH, -1);
-        timeProvider.currentTimeMillis(cal.getTimeInMillis());
-        createQueueAndWriteData(timeProvider);
-        assertEquals(1, getNumberOfQueueFiles());
+            // adjust time
+            timeProvider.currentTimeMillis(System.currentTimeMillis());
+            createQueueAndWriteData(timeProvider, path);
+            assertEquals(2, getNumberOfQueueFiles(path));
 
-        // adjust time
-        timeProvider.currentTimeMillis(System.currentTimeMillis());
-        createQueueAndWriteData(timeProvider);
-        assertEquals(2, getNumberOfQueueFiles());
-
-        List<String> l = new LinkedList<>();
-        new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
-        // 2 entries per message
-        assertEquals(4, l.size());
+            List<String> l = new LinkedList<>();
+            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
+            // 2 entries per message
+            assertEquals(4, l.size());
+        } finally {
+            IOTools.deleteDirWithFiles(path, 20);
+        }
     }
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOFDoesntBlowup() throws Exception {
+        final File path = DirectoryUtils.tempDir(getClass().getName());
+        try {
+            path.mkdirs();
+            final SetTimeProvider timeProvider = new SetTimeProvider();
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_MONTH, -1);
+            timeProvider.currentTimeMillis(cal.getTimeInMillis());
+            createQueueAndWriteData(timeProvider, path);
+            assertEquals(1, getNumberOfQueueFiles(path));
 
-        final SetTimeProvider timeProvider = new SetTimeProvider();
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_MONTH, -1);
-        timeProvider.currentTimeMillis(cal.getTimeInMillis());
-        createQueueAndWriteData(timeProvider);
-        assertEquals(1, getNumberOfQueueFiles());
+            // adjust time
+            timeProvider.currentTimeMillis(System.currentTimeMillis());
+            createQueueAndWriteData(timeProvider, path);
+            assertEquals(2, getNumberOfQueueFiles(path));
 
-        // adjust time
-        timeProvider.currentTimeMillis(System.currentTimeMillis());
-        createQueueAndWriteData(timeProvider);
-        assertEquals(2, getNumberOfQueueFiles());
+            Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
 
-        Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
+            assertTrue(firstQueueFile.isPresent());
 
-        assertTrue(firstQueueFile.isPresent());
+            // remove EOF from first file
+            removeEOF(firstQueueFile.get());
 
-        // remove EOF from first file
-        removeEOF(firstQueueFile.get());
+            List<String> l = new LinkedList<>();
+            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
+            // 2 entries per message
+            assertEquals(4, l.size());
+        } finally {
 
-        List<String> l = new LinkedList<>();
-        new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
-        // 2 entries per message
-        assertEquals(4, l.size());
+            IOTools.deleteDirWithFiles(path, 20);
+        }
     }
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOF() throws Exception {
+        final File path = DirectoryUtils.tempDir(getClass().getName());
+        try {
+            path.mkdirs();
+            final SetTimeProvider timeProvider = new SetTimeProvider();
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_MONTH, -3);
+            timeProvider.currentTimeMillis(cal.getTimeInMillis());
+            createQueueAndWriteData(timeProvider, path);
+            assertEquals(1, getNumberOfQueueFiles(path));
 
-        final SetTimeProvider timeProvider = new SetTimeProvider();
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_MONTH, -3);
-        timeProvider.currentTimeMillis(cal.getTimeInMillis());
-        createQueueAndWriteData(timeProvider);
-        assertEquals(1, getNumberOfQueueFiles());
+            // adjust time
+            timeProvider.currentTimeMillis(System.currentTimeMillis());
+            createQueueAndWriteData(timeProvider, path);
+            assertEquals(2, getNumberOfQueueFiles(path));
 
-        // adjust time
-        timeProvider.currentTimeMillis(System.currentTimeMillis());
-        createQueueAndWriteData(timeProvider);
-        assertEquals(2, getNumberOfQueueFiles());
+            Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
 
-        Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
+            assertTrue(firstQueueFile.isPresent());
 
-        assertTrue(firstQueueFile.isPresent());
+            // remove EOF from first file
+            removeEOF(firstQueueFile.get());
 
-        // remove EOF from first file
-        removeEOF(firstQueueFile.get());
+            List<String> l = new LinkedList<>();
+            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).withReadOnly(false).execute();
+            // 2 entries per message
+            assertEquals(4, l.size());
+        } finally {
 
-        List<String> l = new LinkedList<>();
-        new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).withReadOnly(false).execute();
-        // 2 entries per message
-        assertEquals(4, l.size());
+            IOTools.deleteDirWithFiles(path, 20);
+        }
     }
 
     private void removeEOF(Path path) throws IOException {
@@ -166,15 +181,16 @@ public class RollEOFTest {
         }
     }
 
-    private long getNumberOfQueueFiles() throws IOException {
-        return getQueueFilesStream().count();
+    private long getNumberOfQueueFiles(final File path) throws IOException {
+        return getQueueFilesStream(path).count();
     }
 
-    private Stream<Path> getQueueFilesStream() throws IOException {
+    private Stream<Path> getQueueFilesStream(final File path) throws IOException {
         return Files.list(path.toPath()).filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX));
     }
 
-    private void createQueueAndWriteData(TimeProvider timeProvider) {
+    private void createQueueAndWriteData(TimeProvider timeProvider, File path) {
+
         final SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(path)
                 .testBlockSize()
@@ -187,5 +203,6 @@ public class RollEOFTest {
         try (DocumentContext dc = excerptAppender.writingDocument(false)) {
             dc.wire().write(() -> "test").int64(0);
         }
+
     }
 }

@@ -50,12 +50,13 @@ import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue>
         implements ChronicleQueueBuilder<B, Q>, Marshallable {
 
+    private static final String MESSAGE = "Only supported in Chronicle Queue Enterprise";
     protected File path;
     protected Long blockSize;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractChronicleQueueBuilder.class);
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
-    public static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
+    private static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
 
     protected WireType wireType;
 
@@ -63,11 +64,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     protected Long epoch; // default is 1970-01-01 00:00:00.000 UTC
     public BufferMode writeBufferMode;
     public BufferMode readBufferMode;
-    protected Boolean enableRingBufferMonitoring;
+    private Boolean enableRingBufferMonitoring;
     @Nullable
     protected EventLoop eventLoop;
 
     protected AbstractChronicleQueueBuilder() {
+
     }
 
     @Override
@@ -459,12 +461,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @NotNull
     public AbstractChronicleQueueBuilder encryptSupplier(Supplier<Cipher> encryptSupplier) {
-        throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
+        throw new UnsupportedOperationException(MESSAGE);
     }
 
     @NotNull
     public AbstractChronicleQueueBuilder decryptSupplier(Supplier<Cipher> decryptSupplier) {
-        throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
+        throw new UnsupportedOperationException(MESSAGE);
     }
 
     protected void preBuild() {

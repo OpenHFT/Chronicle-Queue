@@ -255,4 +255,5 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extend
      * @return true if the bockSize has been set, Hence is non null
      */
     boolean hasBlockSize();
+
 }
