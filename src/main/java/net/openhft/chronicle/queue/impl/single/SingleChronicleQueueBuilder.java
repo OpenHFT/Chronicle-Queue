@@ -75,8 +75,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         {
             Constructor co;
             try {
-                co = ((Class) Class.forName("software.chronicle.enterprise.queue" +
-                        ".EnterpriseSingleChronicleQueue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
+                co = ((Class) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
                 co.setAccessible(true);
             } catch (Exception e) {
                 e.printStackTrace();
