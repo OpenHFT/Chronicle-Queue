@@ -92,8 +92,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private StoreFileListener storeFileListener;
 
-    protected Boolean readOnly = false;
-    private Boolean strongAppenders = false;
+    protected Boolean readOnly;
+    private Boolean strongAppenders;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.path = path;
@@ -481,7 +481,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public boolean strongAppenders() {
-        return strongAppenders;
+        return strongAppenders == Boolean.TRUE;
     }
 
     @Override
