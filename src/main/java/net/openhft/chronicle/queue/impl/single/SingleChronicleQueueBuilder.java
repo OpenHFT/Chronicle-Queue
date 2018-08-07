@@ -80,6 +80,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
                         ".EnterpriseSingleChronicleQueue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
                 co.setAccessible(true);
             } catch (Exception e) {
+                e.printStackTrace();
                 co = null;
             }
             ENTERPISE_QUEUE_CONSTRUCTOR = co;
