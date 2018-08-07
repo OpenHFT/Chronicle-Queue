@@ -50,44 +50,60 @@ public class ReadonlyTableStore<T extends Metadata> implements TableStore<T> {
 
     @Override
     public <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code) {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 
     @Nullable
     @Override
     public File file() {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 
     @NotNull
     @Override
     public MappedBytes bytes() {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 
     @NotNull
     @Override
     public String dump() {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 
     @Override
     public void reserve() throws IllegalStateException {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 
     @Override
     public void release() throws IllegalStateException {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 
     @Override
     public long refCount() {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        throw new UnsupportedOperationException("Read only");
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
     }
 }
