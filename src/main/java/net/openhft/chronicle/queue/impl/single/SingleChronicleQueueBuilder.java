@@ -60,8 +60,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
     private WireStoreFactory storeFactory;
 
     private final static Constructor<SingleChronicleQueue> ENTERPISE_QUEUE_CONSTRUCTOR;
-    private final static Constructor<SingleChronicleQueueBuilder>
-            ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR;
+    private final static Constructor<SingleChronicleQueueBuilder> ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR;
     public final static boolean IS_ENTERPRISE_QUEUE_ON_CLASSPATH;
     protected TableStore<SCQMeta> metaStore;
 
@@ -90,12 +89,14 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
             Constructor co;
             try {
                 Class<?> aClass = Class.forName("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder");
-                co = ((Class) aClass).getDeclaredConstructors()[0];
+                co = ((Class) aClass).getDeclaredConstructor();
                 co.setAccessible(true);
                 CLASS_ALIASES.addAlias(aClass, "QueueBuilder");
             } catch (Exception e) {
+                e.printStackTrace();
                 co = null;
                 CLASS_ALIASES.addAlias(SingleChronicleQueueBuilder.class, "QueueBuilder");
+
             }
 
             ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR = co;
