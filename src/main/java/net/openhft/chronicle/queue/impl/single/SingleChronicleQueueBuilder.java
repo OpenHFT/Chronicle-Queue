@@ -47,8 +47,8 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
-public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
-        extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S>> {
+public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, Q extends SingleChronicleQueue>
+        extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S, Q>, Q> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
     private WireStoreFactory storeFactory;
     static {
@@ -91,7 +91,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     @NotNull
-    public static <S extends SingleChronicleQueueBuilder<S>> SingleChronicleQueueBuilder<S> builder(@NotNull Path path, @NotNull WireType wireType) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> builder(@NotNull Path path, @NotNull WireType wireType) {
         return builder(path.toFile(), wireType);
     }
 
@@ -113,38 +113,38 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder binary(@NotNull Path path) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> binary(@NotNull Path path) {
         return binary(path.toFile());
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder binary(@NotNull String basePath) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> binary(@NotNull String basePath) {
         return binary(new File(basePath));
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> binary(@NotNull File basePathFile) {
         return builder(basePathFile, WireType.BINARY_LIGHT);
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder fieldlessBinary(@NotNull File name) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> fieldlessBinary(@NotNull File name) {
         return builder(name, WireType.FIELDLESS_BINARY);
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> defaultZeroBinary(@NotNull File basePathFile) {
         return builder(basePathFile, DEFAULT_ZERO_BINARY);
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder deltaBinary(@NotNull File basePathFile) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> deltaBinary(@NotNull File basePathFile) {
         return builder(basePathFile, DELTA_BINARY);
     }
 
     @Deprecated
     @NotNull
-    public static SingleChronicleQueueBuilder text(@NotNull File name) {
+    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> text(@NotNull File name) {
         return builder(name, WireType.TEXT);
     }
 
@@ -198,13 +198,13 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     @Override
     @NotNull
-    public SingleChronicleQueue build() {
+    public Q build() {
         if (readBufferMode() != BufferMode.None)
             onlyAvailableInEnterprise("Buffering");
         if (writeBufferMode() != BufferMode.None)
             onlyAvailableInEnterprise("Buffering");
         super.preBuild();
-        return new SingleChronicleQueue(this);
+        return (Q) new SingleChronicleQueue((SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue>) this);
     }
 
     private void onlyAvailableInEnterprise(final String feature) {
@@ -242,125 +242,125 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> testBlockSize() {
+    public S testBlockSize() {
         super.testBlockSize();
-        return this;
+        return (S) this;
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> sourceId(int sourceId) {
-        return super.sourceId(sourceId);
-    }
-
-    @NotNull
-    @Override
-    public SingleChronicleQueueBuilder<S> blockSize(int blockSize) {
-        return super.blockSize(blockSize);
+    public S sourceId(int sourceId) {
+        return (S) super.sourceId(sourceId);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> blockSize(long blockSize) {
-        return super.blockSize(blockSize);
+    public S blockSize(int blockSize) {
+        return (S) super.blockSize(blockSize);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> wireType(@NotNull WireType wireType) {
-        return super.wireType(wireType);
+    public S blockSize(long blockSize) {
+        return (S) super.blockSize(blockSize);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> rollCycle(@NotNull RollCycle rollCycle) {
-        return super.rollCycle(rollCycle);
+    public S wireType(@NotNull WireType wireType) {
+        return (S) super.wireType(wireType);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> bufferCapacity(long bufferCapacity) {
-        return super.bufferCapacity(bufferCapacity);
+    public S rollCycle(@NotNull RollCycle rollCycle) {
+        return (S) super.rollCycle(rollCycle);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> epoch(long epoch) {
-        return super.epoch(epoch);
+    public S bufferCapacity(long bufferCapacity) {
+        return (S) super.bufferCapacity(bufferCapacity);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> buffered(boolean isBuffered) {
-        return super.buffered(isBuffered);
-    }
-
-    @Override
-    public SingleChronicleQueueBuilder<S> writeBufferMode(BufferMode writeBufferMode) {
-        return super.writeBufferMode(writeBufferMode);
-    }
-
-    @Override
-    public SingleChronicleQueueBuilder<S> readBufferMode(BufferMode readBufferMode) {
-        return super.readBufferMode(readBufferMode);
+    public S epoch(long epoch) {
+        return (S) super.epoch(epoch);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> eventLoop(EventLoop eventLoop) {
-        return super.eventLoop(eventLoop);
+    public S buffered(boolean isBuffered) {
+        return (S) super.buffered(isBuffered);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> indexCount(int indexCount) {
-        return super.indexCount(indexCount);
+    public S writeBufferMode(BufferMode writeBufferMode) {
+        return (S) super.writeBufferMode(writeBufferMode);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> indexSpacing(int indexSpacing) {
-        return super.indexSpacing(indexSpacing);
+    public S readBufferMode(BufferMode readBufferMode) {
+        return (S) super.readBufferMode(readBufferMode);
+    }
+
+    @NotNull
+    @Override
+    public S eventLoop(EventLoop eventLoop) {
+        return (S) super.eventLoop(eventLoop);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> timeProvider(TimeProvider timeProvider) {
-        return super.timeProvider(timeProvider);
+    public S indexCount(int indexCount) {
+        return (S) super.indexCount(indexCount);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> pauserSupplier(Supplier<TimingPauser> pauser) {
-        return super.pauserSupplier(pauser);
+    public S indexSpacing(int indexSpacing) {
+        return (S) super.indexSpacing(indexSpacing);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> path(final String path) {
-        return super.path(path);
+    public S timeProvider(TimeProvider timeProvider) {
+        return (S) super.timeProvider(timeProvider);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> timeoutMS(long timeoutMS) {
-        return super.timeoutMS(timeoutMS);
+    public S pauserSupplier(Supplier<TimingPauser> pauser) {
+        return (S) super.pauserSupplier(pauser);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> readOnly(boolean readOnly) {
-        return super.readOnly(readOnly);
+    public S path(final String path) {
+        return (S) super.path(path);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> storeFileListener(StoreFileListener storeFileListener) {
-        return super.storeFileListener(storeFileListener);
+    public S timeoutMS(long timeoutMS) {
+        return (S) super.timeoutMS(timeoutMS);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> recoverySupplier(StoreRecoveryFactory recoverySupplier) {
-        return super.recoverySupplier(recoverySupplier);
+    public S readOnly(boolean readOnly) {
+        return (S) super.readOnly(readOnly);
     }
 
     @Override
-    public SingleChronicleQueueBuilder<S> rollTime(@NotNull final LocalTime time, final ZoneId zoneId) {
+    public S storeFileListener(StoreFileListener storeFileListener) {
+        return (S) super.storeFileListener(storeFileListener);
+    }
+
+    @Override
+    public S recoverySupplier(StoreRecoveryFactory recoverySupplier) {
+        return (S) super.recoverySupplier(recoverySupplier);
+    }
+
+    @Override
+    public S rollTime(@NotNull final LocalTime time, final ZoneId zoneId) {
         if (!zoneId.equals(ZoneId.of("UTC"))) {
             onlyAvailableInEnterprise("Non-UTC time-zone");
         }
-        return super.rollTime(time, ZoneId.of("UTC"));
+        return (S) super.rollTime(time, ZoneId.of("UTC"));
     }
 
     @Override

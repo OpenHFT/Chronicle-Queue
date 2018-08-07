@@ -117,7 +117,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final RollingResourcesCache dateCache;
     private int deltaCheckpointInterval;
 
-    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder<?> builder) {
+    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder<?, SingleChronicleQueue> builder) {
         readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
         cycleCalculator = builder.cycleCalculator();

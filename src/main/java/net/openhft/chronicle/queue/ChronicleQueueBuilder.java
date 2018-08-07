@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.FieldInfo;
@@ -38,24 +39,24 @@ import java.util.function.Supplier;
 /**
  * @author Rob Austin.
  */
-public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
+public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue>
         extends Cloneable, Marshallable {
 
-    static SingleChronicleQueueBuilder single(@NotNull String basePath) {
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> single(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
-    static SingleChronicleQueueBuilder single(@NotNull File basePath) {
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> single(@NotNull File basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
     @Deprecated
-    static SingleChronicleQueueBuilder singleText(@NotNull String basePath) {
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> singleText(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.text(new File(basePath));
     }
 
     @NotNull
-    ChronicleQueue build();
+    Q build();
 
     @NotNull
     B onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats);
@@ -232,7 +233,9 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
      * @return that
      */
 
-    default B setAllNullFields(@NotNull ChronicleQueueBuilder source) {
+    default B setAllNullFields(@Nullable ChronicleQueueBuilder source) {
+        if (source == null)
+            return (B) this;
 
         List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(source.getClass());
 

@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import com.oracle.tools.packager.IOUtils;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
@@ -26,18 +27,16 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.util.*;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
 
 public class NotCompleteTest {
@@ -47,7 +46,7 @@ public class NotCompleteTest {
      */
     @Test
     public void testUsingANotCompleteQueue()
-            throws InterruptedException {
+            throws InterruptedException, FileNotFoundException {
 
         BinaryLongReference.startCollecting();
 
@@ -82,11 +81,12 @@ public class NotCompleteTest {
                 assertEquals("data", dc.wire().read(() -> "some").text());
             }
         }
+        IOUtils.deleteRecursive(tmpDir);
     }
 
     @Test
     public void testUsingANotCompleteArrayQueue()
-            throws InterruptedException {
+            throws InterruptedException, FileNotFoundException {
 
         BinaryLongArrayReference.startCollecting();
 
@@ -121,10 +121,11 @@ public class NotCompleteTest {
                 assertEquals("data", dc.wire().read(() -> "some").text());
             }
         }
+        IOUtils.deleteRecursive(tmpDir);
     }
 
     @Test
-    public void testMessageNotLeftIncomplete() {
+    public void testMessageNotLeftIncomplete() throws FileNotFoundException {
 
         File tmpDir = DirectoryUtils.tempDir("testMessageLeftNotComplete");
         try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).build()) {
@@ -220,11 +221,12 @@ public class NotCompleteTest {
 
             assertEquals(expected, queue.dump());
         }
+        IOUtils.deleteRecursive(tmpDir);
     }
 
     @Test
     public void testInterruptedDuringSerialisation()
-            throws InterruptedException {
+            throws InterruptedException, FileNotFoundException {
 
         final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
         DirectoryUtils.deleteDir(tmpDir);
@@ -320,6 +322,7 @@ public class NotCompleteTest {
             assertEquals(person2.name, names.get(1));
             assertFalse(reader.readOne());
         }
+        IOUtils.deleteRecursive(tmpDir);
     }
 
     // the last line of the dump changes - haven't spent the time to get to the bottom of this

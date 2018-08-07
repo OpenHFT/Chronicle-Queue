@@ -3,10 +3,7 @@ package net.openhft.chronicle.queue.reader;
 import net.openhft.chronicle.bytes.MethodWriterBuilder;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
@@ -55,7 +52,8 @@ public class ChronicleReaderTest {
     @Before
     public void before() {
         dataDir = DirectoryUtils.tempDir(ChronicleReaderTest.class.getSimpleName()).toPath();
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
+                .testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
             methodWriterBuilder.recordHistory(true);
@@ -70,10 +68,10 @@ public class ChronicleReaderTest {
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         if (OS.isWindows())
-            return;             // see https://github.com/OpenHFT/Chronicle-Queue/issues/523
+            return;             // see https://github.com/OpenHFT/Chronicle-Queue/issues/523      - 
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
@@ -95,7 +93,7 @@ public class ChronicleReaderTest {
             return;   // see https://github.com/OpenHFT/Chronicle-Queue/issues/523
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
@@ -143,7 +141,7 @@ public class ChronicleReaderTest {
         readerThread.start();
         assertTrue(executeLatch.await(5, TimeUnit.SECONDS));
         assertTrue(capturedOutput.isEmpty());
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
@@ -201,7 +199,7 @@ public class ChronicleReaderTest {
     public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
 
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
             events.say("hello");
@@ -236,7 +234,7 @@ public class ChronicleReaderTest {
     public void readOnlyQueueTailerInFollowModeShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
 
             final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
             events.say("hello");

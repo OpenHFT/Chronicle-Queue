@@ -47,8 +47,8 @@ import java.util.function.Supplier;
 import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 
 @SuppressWarnings("unchecked")
-public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>
-        implements ChronicleQueueBuilder<B>, Marshallable {
+public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue>
+        implements ChronicleQueueBuilder<B, Q>, Marshallable {
 
     protected File path;
     protected Long blockSize;

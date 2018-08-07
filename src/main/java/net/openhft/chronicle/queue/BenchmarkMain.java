@@ -174,8 +174,7 @@ public class BenchmarkMain {
 
     @NotNull
     private static SingleChronicleQueue createQueue(String path) {
-        return ChronicleQueueBuilder.single(path)
-                .blockSize(1 << 30)
+        return (SingleChronicleQueue) ChronicleQueueBuilder.single(path).blockSize(1 << 30)
                 .pauserSupplier(Pauser::timedBusy)
                 .build();
     }
