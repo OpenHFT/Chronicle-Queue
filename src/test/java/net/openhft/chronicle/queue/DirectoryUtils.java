@@ -43,7 +43,12 @@ public class DirectoryUtils {
     }
 
     public static void deleteDir(@NotNull File dir) {
-        IOTools.deleteDirWithFiles(dir, 20);
+        try {
+            IOTools.deleteDirWithFiles(dir, 20);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+
     }
 
     enum DeleteStatic {
