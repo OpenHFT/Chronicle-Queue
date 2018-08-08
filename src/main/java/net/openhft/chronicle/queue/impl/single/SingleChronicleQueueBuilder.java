@@ -78,7 +78,6 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
                 co = ((Class) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
                 co.setAccessible(true);
             } catch (Exception e) {
-                e.printStackTrace();
                 co = null;
             }
             ENTERPISE_QUEUE_CONSTRUCTOR = co;
@@ -92,7 +91,6 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
                 co.setAccessible(true);
                 CLASS_ALIASES.addAlias(aClass, "QueueBuilder");
             } catch (Exception e) {
-                e.printStackTrace();
                 co = null;
                 CLASS_ALIASES.addAlias(SingleChronicleQueueBuilder.class, "QueueBuilder");
 
