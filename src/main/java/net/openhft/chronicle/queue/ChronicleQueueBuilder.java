@@ -235,23 +235,23 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extend
     B path(File path);
 
     /**
-     * updates all the fields in {@code this} that are null, from the {@param source}
+     * updates all the fields in {@code this} that are null, from the {@param parentBuilder}
      *
-     * @param source the source Chronicle Queue Builder
+     * @param parentBuilder the parentBuilder Chronicle Queue Builder
      * @return that
      */
 
-    default B setAllNullFields(@Nullable ChronicleQueueBuilder source) {
-        if (source == null)
+    default B setAllNullFields(@Nullable ChronicleQueueBuilder parentBuilder) {
+        if (parentBuilder == null)
             return (B) this;
 
-        List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(source.getClass());
+        List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(parentBuilder.getClass());
 
         for (final FieldInfo fieldInfo : Wires.fieldInfos(this.getClass())) {
             if (!sourceFieldInfo.contains(fieldInfo))
                 continue;
             Object resultV = fieldInfo.get(this);
-            Object parentV = fieldInfo.get(source);
+            Object parentV = fieldInfo.get(parentBuilder);
             if (resultV == null && parentV != null)
                 fieldInfo.set(this, parentV);
 
