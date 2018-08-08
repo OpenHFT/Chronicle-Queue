@@ -97,7 +97,8 @@ public class ChronicleQueueTestBase {
     protected File getTmpDir() {
         final String methodName = testName.getMethodName();
         return DirectoryUtils.tempDir(methodName != null ?
-                methodName.replaceAll("[\\[\\]\\s]+", "_") : "NULL-" + UUID.randomUUID());
+                methodName.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_') : "NULL-" + UUID
+                .randomUUID());
     }
 
     @After
