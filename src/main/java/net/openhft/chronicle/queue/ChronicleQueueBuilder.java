@@ -208,6 +208,8 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extend
 
     StoreFileListener storeFileListener();
 
+    boolean hasPretouchIntervalMillis();
+
     boolean readOnly();
 
     B readOnly(boolean readOnly);

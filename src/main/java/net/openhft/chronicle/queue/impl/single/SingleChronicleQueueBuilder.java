@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.BufferMode;
+import net.openhft.chronicle.queue.QueueOffsetSpec;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.*;
@@ -175,6 +176,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
     @NotNull
     public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> binary(@NotNull String basePath) {
         return binary(new File(basePath));
+    }
+
+    @Override
+    public boolean hasPretouchIntervalMillis() {
+        return false;
     }
 
     @NotNull
@@ -520,13 +526,14 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         throw new UnsupportedOperationException(ENTERPRISE_ONLY);
     }
 
-    private boolean startPreloader() {
+    public QueueOffsetSpec queueOffsetSpec() {
         throw new UnsupportedOperationException(ENTERPRISE_ONLY);
     }
 
     TableStore<SCQMeta> metaStore() {
         return metaStore;
     }
+
 
     public Updater<Bytes> messageInitializer() {
         throw new UnsupportedOperationException(ENTERPRISE_ONLY);
@@ -555,6 +562,10 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
     }
 
     public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
+        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    }
+
+    public long pretouchIntervalMillis() {
         throw new UnsupportedOperationException(ENTERPRISE_ONLY);
     }
 }

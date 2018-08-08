@@ -27,6 +27,7 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
+import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.Marshallable;
@@ -331,10 +332,14 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
+    /**
+     * @return a new event loop instance if none has been set, otherwise the {@code eventLoop}
+     * that was set
+     */
     @Override
-    @Nullable
+    @NotNull
     public EventLoop eventLoop() {
-        return eventLoop;
+        return eventLoop == null ? new EventGroup(true) : eventLoop;
     }
 
     @Override
@@ -420,6 +425,11 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
                         Jvm.debug().on(getClass(), "File released " + file);
                 } : storeFileListener;
 
+    }
+
+    @Override
+    public boolean hasPretouchIntervalMillis() {
+        return false;
     }
 
     public B sourceId(int sourceId) {

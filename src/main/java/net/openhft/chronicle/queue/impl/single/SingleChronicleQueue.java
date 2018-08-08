@@ -86,7 +86,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     @Nullable
-    private final EventLoop eventLoop;
+    protected final EventLoop eventLoop;
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
