@@ -19,6 +19,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.CheckedExcerpt;
+import net.openhft.lang.io.Bits;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBlocks;
 import net.openhft.lang.io.VanillaMappedBytes;
@@ -426,14 +427,18 @@ public class IndexedChronicle implements Chronicle {
                 int indexLineStart = (int) (indexLookupMod / indexEntriesPerLine * cacheLineSize);
                 int inLine = (indexLineEntry << 2) + 8;
 
-                int dataOffsetEnd = UNSAFE.getInt(indexStartAddr + indexLineStart + inLine);
+                //int dataOffsetEnd = UNSAFE.getInt(indexStartAddr + indexLineStart + inLine);
+                int dataOffsetEnd = Bits.getInt(indexStartAddr + indexLineStart + inLine);
 
-                indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
+                //indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
+                indexBaseForLine = Bits.getLong(indexStartAddr + indexLineStart);
                 indexPositionAddr = indexStartAddr + indexLineStart + inLine;
 
                 long dataOffsetStart = indexLineEntry == 0
                         ? indexBaseForLine
-                        : (indexBaseForLine + Math.abs(UNSAFE.getInt(indexPositionAddr - 4)));
+                        //: (indexBaseForLine + Math.abs(UNSAFE.getInt(indexPositionAddr - 4)));
+                        : (indexBaseForLine + Math.abs(Bits.getInt(indexPositionAddr - 4)));
+
 
                 long dataLookup = dataOffsetStart / dataBlockSize;
                 long dataLookupMod = dataOffsetStart % dataBlockSize;
@@ -494,8 +499,10 @@ public class IndexedChronicle implements Chronicle {
             int inLine = (indexLineEntry << 2) + 8;
             indexStartOffset = indexLookup * indexBlockSize + indexLineStart;
 
-            indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
-            long dataOffsetEnd = indexBaseForLine + Math.abs(UNSAFE.getInt(indexStartAddr + indexLineStart + inLine));
+            //indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
+            indexBaseForLine = Bits.getLong(indexStartAddr + indexLineStart);
+            //long dataOffsetEnd = indexBaseForLine + Math.abs(UNSAFE.getInt(indexStartAddr + indexLineStart + inLine));
+            long dataOffsetEnd = indexBaseForLine + Math.abs(Bits.getInt(indexStartAddr + indexLineStart + inLine));
 
             long dataLookup = dataOffsetEnd / dataBlockSize;
             long dataLookupMod = dataOffsetEnd % dataBlockSize;
