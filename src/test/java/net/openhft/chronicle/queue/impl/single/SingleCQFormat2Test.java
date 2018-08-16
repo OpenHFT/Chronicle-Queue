@@ -47,7 +47,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
 
     static {
         // init class
-        SingleChronicleQueueBuilder.init();
+        SingleChronicleQueueBuilder.addAliases();
     }
 
     private int appendMode;

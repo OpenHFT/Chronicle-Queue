@@ -141,10 +141,6 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         // static initialiser.
     }
 
-    public static void init() {
-        // make sure the static block has been called.
-    }
-
     @NotNull
     public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> builder(@NotNull Path path, @NotNull WireType wireType) {
         return builder(path.toFile(), wireType);
