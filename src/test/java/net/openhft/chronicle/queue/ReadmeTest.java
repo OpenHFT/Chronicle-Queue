@@ -61,12 +61,7 @@ public class ReadmeTest {
 //            System.out.println(queue.dump());
             // write - TestMessage
             appender.writeText("TestMessage");
-        }
 
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
-                .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
-                .build()) {
             ExcerptTailer tailer = queue.createTailer();
 
             tailer.readDocument(w -> System.out.println("msg: " + w.read(() -> "msg").text()));
