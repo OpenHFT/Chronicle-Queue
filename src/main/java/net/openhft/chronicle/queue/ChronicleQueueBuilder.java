@@ -247,6 +247,9 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extend
         if (parentBuilder == null)
             return (B) this;
 
+        if (! (this.getClass().isAssignableFrom(parentBuilder.getClass()) || parentBuilder.getClass().isAssignableFrom(this.getClass())))
+            throw new IllegalArgumentException("Classes are not in same implementation hierarchy");
+
         List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(parentBuilder.getClass());
 
         for (final FieldInfo fieldInfo : Wires.fieldInfos(this.getClass())) {

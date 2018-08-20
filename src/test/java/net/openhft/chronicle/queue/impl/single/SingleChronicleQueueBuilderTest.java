@@ -2,6 +2,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import java.io.File;
@@ -9,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class SingleChronicleQueueBuilderTest {
@@ -35,4 +38,23 @@ public class SingleChronicleQueueBuilderTest {
                 binary(tempFile);
     }
 
+    @Test
+    public void setAllNullFields() {
+        ChronicleQueueBuilder b1 = SingleChronicleQueueBuilder.builder();
+        ChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
+        b1.blockSize(1234567);
+        b2.bufferCapacity(98765);
+        b2.setAllNullFields(b1);
+        assertEquals(1234567, b2.blockSize());
+        assertEquals(98765, b2.bufferCapacity());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
+        ChronicleQueueBuilder b1 = Wires.tupleFor(ChronicleQueueBuilder.class, "ChronicleQueueBuilder");
+        SingleChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
+        b2.bufferCapacity(98765);
+        b1.blockSize(1234567);
+        b2.setAllNullFields(b1);
+    }
 }
