@@ -15,7 +15,7 @@ latencies can be reduced.
 
 [NOTE]
 ====
-Ring buffer functionality is still under development; you will still see `UnsupportedOperationException`s
+Ring buffer functionality is still under development; you will still see UnsupportedOperationExceptions
 thrown when some functionality is used - see link:#unsupported-operations[Unsupported operations].
 ====
 
@@ -163,7 +163,8 @@ The following operations are unsupported when using EnterpriseSingleChronicleQue
 ==== software.chronicle.enterprise.queue.RingBufferChronicleQueue
 
 This queue does not implement the full contract of `ChronicleQueue`, and will throw a `UnsupportedOperationException`
-from some methods. It is created as in the example below, where:
+from some methods. It does not contain the full functionality of EnterpriseSingleChronicleQueue - it does not
+drain to an underlying queue, for example. It is created as in the example below, where:
 
 - `ringBuffer` is the ring buffer to back this queue with,
 - `wireType` is the wire type to use when appending and tailing,
