@@ -32,7 +32,6 @@
     <version>5.16.12-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
-
     <description>Java library for persisted low latency messaging (Java 8+)</description>
 
     <dependencyManagement>
@@ -40,12 +39,13 @@
         <dependencies>
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>third-party-bom
-                </artifactId> <!-- PLEASE DON'T LEAVE THIS ON A SNAPSHOT because they get missed in a release  -->
+                <artifactId>third-party-bom</artifactId>
+                <!-- PLEASE DON'T LEAVE THIS ON A SNAPSHOT because they get missed in a release  -->
                 <type>pom</type>
                 <version>3.6.3</version>
                 <scope>import</scope>
             </dependency>
+
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
@@ -54,7 +54,6 @@
                 <scope>import</scope>
             </dependency>
         </dependencies>
-
     </dependencyManagement>
 
     <dependencies>
