@@ -15,30 +15,32 @@ import static org.junit.Assert.assertEquals;
 
 public class ChronicleQueuePeekDocumentTest {
 
+    boolean firstMessage = true;
+
     @Test
     public void testUsingPeekDocument() throws IOException {
         Path tempDir = null;
         try {
             tempDir = Files.createTempDirectory("ChronicleQueueLoggerTest");
-            try (SingleChronicleQueue writeQueue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
-                ExcerptAppender appender = writeQueue.acquireAppender();
-
-                try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write("field1").int32(123534)
-                            .write("field2").float64(123.423)
-                            .write("time").int64(12053432432L);
-                }
-
-                try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write("field1").int32(323242)
-                            .write("field2").float64(543.1233)
-                            .write("time").int64(12053432900L);
-                }
-            }
-
             // Read back the data
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
                 ExcerptTailer tailer = queue.createTailer();
+
+                try (SingleChronicleQueue writeQueue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
+                    ExcerptAppender appender = writeQueue.acquireAppender();
+
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        dc.wire().write("field1").int32(123534)
+                                .write("field2").float64(123.423)
+                                .write("time").int64(12053432432L);
+                    }
+
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        dc.wire().write("field1").int32(323242)
+                                .write("field2").float64(543.1233)
+                                .write("time").int64(12053432900L);
+                    }
+                }
 
                 assertEquals("field1: !int 123534\n" +
                                 "field2: 123.423\n" +
@@ -59,9 +61,10 @@ public class ChronicleQueuePeekDocumentTest {
     }
 
     private String read(ExcerptTailer tailer) {
-        if (tailer.peekDocument()) {
+        if (tailer.peekDocument() || firstMessage) {
             try (DocumentContext dc = tailer.readingDocument(false)) {
                 if (dc.isPresent()) {
+                    firstMessage = false;
                     String text = dc.wire().asText().toString();
                     return text;
                 }
