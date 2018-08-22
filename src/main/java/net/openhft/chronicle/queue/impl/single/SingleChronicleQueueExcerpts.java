@@ -1057,7 +1057,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean peekDocument() {
             int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
-            return header > 0x0;
+            return header > 0x0 | header == Wires.END_OF_DATA;
         }
 
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
