@@ -209,9 +209,7 @@ public class SingleChronicleQueueExcerpts {
             long startTime = System.nanoTime();
             long count = 0;
             long lastIndex = -1;
-            do
-
-            {
+            do {
                 int batch = Math.max(1, (128 << 10) / size);
                 int defaultIndexSpacing = this.queue.rollCycle().defaultIndexSpacing();
                 for (int i = 0; i < batch; i++) {
@@ -1058,7 +1056,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean peekDocument() {
-            return UnsafeMemory.UNSAFE.getIntVolatile(null, address) > 0x0;
+            int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
+            return header > 0x0;
         }
 
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
@@ -1408,8 +1407,10 @@ public class SingleChronicleQueueExcerpts {
             index(queue.rollCycle().toIndex(cycle, 0));
 
             state = FOUND_CYCLE;
-            if (wire() != null)
+            if (wire() != null) {
                 wire().bytes().readPosition(0);
+                address = wire().bytes().addressForRead(0);
+            }
             return this;
         }
 

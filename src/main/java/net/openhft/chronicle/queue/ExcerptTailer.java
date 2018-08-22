@@ -48,7 +48,10 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
-     * @return true if readingDocument should be called, false if most like it's not needed.
+     * peekDocument() can be used after a message has been found by toStart() or readingDocument().
+     * Until then only readingDocument() will find the first cycle.
+     *
+     * @return true if readingDocument() should be called, false if most likely it's not needed.
      */
     default boolean peekDocument() {
         return true;
