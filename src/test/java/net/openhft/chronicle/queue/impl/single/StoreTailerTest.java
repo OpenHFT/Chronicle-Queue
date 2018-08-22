@@ -23,11 +23,11 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class StoreTailerTest extends ChronicleQueueTestBase {
-    private final Collection<SingleChronicleQueue> createdQueues = new ArrayList<>();
+    private final Collection<ChronicleQueue> createdQueues = new ArrayList<>();
     private final Path dataDirectory = DirectoryUtils.tempDir(StoreTailerTest.class.getSimpleName()).toPath();
 
-    private static void closeQueues(final SingleChronicleQueue... queues) {
-        for (SingleChronicleQueue queue : queues) {
+    private static void closeQueues(final ChronicleQueue... queues) {
+        for (ChronicleQueue queue : queues) {
             if (queue != null) {
                 queue.close();
             }
@@ -37,7 +37,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
     @Test
     public void shouldHandleCycleRollWhenInReadOnlyMode() {
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
-        final SingleChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
+        final ChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
                 timeProvider(timeProvider));
 
         final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
@@ -46,7 +46,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         timeProvider.addTime(2, TimeUnit.MINUTES);
         events.onEvent("secondEvent");
 
-        final SingleChronicleQueue readerQueue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", true).
+        final ChronicleQueue readerQueue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", true).
                 timeProvider(timeProvider));
 
         final ExcerptTailer tailer = readerQueue.createTailer();
@@ -62,12 +62,12 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
-        final SingleChronicleQueue firstInputQueue =
+        final ChronicleQueue firstInputQueue =
                 createQueue(dataDirectory, RollCycles.TEST_DAILY, 1, "firstInputQueue");
         // different RollCycle means that indicies are not identical to firstInputQueue
-        final SingleChronicleQueue secondInputQueue =
+        final ChronicleQueue secondInputQueue =
                 createQueue(dataDirectory, RollCycles.TEST_SECONDLY, 2, "secondInputQueue");
-        final SingleChronicleQueue outputQueue =
+        final ChronicleQueue outputQueue =
                 createQueue(dataDirectory, RollCycles.TEST_DAILY, 0, "outputQueue");
 
         final StringEvents firstWriter = firstInputQueue.acquireAppender().
@@ -130,12 +130,12 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @After
     public void after() {
-        closeQueues(createdQueues.toArray(new SingleChronicleQueue[0]));
+        closeQueues(createdQueues.toArray(new ChronicleQueue[0]));
     }
 
     @NotNull
-    private SingleChronicleQueue createQueue(final Path dataDirectory, final RollCycles rollCycle,
-                                             final int sourceId, final String subdirectory) {
+    private ChronicleQueue createQueue(final Path dataDirectory, final RollCycles rollCycle,
+                                       final int sourceId, final String subdirectory) {
         return build(createQueue(dataDirectory, rollCycle, sourceId,
                 subdirectory, false));
     }
@@ -151,8 +151,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 .readOnly(readOnly);
     }
 
-    private SingleChronicleQueue build(final SingleChronicleQueueBuilder builder) {
-        final SingleChronicleQueue queue = builder.build();
+    private ChronicleQueue build(final SingleChronicleQueueBuilder builder) {
+        final ChronicleQueue queue = builder.build();
         createdQueues.add(queue);
         return queue;
     }

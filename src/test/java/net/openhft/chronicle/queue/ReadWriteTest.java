@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -42,7 +41,7 @@ public class ReadWriteTest {
     @Before
     public void setup() {
         chroniclePath = new File(OS.TARGET, "read_only");
-        try (SingleChronicleQueue readWrite = SingleChronicleQueueBuilder.binary(chroniclePath)
+        try (ChronicleQueue readWrite = SingleChronicleQueueBuilder.binary(chroniclePath)
                 .readOnly(false)
                 .testBlockSize()
                 .build()) {
@@ -61,7 +60,7 @@ public class ReadWriteTest {
 
     @Test
     public void testReadFromReadOnlyChronicle() {
-        try (SingleChronicleQueue out = SingleChronicleQueueBuilder
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(!OS.isWindows())
@@ -87,7 +86,7 @@ public class ReadWriteTest {
             throw new IllegalStateException("not run");
         }
 
-        try (SingleChronicleQueue out = SingleChronicleQueueBuilder
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(true)
@@ -99,7 +98,7 @@ public class ReadWriteTest {
     @Test
     public void testToEndOnReadOnly() {
 
-        try (SingleChronicleQueue out = SingleChronicleQueueBuilder
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(true)

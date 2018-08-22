@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycles;
 import org.junit.Rule;
 import org.junit.Test;
@@ -20,7 +21,7 @@ public final class MappedMemoryUnmappingTest {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         long initialQueueMappedMemory = 0L;
 
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(tmp.newFolder()).testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
                 timeProvider(clock::get).build()) {
             for (int i = 0; i < 100; i++) {

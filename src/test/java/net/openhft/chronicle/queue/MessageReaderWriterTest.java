@@ -60,11 +60,11 @@ public class MessageReaderWriterTest {
         File path1 = DirectoryUtils.tempDir("testWriteWhileReading1");
         File path2 = DirectoryUtils.tempDir("testWriteWhileReading2");
 
-        try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder
+        try (ChronicleQueue queue1 = SingleChronicleQueueBuilder
                 .binary(path1)
                 .testBlockSize()
                 .build();
-             SingleChronicleQueue queue2 = SingleChronicleQueueBuilder
+             ChronicleQueue queue2 = SingleChronicleQueueBuilder
                      .binary(path2)
                      .testBlockSize()
                      .build()) {

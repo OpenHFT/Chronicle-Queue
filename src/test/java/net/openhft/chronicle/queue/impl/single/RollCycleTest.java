@@ -4,10 +4,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
@@ -30,7 +27,7 @@ public class RollCycleTest {
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.DAILY)
@@ -69,7 +66,7 @@ public class RollCycleTest {
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
         int cyclesToWrite = 100;
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(path)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.DAILY)
                 .timeProvider(timeProvider)
@@ -104,7 +101,7 @@ public class RollCycleTest {
     public void testWriteToCorruptedFile() {
 
         File dir = DirectoryUtils.tempDir("testWriteToCorruptedFile");
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(dir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -141,7 +138,7 @@ public class RollCycleTest {
     }
 
     class ParallelQueueObserver implements Runnable, StoreFileListener {
-        SingleChronicleQueue queue;
+        ChronicleQueue queue;
         CountDownLatch progressLatch;
         volatile int documentsRead;
 

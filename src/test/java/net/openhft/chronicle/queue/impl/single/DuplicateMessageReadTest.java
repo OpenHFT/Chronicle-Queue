@@ -1,9 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -41,7 +38,7 @@ public final class DuplicateMessageReadTest {
     public void shouldNotReceiveDuplicateMessages() throws Exception {
         final File location = DirectoryUtils.tempDir(DuplicateMessageReadTest.class.getSimpleName());
 
-        final SingleChronicleQueue chronicleQueue = SingleChronicleQueueBuilder
+        final ChronicleQueue chronicleQueue = SingleChronicleQueueBuilder
                 .binary(location)
                 .rollCycle(QUEUE_CYCLE)
                 .build();

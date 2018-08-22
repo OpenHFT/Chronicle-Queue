@@ -134,8 +134,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @NotNull
     public static String dump(@NotNull String directoryFilePath) {
-        SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directoryFilePath).build();
-        return q.dump();
+        return SingleChronicleQueueBuilder.binary(directoryFilePath).build().dump();
     }
 
     private static WireOut intForBinding(ValueOut wireOut, final LongValue value) {

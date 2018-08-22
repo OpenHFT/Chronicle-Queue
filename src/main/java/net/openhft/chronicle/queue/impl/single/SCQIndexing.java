@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
@@ -333,7 +334,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                             "to 0x" + Long.toHexString(toIndex) + "= ( 0x" + Long.toHexString
                             (toIndex) + "- 0x" + Long.toHexString(fromKnownIndex) + ") = " +
                             (toIndex - fromKnownIndex),
-                    new Throwable("This is a profile stack trace, not an ERROR"));
+                    new StackTrace("This is a profile stack trace, not an ERROR"));
 
         }
         return true;
@@ -348,7 +349,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         // ignored  for the first message
         if (toIndex > 0 && end > start + 250e3)
             // has to be change to debug because is being reported as an an
-            Jvm.debug().on(getClass(), new Throwable("This is a profile stack trace, not an " +
+            Jvm.debug().on(getClass(), new StackTrace("This is a profile stack trace, not an " +
                     "ERROR"));
         return true;
     }

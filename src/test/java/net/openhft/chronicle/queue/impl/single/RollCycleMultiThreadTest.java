@@ -42,7 +42,7 @@ public class RollCycleMultiThreadTest {
             final ExecutorService scheduledExecutorService = Executors
                     .newSingleThreadScheduledExecutor();
 
-            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
                     .testBlockSize()
                     .rollCycle(DAILY)
@@ -81,7 +81,7 @@ public class RollCycleMultiThreadTest {
             final ExecutorService scheduledExecutorService = Executors
                     .newSingleThreadScheduledExecutor();
 
-            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
                     .testBlockSize()
                     .rollCycle(DAILY)

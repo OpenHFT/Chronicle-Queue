@@ -1,20 +1,18 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
+import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class SingleChronicleQueueBuilderTest {
@@ -23,11 +21,13 @@ public class SingleChronicleQueueBuilderTest {
     @Test
     public void shouldDetermineQueueDirectoryFromQueueFile() {
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(path)
                              .testBlockSize()
                              .build()) {
             assertThat(queue.createTailer().readingDocument().isPresent(), is(false));
+        } finally {
+            IOTools.deleteDirWithFiles(path.toFile(), 20);
         }
     }
 
@@ -39,4 +39,23 @@ public class SingleChronicleQueueBuilderTest {
                 binary(tempFile);
     }
 
+    @Test
+    public void setAllNullFields() {
+        ChronicleQueueBuilder b1 = SingleChronicleQueueBuilder.builder();
+        ChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
+        b1.blockSize(1234567);
+        b2.bufferCapacity(98765);
+        b2.setAllNullFields(b1);
+        assertEquals(1234567, b2.blockSize());
+        assertEquals(98765, b2.bufferCapacity());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
+        ChronicleQueueBuilder b1 = Wires.tupleFor(ChronicleQueueBuilder.class, "ChronicleQueueBuilder");
+        SingleChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
+        b2.bufferCapacity(98765);
+        b1.blockSize(1234567);
+        b2.setAllNullFields(b1);
+    }
 }

@@ -139,7 +139,7 @@ public class SingleTableBuilder<T extends Metadata> {
                 }
             }, () -> null);
         } catch (IOException e) {
-            throw new IORuntimeException(e);
+            throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
         }
     }
 

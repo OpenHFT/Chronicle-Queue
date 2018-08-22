@@ -23,13 +23,16 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.ThreadDump;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -64,7 +67,7 @@ public class SingleCQFormatTest {
     public void testEmptyDirectory() {
         @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
-        @NotNull SingleChronicleQueue queue = binary(dir).testBlockSize().build();
+        @NotNull RollingChronicleQueue queue = binary(dir).testBlockSize().build();
         assertEquals(Integer.MAX_VALUE, queue.firstCycle());
         assertEquals(Long.MAX_VALUE, queue.firstIndex());
         assertEquals(Integer.MIN_VALUE, queue.lastCycle());
@@ -81,7 +84,7 @@ public class SingleCQFormatTest {
         try (@NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), 64 << 10)) {
             bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
-            try (@NotNull SingleChronicleQueue queue = binary(dir)
+            try (@NotNull RollingChronicleQueue queue = binary(dir)
                     .rollCycle(RollCycles.TEST4_DAILY)
                     .testBlockSize()
                     .build()) {
@@ -119,7 +122,7 @@ public class SingleCQFormatTest {
             }
         }
 
-        @NotNull SingleChronicleQueue queue = binary(dir)
+        @NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .testBlockSize()
                 .build();
@@ -143,7 +146,7 @@ public class SingleCQFormatTest {
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
         bytes.release();
-        @Nullable SingleChronicleQueue queue = null;
+        @Nullable ChronicleQueue queue = null;
         try {
             queue = binary(dir).timeoutMS(1_000L)
                     .testBlockSize()
@@ -157,7 +160,7 @@ public class SingleCQFormatTest {
         }
     }
 
-    private void testQueue(@NotNull SingleChronicleQueue queue) {
+    private void testQueue(@NotNull ChronicleQueue queue) {
         @NotNull ExcerptTailer tailer = queue.createTailer();
         try (DocumentContext dc = tailer.readingDocument()) {
             assertFalse(dc.isPresent());
@@ -201,7 +204,7 @@ public class SingleCQFormatTest {
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
-        @NotNull SingleChronicleQueue queue = binary(dir)
+        @NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .testBlockSize()
                 .build();
@@ -244,7 +247,7 @@ public class SingleCQFormatTest {
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
-        @NotNull SingleChronicleQueue queue = binary(dir)
+        @NotNull RollingChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build();
@@ -272,7 +275,7 @@ public class SingleCQFormatTest {
         }
 
         bytes.release();
-        try (@NotNull SingleChronicleQueue queue = binary(dir)
+        try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {

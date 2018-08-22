@@ -6,11 +6,18 @@
 == Chronicle Queue Enterprise Ring Buffer
 
 Chronicle Queue Enterprise Ring Buffer provides a high performance, multi-writer, multi-reader, ring buffer implementation
-which can be used in your application code. https://jerryshea.github.io/2018/07/27/RingBuffer.html[This article]
-gives some examples of how high-percentile latencies can be reduced.
+which can be used in your application code.
 
 Additionally, it allows the ring buffer to be accessed
 through two different implementations of the `ChronicleQueue` interface.
+https://jerryshea.github.io/2018/07/27/RingBuffer.html[This article] gives some examples of how high-percentile
+latencies can be reduced.
+
+[NOTE]
+====
+Ring buffer functionality is still under development; you will still see UnsupportedOperationExceptions
+thrown when some functionality is used - see link:#unsupported-operations[Unsupported operations].
+====
 
 .Chronicle Ring Buffer
 image::images/Ring_buffer.svg[]
@@ -25,8 +32,8 @@ As the Chronicle stack is built on `Bytes`, you can use the ring buffer for byte
 
 When you create a ring buffer then any reader can block all writers. If a reader stops reading
 then this will eventually block writers. The number of readers is fixed, and they are all created when the ring buffer is
-created; when the underlying BytesStore is first written-to. The readers will live for as long as the ring buffer; until
-you stop using the BytesStore.
+created; when the underlying BytesStore is first written to. The readers will live for as long as the ring buffer (actually
+as until long as the underlying BytesStore - you can re-create a new ring buffer over the same BytesStore).
 
 Backing the ring buffer with a persistent BytesStore (that is, one backed with a memory-mapped file) means it will be
 visible to multiple processes. All processes can write to, and read from, the ring buffer.
@@ -117,27 +124,25 @@ loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue
 
 ```
     // process 1
-    try (@NotNull ChronicleQueue queue = EnterpriseChronicleQueueBuilder
-            .binary(path)
-            .bufferCapacity(1 << 20)
+    EnterpriseChronicleQueueBuilder builder = EnterpriseChronicleQueueBuilder.binary(path);
+    try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
-            // RB_BYTES_STORE_CREATOR_MAPPED_FILE is an example implementation of a bufferBytesStoreCreator
+            // RB_BYTES_STORE_CREATOR_MAPPED_FILE is an *example* implementation of a bufferBytesStoreCreator
             // which creates a memory-mapped file located in a fast filesystem (/tmp) and has same name as
             // underlying queue, thus allowing its contents to be mapped and shared between processes.
-            .bufferBytesStoreCreator(EnterpriseChronicleQueueBuilder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
+            .bufferBytesStoreCreator(builder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
             .build()) {
         ExcerptAppender appender = queue.acquireAppender();
         ...
     }
 
     // process 2
-    try (@NotNull ChronicleQueue queue = EnterpriseChronicleQueueBuilder
-            .binary(path) // same path as process 1
-            .bufferCapacity(1 << 20)
+    EnterpriseChronicleQueueBuilder builder = EnterpriseChronicleQueueBuilder.binary(path); // same path as process 1
+    try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
-            .bufferBytesStoreCreator(EnterpriseChronicleQueueBuilder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
+            .bufferBytesStoreCreator(builder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
             .build()) {
         ExcerptTailer tailer = queue.createTailer();
         ...
@@ -148,11 +153,18 @@ loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue
 When the queue's event loop is closed, the drainer thread will wait up to 5 seconds to finish draining
 to the underlying queue. If draining can not complete, a warning message is logged
 
+===== Unsupported operations
+The following operations are unsupported when using EnterpriseSingleChronicleQueue backed by a ring buffer:
+
+* writing and reading of metadata
+* `ExcerptTailer.toStart()` and `ExcerptTailer.afterLastWritten()`
+* `ExcerptTailer.index()` and `ExcerptTailer.moveToIndex()`
 
 ==== software.chronicle.enterprise.queue.RingBufferChronicleQueue
 
 This queue does not implement the full contract of `ChronicleQueue`, and will throw a `UnsupportedOperationException`
-from some methods. It is created as in the example below, where:
+from some methods. It does not contain the full functionality of EnterpriseSingleChronicleQueue - it does not
+drain to an underlying queue, for example. It is created as in the example below, where:
 
 - `ringBuffer` is the ring buffer to back this queue with,
 - `wireType` is the wire type to use when appending and tailing,
@@ -162,4 +174,5 @@ from some methods. It is created as in the example below, where:
     ChronicleQueue rbq = new RingBufferChronicleQueue(ringBuffer, wireType, pauser);
 ```
 
-It can be used in the same way as any other Chronicle Queue implementation.
+It can be used in the same way as any other Chronicle Queue implementation, but it is recommended to use
+software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue in preference.

@@ -29,7 +29,7 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
             }
         }
 
-        try (final SingleChronicleQueue readQueue =
+        try (final ChronicleQueue readQueue =
                      SingleChronicleQueueBuilder.binary(tmpDir)
                              .testBlockSize()
                              .rollCycle(TEST_DAILY)

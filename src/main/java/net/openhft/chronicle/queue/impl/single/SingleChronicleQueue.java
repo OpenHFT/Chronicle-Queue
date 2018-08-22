@@ -86,7 +86,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     @Nullable
-    private final EventLoop eventLoop;
+    protected final EventLoop eventLoop;
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
@@ -117,7 +117,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final RollingResourcesCache dateCache;
     private int deltaCheckpointInterval;
 
-    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder<?> builder) {
+    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder<?, SingleChronicleQueue> builder) {
         readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
         cycleCalculator = builder.cycleCalculator();

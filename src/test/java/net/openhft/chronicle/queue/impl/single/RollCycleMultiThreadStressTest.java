@@ -3,12 +3,12 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -276,7 +276,7 @@ public class RollCycleMultiThreadStressTest {
             SingleChronicleQueueBuilder builder = queueBuilder(path);
             if (READERS_READ_ONLY)
                 builder.readOnly(true);
-            try (final SingleChronicleQueue queue = builder.build()) {
+            try (final RollingChronicleQueue queue = builder.build()) {
 
                 final ExcerptTailer tailer = queue.createTailer();
                 int lastTailerCycle = -1;
@@ -366,7 +366,7 @@ public class RollCycleMultiThreadStressTest {
             }
         }
 
-        private SingleChronicleQueue queue() {
+        private ChronicleQueue queue() {
             return queueBuilder(path).build();
         }
 
@@ -398,8 +398,8 @@ public class RollCycleMultiThreadStressTest {
 
         @Override
         public Throwable call() throws Exception {
-            SingleChronicleQueue queue0 = null;
-            try (SingleChronicleQueue queue = queueBuilder(path).build()) {
+            ChronicleQueue queue0 = null;
+            try (ChronicleQueue queue = queueBuilder(path).build()) {
                 queue0 = queue;
                 ExcerptAppender appender = queue.acquireAppender();
                 System.out.println("Starting pretoucher");

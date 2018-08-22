@@ -19,10 +19,8 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -45,7 +43,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
     @Test
     public void testWriteBytesWithIndex() {
         File tmp = getTmpDir();
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build()) {
@@ -55,7 +53,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
             appender.writeBytes(0x421d00000001L, HELLO_WORLD);
         }
 
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -70,7 +68,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
         // TODO: implement this
         //assert runIfAssertsOn = true;
         if (runIfAssertsOn) {
-            try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+            try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                     .testBlockSize()
                     .build()) {
                 InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -88,7 +86,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
         }
 
         // try too far
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -102,7 +100,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
             }
         }
 
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -125,7 +123,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
 
         long expected;
 
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
                 .testBlockSize()
                 .build()) {
 

@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue.service;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.EventGroup;
 import org.jetbrains.annotations.NotNull;
@@ -153,18 +153,18 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public SingleChronicleQueue inputQueue() {
+    public ChronicleQueue inputQueue() {
         return SingleChronicleQueueBuilder.binary(inputPaths.get(0)).testBlockSize().sourceId(inputSourceId()).build();
     }
 
     @NotNull
-    public SingleChronicleQueue outputQueue() {
+    public ChronicleQueue outputQueue() {
         return SingleChronicleQueueBuilder.binary(outputPath).testBlockSize().sourceId(outputSourceId()).build();
     }
 
     @NotNull
     public MethodReader outputReader(Object... impls) {
-        SingleChronicleQueue queue = outputQueue();
+        ChronicleQueue queue = outputQueue();
         MethodReader reader = queue.createTailer().methodReader(impls);
         reader.closeIn(true);
         return reader;
@@ -172,7 +172,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
 
     @NotNull
     public <T> T inputWriter(Class<T> tClass) {
-        SingleChronicleQueue queue = inputQueue();
+        ChronicleQueue queue = inputQueue();
         return queue.acquireAppender().methodWriterBuilder(tClass).recordHistory(true).onClose(queue).get();
     }
 }

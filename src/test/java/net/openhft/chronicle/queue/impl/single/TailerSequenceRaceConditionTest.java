@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
@@ -22,7 +23,7 @@ public final class TailerSequenceRaceConditionTest {
     @Test
     public void shouldAlwaysBeAbleToTail() throws Exception {
         for (int i = 0; i < 10; i++) {
-            final SingleChronicleQueue queue = createNewQueue();
+            final ChronicleQueue queue = createNewQueue();
             for (int j = 0; j < 4; j++) {
                 threadPool.submit(() -> attemptToMoveToTail(queue));
             }
@@ -44,7 +45,7 @@ public final class TailerSequenceRaceConditionTest {
         threadPool.shutdownNow();
     }
 
-    private void appendToQueue(final SingleChronicleQueue queue) {
+    private void appendToQueue(final ChronicleQueue queue) {
         for (int i = 0; i < 31; i++) {
             final ExcerptAppender appender = queue.acquireAppender();
             if (queue.isClosed())
@@ -55,7 +56,7 @@ public final class TailerSequenceRaceConditionTest {
         }
     }
 
-    private void attemptToMoveToTail(final SingleChronicleQueue queue) {
+    private void attemptToMoveToTail(final ChronicleQueue queue) {
         final SingleChronicleQueueExcerpts.StoreTailer tailer =
                 (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
         try {
@@ -66,7 +67,7 @@ public final class TailerSequenceRaceConditionTest {
         }
     }
 
-    private SingleChronicleQueue createNewQueue() {
+    private ChronicleQueue createNewQueue() {
         return SingleChronicleQueueBuilder.
                 binary(DirectoryUtils.tempDir(TailerSequenceRaceConditionTest.class.getSimpleName()))
                 .rollCycle(RollCycles.HOURLY)

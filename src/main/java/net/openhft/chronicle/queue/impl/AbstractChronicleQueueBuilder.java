@@ -27,6 +27,7 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
+import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.Marshallable;
@@ -47,15 +48,16 @@ import java.util.function.Supplier;
 import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 
 @SuppressWarnings("unchecked")
-public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>
-        implements ChronicleQueueBuilder<B>, Marshallable {
+public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue>
+        implements ChronicleQueueBuilder<B, Q>, Marshallable {
 
+    private static final String MESSAGE = "Only supported in Chronicle Queue Enterprise";
     protected File path;
     protected Long blockSize;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractChronicleQueueBuilder.class);
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
-    public static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
+    private static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
 
     protected WireType wireType;
 
@@ -63,11 +65,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     protected Long epoch; // default is 1970-01-01 00:00:00.000 UTC
     public BufferMode writeBufferMode;
     public BufferMode readBufferMode;
-    protected Boolean enableRingBufferMonitoring;
+    private Boolean enableRingBufferMonitoring;
     @Nullable
     protected EventLoop eventLoop;
 
     protected AbstractChronicleQueueBuilder() {
+
     }
 
     @Override
@@ -92,30 +95,30 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private StoreFileListener storeFileListener;
 
-    protected Boolean readOnly = false;
-    private Boolean strongAppenders = false;
+    protected Boolean readOnly;
+    private Boolean strongAppenders;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.path = path;
     }
 
-    private RollCycle loadDefaultRollCycle(){
+    private RollCycle loadDefaultRollCycle() {
         if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
             return RollCycles.DAILY;
         }
 
         String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
-        if(rollCyclePropertyParts.length > 0) {
+        if (rollCyclePropertyParts.length > 0) {
             try {
                 Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
                 if (Enum.class.isAssignableFrom(rollCycleClass)) {
-                    if(rollCyclePropertyParts.length < 2){
+                    if (rollCyclePropertyParts.length < 2) {
                         LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
                     } else {
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
-                        if(instance instanceof RollCycle) {
+                        if (instance instanceof RollCycle) {
                             return (RollCycle) instance;
                         } else {
                             LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
@@ -123,7 +126,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
                     }
                 } else {
                     Object instance = ObjectUtils.newInstance(rollCycleClass);
-                    if(instance instanceof RollCycle) {
+                    if (instance instanceof RollCycle) {
                         return (RollCycle) instance;
                     } else {
                         LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
@@ -267,7 +270,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      */
     @Override
     public long epoch() {
-        return epoch == null ?  Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
+        return epoch == null ? Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
     }
 
     @Override
@@ -329,10 +332,14 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
+    /**
+     * @return a new event loop instance if none has been set, otherwise the {@code eventLoop}
+     * that was set
+     */
     @Override
-    @Nullable
+    @NotNull
     public EventLoop eventLoop() {
-        return eventLoop;
+        return eventLoop == null ? new EventGroup(true) : eventLoop;
     }
 
     @Override
@@ -404,8 +411,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return timeoutMS == null ? 10_000L : timeoutMS;
     }
 
-
-
     @Override
     public B storeFileListener(StoreFileListener storeFileListener) {
         this.storeFileListener = storeFileListener;
@@ -420,6 +425,11 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
                         Jvm.debug().on(getClass(), "File released " + file);
                 } : storeFileListener;
 
+    }
+
+    @Override
+    public boolean hasPretouchIntervalMillis() {
+        return false;
     }
 
     public B sourceId(int sourceId) {
@@ -449,22 +459,24 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public B readOnly(boolean readOnly) {
-        if (OS.isWindows() && readOnly) {
+        if (OS.isWindows() && readOnly)
             Jvm.warn().on(AbstractChronicleQueueBuilder.class,
-                    "Read-only mode is not supported on Windows® platforms, defaulting to read/write.");
-        }
-        this.readOnly = readOnly;
+                    "Read-only mode is not supported on Windows® platforms, defaulting to " +
+                            "read/write.");
+        else
+            this.readOnly = readOnly;
+
         return (B) this;
     }
 
     @NotNull
     public AbstractChronicleQueueBuilder encryptSupplier(Supplier<Cipher> encryptSupplier) {
-        throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
+        throw new UnsupportedOperationException(MESSAGE);
     }
 
     @NotNull
     public AbstractChronicleQueueBuilder decryptSupplier(Supplier<Cipher> decryptSupplier) {
-        throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
+        throw new UnsupportedOperationException(MESSAGE);
     }
 
     protected void preBuild() {
@@ -481,7 +493,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public boolean strongAppenders() {
-        return strongAppenders;
+        return strongAppenders == Boolean.TRUE;
     }
 
     @Override

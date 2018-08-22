@@ -3,7 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.CommonStore;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -36,7 +36,7 @@ public class FsFullReadTest {
     @Test
     public void testFullReadFs() throws Exception {
 
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
+        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
                 .blockSize(256 << 1000)
                 .rollCycle(RollCycles.DAILY)
                 .build();

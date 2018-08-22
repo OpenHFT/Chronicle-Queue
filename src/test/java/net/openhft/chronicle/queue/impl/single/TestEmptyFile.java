@@ -17,21 +17,13 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 import static org.junit.Assert.*;
 
@@ -58,7 +50,7 @@ public class TestEmptyFile {
     @Ignore("This test  crashes JVM, but even with obvious fixes it will not pass as the queue doesn't know how to progress " +
             "past the empty/truncated file. Needs investigation if this is a supported situation - see issue #470")*/
     public void shouldHandleEmptyFile() {
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(tmpDir)
                              .testBlockSize()
                              .readOnly(true)

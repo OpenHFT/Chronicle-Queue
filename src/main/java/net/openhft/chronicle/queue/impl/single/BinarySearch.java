@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -58,7 +59,7 @@ public enum BinarySearch {
     private static long findCycleLinearSearch(@NotNull NavigableSet<Long> cycles, Wire key,
                                               @NotNull Comparator<Wire> c,
                                               @NotNull ExcerptTailer tailer,
-                                              @NotNull final SingleChronicleQueue queue) {
+                                              @NotNull final ChronicleQueue queue) {
 
         final Iterator<Long> iterator = cycles.iterator();
         if (!iterator.hasNext())

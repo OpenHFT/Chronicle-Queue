@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -80,7 +79,7 @@ public class ToEndTest {
         long timeIncMs = 1001;
         timeProvider.currentTimeMillis(now);
 
-        final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+        final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(timeProvider)
@@ -153,7 +152,7 @@ public class ToEndTest {
         long now = System.currentTimeMillis();
         time.currentTimeMillis(now);
 
-        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(time)
@@ -185,8 +184,8 @@ public class ToEndTest {
         File baseDir = DirectoryUtils.tempDir("toEndTest");
 
         List<Integer> results = new ArrayList<>();
-        final SingleChronicleQueue singleChronicleQueue = null;
-        try (RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
+        final ChronicleQueue chronicleQueue = null;
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .indexCount(8)
@@ -267,7 +266,7 @@ public class ToEndTest {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(1470757797000L);
 
-        try (RollingChronicleQueue wqueue = SingleChronicleQueueBuilder
+        try (ChronicleQueue wqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)

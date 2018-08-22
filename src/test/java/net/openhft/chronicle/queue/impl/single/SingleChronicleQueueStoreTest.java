@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.util.ThrowingConsumer;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Rule;
 import org.junit.Test;
@@ -23,7 +24,7 @@ public class SingleChronicleQueueStoreTest {
     @Rule
     public TemporaryFolder tmpDir = new TemporaryFolder();
 
-    private static void assertExcerptsAreIndexed(final SingleChronicleQueue queue, final long[] indices,
+    private static void assertExcerptsAreIndexed(final RollingChronicleQueue queue, final long[] indices,
                                                  final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {
         final SingleChronicleQueueStore wireStore = (SingleChronicleQueueStore)
                 queue.storeForCycle(queue.cycle(), 0L, true);
@@ -67,8 +68,8 @@ public class SingleChronicleQueueStoreTest {
         });
     }
 
-    private void runTest(final ThrowingConsumer<SingleChronicleQueue, Exception> testMethod) throws Exception {
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir.newFolder()).
+    private void runTest(final ThrowingConsumer<RollingChronicleQueue, Exception> testMethod) throws Exception {
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir.newFolder()).
                 testBlockSize().timeProvider(clock::get).
                 rollCycle(ROLL_CYCLE).indexSpacing(INDEX_SPACING).
                 build()) {

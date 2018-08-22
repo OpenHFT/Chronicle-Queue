@@ -2,13 +2,11 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.*;
@@ -52,7 +50,7 @@ public class OvertakeTest {
     @Before
     public void before() {
         path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
-        try (SingleChronicleQueue appender_queue = SingleChronicleQueueBuilder.binary(path)
+        try (ChronicleQueue appender_queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .buffered(false)
                 .build()) {
@@ -71,7 +69,7 @@ public class OvertakeTest {
 
     @Test
     public void appendAndTail() {
-        SingleChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
+        ChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .buffered(false)
                 .build();
@@ -104,7 +102,7 @@ public class OvertakeTest {
 
         MyAppender myapp = new MyAppender(sync);
         Future<Long> f = execService.submit(myapp);
-        SingleChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
+        ChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .buffered(false)
                 .build();
@@ -118,7 +116,7 @@ public class OvertakeTest {
 
     class MyAppender implements Callable<Long> {
 
-        SingleChronicleQueue queue;
+        ChronicleQueue queue;
         ExcerptAppender appender;
         SynchronousQueue<Long> sync;
 
@@ -160,11 +158,11 @@ public class OvertakeTest {
 
     class MyTailer implements Callable<Long> {
 
-        SingleChronicleQueue queue;
+        ChronicleQueue queue;
         long startIndex;
         SynchronousQueue<Long> sync;
 
-        MyTailer(SingleChronicleQueue q, long s, SynchronousQueue<Long> sync) {
+        MyTailer(ChronicleQueue q, long s, SynchronousQueue<Long> sync) {
             queue = q;
             startIndex = s;
             this.sync = sync;

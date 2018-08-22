@@ -16,15 +16,12 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -52,7 +49,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
         Runnable reader = () -> {
             long count = 0;
-            try (RollingChronicleQueue rqueue = SingleChronicleQueueBuilder
+            try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY)

@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.FieldInfo;
@@ -35,27 +36,35 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.builder;
+
 /**
  * @author Rob Austin.
  */
-public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
+public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue>
         extends Cloneable, Marshallable {
 
-    static SingleChronicleQueueBuilder single(@NotNull String basePath) {
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> single() {
+        SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> builder = builder();
+        builder.wireType(WireType.BINARY_LIGHT);
+        return builder;
+    }
+
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> single(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
-    static SingleChronicleQueueBuilder single(@NotNull File basePath) {
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> single(@NotNull File basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
     @Deprecated
-    static SingleChronicleQueueBuilder singleText(@NotNull String basePath) {
+    static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> singleText(@NotNull String basePath) {
         return SingleChronicleQueueBuilder.text(new File(basePath));
     }
 
     @NotNull
-    ChronicleQueue build();
+    Q build();
 
     @NotNull
     B onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats);
@@ -199,6 +208,8 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
 
     StoreFileListener storeFileListener();
 
+    boolean hasPretouchIntervalMillis();
+
     boolean readOnly();
 
     B readOnly(boolean readOnly);
@@ -226,21 +237,26 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
     B path(File path);
 
     /**
-     * updates all the fields in {@code this} that are null, from the {@param source}
+     * updates all the fields in {@code this} that are null, from the {@param parentBuilder}
      *
-     * @param source the source Chronicle Queue Builder
+     * @param parentBuilder the parentBuilder Chronicle Queue Builder
      * @return that
      */
 
-    default B setAllNullFields(@NotNull ChronicleQueueBuilder source) {
+    default B setAllNullFields(@Nullable ChronicleQueueBuilder parentBuilder) {
+        if (parentBuilder == null)
+            return (B) this;
 
-        List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(source.getClass());
+        if (! (this.getClass().isAssignableFrom(parentBuilder.getClass()) || parentBuilder.getClass().isAssignableFrom(this.getClass())))
+            throw new IllegalArgumentException("Classes are not in same implementation hierarchy");
+
+        List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(parentBuilder.getClass());
 
         for (final FieldInfo fieldInfo : Wires.fieldInfos(this.getClass())) {
             if (!sourceFieldInfo.contains(fieldInfo))
                 continue;
             Object resultV = fieldInfo.get(this);
-            Object parentV = fieldInfo.get(source);
+            Object parentV = fieldInfo.get(parentBuilder);
             if (resultV == null && parentV != null)
                 fieldInfo.set(this, parentV);
 
@@ -252,4 +268,5 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder>
      * @return true if the bockSize has been set, Hence is non null
      */
     boolean hasBlockSize();
+
 }
