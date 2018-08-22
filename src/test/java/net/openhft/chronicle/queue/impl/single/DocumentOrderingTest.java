@@ -1,21 +1,12 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
-import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,7 +30,7 @@ public final class DocumentOrderingTest {
 
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws Exception {
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -76,7 +67,7 @@ public final class DocumentOrderingTest {
     @Test
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws Exception {
         // as below, but don't actually close the initial context
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -102,13 +93,13 @@ public final class DocumentOrderingTest {
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws Exception {
         final File dir = DirectoryUtils.tempDir("document-ordering");
         // must be different instances of queue to work around synchronization on acquireStore()
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      builder(dir, 5_000L).build();
-             final SingleChronicleQueue queue2 =
+             final ChronicleQueue queue2 =
                      builder(dir, 5_000L).build();
-             final SingleChronicleQueue queue3 =
+             final ChronicleQueue queue3 =
                      builder(dir, 5_000L).build();
-             final SingleChronicleQueue queue4 =
+             final ChronicleQueue queue4 =
                      builder(dir, 5_000L).build();
         ) {
 
@@ -148,7 +139,7 @@ public final class DocumentOrderingTest {
 
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws Exception {
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -177,7 +168,7 @@ public final class DocumentOrderingTest {
 
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws Exception {
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -213,7 +204,7 @@ public final class DocumentOrderingTest {
         executorService.shutdownNow();
     }
 
-    private Future<RecordInfo> attemptToWriteDocument(final SingleChronicleQueue queue) throws InterruptedException {
+    private Future<RecordInfo> attemptToWriteDocument(final ChronicleQueue queue) throws InterruptedException {
         final CountDownLatch startedLatch = new CountDownLatch(1);
         final Future<RecordInfo> future = executorService.submit(() -> {
             final int counterValue;

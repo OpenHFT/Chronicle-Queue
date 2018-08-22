@@ -19,10 +19,10 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
@@ -35,7 +35,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
@@ -63,7 +62,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         @NotNull File dir = getTmpDir();
         ClassAliasPool.CLASS_ALIASES.addAlias(MyData.class);
 
-        try (@NotNull SingleChronicleQueue queue = binary(dir)
+        try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE).build()) {
             @NotNull ExcerptAppender appender = queue.acquireAppender();
@@ -94,7 +93,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             @NotNull File dir = getTmpDir();
             dir.mkdir();
 
-            try (@NotNull SingleChronicleQueue queue = binary(dir)
+            try (@NotNull RollingChronicleQueue queue = binary(dir)
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .indexCount(8)
                     .indexSpacing(1)
@@ -246,7 +245,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             @NotNull File dir = getTmpDir();
             dir.mkdir();
 
-            try (@NotNull SingleChronicleQueue queue = binary(dir)
+            try (@NotNull RollingChronicleQueue queue = binary(dir)
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     // only do this for testing
                     .indexCount(8)
@@ -658,7 +657,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         appendMode = 0;
     }
 
-    public void appendMessage(@NotNull SingleChronicleQueue queue, long expectedIndex, String msg) {
+    public void appendMessage(@NotNull ChronicleQueue queue, long expectedIndex, String msg) {
         @NotNull ExcerptAppender appender = queue.acquireAppender();
         switch (appendMode) {
             case 1:

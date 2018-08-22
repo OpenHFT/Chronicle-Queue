@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -45,7 +46,7 @@ public class TestTailAfterRoll {
     public void test()  {
         File tmpDir = getTmpDir();
         File[] files;
-        try (SingleChronicleQueue writeQ = SingleChronicleQueueBuilder.binary(tmpDir).build()) {
+        try (ChronicleQueue writeQ = SingleChronicleQueueBuilder.binary(tmpDir).build()) {
             ExcerptAppender appender = writeQ.acquireAppender();
             long wp;
             Wire wire;
@@ -68,7 +69,7 @@ public class TestTailAfterRoll {
         File file = files[0];
         file.delete();
 
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).build()) {
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).build()) {
             ExcerptTailer excerptTailer = q.createTailer().toEnd();
             q.acquireAppender().writeText(EXPECTED);
             Assert.assertEquals(EXPECTED, excerptTailer.readText());

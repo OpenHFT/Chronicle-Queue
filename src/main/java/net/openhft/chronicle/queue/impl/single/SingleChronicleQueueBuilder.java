@@ -24,10 +24,7 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
-import net.openhft.chronicle.queue.BufferMode;
-import net.openhft.chronicle.queue.QueueOffsetSpec;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
@@ -60,7 +57,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
     private static final String ENTERPRISE_ONLY = "this is only supported in the enterprise version";
     private WireStoreFactory storeFactory;
 
-    private final static Constructor<SingleChronicleQueue> ENTERPISE_QUEUE_CONSTRUCTOR;
+    private final static Constructor<ChronicleQueue> ENTERPISE_QUEUE_CONSTRUCTOR;
     private final static Constructor<SingleChronicleQueueBuilder> ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR;
     public final static boolean IS_ENTERPRISE_QUEUE_ON_CLASSPATH;
     protected TableStore<SCQMeta> metaStore;

@@ -9,7 +9,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 
 public class QueueWriteJitterMain {
@@ -119,7 +118,7 @@ public class QueueWriteJitterMain {
         }
     }
 
-    protected SingleChronicleQueue createQueue(String path) {
+    protected ChronicleQueue createQueue(String path) {
         return ChronicleQueueBuilder.single(path).testBlockSize().build();
     }
 }

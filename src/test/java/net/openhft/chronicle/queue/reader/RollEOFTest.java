@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
@@ -191,7 +192,7 @@ public class RollEOFTest {
 
     private void createQueueAndWriteData(TimeProvider timeProvider, File path) {
 
-        final SingleChronicleQueue queue = SingleChronicleQueueBuilder
+        final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)

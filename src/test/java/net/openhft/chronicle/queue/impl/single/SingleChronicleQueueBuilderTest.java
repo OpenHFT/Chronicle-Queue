@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
@@ -20,7 +21,7 @@ public class SingleChronicleQueueBuilderTest {
     @Test
     public void shouldDetermineQueueDirectoryFromQueueFile() {
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
-        try (final SingleChronicleQueue queue =
+        try (final ChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(path)
                              .testBlockSize()
                              .build()) {

@@ -5,10 +5,7 @@ import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -67,7 +64,7 @@ public final class AppenderFileHandleLeakTest {
         };
     }
 
-    private static void readMessage(final SingleChronicleQueue queue,
+    private static void readMessage(final ChronicleQueue queue,
                                     final boolean manuallyReleaseResources,
                                     final Consumer<ExcerptTailer> refHolder) {
         final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
@@ -91,7 +88,7 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
-    private static void writeMessage(final int j, final SingleChronicleQueue queue) {
+    private static void writeMessage(final int j, final ChronicleQueue queue) {
         final ExcerptAppender appender = queue.acquireAppender();
         appender.writeBytes(b -> b.writeInt(j));
     }
@@ -111,7 +108,7 @@ public final class AppenderFileHandleLeakTest {
         final List<ExcerptTailer> gcGuard = new LinkedList<>();
         long openFileHandleCount = countFileHandlesOfCurrentProcess();
         List<Path> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
-        try (SingleChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
+        try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
             final List<Future<Boolean>> futures = new LinkedList<>();
 
             for (int i = 0; i < THREAD_COUNT; i++) {
@@ -144,7 +141,7 @@ public final class AppenderFileHandleLeakTest {
 
         GcControls.requestGcCycle();
         Thread.sleep(100);
-        try (SingleChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
+        try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
             final List<Path> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
             final List<Future<Boolean>> futures = new LinkedList<>();
@@ -176,7 +173,7 @@ public final class AppenderFileHandleLeakTest {
         System.gc();
         Thread.sleep(100);
         final int messagesPerThread = 10;
-        try (SingleChronicleQueue queue = createQueue(currentTime::get)) {
+        try (ChronicleQueue queue = createQueue(currentTime::get)) {
 
             final long openFileHandleCount = countFileHandlesOfCurrentProcess();
             final List<Path> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
@@ -271,7 +268,7 @@ public final class AppenderFileHandleLeakTest {
         }
     }
 
-    private SingleChronicleQueue createQueue(final TimeProvider timeProvider) {
+    private ChronicleQueue createQueue(final TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder.
                 binary(queuePath).
                 rollCycle(RollCycles.TEST_SECONDLY).

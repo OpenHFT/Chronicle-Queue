@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
@@ -36,7 +37,7 @@ public class StuckQueueTest {
 
             DumpQueueMain.dump(tmpDir.toString());
 
-            try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.MINUTELY).readOnly(true).build()) {
+            try (RollingChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.MINUTELY).readOnly(true).build()) {
 
                 ExcerptTailer tailer = q.createTailer();
 

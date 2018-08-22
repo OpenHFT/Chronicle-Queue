@@ -20,7 +20,7 @@ public class DumpQueueMainTest {
             return;
 
         final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
                 build()) {
 
@@ -44,7 +44,7 @@ public class DumpQueueMainTest {
     @Test
     public void shouldDumpDirectoryListing() throws Exception {
         final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
                 build()) {
 

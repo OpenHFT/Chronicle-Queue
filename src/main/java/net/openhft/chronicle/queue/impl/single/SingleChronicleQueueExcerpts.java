@@ -293,7 +293,7 @@ public class SingleChronicleQueueExcerpts {
             queue.onRoll(cycle);
         }
 
-        private void resetWires(@NotNull SingleChronicleQueue queue) {
+        private void resetWires(@NotNull ChronicleQueue queue) {
             WireType wireType = queue.wireType();
             {
                 Wire oldw = this.wire;
@@ -820,13 +820,13 @@ public class SingleChronicleQueueExcerpts {
 // *************************************************************************
 
     private static final class ClosableResources {
-        private final SingleChronicleQueue queue;
+        private final RollingChronicleQueue queue;
         private volatile Bytes wireReference = null;
         private volatile Bytes bufferWireReference = null;
         private volatile Bytes wireForIndexReference = null;
         private volatile CommonStore storeReference = null;
 
-        ClosableResources(final SingleChronicleQueue queue) {
+        ClosableResources(final RollingChronicleQueue queue) {
             this.queue = queue;
         }
 
@@ -1646,7 +1646,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         @NotNull
-        public RollingChronicleQueue queue() {
+        public ChronicleQueue queue() {
             return queue;
         }
 
@@ -1967,7 +1967,7 @@ public class SingleChronicleQueueExcerpts {
 
             private boolean indexIsCloseToAndAheadOfLastIndexMove(
                     final long index, final TailerState state, final TailerDirection direction,
-                    final SingleChronicleQueue queue) {
+                    final ChronicleQueue queue) {
                 return lastMovedToIndex != Long.MIN_VALUE &&
                         index - lastMovedToIndex < INDEXING_LINEAR_SCAN_THRESHOLD &&
                         state == FOUND_CYCLE &&
@@ -1978,7 +1978,7 @@ public class SingleChronicleQueueExcerpts {
 
             private boolean canReuseLastIndexMove(
                     final long index, final TailerState state, final TailerDirection direction,
-                    final SingleChronicleQueue queue, final Wire wire) {
+                    final ChronicleQueue queue, final Wire wire) {
 
                 return ((wire == null) || wire.bytes().readPosition() == readPositionAtLastMove) &&
                         index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&

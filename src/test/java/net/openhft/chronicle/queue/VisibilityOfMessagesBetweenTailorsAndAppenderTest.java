@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
@@ -26,7 +25,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
     @Test
     public void test() throws InterruptedException, ExecutionException {
 
-        SingleChronicleQueue x = SingleChronicleQueueBuilder
+        ChronicleQueue x = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .rollCycle(RollCycles.MINUTELY)
                 .build();

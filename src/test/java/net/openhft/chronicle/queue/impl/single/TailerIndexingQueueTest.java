@@ -34,7 +34,7 @@ public final class TailerIndexingQueueTest {
         }
     }
 
-    private static SingleChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
+    private static ChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder.
                 binary(path).
                 timeProvider(timeProvider).
@@ -47,7 +47,7 @@ public final class TailerIndexingQueueTest {
     @Test
     public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws Exception {
         assumeFalse(OS.isWindows());
-        try (final SingleChronicleQueue queue = createQueue(path, clock::get)) {
+        try (final ChronicleQueue queue = createQueue(path, clock::get)) {
             final ExcerptAppender appender = queue.acquireAppender();
             // generate some cycle files
             range(0, 5).forEach(i -> {
@@ -68,7 +68,7 @@ public final class TailerIndexingQueueTest {
                 .filter(p -> !p.equals(firstFile))
                 .forEach(TailerIndexingQueueTest::deleteFile);
 
-        try (final SingleChronicleQueue queue = createQueue(path, SystemTimeProvider.INSTANCE)) {
+        try (final ChronicleQueue queue = createQueue(path, SystemTimeProvider.INSTANCE)) {
             final ExcerptTailer tailer = queue.createTailer().toEnd();
             // move to END_OF_CYCLE
             try (final DocumentContext readCtx = tailer.readingDocument()) {

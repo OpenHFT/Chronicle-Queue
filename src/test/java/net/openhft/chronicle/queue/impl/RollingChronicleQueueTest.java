@@ -30,7 +30,7 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
         final AtomicLong time = new AtomicLong();
 
         File name = DirectoryUtils.tempDir("testCountExcerptsWhenTheCycleIsRolled");
-        try (final SingleChronicleQueue q = binary(name)
+        try (final RollingChronicleQueue q = binary(name)
                 .testBlockSize()
                 .timeProvider(time::get)
                 .rollCycle(TEST2_DAILY)

@@ -4,11 +4,13 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.*;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.concurrent.Executors;
@@ -26,7 +28,7 @@ public final class EofMarkerOnEmptyQueueTest {
     @Test
     public void shouldRecoverFromEmptyQueueOnRoll() throws Exception {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
-        try (final SingleChronicleQueue queue =
+        try (final RollingChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(tmpFolder.newFolder()).
                              rollCycle(RollCycles.TEST_SECONDLY).
                              timeProvider(clock::get).

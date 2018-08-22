@@ -22,7 +22,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -82,7 +81,7 @@ public final class ChronicleReader {
         boolean retryLastOperation = false;
         boolean queueHasBeenModified = false;
         do {
-            try (final SingleChronicleQueue queue = createQueue();
+            try (final ChronicleQueue queue = createQueue();
                  final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
                 final ExcerptTailer tailer = queue.createTailer();
                 queueHasBeenModified = false;
@@ -228,17 +227,17 @@ public final class ChronicleReader {
     }
 
     private long getCurrentTailIndex() {
-        try (final SingleChronicleQueue queue = createQueue()) {
+        try (final ChronicleQueue queue = createQueue()) {
             return queue.createTailer().toEnd().index();
         }
     }
 
     @NotNull
-    private SingleChronicleQueue createQueue() {
+    private ChronicleQueue createQueue() {
         if (!Files.exists(basePath)) {
             throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
         }
-        return (SingleChronicleQueue) SingleChronicleQueueBuilder
+        return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .readOnly(readOnly)
                 .build();

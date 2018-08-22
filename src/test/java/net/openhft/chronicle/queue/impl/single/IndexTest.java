@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.threads.ThreadDump;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -105,7 +106,7 @@ public class IndexTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex() throws Exception {
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
                 .wireType(this.wireType)

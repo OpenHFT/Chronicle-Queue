@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -39,7 +38,7 @@ public class LastIndexAppendedTest {
         String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
 
         for (int i = 0; i < 5; i++) {
-            try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(path)
+            try (ChronicleQueue queue = ChronicleQueueBuilder.single(path)
                     .testBlockSize()
                     .rollCycle(TEST_DAILY)
                     .build()) {
@@ -67,7 +66,7 @@ public class LastIndexAppendedTest {
         long a_index;
 
         try (
-                SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                ChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
                         .testBlockSize()
                         .rollCycle(TEST_DAILY)
                         .build()) {
@@ -78,7 +77,7 @@ public class LastIndexAppendedTest {
             }
             a_index = appender.lastIndexAppended();
         }
-        SingleChronicleQueue tailer_queue = ChronicleQueueBuilder.single(path)
+        ChronicleQueue tailer_queue = ChronicleQueueBuilder.single(path)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build();
@@ -89,7 +88,7 @@ public class LastIndexAppendedTest {
         assertEquals(a_index, t_index);
         System.out.println("Continue appending");
         try (
-                SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                ChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
                         .testBlockSize()
                         .rollCycle(TEST_DAILY)
                         //.buffered(false)

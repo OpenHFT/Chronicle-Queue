@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
@@ -37,8 +38,8 @@ public final class MessageHistoryTest {
 
     @Test
     public void shouldAccessMessageHistory() throws Exception {
-        try (final SingleChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
-             final SingleChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
+        try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
+             final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
             generateTestData(inputQueue, outputQueue);
 
             final ExcerptTailer tailer = outputQueue.createTailer();
@@ -53,8 +54,8 @@ public final class MessageHistoryTest {
 
     @Test
     public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() throws Exception {
-        try (final SingleChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
-             final SingleChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
+        try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
+             final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
             generateTestData(inputQueue, outputQueue);
 
             final ExcerptTailer tailer = outputQueue.createTailer();
@@ -68,7 +69,7 @@ public final class MessageHistoryTest {
         }
     }
 
-    private void generateTestData(final SingleChronicleQueue inputQueue, final SingleChronicleQueue outputQueue) {
+    private void generateTestData(final ChronicleQueue inputQueue, final ChronicleQueue outputQueue) {
         final First first = inputQueue.acquireAppender().
                 methodWriterBuilder(First.class).recordHistory(true).build();
         first.say("one");
@@ -92,7 +93,7 @@ public final class MessageHistoryTest {
         assertThat(reader.readOne(), is(false));
     }
 
-    private SingleChronicleQueue createQueue(final File queueDir, final int sourceId) {
+    private ChronicleQueue createQueue(final File queueDir, final int sourceId) {
         return SingleChronicleQueueBuilder.binary(queueDir).sourceId(sourceId).
                 timeProvider(clock::get).
                 testBlockSize().build();

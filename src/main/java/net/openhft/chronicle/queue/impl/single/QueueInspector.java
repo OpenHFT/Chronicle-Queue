@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.Wires;
 
@@ -8,9 +9,9 @@ import net.openhft.chronicle.wire.Wires;
 public final class QueueInspector {
     private static final int NO_CURRENT_WRITER = Integer.MIN_VALUE;
 
-    private final SingleChronicleQueue queue;
+    private final RollingChronicleQueue queue;
 
-    public QueueInspector(final SingleChronicleQueue queue) {
+    public QueueInspector(final RollingChronicleQueue queue) {
         this.queue = queue;
     }
 

@@ -20,9 +20,9 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -56,7 +56,7 @@ public class MultiThreadedRollTest {
         timeProvider.currentTimeMillis(1000);
         final File path = DirectoryUtils.tempDir("MultiThreadedRollTest");
 
-        try (final RollingChronicleQueue wqueue = binary(path)
+        try (final ChronicleQueue wqueue = binary(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY)
@@ -64,7 +64,7 @@ public class MultiThreadedRollTest {
 
             wqueue.acquireAppender().writeText("hello world");
 
-            try (final RollingChronicleQueue rqueue = binary(path)
+            try (final ChronicleQueue rqueue = binary(path)
                     .testBlockSize()
                     .timeProvider(timeProvider)
                     .rollCycle(TEST_SECONDLY)

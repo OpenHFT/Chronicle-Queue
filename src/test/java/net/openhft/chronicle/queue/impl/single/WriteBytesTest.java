@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.HeapBytesStore;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.junit.Rule;
@@ -21,7 +22,7 @@ public final class WriteBytesTest {
 
     @Test
     public void shouldWriteBytes() throws IOException {
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(tmpDir.newFolder()).testBlockSize().build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
