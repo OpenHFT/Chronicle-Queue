@@ -181,4 +181,6 @@ public interface ChronicleQueue extends Closeable {
     RollCycle rollCycle();
 
     TimeProvider time();
+
+    int deltaCheckpointInterval();
 }
