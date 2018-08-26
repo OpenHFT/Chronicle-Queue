@@ -22,7 +22,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.core.util.ThrowingTriFunction;
+import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
@@ -549,12 +549,11 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         throw new UnsupportedOperationException(ENTERPRISE_ONLY);
     }
 
-    public S bufferBytesStoreCreator(ThrowingTriFunction<Long,
-            Integer, Long, BytesStore, Exception> bufferBytesStoreCreator) {
+    public S bufferBytesStoreCreator(ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator) {
         throw new UnsupportedOperationException(ENTERPRISE_ONLY);
     }
 
-    public ThrowingTriFunction<Long, Integer, Long, BytesStore, Exception> bufferBytesStoreCreator() {
+    public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
         throw new UnsupportedOperationException(ENTERPRISE_ONLY);
     }
 
