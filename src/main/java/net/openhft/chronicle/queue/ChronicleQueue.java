@@ -176,11 +176,22 @@ public interface ChronicleQueue extends Closeable {
         return 0;
     }
 
-    long lastAcknowledgedIndexReplicated();
-
     RollCycle rollCycle();
 
     TimeProvider time();
 
     int deltaCheckpointInterval();
+
+    /**
+     * when using replication to another host, this is the last index that has been sent to the remote host.
+     */
+    long lastIndexReplicated();
+    long lastAcknowledgedIndexReplicated();
+
+    /**
+     * @param lastIndex last index that has been sent to the remote host.
+     */
+    void lastIndexReplicated(long lastIndex);
+    void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
+
 }

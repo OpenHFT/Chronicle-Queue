@@ -16,10 +16,17 @@ public interface TableStore<T extends Metadata> extends CommonStore {
      * file. To prevent this, it is advised to use {@link #doWithExclusiveLock(Function)} to wrap calls to this method,
      * which will ensure exclusive access to file while initially acquiring values.
      *
+     * If the value isn't found, it is created with {@link Long#MIN_VALUE } value by default. To specify other default
+     * value, use {@link #acquireValueFor(CharSequence, long)}
+     *
      * @param key the key of the value
      * @return {@link LongValue} object pointing to particular location in mapped underlying file
      */
-    LongValue acquireValueFor(CharSequence key);
+    default LongValue acquireValueFor(CharSequence key) {
+        return acquireValueFor(key, Long.MIN_VALUE);
+    }
+
+    LongValue acquireValueFor(CharSequence key, long defaultValue);
 
     /**
      * Acquires file-system level lock on the underlying file, to prevent concurrent access from multiple processes.

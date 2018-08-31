@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
@@ -101,6 +102,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final CycleCalculator cycleCalculator;
     @NotNull
     private final TableStore<SCQMeta> metaStore;
+    @Nullable
+    private final LongValue lastAcknowledgedIndexReplicated;
+    @Nullable
+    private final LongValue lastIndexReplicated;
     @NotNull
     private final DirectoryListing directoryListing;
     @NotNull
@@ -160,6 +165,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         this.queueLock = builder.queueLock();
         this.writeLock = builder.writeLock();
 
+        if (readOnly) {
+            this.lastIndexReplicated = null;
+            this.lastAcknowledgedIndexReplicated = null;
+        } else {
+            this.lastIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastIndexReplicated", -1L));
+            this.lastAcknowledgedIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastAcknowledgedIndexReplicated", -1L));
+        }
+
         if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
             try {
                 Method deltaCheckpointInterval = builder.getClass().getDeclaredMethod
@@ -201,6 +214,35 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @Override
     public int sourceId() {
         return sourceId;
+    }
+
+    /**
+     * when using replication to another host, this is the last index that has been confirmed to *
+     * have been read by the remote host.
+     */
+    @Override
+    public long lastAcknowledgedIndexReplicated() {
+        return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue();
+    }
+
+    @Override
+    public void lastAcknowledgedIndexReplicated(long newValue) {
+        if (lastAcknowledgedIndexReplicated != null)
+            lastAcknowledgedIndexReplicated.setMaxValue(newValue);
+    }
+
+    /**
+     * when using replication to another host, this is the last index that has been sent to the remote host.
+     */
+    @Override
+    public long lastIndexReplicated() {
+        return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue();
+    }
+
+    @Override
+    public void lastIndexReplicated(long indexReplicated) {
+        if (lastIndexReplicated != null)
+            lastIndexReplicated.setMaxValue(indexReplicated);
     }
 
     @Override
@@ -540,7 +582,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (isClosed.getAndSet(true))
             return;
 
-        closeQuietly(directoryListing, queueLock, writeLock);
+        closeQuietly(directoryListing, queueLock, writeLock, lastAcknowledgedIndexReplicated, lastIndexReplicated);
 
         synchronized (closers) {
             closers.forEach((k, v) -> v.accept(k));
@@ -703,11 +745,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         synchronized (closers) {
             closers.remove(storeTailer);
         }
-    }
-
-    @Override
-    public long lastAcknowledgedIndexReplicated() {
-        return ((StoreAppender) acquireAppender()).store().lastAcknowledgedIndexReplicated();
     }
 
     private static final class CachedCycleTree {

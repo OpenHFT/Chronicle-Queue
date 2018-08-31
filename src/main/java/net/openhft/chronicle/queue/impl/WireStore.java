@@ -16,7 +16,6 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.impl.single.ScanResult;
-import net.openhft.chronicle.wire.AbstractWire;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
@@ -33,15 +32,7 @@ public interface WireStore extends CommonStore {
     @NotNull
     WireStore writePosition(long position);
 
-    /**
-     * when using replication to another host, this is the last index that has been sent to the remote host.
-     */
-    long lastIndexReplicated();
 
-    /**
-     * @param lastIndex last index that has been sent to the remote host.
-     */
-    void lastIndexReplicated(long lastIndex);
 
     /**
      * @return the start of the last written excerpt to this cycle/store
@@ -63,9 +54,7 @@ public interface WireStore extends CommonStore {
 
     long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException;
 
-    void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
-    long lastAcknowledgedIndexReplicated();
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 

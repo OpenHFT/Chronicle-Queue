@@ -210,7 +210,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
      * {@inheritDoc}
      */
     @Override
-    public synchronized LongValue acquireValueFor(CharSequence key) { // TODO Change to ThreadLocal values if performance is a problem.
+    public synchronized LongValue acquireValueFor(CharSequence key, long defaultValue) { // TODO Change to ThreadLocal values if performance is a problem.
         StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve();
         try {
@@ -234,7 +234,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
             mappedBytes.writePosition(mappedBytes.readPosition());
             long pos = recovery.writeHeader(mappedWire, safeLength, timeoutMS, null, null);
             LongValue longValue = wireType.newLongReference().get();
-            mappedWire.writeEventName(key).int64forBinding(Long.MIN_VALUE, longValue);
+            mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
             mappedWire.updateHeader(pos, false);
             return longValue;
 

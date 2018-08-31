@@ -54,12 +54,6 @@ public class SingleChronicleQueueStore implements WireStore {
     private final MappedFile mappedFile;
     @NotNull
     private final ReferenceCounter refCount;
-    @Nullable
-    private LongValue lastAcknowledgedIndexReplicated;
-
-    // The last index that has been sent
-    private final LongValue lastIndexReplicated;
-
     @NotNull
     private transient Sequence sequence;
 
@@ -81,22 +75,8 @@ public class SingleChronicleQueueStore implements WireStore {
             this.indexing = Objects.requireNonNull(wire.read(MetaDataField.indexing).typedMarshallable());
             assert indexing != null;
             this.indexing.writePosition = writePosition;
-
-            if (wire.bytes().readRemaining() > 0) {
-                this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
-                        .int64ForBinding(null);
-            } else {
-                this.lastAcknowledgedIndexReplicated = null; // disabled.
-            }
-
             this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
             this.indexing.sequence = sequence;
-
-            if (wire.bytes().readRemaining() > 0) {
-                lastIndexReplicated = wire.read(MetaDataField.lastIndexReplicated).int64ForBinding(null);
-            } else {
-                this.lastIndexReplicated = null; // disabled.
-            }
 
         } finally {
             assert wire.endUse();
@@ -127,9 +107,6 @@ public class SingleChronicleQueueStore implements WireStore {
         this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(writePosition,
                 rollCycle.defaultIndexCount(),
                 rollCycle.defaultIndexSpacing());
-
-        this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
-        this.lastIndexReplicated = wireType.newLongReference().get();
     }
 
     @NotNull
@@ -175,35 +152,6 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public File file() {
         return mappedFile.file();
-    }
-
-    /**
-     * when using replication to another host, this is the last index that has been confirmed to *
-     * have been read by the remote host.
-     */
-    @Override
-    public long lastAcknowledgedIndexReplicated() {
-        return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue();
-    }
-
-    @Override
-    public void lastAcknowledgedIndexReplicated(long newValue) {
-        if (lastAcknowledgedIndexReplicated != null)
-            lastAcknowledgedIndexReplicated.setMaxValue(newValue);
-    }
-
-    /**
-     * when using replication to another host, this is the last index that has been sent to the remote host.
-     */
-    @Override
-    public long lastIndexReplicated() {
-        return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue();
-    }
-
-    @Override
-    public void lastIndexReplicated(long indexReplicated) {
-        if (lastIndexReplicated != null)
-            lastIndexReplicated.setMaxValue(indexReplicated);
     }
 
     @NotNull
@@ -307,8 +255,6 @@ public class SingleChronicleQueueStore implements WireStore {
                 ", writePosition/seq=" + writePosition.toString() +
                 ", mappedFile=" + mappedFile +
                 ", refCount=" + refCount +
-                ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
-                ", lastIndexReplicated=" + lastIndexReplicated +
                 '}';
     }
 
@@ -319,20 +265,13 @@ public class SingleChronicleQueueStore implements WireStore {
     private void onCleanup() {
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
-        Closeable.closeQuietly(lastAcknowledgedIndexReplicated);
-        Closeable.closeQuietly(lastIndexReplicated);
         mappedBytes.release();
     }
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        if (lastAcknowledgedIndexReplicated == null)
-            lastAcknowledgedIndexReplicated = wire.newLongReference();
-
         ValueOut wireOut = wire.write(MetaDataField.writePosition);
-        intForBinding(wireOut, writePosition).write(MetaDataField.indexing).typedMarshallable(this.indexing)
-                .write(MetaDataField.lastAcknowledgedIndexReplicated).int64forBinding(-1L, lastAcknowledgedIndexReplicated)
-                .write(MetaDataField.lastIndexReplicated).int64forBinding(-1L, lastIndexReplicated);
+        intForBinding(wireOut, writePosition).write(MetaDataField.indexing).typedMarshallable(this.indexing);
         wire.padToCacheAlign();
     }
 

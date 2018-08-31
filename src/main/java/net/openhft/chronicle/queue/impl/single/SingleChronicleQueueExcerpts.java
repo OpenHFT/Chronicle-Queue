@@ -1226,7 +1226,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean inACycleCheckRep() {
-            long lastSequenceAck = store().lastAcknowledgedIndexReplicated();
+            long lastSequenceAck = queue.lastAcknowledgedIndexReplicated();
             long seq = queue.rollCycle().toSequenceNumber(index);
             return seq > lastSequenceAck;
         }
@@ -1843,78 +1843,6 @@ public class SingleChronicleQueueExcerpts {
                             "(message index %s, message history %s). If source queue is replicated then " +
                             "sourceIndex may not have been replicated yet",
                     tailer.queue().fileAbsolutePath(), Long.toHexString(tailer.index()), WireType.TEXT.asString(messageHistory));
-        }
-
-        public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
-
-            if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "received lastAcknowledgedIndexReplicated=" + Long.toHexString(acknowledgeIndex) + " ,file=" + queue().fileAbsolutePath());
-
-            RollCycle rollCycle = queue.rollCycle();
-            int cycle0 = rollCycle.toCycle(acknowledgeIndex);
-            // cycle is the same so the same tailer can be used.
-            if (cycle0 == cycle()) {
-                store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
-                return;
-            }
-            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
-            // NOTE: This is a very expensive operation.
-            StoreTailer temp = queue.acquireTailer();
-            try {
-                if (!temp.cycle(cycle0)) {
-                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
-                    return;
-                }
-
-                WireStore store = temp.store;
-                if (store == null) {
-                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " discarded.");
-                    return;
-                }
-                store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
-            } finally {
-                temp.release();
-            }
-        }
-
-        public void lastIndexReplicated(long lastIndexReplicated) {
-
-            if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "received lastIndexReplicated=" + Long.toHexString(lastIndexReplicated) + " ,file=" + queue().fileAbsolutePath());
-
-            RollCycle rollCycle = queue.rollCycle();
-            int cycle0 = rollCycle.toCycle(lastIndexReplicated);
-            // cycle is the same so the same tailer can be used.
-            if (cycle0 == cycle()) {
-                store().lastIndexReplicated(lastIndexReplicated);
-                return;
-            }
-            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
-            // NOTE: This is a very expensive operation.
-            StoreTailer temp = queue.acquireTailer();
-            try {
-
-                if (!temp.cycle(cycle0)) {
-                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " for a cycle which could not found");
-                    return;
-                }
-
-                if (temp.store == null) {
-                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(lastIndexReplicated) + " discarded.");
-                    return;
-                }
-                temp.store().lastIndexReplicated(lastIndexReplicated);
-            } finally {
-                temp.release();
-            }
-        }
-
-        public long lastAcknowledgedIndexReplicated() {
-            return ((StoreAppender) queue.acquireAppender()).store().lastAcknowledgedIndexReplicated();
-        }
-
-        public long lastIndexReplicated() {
-            return ((StoreAppender) queue.acquireAppender()).store().lastIndexReplicated();
         }
 
         public void setCycle(int cycle) {

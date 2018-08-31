@@ -54,119 +54,113 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    630,\n" +
-                    "    2705829396482\n" +
+                    "    550,\n" +
+                    "    2362232012802\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 264,\n" +
+                    "    index2Index: 184,\n" +
                     "    lastIndex: 4\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  lastIndexReplicated: -1\n" +
+                    "  }\n" +
                     "}\n" +
-                    "# position: 264, header: -1\n" +
+                    "# position: 184, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  432,\n" +
+                    "  352,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 432, header: -1\n" +
+                    "# position: 352, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 2\n" +
-                    "  592,\n" +
-                    "  630,\n" +
+                    "  512,\n" +
+                    "  550,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 592, header: 0\n" +
+                    "# position: 512, header: 0\n" +
                     "--- !!data\n" +
                     "1. some  text\n" +
-                    "# position: 609, header: 1\n" +
+                    "# position: 529, header: 1\n" +
                     "--- !!data\n" +
                     "2. some more text\n" +
-                    "# position: 630, header: 2\n" +
+                    "# position: 550, header: 2\n" +
                     "--- !!data\n" +
                     "3. some more text\n" +
-                    "# position: 651, header: 2 EOF\n" +
+                    "# position: 571, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130417 bytes remaining\n" +
+                    "# 130497 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    592,\n" +
-                    "    2542620639232\n" +
+                    "    512,\n" +
+                    "    2199023255552\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 264,\n" +
+                    "    index2Index: 184,\n" +
                     "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  lastIndexReplicated: -1\n" +
+                    "  }\n" +
                     "}\n" +
-                    "# position: 264, header: -1\n" +
+                    "# position: 184, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  432,\n" +
+                    "  352,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 432, header: -1\n" +
+                    "# position: 352, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  592,\n" +
+                    "  512,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 592, header: 0\n" +
+                    "# position: 512, header: 0\n" +
                     "--- !!data\n" +
                     "4. some text - first cycle\n" +
-                    "# position: 622, header: 0 EOF\n" +
+                    "# position: 542, header: 0 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130446 bytes remaining\n" +
+                    "# 130526 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    623,\n" +
-                    "    2675764625409\n" +
+                    "    543,\n" +
+                    "    2332167241729\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 264,\n" +
+                    "    index2Index: 184,\n" +
                     "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  lastIndexReplicated: -1\n" +
+                    "  }\n" +
                     "}\n" +
-                    "# position: 264, header: -1\n" +
+                    "# position: 184, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  432,\n" +
+                    "  352,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 432, header: -1\n" +
+                    "# position: 352, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  592,\n" +
+                    "  512,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 592, header: 0\n" +
+                    "# position: 512, header: 0\n" +
                     "--- !!data\n" +
                     "5. some text - second cycle\n" +
-                    "# position: 623, header: 1\n" +
+                    "# position: 543, header: 1\n" +
                     "--- !!data\n" +
                     "some more text\n" +
                     "...\n" +
-                    "# 130427 bytes remaining\n";
+                    "# 130507 bytes remaining\n";
             assertEquals(expectedEager, q.dump());
 
             assertEquals(5, q.countExcerpts(start, end));

@@ -160,27 +160,25 @@ public class NotCompleteTest {
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 1,\n" +
-                        "    index2Index: 264,\n" +
+                        "    index2Index: 184,\n" +
                         "    lastIndex: 0\n" +
-                        "  },\n" +
-                        "  lastAcknowledgedIndexReplicated: -1,\n" +
-                        "  lastIndexReplicated: -1\n" +
+                        "  }\n" +
                         "}\n" +
-                        "# position: 264, header: -1\n" +
+                        "# position: 184, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  368,\n" +
+                        "  288,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
-                        "# position: 368, header: -1\n" +
+                        "# position: 288, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 0\n" +
                         "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "...\n" +
-                        "# 327212 bytes remaining\n";
+                        "# 327292 bytes remaining\n";
                 assertEquals(expectedEager, queue.dump());
             }
 
@@ -194,37 +192,35 @@ public class NotCompleteTest {
                 String expected = "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    464,\n" +
-                        "    1992864825344\n" +
+                        "    384,\n" +
+                        "    1649267441664\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 1,\n" +
-                        "    index2Index: 264,\n" +
+                        "    index2Index: 184,\n" +
                         "    lastIndex: 1\n" +
-                        "  },\n" +
-                        "  lastAcknowledgedIndexReplicated: -1,\n" +
-                        "  lastIndexReplicated: -1\n" +
+                        "  }\n" +
                         "}\n" +
-                        "# position: 264, header: -1\n" +
+                        "# position: 184, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  368,\n" +
+                        "  288,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
-                        "# position: 368, header: -1\n" +
+                        "# position: 288, header: -1\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  464,\n" +
+                        "  384,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
-                        "# position: 464, header: 0\n" +
+                        "# position: 384, header: 0\n" +
                         "--- !!data #binary\n" +
                         "some: data\n" +
                         "...\n" +
-                        "# 327198 bytes remaining\n";
+                        "# 327278 bytes remaining\n";
 
                 assertEquals(expected, queue.dump());
             }

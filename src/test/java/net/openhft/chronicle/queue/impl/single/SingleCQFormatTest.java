@@ -241,9 +241,7 @@ public class SingleCQFormatTest {
                 "    indexSpacing: 4,\n" +
                 "    index2Index: 0,\n" +
                 "    lastIndex: 0\n" +
-                "  },\n" +
-                "  lastAcknowledgedIndexReplicated: -1,\n" +
-                "  lastIndexReplicated: -1\n" +
+                "  }\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 

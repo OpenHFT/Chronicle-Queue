@@ -44,7 +44,7 @@ public class ReadonlyTableStore<T extends Metadata> implements TableStore<T> {
     }
 
     @Override
-    public LongValue acquireValueFor(CharSequence key) {
+    public LongValue acquireValueFor(CharSequence key, long defaultValue) {
         throw new UnsupportedOperationException("Read only");
     }
 

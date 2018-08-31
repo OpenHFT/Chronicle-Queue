@@ -95,29 +95,19 @@ The Sink and Source handers are as follows:
 | sink  |source   | `software.chronicle.enterprise.queue.replication.SourceReplicationHandler`
 |===
 
-When using Chronicle Services, extended sink and source handlers are used, these ensure that input queues are replicated before output queues.
-
-[%autowidth]
-|===
-| from	|	to 	| msg sent
-| source	| sink	| `software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSourceReplicationHandler`
-| sink 	| source	| `software.chronicle.services.replication.ServicesReplicatedQueue.ServiceSinkReplicationHandler`
-|===
-
-The source-side of the connection sends a `ServiceSinkReplicationHandler` to be run on the remote sink host.
+The source-side of the connection sends a `SinkReplicationHandler` to be run on the remote sink host.
 
 ```
 --- !!meta-data #binary
 csp: /replication/out-1/2
 cid: 292323922173575
 --- !!data #binary
-handler: !ServiceSinkReplicationHandler {
+handler: !SinkReplicationHandler {
   queueName: out-1,
   wireType: BINARY_LIGHT,
   acknowledgement: true,
   nextIndexRequired: 0x451600000001,
-  sourceId: !short 1002,
-  sourceBuilderClass: !type ServiceSourceReplicationHandlerBuilder
+  sourceId: !short 1002
 }
 ```
 
@@ -128,7 +118,7 @@ The sink-side of the connection will respond by setting up a `SourceReplicationH
 csp: /replication/out-1/2
 cid: 292323922173575
 --- !!data #binary
-handler: !ServiceSourceReplicationHandler {
+handler: !SourceReplicationHandler {
   queueName: out-1,
   wireType: BINARY_LIGHT,
   acknowledgement: true,
