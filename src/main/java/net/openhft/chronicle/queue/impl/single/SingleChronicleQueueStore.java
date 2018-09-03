@@ -84,11 +84,11 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     /**
-     * @param rollCycle               the current rollCycle
-     * @param wireType                the wire type that is being used
-     * @param mappedBytes             used to mapped the data store file
-     * @param indexCount              the number of entries in each index.
-     * @param indexSpacing            the spacing between indexed entries.
+     * @param rollCycle    the current rollCycle
+     * @param wireType     the wire type that is being used
+     * @param mappedBytes  used to mapped the data store file
+     * @param indexCount   the number of entries in each index.
+     * @param indexSpacing the spacing between indexed entries.
      */
     public SingleChronicleQueueStore(@NotNull RollCycle rollCycle,
                                      @NotNull final WireType wireType,
@@ -217,6 +217,11 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public long refCount() {
         return this.refCount.get();
+    }
+
+    @Override
+    public boolean tryReserve() {
+        return this.refCount.tryReserve();
     }
 
     @Override
