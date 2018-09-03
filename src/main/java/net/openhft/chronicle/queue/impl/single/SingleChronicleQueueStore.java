@@ -342,6 +342,11 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
+    public boolean tryReserve() {
+        return this.refCount.tryReserve();
+    }
+
+    @Override
     public void close() {
         while (refCount.get() > 0) {
             refCount.release();
