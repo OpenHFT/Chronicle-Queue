@@ -157,6 +157,11 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     }
 
     @Override
+    public boolean tryReserve() {
+        return refCount.tryReserve();
+    }
+
+    @Override
     public void close() {
 
         while (refCount.get() > 0) {
