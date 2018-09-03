@@ -243,7 +243,7 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
 
     private static boolean isQueueReplicationAvailable() {
         try {
-            Class.forName("software.chronicle.enterprise.queue.QueueSyncReplicationHandler");
+            Class.forName("software.chronicle.enterprise.queue.replication.SinkReplicationHandler");
             return true;
         } catch (ClassNotFoundException e) {
             return false;
