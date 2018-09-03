@@ -150,6 +150,11 @@ public class SingleTableStore implements TableStore {
     }
 
     @Override
+    public boolean tryReserve() {
+        return refCount.tryReserve();
+    }
+
+    @Override
     public void close() {
 
         while (refCount.get() > 0) {
