@@ -101,6 +101,11 @@ public class ReadonlyTableStore<T extends Metadata> implements TableStore<T> {
     }
 
     @Override
+    public boolean tryReserve() {
+        return false;
+    }
+
+    @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
