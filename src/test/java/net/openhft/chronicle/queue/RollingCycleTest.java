@@ -25,14 +25,11 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -47,7 +44,7 @@ public class RollingCycleTest {
         stp.currentTimeMillis(start);
 
         String basePath = OS.TARGET + "/testRollCycle" + System.nanoTime();
-        try (final ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .timeoutMS(5)
                 .rollCycle(RollCycles.TEST_DAILY)

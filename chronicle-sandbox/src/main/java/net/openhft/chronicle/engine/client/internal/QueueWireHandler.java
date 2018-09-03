@@ -23,7 +23,6 @@ import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
 import net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
 import net.openhft.chronicle.network.event.EventGroup;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.slf4j.Logger;
@@ -195,7 +194,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             queue = fileNameToChronicle.computeIfAbsent
                     (filename, s -> {
                         try {
-                            return new ChronicleQueueBuilder(filename).build();
+                            return net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single(filename).build();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }

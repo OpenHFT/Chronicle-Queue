@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import org.junit.After;
 import org.junit.Before;
@@ -48,7 +49,7 @@ public class ReadmeTest {
     @Test
     public void createAQueue() {
         final String basePath = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {

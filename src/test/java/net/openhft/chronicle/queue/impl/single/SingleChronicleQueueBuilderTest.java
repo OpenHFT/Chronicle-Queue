@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
@@ -41,8 +40,8 @@ public class SingleChronicleQueueBuilderTest {
 
     @Test
     public void setAllNullFields() {
-        ChronicleQueueBuilder b1 = SingleChronicleQueueBuilder.builder();
-        ChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
+        SingleChronicleQueueBuilder b1 = SingleChronicleQueueBuilder.builder();
+        SingleChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
         b1.blockSize(1234567);
         b2.bufferCapacity(98765);
         b2.setAllNullFields(b1);
@@ -52,7 +51,7 @@ public class SingleChronicleQueueBuilderTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
-        ChronicleQueueBuilder b1 = Wires.tupleFor(ChronicleQueueBuilder.class, "ChronicleQueueBuilder");
+        SingleChronicleQueueBuilder b1 = Wires.tupleFor(SingleChronicleQueueBuilder.class, "ChronicleQueueBuilder");
         SingleChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
         b2.bufferCapacity(98765);
         b1.blockSize(1234567);

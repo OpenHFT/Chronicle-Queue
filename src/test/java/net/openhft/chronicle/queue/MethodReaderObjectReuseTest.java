@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import org.junit.Test;
 
@@ -16,7 +17,7 @@ public class MethodReaderObjectReuseTest {
     @Test
     public void testOneOne() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
-        try (ChronicleQueue cq = ChronicleQueueBuilder.single(OS.TARGET + "/MethodReaderObjectReuseTest-" + System.nanoTime()).build()) {
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(OS.TARGET + "/MethodReaderObjectReuseTest-" + System.nanoTime()).build()) {
             PingDTO.constructionExpected++;
             PingDTO pdtio = new PingDTO();
             PingDTO.constructionExpected++;

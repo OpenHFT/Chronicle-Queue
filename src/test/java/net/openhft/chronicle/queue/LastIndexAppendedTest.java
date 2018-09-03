@@ -26,6 +26,7 @@ import org.junit.Test;
 import java.io.File;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.*;
 
 /**
@@ -34,11 +35,11 @@ import static org.junit.Assert.*;
 public class LastIndexAppendedTest {
 
     @Test
-    public void testLastIndexAppendedAcrossRestarts() throws Exception {
+    public void testLastIndexAppendedAcrossRestarts() {
         String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
 
         for (int i = 0; i < 5; i++) {
-            try (ChronicleQueue queue = ChronicleQueueBuilder.single(path)
+            try (ChronicleQueue queue = single(path)
                     .testBlockSize()
                     .rollCycle(TEST_DAILY)
                     .build()) {
@@ -66,7 +67,7 @@ public class LastIndexAppendedTest {
         long a_index;
 
         try (
-                ChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                ChronicleQueue appender_queue = single(path)
                         .testBlockSize()
                         .rollCycle(TEST_DAILY)
                         .build()) {
@@ -77,7 +78,7 @@ public class LastIndexAppendedTest {
             }
             a_index = appender.lastIndexAppended();
         }
-        ChronicleQueue tailer_queue = ChronicleQueueBuilder.single(path)
+        ChronicleQueue tailer_queue = single(path)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build();
@@ -88,7 +89,7 @@ public class LastIndexAppendedTest {
         assertEquals(a_index, t_index);
         System.out.println("Continue appending");
         try (
-                ChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                ChronicleQueue appender_queue = single(path)
                         .testBlockSize()
                         .rollCycle(TEST_DAILY)
                         //.buffered(false)

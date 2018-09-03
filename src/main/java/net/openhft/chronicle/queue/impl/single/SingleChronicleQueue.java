@@ -39,8 +39,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Method;
 import java.text.ParseException;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -74,7 +74,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     final File path;
     final String fileAbsolutePath;
     final AtomicBoolean isClosed = new AtomicBoolean();
-    private final StoreFileListener storeFileListener;
+    private StoreFileListener storeFileListener;
     private final StoreSupplier storeSupplier;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
     @NotNull
@@ -86,7 +86,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final long blockSize, overlapSize;
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
-    @Nullable
+    @NotNull
     protected final EventLoop eventLoop;
     private final long bufferCapacity;
     private final int indexSpacing;
@@ -101,7 +101,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final CycleCalculator cycleCalculator;
     @NotNull
-    private final TableStore<SCQMeta> metaStore;
+    protected final TableStore<SCQMeta> metaStore;
     @Nullable
     private final LongValue lastAcknowledgedIndexReplicated;
     @Nullable
@@ -122,10 +122,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final RollingResourcesCache dateCache;
     private int deltaCheckpointInterval;
 
-    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder<?, SingleChronicleQueue> builder) {
+    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
-        cycleCalculator = builder.cycleCalculator();
+        cycleCalculator = cycleCalculator(builder.rollTimeZone());
         epoch = builder.epoch();
         dateCache = new RollingResourcesCache(rollCycle, epoch, textToFile(builder), fileToText());
 
@@ -173,19 +173,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             this.lastAcknowledgedIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastAcknowledgedIndexReplicated", -1L));
         }
 
-        if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
-            try {
-                Method deltaCheckpointInterval = builder.getClass().getDeclaredMethod
-                        ("deltaCheckpointInterval");
-                deltaCheckpointInterval.setAccessible(true);
-                this.deltaCheckpointInterval = (Integer) deltaCheckpointInterval.invoke(builder);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
 
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
+    }
+
+    protected CycleCalculator cycleCalculator(ZoneId zoneId) {
+        return DefaultCycleCalculator.INSTANCE;
     }
 
     @NotNull
@@ -369,7 +364,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return this.isBuffered;
     }
 
-    @Nullable
+    @NotNull
     public EventLoop eventLoop() {
         return this.eventLoop;
     }
@@ -382,7 +377,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return new StoreAppender(this, newPool);
     }
 
-    StoreFileListener storeFileListener() {
+    protected StoreFileListener storeFileListener() {
         return storeFileListener;
     }
 

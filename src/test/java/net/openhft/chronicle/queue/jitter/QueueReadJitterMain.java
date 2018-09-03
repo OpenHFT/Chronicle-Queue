@@ -6,9 +6,9 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -105,6 +105,6 @@ public class QueueReadJitterMain {
     }
 
     protected ChronicleQueue createQueue(String path) {
-        return ChronicleQueueBuilder.single(path).blockSize(1 << 20).build();
+        return SingleChronicleQueueBuilder.single(path).blockSize(1 << 20).build();
     }
 }

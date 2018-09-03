@@ -16,51 +16,61 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
-import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.BufferMode;
+import net.openhft.chronicle.queue.QueueOffsetSpec;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.threads.EventGroup;
+import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.threads.TimingPauser;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
+import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
-public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, Q extends
-        SingleChronicleQueue>
-        extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder<S, Q>, Q> {
+public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
+    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
+    private static final Constructor ENTERPISE_QUEUE_CONSTRUCTOR;
+    private static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
-    private static final String ENTERPRISE_ONLY = "this is only supported in the enterprise version";
-    private WireStoreFactory storeFactory;
-
-    private final static Constructor<ChronicleQueue> ENTERPISE_QUEUE_CONSTRUCTOR;
-    private final static Constructor<SingleChronicleQueueBuilder> ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR;
-    public final static boolean IS_ENTERPRISE_QUEUE_ON_CLASSPATH;
-    protected TableStore<SCQMeta> metaStore;
 
     static {
         CLASS_ALIASES.addAlias(WireType.class);
@@ -79,67 +89,76 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
                 co = null;
             }
             ENTERPISE_QUEUE_CONSTRUCTOR = co;
-            IS_ENTERPRISE_QUEUE_ON_CLASSPATH = (co != null);
-        }
-        {
-            Constructor co;
-            try {
-                Class<?> aClass = Class.forName("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder");
-                co = ((Class) aClass).getDeclaredConstructor();
-                co.setAccessible(true);
-                CLASS_ALIASES.addAlias(aClass, "QueueBuilder");
-            } catch (Exception e) {
-                co = null;
-                CLASS_ALIASES.addAlias(SingleChronicleQueueBuilder.class, "QueueBuilder");
-
-            }
-
-            ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR = co;
-
         }
 
     }
 
+    private WireType wireType = WireType.BINARY_LIGHT;
+    private Long blockSize;
+    private File path;
+    private RollCycle rollCycle = loadDefaultRollCycle();
+    private Long epoch; // default is 1970-01-01 00:00:00.000 UTC
+    private Long bufferCapacity;
+    private Integer indexSpacing;
+    private Integer indexCount;
+
+    public BufferMode writeBufferMode = BufferMode.None;
+    public BufferMode readBufferMode = BufferMode.None;
+
+    private Boolean enableRingBufferMonitoring;
+    @Nullable
+    private EventLoop eventLoop;
+    private WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     /**
-     * @return an empty builder
+     * by default logs the performance stats of the ring buffer
      */
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> builder() {
+    @NotNull
+    private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
+    private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
+    private Supplier<TimingPauser> pauserSupplier = () -> new TimeoutPauser(500_000);
+    private Long timeoutMS; // 10 seconds.
+    private Integer sourceId;
+    private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
+    private StoreFileListener storeFileListener;
 
-        try {
-            return ENTERPRISE_QUEUE_BUILDER_CONSTRUCTOR.newInstance();
-        } catch (Exception ignore) {
-        }
+    private Boolean readOnly;
+    private Boolean strongAppenders;
 
-        return new SingleChronicleQueueBuilder<>();
-    }
+    private TableStore<SCQMeta> metaStore;
 
-    protected SingleChronicleQueueBuilder() {
+    // enterprise stuff
+    private int deltaCheckpointInterval = -1;
+    private Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier;
+    private Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier;
+    private Updater<Bytes> messageInitializer;
+    private Consumer<Bytes> messageHeaderReader;
+    private SecretKeySpec key;
 
-    }
-
-    @SuppressWarnings("unchecked")
-    @Deprecated
-    public SingleChronicleQueueBuilder(@NotNull String path) {
-        this(new File(path));
-    }
-
-    @SuppressWarnings("unchecked")
-    @Deprecated
-    public SingleChronicleQueueBuilder(@NotNull File path) {
-        super(path);
-    }
-
-    @Override
-    public WireStoreFactory storeFactory() {
-        return storeFactory == null ? SingleChronicleQueueBuilder::createStore : storeFactory;
-    }
+    private int maxTailers;
+    private ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator;
+    private Long pretouchIntervalMillis;
+    private LocalTime rollTime;
+    private ZoneId rollTimeZone;
+    private QueueOffsetSpec queueOffsetSpec;
 
     public static void addAliases() {
         // static initialiser.
     }
+    /*
+     * ========================
+     * Builders
+     * ========================
+     */
+
+    /**
+     * @return an empty builder
+     */
+    public static SingleChronicleQueueBuilder builder() {
+        return new SingleChronicleQueueBuilder();
+    }
 
     @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> builder(@NotNull Path path, @NotNull WireType wireType) {
+    public static SingleChronicleQueueBuilder builder(@NotNull Path path, @NotNull WireType wireType) {
         return builder(path.toFile(), wireType);
     }
 
@@ -161,280 +180,172 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         return result;
     }
 
-    @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> binary(@NotNull Path path) {
+    public static SingleChronicleQueueBuilder single() {
+        SingleChronicleQueueBuilder builder = builder();
+        builder.wireType(WireType.BINARY_LIGHT);
+        return builder;
+    }
+
+    public static SingleChronicleQueueBuilder single(@NotNull String basePath) {
+        return binary(basePath);
+    }
+
+    public static SingleChronicleQueueBuilder single(@NotNull File basePath) {
+        return binary(basePath);
+    }
+
+    public static SingleChronicleQueueBuilder binary(@NotNull Path path) {
         return binary(path.toFile());
     }
 
-    @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> binary(@NotNull String basePath) {
+    public static SingleChronicleQueueBuilder binary(@NotNull String basePath) {
         return binary(new File(basePath));
     }
 
-    @Override
-    public boolean hasPretouchIntervalMillis() {
-        return false;
-    }
-
-    @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> binary(@NotNull File basePathFile) {
+    public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
         return builder(basePathFile, WireType.BINARY_LIGHT);
     }
 
-    @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> fieldlessBinary(@NotNull File name) {
+    public static SingleChronicleQueueBuilder fieldlessBinary(@NotNull File name) {
         return builder(name, WireType.FIELDLESS_BINARY);
     }
 
-    @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> defaultZeroBinary(@NotNull File basePathFile) {
+    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
         return builder(basePathFile, DEFAULT_ZERO_BINARY);
     }
 
-    @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> deltaBinary(@NotNull File basePathFile) {
+    public static SingleChronicleQueueBuilder deltaBinary(@NotNull File basePathFile) {
         return builder(basePathFile, DELTA_BINARY);
     }
 
-    @Deprecated
+    /**
+     * @param name               the file name
+     * @param deltaIntervalShift default value of 6, the shift for deltaInterval, the should be a
+     *                           number between 0-63 ( inclusive ), default the delta messaging is
+     *                           check pointed every 64 messages, so the default {@code
+     *                           deltaIntervalShift  == 6}, as {@code 1 << 6 == 64 }
+     * @return the EnterpriseChronicleQueueBuilder
+     */
+    public static SingleChronicleQueueBuilder deltaBinary(@NotNull File name, byte deltaIntervalShift) {
+        @NotNull SingleChronicleQueueBuilder ret = deltaBinary(name);
+
+        if (deltaIntervalShift < 0 || deltaIntervalShift > 63)
+            throw new IllegalArgumentException("deltaIntervalShift=" + deltaIntervalShift + ", but " +
+                    "should be a value between 0-63 inclusive");
+
+        ret.deltaCheckpointInterval(1 << deltaIntervalShift);
+        return ret;
+    }
+
+    protected SingleChronicleQueueBuilder() {
+    }
+
+    public WireStoreFactory storeFactory() {
+        return storeFactory;
+    }
+
+    public boolean hasPretouchIntervalMillis() {
+        return pretouchIntervalMillis != null;
+    }
+
     @NotNull
-    public static SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> text(@NotNull File name) {
-        return builder(name, WireType.TEXT);
+    public SingleChronicleQueue build() {
+        boolean needEnterprise = checkEnterpriseFeaturesRequested();
+        preBuild();
+
+        if (needEnterprise)
+            return buildEnterprise();
+
+        return new SingleChronicleQueue(this);
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
+    private boolean checkEnterpriseFeaturesRequested() {
+
+        boolean result = false;
+        if (readBufferMode != BufferMode.None)
+            result = onlyAvailableInEnterprise("Buffering");
+        if (writeBufferMode != BufferMode.None)
+            result = onlyAvailableInEnterprise("Buffering");
+        if (rollTimeZone != null && !rollTimeZone.getId().equals("UTC") && !rollTimeZone.getId().equals("Z"))
+            result = onlyAvailableInEnterprise("Non-UTC roll time zone");
+        if (wireType == WireType.DELTA_BINARY)
+            result = onlyAvailableInEnterprise("Wire type " + wireType.name());
+        if (encodingSupplier != null)
+            result = onlyAvailableInEnterprise("Encoding");
+        if (key != null)
+            result = onlyAvailableInEnterprise("Encryption");
+        if (hasPretouchIntervalMillis())
+            result = onlyAvailableInEnterprise("Pretouching");
+
+        return result;
+    }
+
+    private boolean onlyAvailableInEnterprise(final String feature) {
+        if (ENTERPISE_QUEUE_CONSTRUCTOR == null)
+            LOGGER.warn(feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
+        return true;
+    }
 
     @NotNull
-    static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue,
-                                                 @NotNull Wire wire) {
-        final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
-                queue.rollCycle(),
-                queue.wireType(),
-                (MappedBytes) wire.bytes(),
-                queue.indexCount(),
-                queue.indexSpacing());
-
-        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
-
-        return wireStore;
-    }
-
-    @Nullable
-    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
-        final StringBuilder eventName = new StringBuilder();
-        wire.readEventName(eventName);
-        if (eventName.toString().equals(MetaDataKeys.header.name())) {
-            final SingleChronicleQueueStore store = wire.read().typedMarshallable();
-            if (store == null) {
-                throw new IllegalArgumentException("Unable to load wire store");
-            }
-            return store;
-        }
-
-        LOGGER.warn("Unable to load store file from input. Queue file may be corrupted.");
-        return null;
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private static boolean isQueueReplicationAvailable() {
-        try {
-            Class.forName("software.chronicle.enterprise.queue.replication.SinkReplicationHandler");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
-    @Override
-    @NotNull
-    public Q build() {
-        if (readBufferMode() != BufferMode.None)
-            onlyAvailableInEnterprise("Buffering");
-        if (writeBufferMode() != BufferMode.None)
-            onlyAvailableInEnterprise("Buffering");
-        super.preBuild();
-
-        Q result = buildEnterprise();
-        if (result != null)
-            return result;
-
-        return (Q) new SingleChronicleQueue((SingleChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue>) this);
-    }
-
-    private void onlyAvailableInEnterprise(final String feature) {
-        getLogger().warn(feature + " is only supported in Chronicle Queue Enterprise. " +
-                "If you would like to use this feature, please contact sales@chronicle.software for more information.");
-    }
-
-    private Q buildEnterprise() {
-        if (IS_ENTERPRISE_QUEUE_ON_CLASSPATH)
-            return null;
+    private SingleChronicleQueue buildEnterprise() {
+        if (ENTERPISE_QUEUE_CONSTRUCTOR == null)
+            throw new IllegalStateException("Enterprise features requested but Chronicle Queue Enterprise is not in the class path!");
 
         try {
-            return (Q) ENTERPISE_QUEUE_CONSTRUCTOR.newInstance(this, null);
+            return (SingleChronicleQueue) ENTERPISE_QUEUE_CONSTRUCTOR.newInstance(this);
         } catch (Exception e) {
-            return null;
+            throw new IllegalStateException("Couldn't create an instance of Enterprise queue", e);
         }
 
     }
 
-    @Nullable
-    public Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier() {
-        return null;
-    }
-
-    @Nullable
-    public Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier() {
-        return null;
-    }
-
-    @NotNull
     public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
         if (keyBytes == null) {
             codingSuppliers(null, null);
             return this;
         }
-        onlyAvailableInEnterprise("AES encryption");
+        key = new SecretKeySpec(keyBytes, "AES");
         return this;
     }
 
-    @NotNull
-    public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
-                                                       @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
-        if (encodingSupplier != null || decodingSupplier != null)
-            onlyAvailableInEnterprise("Custom encoding");
+    public Updater<Bytes> messageInitializer() {
+        return messageInitializer == null ? Bytes::clear : messageInitializer;
+    }
+
+    public Consumer<Bytes> messageHeaderReader() {
+        return messageHeaderReader == null ? b -> {
+        } : messageHeaderReader;
+    }
+
+    public SingleChronicleQueueBuilder messageHeader(Updater<Bytes> messageInitializer,
+                                                     Consumer<Bytes> messageHeaderReader) {
+        this.messageInitializer = messageInitializer;
+        this.messageHeaderReader = messageHeaderReader;
         return this;
     }
 
-    @NotNull
-    @Override
-    public S testBlockSize() {
-        super.testBlockSize();
-        return (S) this;
+    public SingleChronicleQueueBuilder rollTime(final LocalTime rollTime) {
+        rollTime(rollTime, rollTimeZone);
+        return this;
     }
 
-    @Override
-    public S sourceId(int sourceId) {
-        return (S) super.sourceId(sourceId);
+    public ZoneId rollTimeZone() {
+        return rollTimeZone;
     }
 
-    @NotNull
-    @Override
-    public S blockSize(int blockSize) {
-        return (S) super.blockSize(blockSize);
+    public SingleChronicleQueueBuilder rollTimeZone(final ZoneId rollTimeZone) {
+        rollTime(rollTime, rollTimeZone);
+        return this;
     }
 
-    @NotNull
-    @Override
-    public S blockSize(long blockSize) {
-        return (S) super.blockSize(blockSize);
+    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, final ZoneId zoneId) {
+        this.rollTime = rollTime;
+        this.rollTimeZone = zoneId;
+        this.epoch = TimeUnit.SECONDS.toMillis(rollTime.toSecondOfDay());
+        this.queueOffsetSpec = QueueOffsetSpec.ofRollTime(rollTime, zoneId);
+        return this;
     }
 
-    @NotNull
-    @Override
-    public S wireType(@NotNull WireType wireType) {
-        return (S) super.wireType(wireType);
-    }
-
-    @NotNull
-    @Override
-    public S rollCycle(@NotNull RollCycle rollCycle) {
-        return (S) super.rollCycle(rollCycle);
-    }
-
-    @NotNull
-    @Override
-    public S bufferCapacity(long bufferCapacity) {
-        return (S) super.bufferCapacity(bufferCapacity);
-    }
-
-    @NotNull
-    @Override
-    public S epoch(long epoch) {
-        return (S) super.epoch(epoch);
-    }
-
-    @NotNull
-    @Override
-    public S buffered(boolean isBuffered) {
-        return (S) super.buffered(isBuffered);
-    }
-
-    @Override
-    public S writeBufferMode(BufferMode writeBufferMode) {
-        return (S) super.writeBufferMode(writeBufferMode);
-    }
-
-    @Override
-    public S readBufferMode(BufferMode readBufferMode) {
-        return (S) super.readBufferMode(readBufferMode);
-    }
-
-    @NotNull
-    @Override
-    public S eventLoop(EventLoop eventLoop) {
-        return (S) super.eventLoop(eventLoop);
-    }
-
-    @Override
-    public S indexCount(int indexCount) {
-        return (S) super.indexCount(indexCount);
-    }
-
-    @Override
-    public S indexSpacing(int indexSpacing) {
-        return (S) super.indexSpacing(indexSpacing);
-    }
-
-    @Override
-    public S timeProvider(TimeProvider timeProvider) {
-        return (S) super.timeProvider(timeProvider);
-    }
-
-    @Override
-    public S pauserSupplier(Supplier<TimingPauser> pauser) {
-        return (S) super.pauserSupplier(pauser);
-    }
-
-    @Override
-    public S path(final String path) {
-        return (S) super.path(path);
-    }
-
-    @Override
-    public S timeoutMS(long timeoutMS) {
-        return (S) super.timeoutMS(timeoutMS);
-    }
-
-    @Override
-    public S readOnly(boolean readOnly) {
-        return (S) super.readOnly(readOnly);
-    }
-
-    @Override
-    public S storeFileListener(StoreFileListener storeFileListener) {
-        return (S) super.storeFileListener(storeFileListener);
-    }
-
-    @Override
-    public S recoverySupplier(StoreRecoveryFactory recoverySupplier) {
-        return (S) super.recoverySupplier(recoverySupplier);
-    }
-
-    @Override
-    public S rollTime(@NotNull final LocalTime time, final ZoneId zoneId) {
-        if (!zoneId.equals(ZoneId.of("UTC"))) {
-            onlyAvailableInEnterprise("Non-UTC time-zone");
-        }
-        return (S) super.rollTime(time, ZoneId.of("UTC"));
-    }
-
-    @Override
     protected void initializeMetadata() {
         File metapath = metapath();
         validateRollCycle(metapath);
@@ -511,53 +422,529 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder, 
         return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2);
     }
 
-    protected int deltaCheckpointInterval() {
-        return -1;
+    public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
+        this.pretouchIntervalMillis = pretouchIntervalMillis;
+        return this;
     }
 
-    public S enablePreloader(final long pretouchIntervalMillis) {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    public int deltaCheckpointInterval() {
+        return deltaCheckpointInterval == -1 ? 64 : deltaCheckpointInterval;
     }
 
     public QueueOffsetSpec queueOffsetSpec() {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+        return queueOffsetSpec == null ? QueueOffsetSpec.ofNone() : queueOffsetSpec;
     }
 
     TableStore<SCQMeta> metaStore() {
         return metaStore;
     }
 
-
-    public Updater<Bytes> messageInitializer() {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    /**
+     * RingBuffer tailers need to be preallocated. Only set this if using readBufferMode=Asynchronous.
+     * By default 1 tailer will be created for the user.
+     *
+     * @param maxTailers number of tailers that will be required from this queue, not including the draining tailer
+     * @return this
+     */
+    public SingleChronicleQueueBuilder maxTailers(int maxTailers) {
+        this.maxTailers = maxTailers;
+        return this;
     }
 
-    public Consumer<Bytes> messageHeaderReader() {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
-    }
-
-    public S messageHeader(Updater<Bytes> messageInitializer,
-                           Consumer<Bytes> messageHeaderReader) {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
-    }
-
-    public S maxTailers(int maxTailers) {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
-    }
-
+    /**
+     * maxTailers
+     *
+     * @return number of tailers that will be required from this queue, not including the draining tailer
+     */
     public int maxTailers() {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+        return maxTailers;
     }
 
-    public S bufferBytesStoreCreator(ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator) {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+    public SingleChronicleQueueBuilder bufferBytesStoreCreator(ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator) {
+        this.bufferBytesStoreCreator = bufferBytesStoreCreator;
+        return this;
     }
 
+    /**
+     * Creator for BytesStore for underlying ring buffer. Allows visibility of RB's data to be controlled.
+     * See also RB_BYTES_STORE_CREATOR_NATIVE, RB_BYTES_STORE_CREATOR_MAPPED_FILE
+     *
+     * @return
+     */
+    @Nullable
     public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+        return bufferBytesStoreCreator;
     }
+
 
     public long pretouchIntervalMillis() {
-        throw new UnsupportedOperationException(ENTERPRISE_ONLY);
+        return pretouchIntervalMillis == null ? 1_000L : pretouchIntervalMillis;
+    }
+
+
+
+    public SingleChronicleQueueBuilder path(String path) {
+        return path(new File(path));
+    }
+
+    public SingleChronicleQueueBuilder path(final File path) {
+        this.path = path;
+        return this;
+    }
+
+    /**
+     * consumer will be called every second, also as there is data to report
+     *
+     * @param onRingBufferStats a consumer of the BytesRingBufferStats
+     * @return this
+     */
+    public SingleChronicleQueueBuilder onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats) {
+        this.onRingBufferStats = onRingBufferStats;
+        return this;
+    }
+
+    @NotNull
+    public Consumer<BytesRingBufferStats> onRingBufferStats() {
+        return this.onRingBufferStats == null ? NoBytesRingBufferStats.NONE : onRingBufferStats;
+    }
+
+    @NotNull
+    public File path() {
+        return this.path;
+    }
+
+    public SingleChronicleQueueBuilder blockSize(long blockSize) {
+        this.blockSize = Math.max(TEST_BLOCK_SIZE, blockSize);
+        return this;
+    }
+
+    public SingleChronicleQueueBuilder blockSize(int blockSize) {
+        return blockSize((long) blockSize);
+    }
+
+    public long blockSize() {
+
+        long bs = blockSize == null ? OS.is64Bit() ? 64L << 20 : TEST_BLOCK_SIZE : blockSize;
+
+        // can add an index2index & an index in one go.
+        long minSize = Math.max(TEST_BLOCK_SIZE, 32L * indexCount());
+        return Math.max(minSize, bs);
+    }
+
+    /**
+     * THIS IS FOR TESTING ONLY.
+     * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.
+     * <p>
+     * Using this will be slower when you have many messages, and break when you have large messages.
+     * </p>
+     *
+     * @return this
+     */
+    public SingleChronicleQueueBuilder testBlockSize() {
+        // small size for testing purposes only.
+        return blockSize(64 << 10);
+    }
+
+    @NotNull
+    public SingleChronicleQueueBuilder wireType(@NotNull WireType wireType) {
+        if (wireType == WireType.DELTA_BINARY)
+            deltaCheckpointInterval(64);
+        this.wireType = wireType;
+        return this;
+    }
+
+    private void deltaCheckpointInterval(int deltaCheckpointInterval) {
+        assert checkIsPowerOf2(deltaCheckpointInterval);
+        this.deltaCheckpointInterval = deltaCheckpointInterval;
+    }
+
+    private boolean checkIsPowerOf2(long value) {
+        return (value & (value - 1)) == 0;
+    }
+
+    @NotNull
+    public WireType wireType() {
+        return this.wireType == null ? WireType.BINARY_LIGHT : wireType;
+    }
+
+    @NotNull
+    public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
+        this.rollCycle = rollCycle;
+        return this;
+    }
+
+    @NotNull
+    public RollCycle rollCycle() {
+        return this.rollCycle;
+    }
+
+    /**
+     * @return ringBufferCapacity in bytes
+     */
+    public long bufferCapacity() {
+        long bufferCapacity = this.bufferCapacity == null ? 0 : this.bufferCapacity;
+        Long blockSize = blockSize();
+        return Math.min(blockSize / 4, bufferCapacity == -1 ? 2 << 20 : Math.max(4 << 10,
+                bufferCapacity));
+    }
+
+    /**
+     * @param bufferCapacity sets the ring buffer capacity in bytes
+     * @return this
+     */
+    @NotNull
+    public SingleChronicleQueueBuilder bufferCapacity(long bufferCapacity) {
+        this.bufferCapacity = bufferCapacity;
+        return this;
+    }
+
+    /**
+     * sets epoch offset in milliseconds
+     *
+     * @param epoch sets an epoch offset as the number of number of milliseconds since January 1,
+     *              1970,  00:00:00 GMT
+     * @return {@code this}
+     */
+    @NotNull
+    public SingleChronicleQueueBuilder epoch(long epoch) {
+        this.epoch = epoch;
+        queueOffsetSpec = QueueOffsetSpec.ofEpoch(epoch);
+        return this;
+    }
+
+    /**
+     * @return epoch offset as the number of number of milliseconds since January 1, 1970,  00:00:00
+     * GMT
+     */
+    public long epoch() {
+        return epoch == null ? Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
+    }
+
+    /**
+     * when set to {@code true}. uses a ring buffer to buffer appends, excerpts are written to the
+     * Chronicle Queue using a background thread
+     *
+     * @param isBuffered {@code true} if the append is buffered
+     * @return this
+     */
+    @NotNull
+    @Deprecated
+    public SingleChronicleQueueBuilder buffered(boolean isBuffered) {
+        this.writeBufferMode = isBuffered ? BufferMode.Asynchronous : BufferMode.None;
+        return this;
+    }
+
+    /**
+     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the
+     * Chronicle Queue using a background thread
+     */
+    @Deprecated
+    public boolean buffered() {
+        return this.writeBufferMode == BufferMode.Asynchronous;
+    }
+
+    /**
+     * @return BufferMode to use for writes. Only None is available is the OSS
+     */
+    @NotNull
+    public BufferMode writeBufferMode() {
+        return wireType() == WireType.DELTA_BINARY ? BufferMode.None : (writeBufferMode == null)
+                ? BufferMode.None : writeBufferMode;
+    }
+
+    public SingleChronicleQueueBuilder writeBufferMode(BufferMode writeBufferMode) {
+        this.writeBufferMode = writeBufferMode;
+        return this;
+    }
+
+    /**
+     * @return BufferMode to use for reads. Only None is available is the OSS
+     */
+    public BufferMode readBufferMode() {
+        return readBufferMode == null ? BufferMode.None : readBufferMode;
+    }
+
+    public SingleChronicleQueueBuilder readBufferMode(BufferMode readBufferMode) {
+        this.readBufferMode = readBufferMode;
+        return this;
+    }
+
+    /**
+     * @return a new event loop instance if none has been set, otherwise the {@code eventLoop}
+     * that was set
+     */
+    @NotNull
+    public EventLoop eventLoop() {
+        return eventLoop == null ? new EventGroup(true) : eventLoop;
+    }
+
+    @NotNull
+    public SingleChronicleQueueBuilder eventLoop(EventLoop eventLoop) {
+        this.eventLoop = eventLoop;
+        return this;
+    }
+
+    /**
+     * @return if the ring buffer's monitoring capability is turned on. Not available in OSS
+     */
+    public boolean enableRingBufferMonitoring() {
+        return enableRingBufferMonitoring == null ? false : enableRingBufferMonitoring;
+    }
+
+    public SingleChronicleQueueBuilder enableRingBufferMonitoring(boolean enableRingBufferMonitoring) {
+        this.enableRingBufferMonitoring = enableRingBufferMonitoring;
+        return this;
+    }
+
+    public SingleChronicleQueueBuilder indexCount(int indexCount) {
+        this.indexCount = Maths.nextPower2(indexCount, 8);
+        return this;
+    }
+
+    public int indexCount() {
+        return indexCount == null || indexCount <= 0 ? rollCycle().defaultIndexCount() : indexCount;
+    }
+
+    public SingleChronicleQueueBuilder indexSpacing(int indexSpacing) {
+        this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
+        return this;
+    }
+
+    public int indexSpacing() {
+        return indexSpacing == null || indexSpacing <= 0 ? rollCycle().defaultIndexSpacing() :
+                indexSpacing;
+    }
+
+    public TimeProvider timeProvider() {
+        return timeProvider == null ? SystemTimeProvider.INSTANCE : timeProvider;
+    }
+
+    public SingleChronicleQueueBuilder timeProvider(TimeProvider timeProvider) {
+        this.timeProvider = timeProvider;
+        return this;
+    }
+
+    public Supplier<TimingPauser> pauserSupplier() {
+        return pauserSupplier;
+    }
+
+    public SingleChronicleQueueBuilder pauserSupplier(Supplier<TimingPauser> pauser) {
+        this.pauserSupplier = pauser;
+        return this;
+    }
+
+    public SingleChronicleQueueBuilder timeoutMS(long timeoutMS) {
+        this.timeoutMS = timeoutMS;
+        return this;
+    }
+
+    public long timeoutMS() {
+        return timeoutMS == null ? 10_000L : timeoutMS;
+    }
+
+    public SingleChronicleQueueBuilder storeFileListener(StoreFileListener storeFileListener) {
+        this.storeFileListener = storeFileListener;
+        return this;
+    }
+
+    public StoreFileListener storeFileListener() {
+        return storeFileListener == null ?
+                (cycle, file) -> {
+                    if (Jvm.isDebugEnabled(getClass()))
+                        Jvm.debug().on(getClass(), "File released " + file);
+                } : storeFileListener;
+
+    }
+
+    public SingleChronicleQueueBuilder sourceId(int sourceId) {
+        if (sourceId < 0)
+            throw new IllegalArgumentException("Invalid source Id, must be positive");
+        this.sourceId = sourceId;
+        return this;
+    }
+
+    public int sourceId() {
+        return sourceId == null ? 0 : sourceId;
+    }
+
+    public StoreRecoveryFactory recoverySupplier() {
+        return recoverySupplier;
+    }
+
+    public SingleChronicleQueueBuilder recoverySupplier(StoreRecoveryFactory recoverySupplier) {
+        this.recoverySupplier = recoverySupplier;
+        return this;
+    }
+
+    public boolean readOnly() {
+        return readOnly == Boolean.TRUE && !OS.isWindows();
+    }
+
+    public SingleChronicleQueueBuilder readOnly(boolean readOnly) {
+        if (OS.isWindows() && readOnly)
+            Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                    "Read-only mode is not supported on Windows® platforms, defaulting to " +
+                            "read/write.");
+        else
+            this.readOnly = readOnly;
+
+        return this;
+    }
+
+
+    public Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier() {
+        return encodingSupplier;
+    }
+
+    public Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier() {
+        return decodingSupplier;
+    }
+
+    public SingleChronicleQueueBuilder codingSuppliers(@Nullable
+                                                               Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
+                                                       @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
+        if ((encodingSupplier == null) != (decodingSupplier == null))
+            throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
+        this.encodingSupplier = encodingSupplier;
+        this.decodingSupplier = decodingSupplier;
+        return this;
+    }
+
+    public SecretKeySpec key() {
+        return key;
+    }
+
+    protected void preBuild() {
+        initializeMetadata();
+    }
+
+    public SingleChronicleQueueBuilder strongAppenders(boolean strongAppenders) {
+        this.strongAppenders = strongAppenders;
+        return this;
+    }
+
+    public boolean strongAppenders() {
+        return strongAppenders == Boolean.TRUE;
+    }
+
+    public SingleChronicleQueueBuilder clone() {
+        try {
+            return (SingleChronicleQueueBuilder) super.clone();
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    /**
+     * updates all the fields in {@code this} that are null, from the {@param parentBuilder}
+     *
+     * @param parentBuilder the parentBuilder Chronicle Queue Builder
+     * @return that
+     */
+
+    public SingleChronicleQueueBuilder setAllNullFields(@Nullable SingleChronicleQueueBuilder parentBuilder) {
+        if (parentBuilder == null)
+            return this;
+
+        if (! (this.getClass().isAssignableFrom(parentBuilder.getClass()) || parentBuilder.getClass().isAssignableFrom(this.getClass())))
+            throw new IllegalArgumentException("Classes are not in same implementation hierarchy");
+
+        List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(parentBuilder.getClass());
+
+        for (final FieldInfo fieldInfo : Wires.fieldInfos(this.getClass())) {
+            if (!sourceFieldInfo.contains(fieldInfo))
+                continue;
+            Object resultV = fieldInfo.get(this);
+            Object parentV = fieldInfo.get(parentBuilder);
+            if (resultV == null && parentV != null)
+                fieldInfo.set(this, parentV);
+
+        }
+        return this;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @NotNull
+    static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue,
+                                                 @NotNull Wire wire) {
+        final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
+                queue.rollCycle(),
+                queue.wireType(),
+                (MappedBytes) wire.bytes(),
+                queue.indexCount(),
+                queue.indexSpacing());
+
+        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+
+        return wireStore;
+    }
+
+    @Nullable
+    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
+        final StringBuilder eventName = new StringBuilder();
+        wire.readEventName(eventName);
+        if (eventName.toString().equals(MetaDataKeys.header.name())) {
+            final SingleChronicleQueueStore store = wire.read().typedMarshallable();
+            if (store == null) {
+                throw new IllegalArgumentException("Unable to load wire store");
+            }
+            return store;
+        }
+
+        LOGGER.warn("Unable to load store file from input. Queue file may be corrupted.");
+        return null;
+    }
+
+    private static boolean isQueueReplicationAvailable() {
+        return ENTERPISE_QUEUE_CONSTRUCTOR != null;
+    }
+
+    private static RollCycle loadDefaultRollCycle() {
+        if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
+            return RollCycles.DAILY;
+        }
+
+        String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
+        String[] rollCyclePropertyParts = rollCycleProperty.split(":");
+        if (rollCyclePropertyParts.length > 0) {
+            try {
+                Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
+                if (Enum.class.isAssignableFrom(rollCycleClass)) {
+                    if (rollCyclePropertyParts.length < 2) {
+                        LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
+                    } else {
+                        Class<Enum> eClass = (Class<Enum>) rollCycleClass;
+                        Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
+                        if (instance instanceof RollCycle) {
+                            return (RollCycle) instance;
+                        } else {
+                            LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                        }
+                    }
+                } else {
+                    Object instance = ObjectUtils.newInstance(rollCycleClass);
+                    if (instance instanceof RollCycle) {
+                        return (RollCycle) instance;
+                    } else {
+                        LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                    }
+                }
+            } catch (ClassNotFoundException ignored) {
+                LOGGER.warn("Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
+            }
+        }
+
+        return RollCycles.DAILY;
+    }
+
+    enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
+        NONE;
+
+        @Override
+        public void accept(BytesRingBufferStats bytesRingBufferStats) {
+        }
     }
 }

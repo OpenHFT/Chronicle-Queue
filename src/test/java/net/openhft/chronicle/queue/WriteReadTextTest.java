@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assert;
@@ -73,7 +74,7 @@ public class WriteReadTextTest {
 
         String myPath = OS.TARGET + "/writeReadText-" + System.nanoTime();
 
-        try (ChronicleQueue theQueue = ChronicleQueueBuilder
+        try (ChronicleQueue theQueue = SingleChronicleQueueBuilder
                 .single(myPath)
                 .blockSize(Maths.nextPower2(EXTREMELY_LARGE.length() * 4, 256 << 10))
                 // .testBlockSize() not suitable as large message sizes.

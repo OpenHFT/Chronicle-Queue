@@ -148,7 +148,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
     public void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
-        final ChronicleQueue queue = ChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
+        final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY).build();
 
         final ExcerptTailer tailer = queue.createTailer();

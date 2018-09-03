@@ -1,17 +1,18 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY;
 
 public class RollCycleDefaultingTest {
     @Test
     public void correctConfigGetsLoaded() {
         String aClass = RollCycles.HOURLY.getClass().getName();
         String configuredCycle = aClass + ":HOURLY";
-        System.setProperty(AbstractChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
         Assert.assertEquals(RollCycles.HOURLY, builder.rollCycle());
     }
@@ -19,7 +20,7 @@ public class RollCycleDefaultingTest {
     @Test
     public void customDefinitionGetsLoaded() {
         String configuredCycle = MyRollcycle.class.getName();
-        System.setProperty(AbstractChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
 
         Assert.assertTrue(builder.rollCycle() instanceof MyRollcycle);
@@ -28,7 +29,7 @@ public class RollCycleDefaultingTest {
     @Test
     public void unknownClassDefaultsToDaily(){
         String configuredCycle = "foobarblah";
-        System.setProperty(AbstractChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
         Assert.assertEquals(RollCycles.DAILY, builder.rollCycle());
 
@@ -37,7 +38,7 @@ public class RollCycleDefaultingTest {
     @Test
     public void nonRollCycleDefaultsToDaily(){
         String configuredCycle = String.class.getName();
-        System.setProperty(AbstractChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
         Assert.assertEquals(RollCycles.DAILY, builder.rollCycle());
     }

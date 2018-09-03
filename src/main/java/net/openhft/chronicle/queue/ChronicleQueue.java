@@ -170,12 +170,6 @@ public interface ChronicleQueue extends Closeable {
                 new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
     }
 
-    default int numberOfReferences(final File queueFile) {
-        Jvm.warn().on(ChronicleQueue.class, "File-reference counting is only supported in Chronicle Queue Enterprise. " +
-                "If you would like to use this feature, please contact sales@chronicle.software for more information.");
-        return 0;
-    }
-
     RollCycle rollCycle();
 
     TimeProvider time();

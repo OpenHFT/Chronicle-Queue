@@ -30,6 +30,7 @@ import org.junit.Test;
 import java.io.File;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -43,7 +44,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
     @Test
     public void testWriteBytesWithIndex() {
         File tmp = getTmpDir();
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build()) {
@@ -53,7 +54,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
             appender.writeBytes(0x421d00000001L, HELLO_WORLD);
         }
 
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -68,7 +69,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
         // TODO: implement this
         //assert runIfAssertsOn = true;
         if (runIfAssertsOn) {
-            try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+            try (ChronicleQueue queue = single(tmp)
                     .testBlockSize()
                     .build()) {
                 InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -86,7 +87,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
         }
 
         // try too far
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -100,7 +101,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
             }
         }
 
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
@@ -118,12 +119,12 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
     // TODO: 2 or more threads soak test
 
     @Test
-    public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() throws Exception {
+    public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() {
         File tmp = getTmpDir();
 
         long expected;
 
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+        try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .build()) {
 

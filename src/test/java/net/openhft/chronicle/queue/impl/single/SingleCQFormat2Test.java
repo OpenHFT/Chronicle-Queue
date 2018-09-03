@@ -803,7 +803,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
     @Test
     public void testWritingIndex() {
         @NotNull File dir = getTmpDir();
-        try (@NotNull ChronicleQueue queue = ChronicleQueueBuilder.single(dir)
+        try (@NotNull ChronicleQueue queue = SingleChronicleQueueBuilder.single(dir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)

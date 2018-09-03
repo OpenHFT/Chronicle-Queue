@@ -8,7 +8,8 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static net.openhft.chronicle.queue.ChronicleQueueBuilder.single;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
+
 
 public class LastAppendedTest extends ChronicleQueueTestBase {
     @Test

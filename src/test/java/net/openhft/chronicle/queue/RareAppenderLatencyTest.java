@@ -65,7 +65,7 @@ public class RareAppenderLatencyTest {
     }
 
     @Test
-    public void testRareAppenderLatency() throws IOException, InterruptedException, ExecutionException {
+    public void testRareAppenderLatency() throws InterruptedException, ExecutionException {
         System.setProperty("ignoreHeaderCountIfNumberOfExcerptsBehindExceeds", "" + (1 << 12));
 
         if (Jvm.isDebug())
@@ -83,7 +83,7 @@ public class RareAppenderLatencyTest {
         new File(pathname).deleteOnExit();
 
         // Shared queue between two threads appending. One appends very rarely, another heavily.
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(pathname)
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(pathname)
                 .rollCycle(RollCycles.HOURLY)
                 .build();
 

@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import org.junit.Assert;
 import org.junit.Ignore;

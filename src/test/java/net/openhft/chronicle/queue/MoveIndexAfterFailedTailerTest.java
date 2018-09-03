@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
@@ -25,7 +26,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import static java.lang.System.currentTimeMillis;
@@ -35,9 +35,9 @@ public class MoveIndexAfterFailedTailerTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MoveIndexAfterFailedTailerTest.class);
 
     @Test
-    public void test() throws IOException {
+    public void test() {
         String basePath = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
-        final ChronicleQueueBuilder myBuilder = ChronicleQueueBuilder.single(basePath)
+        final SingleChronicleQueueBuilder myBuilder = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .timeProvider(System::currentTimeMillis)
                 .rollCycle(HOURLY);
