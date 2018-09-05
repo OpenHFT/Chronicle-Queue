@@ -137,7 +137,7 @@ outputs the following:
   name: "104",
   age: 101
 }
----
+----
 
 == Tiered Indexing
 Chronicle Queue uses tiered multi-level indexing to provide a fast and efficient method for searching for messages in a large queue.
