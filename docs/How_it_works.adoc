@@ -97,14 +97,6 @@ public class Example {
         String name;
         int age;
 
-        MyObject() {
-        }
-
-        MyObject(final String name, final int age) {
-            this.name = name;
-            this.age = age;
-        }
-
         @Override
         public String toString() {
             return Marshallable.$toString(this);
@@ -119,7 +111,9 @@ public class Example {
         ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
 
-        MyObject me = new MyObject("rob", 40);
+        MyObject me = new MyObject();
+        me.name = "rob";
+        me.age = 40;
 
         // write 'hello world' to the queue
         appender.writeDocument(me);
