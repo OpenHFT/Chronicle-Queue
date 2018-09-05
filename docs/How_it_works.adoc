@@ -112,10 +112,10 @@ public class Example {
         me.name = "rob";
         me.age = 40;
 
-        // write 'hello world' to the queue
+        // write 'MyObject' to the queue
         appender.writeDocument(me);
 
-        // read 'hello world' from the queue
+        // read 'MyObject' from the queue
         MyObject result = new MyObject();
         tailer.readDocument(result);
 
