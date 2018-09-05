@@ -42,32 +42,102 @@ In the following example we will:
 
 [source,java]
 ----
-// todo
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+
+...
+
+// will write the .cq4 file to working directory
+SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(".").build();
+ExcerptAppender appender = queue.acquireAppender();
+ExcerptTailer tailer = queue.createTailer();
+
+// write 'hello world' to the queue
+appender.writeText("hello word");
+
+// read 'hello world' from the queue
+System.out.println(tailer.readText());
+
 ----
 
-Create a Chronicle queue giving `Java_temp_directory/SimpleChronicle` as the base folder.
+Create a tmp directoyr for the Chronicle queue giving the name starting `Java_temp_directory/SimpleChronicle` as the base folder.
 
 [source,java]
 ----
-// todo
+SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files.createTempDirectory("SimpleChronicle").toFile()).build();
 ----
 
- 
 Create appender and reader:
 
 [source,java]
 ----
-ExcerptAppender appender = chronicle.acquireAppender();
-ExcerptTailer reader = chronicle.createTailer();
+ExcerptAppender appender = queue.acquireAppender();
+ExcerptTailer tailer = queue.createTailer();
 ----
 
 The `write` and `read` an object 
 
 [source,java]
 ----
-// todo
+
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.Marshallable;
+
+/**
+ * Created by Rob Austin
+ */
+public class Example {
+
+    static class MyObject implements Marshallable {
+        String name;
+        int age;
+
+        MyObject() {
+        }
+
+        MyObject(final String name, final int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return Marshallable.$toString(this);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        // will write the .cq4 file to working directory
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(".").build();
+
+        ExcerptAppender appender = queue.acquireAppender();
+        ExcerptTailer tailer = queue.createTailer();
+
+        MyObject me = new MyObject("rob", 40);
+
+        // write 'hello world' to the queue
+        appender.writeDocument(me);
+
+        // read 'hello world' from the queue
+        MyObject result = new MyObject();
+        tailer.readDocument(result);
+
+        System.out.println(result);
+    }
+
+}
 ----
 
+outputs the following: 
+
+----
+!net.openhft.chronicle.queue.Example$MyObject {
+  name: "104",
+  age: 101
+}
+---
 
 == Tiered Indexing
 Chronicle Queue uses tiered multi-level indexing to provide a fast and efficient method for searching for messages in a large queue.
