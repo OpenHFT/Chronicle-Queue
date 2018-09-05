@@ -14,7 +14,7 @@ image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-qu
 
 ==== The Changes from Chronicle Queue version 4 to version 5
 
-In Chronicle Queue 5 tailers are now read-only, in Chronicle-Queue 4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise,  when lazy indexing was turned on the indexing was done by the first tailer that read the data. Since in chronicle queue 4 tailers could do the indexing we could not rely on them to be read only. We decided to drop lazy indexing in chronicle queue 5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations else where in the code.
+In Chronicle Queue 5 tailers are now read-only, in Chronicle Queue 4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise,  when lazy indexing was turned on the indexing was done by the first tailer that read the data. Since in chronicle queue 4 tailers could do the indexing we could not rely on them to be read only. We decided to drop lazy indexing in chronicle queue 5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations else where in the code.
 
 The locking model of Chronicle Queue was changed, in Chronicle Queue 4 a write lock ( to prevent concurrent writes to the queue ) exists in the .cq4 file, In Chronicle Queue 5 this was moved to a single file called a table store (queuelock.cq4t). This simplifies the locking code internally as only the table store file has to be inspected.
 
