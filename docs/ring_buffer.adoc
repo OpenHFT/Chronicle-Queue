@@ -103,7 +103,7 @@ chosen to allow for the maximum burst size.
 ====== Example:
 
 ```
-    try (ChronicleQueue queue = EnterpriseChronicleQueueBuilder
+    try (ChronicleQueue queue = SingleChronicleQueueBuilder
             .binary(path)
             .bufferCapacity(1 << 20) // ring buffer base capacity
             .writeBufferMode(BufferMode.Asynchronous)
@@ -126,7 +126,7 @@ loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue
 
 ```
     // process 1
-    EnterpriseChronicleQueueBuilder builder = EnterpriseChronicleQueueBuilder.binary(path);
+    SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(path);
     try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
@@ -140,7 +140,7 @@ loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue
     }
 
     // process 2
-    EnterpriseChronicleQueueBuilder builder = EnterpriseChronicleQueueBuilder.binary(path); // same path as process 1
+    SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(path); // same path as process 1
     try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)

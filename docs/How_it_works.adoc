@@ -244,7 +244,7 @@ a separate JVM to the application, in the following manner:
 ....
 public void removeOldQueueFiles() throws IOException {
     final Path queuePath = Paths.get("/path/to/queue");
-    try (final SingleChronicleQueue queue = EnterpriseChronicleQueueBuilder.
+    try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
             binary(queuePath).build()) {
 
         try (final Stream<Path> queueFiles = Files.list(queuePath).

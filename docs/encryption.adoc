@@ -15,7 +15,7 @@ AES 64-bit encryption can be used by specifying `aesEncryption` at queue build t
 For example:
 [source, java]
 ....
-public EnterpriseChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
+public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
         if (keyBytes == null) {
             codingSuppliers(null, null);
             return this;
@@ -42,7 +42,7 @@ For example:
 
 [source, java]
 ....
-public EnterpriseChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
+public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
                                                            @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");

@@ -906,7 +906,7 @@ To create an instance you have to use the `ChronicleQueueBuilder`.
 [source, Java]
 ----
 String basePath = System.getProperty("java.io.tmpdir") + "/getting-started"
-ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build();
+ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").build();
 ----
 
 In this example we have created an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
@@ -956,7 +956,7 @@ queue.close();
 
 [source, Java]
 ----
-try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").build()) {
     // Obtain an ExcerptAppender
     ExcerptAppender appender = queue.acquireAppender();
 
