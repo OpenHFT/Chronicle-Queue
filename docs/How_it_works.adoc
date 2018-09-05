@@ -21,26 +21,18 @@ The size of data stored can exceed the amount of memory you have. Provided the a
 
 == Building Blocks
 
-Chronicle Queue has three main conceptual components:
+Chronicle Queue has two main conceptual components:
 
- - Tailer - sequential reads
- - Excerpt - random reads
+ - Tailer - used for both sequential reads and random reads
  - Appender - sequential writes
 
 Chronicle Queue is the main interface for management and can be seen as the collection class of the Chronicle environment.
 
-You will reserve a portion of memory and then put/fetch/update records using the Chronicle interface.
+Chronicle Queue allows you to put huge numbers of objects of different sizes onto a single queue. For each data record, Chronicle builds it indexes ( used for random access reads ) automatically when ever messages are appended to the queue. 
 
-Chronicle Queue allows you to put huge numbers of objects of different sizes onto a single queue. For each data record, Chronicle holds the memory-offset in another index cache for random access. This means that Chronicle knows where the 3rd object resides in memory. This index is a sequential index, where the first object has index 0, the second object has index 1, and so on.
+An appender is used to write/add data to the queue.
 
-An excerpt is the main data container in a Chronicle queue. Each queue is composed of excerpts. Putting data to a queue means starting a new excerpt, writing data into it, and then finishing the excerpt at the end.
-
-An appender is something like an iterator in Chronicle environment. You add data by appending it to the current queue.
-
-=== HashMap v B-Tree
-
-HashMap is more performant with lower garbage collection than a B-Tree.  The advantage of a B-Tree is that it is sorted.  If you don't need this, use a hash map of some kind.
-
+ 
 == Getting Started
 In the following example we will:
 
@@ -50,62 +42,17 @@ In the following example we will:
 
 [source,java]
 ----
-package net.openhft.chronicle.examples;
-import java.io.IOException;
-    import net.openhft.chronicle.Excerpt;
-    import net.openhft.chronicle.ExcerptAppender;
-    import net.openhft.chronicle.Chronicle;
-    import net.openhft.chronicle.ChronicleQueueBuilder;
-    import net.openhft.chronicle.tools.ChronicleTools;
-
-    public class GettingStartedMain {
-        public static void main(String... ignored) throws IOException {
-
-            String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
-            ChronicleTools.deleteOnExit(basePath);
-
-            Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
-
-            // write one object
-            ExcerptAppender appender = chronicle.acquireAppender();
-            appender.startExcerpt(256); // an upper limit to how much space in bytes this message should need.
-            appender.writeObject("TestMessage");
-            appender.finish();
-            appender.close();
-
-            // read one object
-            ExcerptTailer reader = chronicle.createTailer();
-            while(!reader.nextIndex()); // while until there is a new Excerpt to read
-            Object ret = reader.readObject();
-            reader.finish();
-            reader.close();
-
-            chronicle.close();
-
-            System.out.println(ret);
-        }
-    }
-
+// todo
 ----
 
 Create a Chronicle queue giving `Java_temp_directory/SimpleChronicle` as the base folder.
 
 [source,java]
 ----
-String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
-ChronicleTools.deleteOnExit(basePath);
-
-Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
+// todo
 ----
 
-Chronicle creates two `RandomAccessFile`. One for indexes, and one for data having names relatively:
-
-[source,java]
-----
-Java_temp_directory/SimpleChronicle.index
-Java_temp_directory/SimpleChronicle.data
-----
-
+ 
 Create appender and reader:
 
 [source,java]
@@ -114,35 +61,13 @@ ExcerptAppender appender = chronicle.acquireAppender();
 ExcerptTailer reader = chronicle.createTailer();
 ----
 
-The `NativeExcerptAppender.startExcerpt` method performs checks and calculates the `startAddr` and `limitAddr(startAddr+100)` for this excerpt.
+The `write` and `read` an object 
 
 [source,java]
 ----
-appender.startExcerpt(100);
+// todo
 ----
 
-The `writeObject` method copies the contents of the object into the excerpt:
-
-[source,java]
-----
-appender.writeObject("TestMessage");
-----
-
-The `finish` method object offset is written to index cache. This method acts like a commit, without writing this offset to cache you put data to the data cache, but not persist it.
-
-[source,java]
-----
-appender.finish();
-----
-
-In order to read data from the data cache, you first need to get the physical start address of the data from index cache. The `Reader.index(0)` method does the calculation for you. You read the data and finish the reading operation:
-
-[source,java]
-----
-reader.index(0); // optional as it is at the start already
-Object ret = reader.readObject();
-reader.finish();
-----
 
 == Tiered Indexing
 Chronicle Queue uses tiered multi-level indexing to provide a fast and efficient method for searching for messages in a large queue.
