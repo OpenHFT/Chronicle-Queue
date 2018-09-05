@@ -6,21 +6,27 @@
 
 
 == Overview
-This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise to replicate data using TCP/IP from queues that are on different machines. Chronicle Queue Enterprise is a licenced product; if you are interested in obtaining more information about this please contact sales@chronicle.software 
+This document describes the high-level protocol and handshaking that is used by Chronicle Queue Enterprise
+ to replicate data using TCP/IP from queues that are on different machines. Chronicle Queue Enterprise is a licenced
+ product; if you are interested in obtaining more information about this please contact sales@chronicle.software
 
 === Message format in this document
 
-Chronicle Queue Enterprise sends its messages in binary wire format (see `net.openhft.chronicle.wire.BinaryWire`); this is a  binary form of `YAML`.
+Chronicle Queue Enterprise sends its messages in binary wire format (see `net.openhft.chronicle.wire.BinaryWire`);
+ this is a binary form of `YAML`.
 
-In order to make the messages human-readable in this document, the messages are shown in text wire format (see `net.openhft.chronicle.wire.TextWire`).
+In order to make the messages human-readable in this document, the messages are shown in text wire format (see
+ `net.openhft.chronicle.wire.TextWire`).
 
 === Who should read this document
 
-Anyone who wants to get more information into the data that is transfered between the remote hosts, used by Chronicle Queue Enterprise, to do TCP/IP replication. This document is not a queue functionality overview document.
+Anyone who wants to get more information into the data that is transfered between the remote hosts, used by Chronicle
+ Queue Enterprise, to do TCP/IP replication. This document is not a queue functionality overview document.
 
 == UberHandler
 
-Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are serialised locally, and then sent to the remote host using TCP/IP. The serialised form of UberHandler is shown below:
+Chronicle Queue Enterprise replication uses an UberHandler. UberHandlers act as message routers, They are serialised
+ locally, and then sent to the remote host using TCP/IP. The serialised form of UberHandler is shown below:
 
 ```
 --- !!data #binary
@@ -34,13 +40,21 @@ handler: !net.openhft.chronicle.network.cluster.handlers.UberHandler {
 
 === onInitialize() and TerminatorHandler
 
-When the Uberhandler is loaded by the remote machine, its `onInitialize()` method is automatically called (`see net.openhft.chronicle.network.cluster.handlers.UberHandler#onInitialize`).
+When the Uberhandler is loaded by the remote machine, its `onInitialize()` method is automatically called (`see
+ net.openhft.chronicle.network.cluster.handlers.UberHandler#onInitialize`).
 
-Running the `onInitialize()` method establishes, on the remote host, an Uberhandler (message router), which later can be shutdown by a `net.openhft.chronicle.network.cluster.TerminatorHandler`. If you wish to cleanly shutdown a connection, you should send a `TerminatorHandler` message, otherwise the remote connection may think the connection was closed abruptly and try to re-establish the connection.
+Running the `onInitialize()` method establishes, on the remote host, an Uberhandler (message router), which later can
+ be shutdown by a `net.openhft.chronicle.network.cluster.TerminatorHandler`. If you wish to cleanly shutdown a
+ connection, you should send a `TerminatorHandler` message, otherwise the remote connection may think the connection
+ was closed abruptly and try to re-establish the connection.
 
-NOTE: When sending the Uberhandler, only its data is serialised. The Java byte code of the Uberhandler must already exist on the remote machine. Only the data of the Uberhandler instance is sent, not the byte code for the Uberhandler class itself. This is because automatically running any arbitrary code using the `onInitialize()` method remotely could lead to security concerns. +
+NOTE: When sending the Uberhandler, only its data is serialised. The Java byte code of the Uberhandler must already
+ exist on the remote machine. Only the data of the Uberhandler instance is sent, not the byte code for the Uberhandler
+ class itself. This is because automatically running any arbitrary code using the `onInitialize()` method remotely could
+ lead to security concerns. +
  +
- This is also true for any SubHandler (see `net.openhft.chronicle.network.api.session.SubHandler`) which also has an `onInitialize()` method. This is covered in more detail below.
+ This is also true for any SubHandler (see `net.openhft.chronicle.network.api.session.SubHandler`) which also has an
+ `onInitialize()` method. This is covered in more detail below.
 
 === SubHandlers
 

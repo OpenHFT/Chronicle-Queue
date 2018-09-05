@@ -30,39 +30,36 @@ The set of hosts onto which the queue is replicated, is defined as a `cluster`. 
 
 ```
 !QueueReplicationCfg {
-  clusters: !QueueClustersCfg {
-    cluster1: {
-      context: !QueueClusterContext {
-        heartbeatIntervalMs: 300000,
-        heartbeatTimeoutMs: 500000,
-        baseSourcePath: "replica/source",
-        baseSinkPath: "replica/sink",
-      }
-
-      host1: {
-        hostId: 1,
-        connectUri: host.port1,
-      }
-      host2: {
-        hostId: 2,
-        connectUri: host.port2,
-      }
-      ...
+  cluster: {
+    context: !QueueClusterContext {
+      heartbeatIntervalMs: 300000,
+      heartbeatTimeoutMs: 500000,
+      baseSourcePath: "replica/source",
+      baseSinkPath: "replica/sink",
     }
+
+    host1: {
+      hostId: 1,
+      connectUri: host.port1,
+    }
+    host2: {
+      hostId: 2,
+      connectUri: host.port2,
+    }
+    ...
   },
 
-  queues: !ReplicatedQueuesCfg {
+  queues: {
     queue1: {
-      cluster: "cluster1",
+      path: "queue1",
       acknowledge: false,
-      wireType: !WireType BINARY,
       masterId: 1,
     }
   }
 }
 ```
 
-In the configuration shown above, the queue, `queue1`, is set to be replicated from `host1` (as indicated by `masterId`) to all other hosts defined for the cluster, `cluster1`.
+In the configuration shown above, the queue, `queue1`, is set to be replicated from `host1` (as indicated by `masterId`) to all other hosts defined for the cluster.
 
 Queues will use storage paths defined by `baseSourcePath` and `baseSinkPath` for `source` and `sink`, respectively, followed by the queue name. For this example, the `source` queue will be at `replica/source/queue1`, while the `sink` will be written to `replica/sink/queue1`.
 
@@ -71,8 +68,8 @@ Queues will use storage paths defined by `baseSourcePath` and `baseSinkPath` for
 To start replicating data, the user must create an instance of `ReplicatedQueue` for each host. This is done as follows:
 
 ```
-ReplicatedQueue repl = new ReplicatedQueue(config());
-repl.startReplication(hostId, new ServicesReplicationConfig());
+ReplicatedQueue repl = new ReplicatedQueue(config(), hostId);
+repl.startReplication();
 ...
 // shutdown
 repl.shutdown();
@@ -85,34 +82,28 @@ repl.shutdown();
 @Test
 public void shouldReplicate() throws Exception {
 
-  YamlLogging.setAll(false);
-        IOTools.deleteDirWithFiles("replica", 10);
-        TCPRegistry.createServerSocketChannelFor(
-                "host.port1",
-                "host.port2",
-                "host.port3");
+    YamlLogging.setAll(false);
+    IOTools.deleteDirWithFiles("replica", 10);
+    TCPRegistry.createServerSocketChannelFor(
+            "host.port1",
+            "host.port2",
+            "host.port3");
 
     startupHost((byte) 1);
     startupHost((byte) 2);
 
-    String queueName = config().queues().getQueues().iterator().next();
-    ReplicatedQueueCfg qCfg = config().queues().getQueue(queueName);
-    QueueClusterContext clusterContext = config().clusters().getClusters().iterator().next().clusterContext();
-    String sourceBasePath = clusterContext.baseSourcePath();
-    String sinkBasePath = clusterContext.baseSinkPath();
-    WireType wireType = qCfg.wireType();
-    SingleChronicleQueue source = SingleChronicleQueueBuilder.builder(Paths.get(sourceBasePath, queueName), wireType).build();
-    SingleChronicleQueue sink = SingleChronicleQueueBuilder.builder(Paths.get(sinkBasePath, queueName), wireType).build();
+    ReplicatedQueueCfg qCfg = CONFIG.queues().values().stream().filter(q -> q.path.equals("queue1")).findFirst().orElseGet(() -> {
+        fail("Queue queue1 not found");
+        return null;
+    });
+    QueueClusterContext ctx = CONFIG.cluster().clusterContext();
+    assert ctx != null;
+    SingleChronicleQueue source = QueueBuilderFromConfig.queueFromConfig(qCfg, CONFIG::queueConfig, path -> ctx.getSourcePath(path, (byte) 1));
+    SingleChronicleQueue sink = QueueBuilderFromConfig.queueFromConfig(qCfg, CONFIG::queueConfig, path -> ctx.getSinkPath(path, (byte) 2));
 
-    final BlockingQueue<String> sinkMessages = new LinkedBlockingQueue<>();
-    ChronicleReader chronicleReader = new ChronicleReader().withBasePath(sink.file().toPath()).withMessageSink(msg -> {
-        if (!msg.startsWith("0x"))
-            sinkMessages.add(msg);
-    }).tail();
-    Thread readerThread = new Thread(chronicleReader::execute);
-    readerThread.start();
+    ExcerptTailer tailer = sink.createTailer();
 
-    assertNull(sinkMessages.poll(200L, TimeUnit.MILLISECONDS));
+    assertNull(poll(tailer, 200L));
 
     ExcerptAppender appender = source.acquireAppender();
 
@@ -120,21 +111,18 @@ public void shouldReplicate() throws Exception {
         dc.wire().write("test").text("Hello replica");
     }
 
-    String poll = sinkMessages.poll(5000L, TimeUnit.MILLISECONDS);
-    assertEquals("test: Hello replica\n", poll);
+    String poll = poll(tailer);
+    assertEquals("Hello replica", poll);
 
     try (DocumentContext dc = appender.writingDocument()) {
-        dc.wire().write("test2").text("Hello replica");
+        dc.wire().write("test").text("Hello replica2");
     }
 
-    poll = sinkMessages.poll(5000L, TimeUnit.MILLISECONDS);
-    assertEquals("test2: Hello replica\n", poll);
+    poll = poll(tailer);
+    assertEquals("Hello replica2", poll);
 
-    poll = sinkMessages.poll(500L, TimeUnit.MILLISECONDS);
+    poll = poll(tailer, 500L);
     assertNull(poll);
-    readerThread.interrupt();
-
-    readerThread.join();
 }
 ```
 

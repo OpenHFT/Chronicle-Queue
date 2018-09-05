@@ -12,10 +12,13 @@ image::images/Queue_line.png[width=20%]
 [caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
 image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[]
 
-==== Changes from Chronicle Queue version 4 to version 5
+==== The Changes from Chronicle Queue version 4 to version 5
 
-Tailers are now always read only and are not allowed to write data, and appenders are now using write lock stored in a queuelock.cq4t table store meaning it's no longer possible for appenders to attempt concurrent writing/rolling/etc. The write lock guards rolls, EOF writing and any other write access. In addition, lazy indexing has been dropped (to facilitate the above), and first index is now written during the new file acquisition.
+In Chronicle Queue 5 tailers are now read-only, in Chronicle Queue 4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise,  when lazy indexing was turned on the indexing was done by the first tailer that read the data. Since in chronicle queue 4 tailers could do the indexing we could not rely on them to be read only. We decided to drop lazy indexing in chronicle queue 5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations else where in the code.
 
+The locking model of Chronicle Queue was changed, in Chronicle Queue 4 a write lock ( to prevent concurrent writes to the queue ) exists in the .cq4 file, In Chronicle Queue 5 this was moved to a single file called a table store (queuelock.cq4t). This simplifies the locking code internally as only the table store file has to be inspected.
+
+You can use Chronicle 5 to read messages written with Chronicle 4, however you should not concurrently run chronicle queue 4 and chronicle queue 5 at the same time. In other words avoid running Chronicle Queue 4’s appenders and tailers on a queue which at the same time is also be read and written to via Chronicle Queue 5.
 
 ==== About Chronicle Software
 
@@ -903,7 +906,7 @@ To create an instance you have to use the `ChronicleQueueBuilder`.
 [source, Java]
 ----
 String basePath = System.getProperty("java.io.tmpdir") + "/getting-started"
-ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build();
+ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").build();
 ----
 
 In this example we have created an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
@@ -953,7 +956,7 @@ queue.close();
 
 [source, Java]
 ----
-try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").build()) {
     // Obtain an ExcerptAppender
     ExcerptAppender appender = queue.acquireAppender();
 
