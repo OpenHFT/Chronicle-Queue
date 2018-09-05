@@ -79,10 +79,14 @@ The `write` and `read` an object
 
 [source,java]
 ----
+package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
+
+import java.io.IOException;
+import java.nio.file.Files;
 
 /**
  * Created by Rob Austin
@@ -107,11 +111,11 @@ public class Example {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         // will write the .cq4 file to working directory
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(".").build();
-
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files
+                .createTempDirectory("queue").toFile()).build();
         ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
 
@@ -134,8 +138,8 @@ outputs the following:
 
 ----
 !net.openhft.chronicle.queue.Example$MyObject {
-  name: "104",
-  age: 101
+  name: rob,
+  age: 40
 }
 ----
 
