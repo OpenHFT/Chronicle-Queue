@@ -492,6 +492,11 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return this;
     }
 
+    public SingleChronicleQueueBuilder path(final Path path) {
+        this.path = path.toFile();
+        return this;
+    }
+
     /**
      * consumer will be called every second, also as there is data to report
      *
