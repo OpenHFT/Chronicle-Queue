@@ -88,9 +88,6 @@ import net.openhft.chronicle.wire.Marshallable;
 import java.io.IOException;
 import java.nio.file.Files;
 
-/**
- * Created by Rob Austin
- */
 public class Example {
 
     static class MyObject implements Marshallable {
