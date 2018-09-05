@@ -6,7 +6,7 @@ image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
 
 == What is Different?
-On the first glance this project can be seen as yet another queue implementation but it has major design choices that should be emphasized.
+This project can be seen as yet another queue implementation but it has major design choices that should be emphasized.
 
 Using non-heap storage options (`RandomAccessFile`) Chronicle provides a processing environment where applications do not suffer from garbage collection (GC).
 
