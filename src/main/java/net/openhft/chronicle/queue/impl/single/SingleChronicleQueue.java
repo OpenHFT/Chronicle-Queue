@@ -113,6 +113,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final WriteLock writeLock;
     private final boolean strongAppenders;
+    private final boolean checkInterrupts;
     protected int sourceId;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
@@ -152,6 +153,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
         strongAppenders = builder.strongAppenders();
+        checkInterrupts = builder.checkInterrupts();
         metaStore = builder.metaStore();
 
         if (readOnly) {
@@ -374,7 +376,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         queueLock.waitForLock();
 
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
-        return new StoreAppender(this, newPool);
+        return new StoreAppender(this, newPool, checkInterrupts);
     }
 
     protected StoreFileListener storeFileListener() {
