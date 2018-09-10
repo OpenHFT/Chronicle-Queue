@@ -186,6 +186,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void testTextReadWrite() {
+
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue =
+                     builder(tmpDir, wireType)
+                             .build()) {
+            queue.acquireAppender().writeText("hello world");
+            Assert.assertEquals("hello world", queue.createTailer().readText());
+
+        }
+    }
+
+    @Test
     public void testCleanupDir() {
 
         File tmpDir = getTmpDir();
@@ -197,7 +210,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("hello").text("world");
             }
-
 
         }
         DirectoryUtils.deleteDir(tmpDir);
