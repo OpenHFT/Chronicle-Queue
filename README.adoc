@@ -1231,7 +1231,8 @@ On most systems `System.nanoTime()` is roughly the number of nanoseconds since t
 === Compacting logs
 
 Chronicle Queue manages storage by cycle. You can add a `StoreFileListener` which will notify you when a file is added, and when it is no longer retained.  You can move, compress, or delete all the messages for a day, at once.
-
+NOTE :  Unfortunately on Windows, if an IO operation is interrupted, it can close the underlying
+FileChannel.
 
 === Avoid Interrupts
 
