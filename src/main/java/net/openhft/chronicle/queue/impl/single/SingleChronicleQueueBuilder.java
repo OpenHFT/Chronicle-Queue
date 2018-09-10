@@ -844,8 +844,8 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return !Boolean.FALSE.equals(checkInterrupts);
     }
 
-    public SingleChronicleQueueBuilder ignoreInterrupts(boolean ignoreInterrupts) {
-        this.checkInterrupts = ignoreInterrupts;
+    public SingleChronicleQueueBuilder checkInterrupts(boolean checkInterrupts) {
+        this.checkInterrupts = checkInterrupts;
         return this;
     }
 
