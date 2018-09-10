@@ -51,16 +51,28 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
 
     public EventLoopServiceWrapper(@NotNull ServiceWrapperBuilder<O> builder) {
         this.priority = builder.priority();
-        outputQueue = SingleChronicleQueueBuilder.binary(builder.outputPath()).testBlockSize().sourceId(builder.outputSourceId()).build();
-        serviceOut = outputQueue.acquireAppender().methodWriterBuilder(builder.outClass()).recordHistory(builder.outputSourceId() != 0).get();
-        serviceImpl = builder.getServiceFunctions().stream().map(f -> f.apply(serviceOut)).toArray();
+        outputQueue = SingleChronicleQueueBuilder.binary(builder.outputPath())
+                .sourceId(builder.outputSourceId())
+                .checkInterrupts(false)
+                .build();
+        serviceOut = outputQueue.acquireAppender()
+                .methodWriterBuilder(builder.outClass())
+                .recordHistory(builder.outputSourceId() != 0)
+                .get();
+        serviceImpl = builder.getServiceFunctions().stream()
+                .map(f -> f.apply(serviceOut))
+                .toArray();
 
         List<String> paths = builder.inputPath();
         serviceIn = new MethodReader[paths.size()];
         inputQueues = new ChronicleQueue[paths.size()];
         for (int i = 0; i < paths.size(); i++) {
-            inputQueues[i] = SingleChronicleQueueBuilder.binary(paths.get(i)).sourceId(builder.inputSourceId()).build();
-            serviceIn[i] = inputQueues[i].createTailer().afterLastWritten(outputQueue).methodReader(serviceImpl);
+            inputQueues[i] = SingleChronicleQueueBuilder.binary(paths.get(i))
+                    .sourceId(builder.inputSourceId())
+                    .build();
+            serviceIn[i] = inputQueues[i].createTailer()
+                    .afterLastWritten(outputQueue)
+                    .methodReader(serviceImpl);
         }
         eventLoop = builder.eventLoop();
         eventLoop.addHandler(this);

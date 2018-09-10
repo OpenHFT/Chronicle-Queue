@@ -154,12 +154,20 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
 
     @NotNull
     public ChronicleQueue inputQueue() {
-        return SingleChronicleQueueBuilder.binary(inputPaths.get(0)).testBlockSize().sourceId(inputSourceId()).build();
+        return SingleChronicleQueueBuilder
+                .binary(inputPaths.get(0))
+                .sourceId(inputSourceId())
+                .checkInterrupts(false)
+                .build();
     }
 
     @NotNull
     public ChronicleQueue outputQueue() {
-        return SingleChronicleQueueBuilder.binary(outputPath).testBlockSize().sourceId(outputSourceId()).build();
+        return SingleChronicleQueueBuilder
+                .binary(outputPath)
+                .sourceId(outputSourceId())
+                .checkInterrupts(false)
+                .build();
     }
 
     @NotNull
@@ -173,6 +181,10 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     @NotNull
     public <T> T inputWriter(Class<T> tClass) {
         ChronicleQueue queue = inputQueue();
-        return queue.acquireAppender().methodWriterBuilder(tClass).recordHistory(true).onClose(queue).get();
+        return queue.acquireAppender()
+                .methodWriterBuilder(tClass)
+                .recordHistory(true)
+                .onClose(queue)
+                .get();
     }
 }
