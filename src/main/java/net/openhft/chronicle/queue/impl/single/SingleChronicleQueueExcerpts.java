@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.UnsafeMemory;
+import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.queue.*;
@@ -736,14 +737,7 @@ public class SingleChronicleQueueExcerpts {
                 try {
                     final boolean interrupted = CHECK_INTERRUPTS && Thread.currentThread().isInterrupted();
                     if (rollbackOnClose || interrupted) {
-                        if (interrupted)
-                            LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
-                        // zero out all contents...
-                        for (long i = position; i <= wire.bytes().writePosition(); i++)
-                            wire.bytes().writeByte(i, (byte) 0);
-                        position = lastPosition;
-                        wire.bytes().writePosition(position);
-                        ((AbstractWire) wire).forceNotInsideHeader();
+                        doRollback(interrupted);
                         return;
                     }
 
@@ -786,6 +780,17 @@ public class SingleChronicleQueueExcerpts {
                             Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
                         }
                 }
+            }
+
+            private void doRollback(boolean interrupted) {
+                if (interrupted)
+                    LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
+                // zero out all contents...
+                for (long i = position; i <= wire.bytes().writePosition(); i++)
+                    wire.bytes().writeByte(i, (byte) 0);
+                position = lastPosition;
+                wire.bytes().writePosition(position);
+                ((AbstractWire) wire).forceNotInsideHeader();
             }
 
             @Override
@@ -1665,7 +1670,8 @@ public class SingleChronicleQueueExcerpts {
             getCloserJob().run();
         }
 
-        private void incrementIndex() {
+        @PackageLocal
+        void incrementIndex() {
             RollCycle rollCycle = queue.rollCycle();
             long seq = rollCycle.toSequenceNumber(this.index);
             int cycle = rollCycle.toCycle(this.index);
