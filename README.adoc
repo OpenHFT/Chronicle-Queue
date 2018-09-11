@@ -1231,6 +1231,12 @@ On most systems `System.nanoTime()` is roughly the number of nanoseconds since t
 === Compacting logs
 
 Chronicle Queue manages storage by cycle. You can add a `StoreFileListener` which will notify you when a file is added, and when it is no longer retained.  You can move, compress, or delete all the messages for a day, at once.
+NOTE :  Unfortunately on Windows, if an IO operation is interrupted, it can close the underlying
+FileChannel.
+
+=== Avoid Interrupts
+
+Due to performance reasons we have remove checking for interrupts in the chronicle queue code, As such we recommend that you avoid using chronicle queue with code that generates interrupts. If you can not avoid generating interrupts then we suggest that you create a separate instance of chronicle-queue per thread.
 
 == Chronicle Queue vs Kafka
 
