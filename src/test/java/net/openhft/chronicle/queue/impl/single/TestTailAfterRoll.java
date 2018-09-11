@@ -71,7 +71,8 @@ public class TestTailAfterRoll {
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).build()) {
             ExcerptTailer excerptTailer = q.createTailer().toEnd();
-            q.acquireAppender().writeText(EXPECTED);
+            q.acquireAppender()
+                    .writeText(EXPECTED);
             Assert.assertEquals(EXPECTED, excerptTailer.readText());
         }
 

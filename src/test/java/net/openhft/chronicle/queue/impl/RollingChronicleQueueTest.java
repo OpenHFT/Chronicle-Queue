@@ -54,8 +54,8 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
             String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    550,\n" +
-                    "    2362232012802\n" +
+                    "    552,\n" +
+                    "    2370821947394\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
@@ -76,22 +76,22 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "index: [\n" +
                     "  # length: 16, used: 2\n" +
                     "  512,\n" +
-                    "  550,\n" +
+                    "  552,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 512, header: 0\n" +
-                    "--- !!data\n" +
-                    "1. some  text\n" +
-                    "# position: 529, header: 1\n" +
-                    "--- !!data\n" +
-                    "2. some more text\n" +
-                    "# position: 550, header: 2\n" +
-                    "--- !!data\n" +
-                    "3. some more text\n" +
-                    "# position: 571, header: 2 EOF\n" +
+                    "--- !!data #binary\n" +
+                    "\"1. some  text\"\n" +
+                    "# position: 530, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "\"2. some more text\"\n" +
+                    "# position: 552, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "\"3. some more text\"\n" +
+                    "# position: 576, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130497 bytes remaining\n" +
+                    "# 130492 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -120,17 +120,17 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 512, header: 0\n" +
-                    "--- !!data\n" +
-                    "4. some text - first cycle\n" +
-                    "# position: 542, header: 0 EOF\n" +
+                    "--- !!data #binary\n" +
+                    "\"4. some text - first cycle\"\n" +
+                    "# position: 543, header: 0 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 130526 bytes remaining\n" +
+                    "# 130525 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    543,\n" +
-                    "    2332167241729\n" +
+                    "    544,\n" +
+                    "    2336462209025\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
@@ -154,13 +154,13 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 512, header: 0\n" +
-                    "--- !!data\n" +
-                    "5. some text - second cycle\n" +
-                    "# position: 543, header: 1\n" +
-                    "--- !!data\n" +
+                    "--- !!data #binary\n" +
+                    "\"5. some text - second cycle\"\n" +
+                    "# position: 544, header: 1\n" +
+                    "--- !!data #binary\n" +
                     "some more text\n" +
                     "...\n" +
-                    "# 130507 bytes remaining\n";
+                    "# 130505 bytes remaining\n";
             assertEquals(expectedEager, q.dump());
 
             assertEquals(5, q.countExcerpts(start, end));

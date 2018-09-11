@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -30,6 +31,7 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -133,7 +135,7 @@ public class NotCompleteTest {
     @Test
     public void testMessageNotLeftIncomplete() {
 
-        File tmpDir = DirectoryUtils.tempDir("testMessageLeftNotComplete");
+        File tmpDir = DirectoryUtils.tempDir("testMessageNotLeftIncomplete");
         try {
             try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).build()) {
                 ExcerptAppender appender = queue.acquireAppender();
@@ -225,7 +227,13 @@ public class NotCompleteTest {
                 assertEquals(expected, queue.dump());
             }
         } finally {
-            IOTools.deleteDirWithFiles(tmpDir, 20);
+            try {
+                IOTools.deleteDirWithFiles(tmpDir, 2);
+            } catch (Exception e) {
+                if (e instanceof AccessDeniedException && OS.isWindows())
+                    return;
+                throw e;
+            }
         }
 
     }
@@ -330,7 +338,13 @@ public class NotCompleteTest {
                 assertFalse(reader.readOne());
             }
         } finally {
-            DirectoryUtils.deleteDir(tmpDir);
+            try {
+                IOTools.deleteDirWithFiles(tmpDir, 2);
+            } catch (Exception e) {
+                if (e instanceof AccessDeniedException && OS.isWindows())
+                    return;
+                throw e;
+            }
         }
 
     }

@@ -26,6 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.AccessDeniedException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -55,7 +56,14 @@ public class ReadWriteTest {
 
     @After
     public void teardown() {
-        IOTools.shallowDeleteDirWithFiles(chroniclePath);
+        try {
+            IOTools.shallowDeleteDirWithFiles(chroniclePath);
+        } catch (Exception e) {
+            if (e instanceof AccessDeniedException && OS.isWindows())
+                System.err.println(e);
+            else
+                throw e;
+        }
     }
 
     @Test

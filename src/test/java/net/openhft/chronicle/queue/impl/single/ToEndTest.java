@@ -276,7 +276,7 @@ public class ToEndTest {
 
             for (int i = 0; i < 10; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write().text("hi-" + i);
+                    dc.wire().getValueOut().text("hi-" + i);
                     lastCycle = wqueue.rollCycle().toCycle(dc.index());
                 }
 

@@ -838,18 +838,18 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 384, header: 0\n" +
-                    "--- !!data\n" +
+                    "--- !!data #binary\n" +
                     "msg-1\n" +
                     "...\n" +
-                    "# 130675 bytes remaining\n";
+                    "# 130674 bytes remaining\n";
             assertEquals(expectedEager, queue.dump());
             for (int i = 1; i <= 16; i++)
                 appender.writeText("msg-" + i);
             String expectedEager2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    629,\n" +
-                    "    2701534429200\n" +
+                    "    644,\n" +
+                    "    2765958938640\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
@@ -863,8 +863,8 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "index2index: [\n" +
                     "  # length: 8, used: 3\n" +
                     "  288,\n" +
-                    "  465,\n" +
-                    "  639,\n" +
+                    "  474,\n" +
+                    "  655,\n" +
                     "  0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 288, header: -1\n" +
@@ -872,87 +872,87 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "index: [\n" +
                     "  # length: 8, used: 8\n" +
                     "  384,\n" +
-                    "  393,\n" +
-                    "  402,\n" +
-                    "  411,\n" +
-                    "  420,\n" +
-                    "  429,\n" +
-                    "  438,\n" +
-                    "  447\n" +
+                    "  394,\n" +
+                    "  404,\n" +
+                    "  414,\n" +
+                    "  424,\n" +
+                    "  434,\n" +
+                    "  444,\n" +
+                    "  454\n" +
                     "]\n" +
                     "# position: 384, header: 0\n" +
-                    "--- !!data\n" +
+                    "--- !!data #binary\n" +
                     "msg-1\n" +
-                    "# position: 393, header: 1\n" +
-                    "--- !!data\n" +
+                    "# position: 394, header: 1\n" +
+                    "--- !!data #binary\n" +
                     "msg-1\n" +
-                    "# position: 402, header: 2\n" +
-                    "--- !!data\n" +
+                    "# position: 404, header: 2\n" +
+                    "--- !!data #binary\n" +
                     "msg-2\n" +
-                    "# position: 411, header: 3\n" +
-                    "--- !!data\n" +
+                    "# position: 414, header: 3\n" +
+                    "--- !!data #binary\n" +
                     "msg-3\n" +
-                    "# position: 420, header: 4\n" +
-                    "--- !!data\n" +
+                    "# position: 424, header: 4\n" +
+                    "--- !!data #binary\n" +
                     "msg-4\n" +
-                    "# position: 429, header: 5\n" +
-                    "--- !!data\n" +
+                    "# position: 434, header: 5\n" +
+                    "--- !!data #binary\n" +
                     "msg-5\n" +
-                    "# position: 438, header: 6\n" +
-                    "--- !!data\n" +
+                    "# position: 444, header: 6\n" +
+                    "--- !!data #binary\n" +
                     "msg-6\n" +
-                    "# position: 447, header: 7\n" +
-                    "--- !!data\n" +
+                    "# position: 454, header: 7\n" +
+                    "--- !!data #binary\n" +
                     "msg-7\n" +
-                    "# position: 456, header: 8\n" +
-                    "--- !!data\n" +
+                    "# position: 464, header: 8\n" +
+                    "--- !!data #binary\n" +
                     "msg-8\n" +
-                    "# position: 465, header: 8\n" +
+                    "# position: 474, header: 8\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 8\n" +
-                    "  456,\n" +
-                    "  560,\n" +
-                    "  569,\n" +
-                    "  579,\n" +
+                    "  464,\n" +
+                    "  568,\n" +
+                    "  578,\n" +
                     "  589,\n" +
-                    "  599,\n" +
-                    "  609,\n" +
-                    "  619\n" +
+                    "  600,\n" +
+                    "  611,\n" +
+                    "  622,\n" +
+                    "  633\n" +
                     "]\n" +
-                    "# position: 560, header: 9\n" +
-                    "--- !!data\n" +
+                    "# position: 568, header: 9\n" +
+                    "--- !!data #binary\n" +
                     "msg-9\n" +
-                    "# position: 569, header: 10\n" +
-                    "--- !!data\n" +
+                    "# position: 578, header: 10\n" +
+                    "--- !!data #binary\n" +
                     "msg-10\n" +
-                    "# position: 579, header: 11\n" +
-                    "--- !!data\n" +
+                    "# position: 589, header: 11\n" +
+                    "--- !!data #binary\n" +
                     "msg-11\n" +
-                    "# position: 589, header: 12\n" +
-                    "--- !!data\n" +
+                    "# position: 600, header: 12\n" +
+                    "--- !!data #binary\n" +
                     "msg-12\n" +
-                    "# position: 599, header: 13\n" +
-                    "--- !!data\n" +
+                    "# position: 611, header: 13\n" +
+                    "--- !!data #binary\n" +
                     "msg-13\n" +
-                    "# position: 609, header: 14\n" +
-                    "--- !!data\n" +
+                    "# position: 622, header: 14\n" +
+                    "--- !!data #binary\n" +
                     "msg-14\n" +
-                    "# position: 619, header: 15\n" +
-                    "--- !!data\n" +
+                    "# position: 633, header: 15\n" +
+                    "--- !!data #binary\n" +
                     "msg-15\n" +
-                    "# position: 629, header: 16\n" +
-                    "--- !!data\n" +
+                    "# position: 644, header: 16\n" +
+                    "--- !!data #binary\n" +
                     "msg-16\n" +
-                    "# position: 639, header: 16\n" +
+                    "# position: 655, header: 16\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  629,\n" +
+                    "  644,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
-                    "# 130332 bytes remaining\n";
+                    "# 130316 bytes remaining\n";
             assertEquals(expectedEager2, queue.dump());
         }
     }

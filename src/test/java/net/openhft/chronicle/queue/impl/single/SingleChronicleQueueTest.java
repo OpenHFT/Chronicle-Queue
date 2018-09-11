@@ -2104,21 +2104,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
                 .rollCycle(RollCycles.HOURLY)
-                .blockSize(2 << 20)
+                .testBlockSize()
                 .build();
              ChronicleQueue chronicle2 = builder(dir, wireType)
                      .rollCycle(RollCycles.HOURLY)
-                     .blockSize(2 << 20)
+                     .testBlockSize()
                      .build()) {
             ExcerptAppender append = chronicle2.acquireAppender();
-            for (int i = 0; i < 50_000; i++)
-                append.writeDocument(w -> w.write(() -> "test - message").text("text"));
+            int runs = 50_000;
+            for (int i = 0; i < runs; i++) {
+                append.writeDocument(w -> w
+                        .write(() -> "test - message")
+                        .text("text"));
+            }
 
             ExcerptTailer tailer = chronicle.createTailer();
             ExcerptTailer tailer2 = chronicle.createTailer();
             ExcerptTailer tailer3 = chronicle.createTailer();
             ExcerptTailer tailer4 = chronicle.createTailer();
-            for (int i = 0; i < 50_000; i++) {
+            for (int i = 0; i < runs; i++) {
                 if (i % 10000 == 0)
                     System.gc();
                 if (i % 2 == 0)
@@ -2874,8 +2878,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    476,\n" +
-                    "    2044404432901\n" +
+                    "    481,\n" +
+                    "    2065879269381\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
@@ -2896,42 +2900,42 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
                     "  384,\n" +
-                    "  396,\n" +
-                    "  424,\n" +
-                    "  436,\n" +
-                    "  464,\n" +
-                    "  476,\n" +
+                    "  397,\n" +
+                    "  426,\n" +
+                    "  439,\n" +
+                    "  468,\n" +
+                    "  481,\n" +
                     "  0, 0\n" +
                     "]\n" +
                     "# position: 384, header: 0\n" +
-                    "--- !!data\n" +
+                    "--- !!data #binary\n" +
                     "hello A0\n" +
-                    "# position: 396, header: 1\n" +
-                    "--- !!data\n" +
+                    "# position: 397, header: 1\n" +
+                    "--- !!data #binary\n" +
                     "hello B0\n" +
-                    "# position: 408, header: 1\n" +
+                    "# position: 410, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 424, header: 2\n" +
-                    "--- !!data\n" +
+                    "# position: 426, header: 2\n" +
+                    "--- !!data #binary\n" +
                     "hello A1\n" +
-                    "# position: 436, header: 3\n" +
-                    "--- !!data\n" +
+                    "# position: 439, header: 3\n" +
+                    "--- !!data #binary\n" +
                     "hello B1\n" +
-                    "# position: 448, header: 3\n" +
+                    "# position: 452, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 464, header: 4\n" +
-                    "--- !!data\n" +
+                    "# position: 468, header: 4\n" +
+                    "--- !!data #binary\n" +
                     "hello A2\n" +
-                    "# position: 476, header: 5\n" +
-                    "--- !!data\n" +
+                    "# position: 481, header: 5\n" +
+                    "--- !!data #binary\n" +
                     "hello B2\n" +
-                    "# position: 488, header: 5\n" +
+                    "# position: 494, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 130564 bytes remaining\n";
+                    "# 130556 bytes remaining\n";
 
         throw new IllegalStateException("unknown wiretype=" + wireType);
     }
@@ -3636,23 +3640,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     closeQuietly(bytesWithIndies);
                 }
 
-                Assert.assertTrue(queue.dump(), queue.dump().contains("--- !!data #binary\n" +
-                        "hello: world0\n" +
-                        "# position: 785, header: 1\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world1\n" +
-                        "# position: 802, header: 2\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world2\n" +
-                        "# position: 819, header: 3\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world3\n" +
-                        "# position: 836, header: 4\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world4\n" +
-                        "# position: 853, header: 5\n" +
-                        "--- !!data\n" +
-                        "hello\n"));
+                Assert.assertTrue(queue.dump(), queue.dump().contains(
+                        "# position: 768, header: 0\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world0\n" +
+                                "# position: 785, header: 1\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world1\n" +
+                                "# position: 802, header: 2\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world2\n" +
+                                "# position: 819, header: 3\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world3\n" +
+                                "# position: 836, header: 4\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world4\n" +
+                                "# position: 853, header: 5\n" +
+                                "--- !!data #binary\n" +
+                                "hello\n"));
 
             }
 

@@ -483,7 +483,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
 
-
     public SingleChronicleQueueBuilder path(String path) {
         return path(new File(path));
     }
@@ -837,7 +836,8 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         if (checkInterrupts == null) {
             if (System.getProperties().contains("chronicle.queue.ignoreInterrupts"))
                 return !Boolean.getBoolean("chronicle.queue.ignoreInterrupts");
-            return Boolean.getBoolean("chronicle.queue.checkInterrupts");
+            if (System.getProperties().contains("chronicle.queue.checkInterrupts"))
+                return Boolean.getBoolean("chronicle.queue.checkInterrupts");
         }
 
         // default is true unless turned off.
@@ -868,7 +868,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         if (parentBuilder == null)
             return this;
 
-        if (! (this.getClass().isAssignableFrom(parentBuilder.getClass()) || parentBuilder.getClass().isAssignableFrom(this.getClass())))
+        if (!(this.getClass().isAssignableFrom(parentBuilder.getClass()) || parentBuilder.getClass().isAssignableFrom(this.getClass())))
             throw new IllegalArgumentException("Classes are not in same implementation hierarchy");
 
         List<FieldInfo> sourceFieldInfo = Wires.fieldInfos(parentBuilder.getClass());
