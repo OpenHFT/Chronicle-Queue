@@ -147,16 +147,6 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        @Override
-        public void writeText(@NotNull CharSequence text) throws UnrecoverableTimeoutException {
-            try (DocumentContext dc = writingDocument()) {
-                dc.wire().bytes()
-                        .append8bit(text);
-                if (padToCacheAlignMode() != Padding.ALWAYS)
-                    ((StoreAppenderContext) dc).padToCacheAlign = false;
-            }
-        }
-
         void close() {
             Wire w0 = wireForIndex;
             wireForIndex = null;
