@@ -1525,14 +1525,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptTailer tailer = chronicle.createTailer();
             Bytes bytes = Bytes.elasticByteBuffer();
-            tailer.readBytes(bytes);
-            Assert.assertEquals("Steve", bytes.toString());
-            tailer.readBytes(bytes);
-            Assert.assertEquals("Jobs", bytes.toString());
+            try {
+                tailer.readBytes(bytes);
+                Assert.assertEquals("Steve", bytes.toString());
+                tailer.readBytes(bytes);
+                Assert.assertEquals("Jobs", bytes.toString());
+            } finally {
+                steve.release();
+                jobs.release();
+                bytes.release();
+            }
 
-            steve.release();
-            jobs.release();
-            bytes.release();
         }
     }
 

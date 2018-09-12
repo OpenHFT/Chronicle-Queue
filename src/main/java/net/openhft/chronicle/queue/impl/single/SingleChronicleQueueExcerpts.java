@@ -141,8 +141,12 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeBytes(@NotNull WriteBytesMarshallable marshallable) throws UnrecoverableTimeoutException {
             try (DocumentContext dc = writingDocument()) {
-                marshallable.writeMarshallable(dc.wire().bytes());
-                if (padToCacheAlignMode() != Padding.ALWAYS)
+                Bytes<?> bytes = dc.wire().bytes();
+                long wp = bytes.writePosition();
+                marshallable.writeMarshallable(bytes);
+                if (wp == bytes.writePosition())
+                    dc.rollbackOnClose();
+                else if (padToCacheAlignMode() != Padding.ALWAYS)
                     ((StoreAppenderContext) dc).padToCacheAlign = false;
             }
         }
