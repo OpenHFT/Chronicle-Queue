@@ -2877,7 +2877,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @NotNull
     protected String expectedMultipleAppenders() {
-
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
