@@ -1528,6 +1528,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try {
                 tailer.readBytes(bytes);
                 Assert.assertEquals("Steve", bytes.toString());
+                bytes.clear();
                 tailer.readBytes(bytes);
                 Assert.assertEquals("Jobs", bytes.toString());
             } finally {
