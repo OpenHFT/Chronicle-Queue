@@ -208,7 +208,8 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
         if (metadata != Metadata.NoMeta.INSTANCE)
             wire.write(MetaDataField.metadata).typedMarshallable(this.metadata);
 
-        wire.padToCacheAlign();
+        // align to a word whether needed or not as a micro-optimisation.
+        wire.writeAlignTo(Integer.BYTES, 0);
     }
 
     /**
@@ -240,6 +241,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
             long pos = recovery.writeHeader(mappedWire, safeLength, timeoutMS, null, null);
             LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
+            mappedWire.writeAlignTo(Integer.BYTES, 0);
             mappedWire.updateHeader(pos, false);
             return longValue;
 

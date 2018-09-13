@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -52,7 +53,7 @@ public abstract class AbstractTSQueueLock implements Closeable {
     }
 
     protected void forceUnlock() {
-        Jvm.warn().on(getClass(), "Forced unlock for the lock file:" + path, new Exception());
+        Jvm.warn().on(getClass(), "Forced unlock for the lock file:" + path, new StackTrace());
         lock.setValue(UNLOCKED);
     }
 }

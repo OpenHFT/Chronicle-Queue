@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.*;
@@ -222,7 +223,9 @@ public class NotCompleteTest {
                         "--- !!data #binary\n" +
                         "some: data\n" +
                         "...\n" +
-                        "# 327278 bytes remaining\n";
+                        (Jvm.isArm()
+                                ? "# 327276 bytes remaining\n"
+                                : "# 327278 bytes remaining\n");
 
                 assertEquals(expected, queue.dump());
             }

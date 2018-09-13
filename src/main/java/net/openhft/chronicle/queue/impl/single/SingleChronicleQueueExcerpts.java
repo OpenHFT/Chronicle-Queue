@@ -90,7 +90,7 @@ public class SingleChronicleQueueExcerpts {
         private int lastCycle;
         @Nullable
         private Pretoucher pretoucher = null;
-        private Padding padToCacheLines = Padding.SMART;
+        private Padding padToCacheLines = Jvm.isArm() ? Padding.WORD : Padding.SMART;
 
         StoreAppender(@NotNull SingleChronicleQueue queue,
                       @NotNull WireStorePool storePool,
@@ -146,7 +146,9 @@ public class SingleChronicleQueueExcerpts {
                 marshallable.writeMarshallable(bytes);
                 if (wp == bytes.writePosition())
                     dc.rollbackOnClose();
-                else if (padToCacheAlignMode() != Padding.ALWAYS)
+                else if (padToCacheAlignMode() == Padding.WORD)
+                    ((StoreAppenderContext) dc).padToWordAlign = true;
+                else if (padToCacheAlignMode() != Padding.CACHE_LINE)
                     ((StoreAppenderContext) dc).padToCacheAlign = false;
             }
         }
@@ -396,6 +398,7 @@ public class SingleChronicleQueueExcerpts {
             context.isClosed = false;
             context.rollbackOnClose = false;
             context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+            context.padToWordAlign = padToCacheAlignMode() == Padding.WORD;
             context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
             context.metaData(metaData);
         }
@@ -455,7 +458,10 @@ public class SingleChronicleQueueExcerpts {
                 position(writeHeader(wire, (int) queue.overlapSize()));
                 assert ((AbstractWire) wire).isInsideHeader();
                 beforeAppend(wire, wire.headerNumber() + 1);
-                wire.bytes().write(bytes);
+                Bytes<?> wireBytes = wire.bytes();
+                wireBytes.write(bytes);
+                if (padToCacheLines == Padding.WORD)
+                    wireBytes.writeSkip((-wireBytes.writePosition()) & 0x3);
                 wire.updateHeader(position, false, 0);
                 lastIndex(wire.headerNumber());
                 lastPosition = position;
@@ -677,6 +683,7 @@ public class SingleChronicleQueueExcerpts {
         class StoreAppenderContext implements DocumentContext {
 
             boolean isClosed;
+            boolean padToWordAlign = false;
             boolean padToCacheAlign = true;
             private boolean metaData = false;
             private boolean rollbackOnClose = false;
@@ -742,7 +749,9 @@ public class SingleChronicleQueueExcerpts {
                     }
 
                     if (wire == StoreAppender.this.wire) {
-                        if (padToCacheAlign)
+                        if (padToWordAlign)
+                            wire.writeAlignTo(Integer.BYTES, 0);
+                        else if (padToCacheAlign)
                             wire.padToCacheAlign();
 
                         try {

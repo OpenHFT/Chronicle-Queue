@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -15,6 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 public final class RollAtEndOfCycleTest {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -28,6 +30,8 @@ public final class RollAtEndOfCycleTest {
 
     @Test
     public void shouldRollAndAppendToNewFile() throws Exception {
+        assumeFalse(Jvm.isArm());
+
         try (final SingleChronicleQueue queue = createQueue()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
