@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,7 +50,7 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
 
     public EventLoopServiceWrapper(@NotNull ServiceWrapperBuilder<O> builder) {
         this.priority = builder.priority();
-        outputQueue = SingleChronicleQueueBuilder.binary(builder.outputPath())
+        outputQueue = ChronicleQueue.singleBuilder(builder.outputPath())
                 .sourceId(builder.outputSourceId())
                 .checkInterrupts(false)
                 .build();
@@ -67,7 +66,7 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
         serviceIn = new MethodReader[paths.size()];
         inputQueues = new ChronicleQueue[paths.size()];
         for (int i = 0; i < paths.size(); i++) {
-            inputQueues[i] = SingleChronicleQueueBuilder.binary(paths.get(i))
+            inputQueues[i] = ChronicleQueue.singleBuilder(paths.get(i))
                     .sourceId(builder.inputSourceId())
                     .build();
             serviceIn[i] = inputQueues[i].createTailer()

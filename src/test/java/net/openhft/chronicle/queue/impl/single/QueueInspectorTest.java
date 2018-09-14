@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -41,7 +42,7 @@ public final class QueueInspectorTest {
     public void shouldDetermineWritingProcessIdWhenDocumentIsNotComplete() throws IOException {
 
 
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
+        try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
                 testBlockSize().
                 build()) {
             final QueueInspector inspector = new QueueInspector(queue);
@@ -60,7 +61,7 @@ public final class QueueInspectorTest {
 
     @Test
     public void shouldIndicateNoProcessIdWhenDocumentIsComplete() throws IOException {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
+        try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
                 testBlockSize().
                 build()) {
             final QueueInspector inspector = new QueueInspector(queue);

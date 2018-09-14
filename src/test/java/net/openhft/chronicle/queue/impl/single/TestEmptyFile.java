@@ -51,14 +51,14 @@ public class TestEmptyFile {
             "past the empty/truncated file. Needs investigation if this is a supported situation - see issue #470")*/
     public void shouldHandleEmptyFile() {
         try (final ChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(tmpDir)
+                     ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()
                              .readOnly(true)
                              .build()) {
             ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.readingDocument().isPresent());
 
-            try (DocumentContext dc = SingleChronicleQueueBuilder.binary(tmpDir)
+            try (DocumentContext dc = ChronicleQueue.singleBuilder(tmpDir)
                     .testBlockSize().build().acquireAppender().writingDocument()) {
                 dc.wire().write("hello").text("world");
             }

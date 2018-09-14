@@ -41,7 +41,7 @@ public final class ResultGenerator {
             }
         }, (c, m, t) -> System.out.println(m));
         try (final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(lastStageConfig.getOutputPath()).build();
+                     ChronicleQueue.singleBuilder(lastStageConfig.getOutputPath()).build();
              final Writer resultsWriter = new FileWriter("results.txt", false)) {
             final MethodReader methodReader = queue.createTailer().methodReader(new CapturingReceiver(resultsWriter));
             while (methodReader.readOne()) {

@@ -16,7 +16,7 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
     public void shouldNotSkipMessageAtStartOfQueue() throws Exception {
         final File tmpDir = DirectoryUtils.tempDir(ExcerptsSkippedWhenTailerDirectionNoneTest.class.getSimpleName());
         try (final ChronicleQueue writeQueue =
-                     SingleChronicleQueueBuilder.binary(tmpDir)
+                     ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()
                              .rollCycle(TEST_DAILY)
                              .build()) {
@@ -30,7 +30,7 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
         }
 
         try (final ChronicleQueue readQueue =
-                     SingleChronicleQueueBuilder.binary(tmpDir)
+                     ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()
                              .rollCycle(TEST_DAILY)
                              .build()) {

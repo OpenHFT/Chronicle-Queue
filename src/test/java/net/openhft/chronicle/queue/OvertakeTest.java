@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -50,7 +49,7 @@ public class OvertakeTest {
     @Before
     public void before() {
         path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
-        try (ChronicleQueue appender_queue = SingleChronicleQueueBuilder.binary(path)
+        try (ChronicleQueue appender_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .buffered(false)
                 .build()) {
@@ -69,7 +68,7 @@ public class OvertakeTest {
 
     @Test
     public void appendAndTail() {
-        ChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
+        ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .buffered(false)
                 .build();
@@ -102,7 +101,7 @@ public class OvertakeTest {
 
         MyAppender myapp = new MyAppender(sync);
         Future<Long> f = execService.submit(myapp);
-        ChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
+        ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .buffered(false)
                 .build();
@@ -130,7 +129,7 @@ public class OvertakeTest {
 
         @Override
         public Long call() throws Exception {
-            queue = SingleChronicleQueueBuilder.binary(path)
+            queue = ChronicleQueue.singleBuilder(path)
                     //.testBlockSize()
                     //.rollCycle(TEST_DAILY)
                     .buffered(false)

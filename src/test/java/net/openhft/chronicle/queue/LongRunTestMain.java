@@ -21,7 +21,6 @@ import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 
 public class LongRunTestMain {
@@ -37,7 +36,7 @@ public class LongRunTestMain {
         final LogEntryOutput output = new LogEntryOutput(1024);
         output.setMarshallable(entry);
 
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(
+        final ChronicleQueue queue = ChronicleQueue.singleBuilder(
                 OS.TARGET + "/test-" + System.nanoTime())
                 .rollCycle(RollCycles.HOURLY)
                 .build();

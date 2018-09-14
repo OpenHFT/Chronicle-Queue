@@ -310,7 +310,7 @@ To write data to a Chronicle-Queue, you must first create an Appender
 
 [source, Java]
 ----
-try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
    final ExcerptAppender appender = queue.acquireAppender();
 }   
 ----
@@ -565,7 +565,7 @@ Reading the queue follows the same pattern as writing, except there is a possibi
 .Start Reading
 [source, Java]
 ----
-try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
    final ExcerptTailer tailer = queue.createTailer();
 }
 ----
@@ -733,7 +733,7 @@ To write to the queue you can call a proxy which implements this interface.
 
 [source, Java]
 ----
-SingleChronicleQueue queue1 = SingleChronicleQueueBuilder.binary(path).build();
+SingleChronicleQueue queue1 = ChronicleQueue.singleBuilder(path).build();
 
 MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
 
@@ -1002,7 +1002,7 @@ When using daily-rolling, Chronicle Queue will roll at midnight UTC. If you wish
 [source, Java]
 ----
 Path path = Files.createTempDirectory("rollCycleTest");
-SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).epoch(0).build();
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder(path).epoch(0).build();
 ----
 
 We do not recommend that you change the `epoch()` on an existing system, which already has `.cq4` files created, using a different `epoch()` setting.
@@ -1433,7 +1433,7 @@ For instance, using the following code snippet will result in the queue files be
 
 [source,java]
 ----
-SingleChronicleQueueBuilder.binary(queuePath).rollCycle(RollCycles.HOURLY).build()
+ChronicleQueue.singleBuilder(queuePath).rollCycle(RollCycles.HOURLY).build()
 ----
 
 Once a queue's roll-cycle has been set, it cannot be changed at a later date.
@@ -1445,7 +1445,7 @@ This check is enforced by `SingleChronicleQueueBuilder`, so the following code c
 [source,java]
 ----
 final Path queueDir = Paths.get("/data/queue/my-queue");
-try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(SECONDLY).build()) {
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).rollCycle(SECONDLY).build()) {
     // this append call will 'lock' the queue to use the SECONDLY roll-cycle
     try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
         documentContext.wire().write("somekey").text("somevalue");
@@ -1454,7 +1454,7 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).rollCyc
 
 // this call will fail since we are trying to create a new queue,
 // at the same location, with a different roll-cycle
-try (ChronicleQueue recreated = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(HOURLY).build()) {
+try (ChronicleQueue recreated = ChronicleQueue.singleBuilder(queueDir).rollCycle(HOURLY).build()) {
 
 }
 ----
@@ -1467,9 +1467,9 @@ of the situation:
 [source,java]
 ----
 // creates a queue with roll-cycle MINUTELY
-try (ChronicleQueue minuteRollCycleQueue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(MINUTELY).build()) {
+try (ChronicleQueue minuteRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(MINUTELY).build()) {
     // creates a queue with roll-cycle HOURLY - valid since no appends have yet been made
-    try (ChronicleQueue hourlyRollCycleQueue = SingleChronicleQueueBuilder.binary(queueDir).rollCycle(HOURLY).build()) {
+    try (ChronicleQueue hourlyRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(HOURLY).build()) {
         // append using the HOURLY roll-cycle
         try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
             documentContext.wire().write("somekey").text("somevalue");
@@ -1494,7 +1494,7 @@ It's possible to configure how Chronicle Queue will store the data:
 
 [source,java]
 ----
-SingleChronicleQueueBuilder.binary(queuePath)
+ChronicleQueue.singleBuilder(queuePath)
 SingleChronicleQueueBuilder.fieldlessBinary(queuePath)
 SingleChronicleQueueBuilder.defaultZeroBinary(queuePath)
 SingleChronicleQueueBuilder.deltaBinary(queuePath)

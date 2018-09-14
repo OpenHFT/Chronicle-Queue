@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.junit.Assert;
@@ -64,7 +63,7 @@ public class ChronicleHistoryReaderTest {
         File queuePath2 = new File(OS.TARGET, "testWithQueueHistory2-" + nanoTime);
         File queuePath3 = new File(OS.TARGET, "testWithQueueHistory3-" + nanoTime);
         try {
-            try (ChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath).testBlockSize().sourceId(1).build()) {
+            try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath).testBlockSize().sourceId(1).build()) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
                         .recordHistory(recordHistoryFirst)
@@ -72,8 +71,8 @@ public class ChronicleHistoryReaderTest {
                 writer.say("hello");
             }
 
-            try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath).testBlockSize().sourceId(1).build();
-                 ChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath2).testBlockSize().build()) {
+            try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath).testBlockSize().sourceId(1).build();
+                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().build()) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
                         .recordHistory(true)
@@ -90,8 +89,8 @@ public class ChronicleHistoryReaderTest {
                 assertFalse(reader.readOne());
             }
 
-            try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath2).testBlockSize().sourceId(2).build();
-                 ChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath3).testBlockSize().build()) {
+            try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build();
+                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath3).testBlockSize().build()) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
                         .recordHistory(true)

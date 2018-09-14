@@ -66,7 +66,7 @@ public class ThreadedQueueTest {
         ExecutorService tailerES = Executors.newSingleThreadExecutor(/*new NamedThreadFactory("tailer", true)*/);
         Future tf = tailerES.submit(() -> {
             try {
-                final ChronicleQueue rqueue = SingleChronicleQueueBuilder.binary(path)
+                final ChronicleQueue rqueue = ChronicleQueue.singleBuilder(path)
                         .testBlockSize()
                         .build();
 
@@ -88,7 +88,7 @@ public class ThreadedQueueTest {
         ExecutorService appenderES = Executors.newSingleThreadExecutor(/*new NamedThreadFactory("appender", true)*/);
         Future af = appenderES.submit(() -> {
             try {
-                final ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
+                final ChronicleQueue wqueue = ChronicleQueue.singleBuilder(path)
                         .testBlockSize()
                         .build();
 

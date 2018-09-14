@@ -1,13 +1,11 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertFalse;
@@ -21,11 +19,10 @@ public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBa
     protected static final Logger LOG = LoggerFactory.getLogger(ChronicleQueueMethodsWithoutParameters.class);
 
     @Test
-    public void test() throws IOException, InterruptedException {
+    public void test() {
         File file = getTmpDir();
 
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder
-                .binary(file)
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(file)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY).build()) {
 

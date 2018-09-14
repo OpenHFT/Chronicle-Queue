@@ -3,10 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -35,7 +32,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         stp.currentTimeMillis(time);
 
         final File tmpDir = getTmpDir();
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
                 .build()) {

@@ -220,7 +220,7 @@ public final class DocumentOrderingTest {
     }
 
     private SingleChronicleQueueBuilder builder(final File dir, final long timeoutMS) {
-        return SingleChronicleQueueBuilder.binary(dir).
+        return ChronicleQueue.singleBuilder(dir).
                 testBlockSize().rollCycle(ROLL_CYCLE).
                 timeProvider(clock::get).timeoutMS(timeoutMS);
     }

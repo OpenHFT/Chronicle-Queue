@@ -15,10 +15,10 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import net.openhft.chronicle.wire.WireType;
@@ -30,6 +30,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low
@@ -187,5 +188,25 @@ public interface ChronicleQueue extends Closeable {
      */
     void lastIndexReplicated(long lastIndex);
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
+
+    static ChronicleQueue single(String path) {
+        return SingleChronicleQueueBuilder.single(path).build();
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder() {
+        return SingleChronicleQueueBuilder.single();
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder(String path) {
+        return SingleChronicleQueueBuilder.binary(path);
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder(File path) {
+        return SingleChronicleQueueBuilder.binary(path);
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder(Path path) {
+        return SingleChronicleQueueBuilder.binary(path);
+    }
 
 }

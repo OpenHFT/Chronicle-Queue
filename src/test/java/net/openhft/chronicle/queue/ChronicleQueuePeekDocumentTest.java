@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
@@ -23,10 +22,10 @@ public class ChronicleQueuePeekDocumentTest {
         try {
             tempDir = Files.createTempDirectory("ChronicleQueueLoggerTest");
             // Read back the data
-            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
                 ExcerptTailer tailer = queue.createTailer();
 
-                try (SingleChronicleQueue writeQueue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
+                try (ChronicleQueue writeQueue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
                     ExcerptAppender appender = writeQueue.acquireAppender();
 
                     try (DocumentContext dc = appender.writingDocument()) {

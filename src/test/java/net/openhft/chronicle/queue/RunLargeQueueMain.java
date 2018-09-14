@@ -20,7 +20,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
 /*
  * Created by Peter Lawrey on 25/01/17.
@@ -38,7 +37,7 @@ public enum RunLargeQueueMain {
         System.out.println("msg.size: " + MSG_SIZE + " # B");
         System.out.println("block.size: " + BLOCK_SIZE + " # MB");
         System.out.println("pretouch: " + PRETOUCH);
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(args[0]).blockSize((int) (BLOCK_SIZE * (1 << 20))).build()) {
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(args[0]).blockSize((int) (BLOCK_SIZE * (1 << 20))).build()) {
             ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
             BytesStore bytes = NativeBytesStore.nativeStore(MSG_SIZE);

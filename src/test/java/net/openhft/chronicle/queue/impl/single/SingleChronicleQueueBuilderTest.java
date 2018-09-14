@@ -21,7 +21,7 @@ public class SingleChronicleQueueBuilderTest {
     public void shouldDetermineQueueDirectoryFromQueueFile() {
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         try (final ChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(path)
+                     ChronicleQueue.singleBuilder(path)
                              .testBlockSize()
                              .build()) {
             assertThat(queue.createTailer().readingDocument().isPresent(), is(false));

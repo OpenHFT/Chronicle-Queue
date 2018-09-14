@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
@@ -29,7 +30,7 @@ public final class EofMarkerOnEmptyQueueTest {
     public void shouldRecoverFromEmptyQueueOnRoll() throws Exception {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         try (final RollingChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(tmpFolder.newFolder()).
+                     ChronicleQueue.singleBuilder(tmpFolder.newFolder()).
                              rollCycle(RollCycles.TEST_SECONDLY).
                              timeProvider(clock::get).
                              timeoutMS(1_000).

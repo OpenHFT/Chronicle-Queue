@@ -7,7 +7,6 @@ import net.openhft.chronicle.core.Memory;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -174,7 +173,8 @@ public class BenchmarkMain {
 
     @NotNull
     private static ChronicleQueue createQueue(String path) {
-        return SingleChronicleQueueBuilder.single(path).blockSize(1 << 30)
+        return ChronicleQueue.singleBuilder(path)
+                .blockSize(1 << 30)
                 .pauserSupplier(Pauser::timedBusy)
                 .build();
     }

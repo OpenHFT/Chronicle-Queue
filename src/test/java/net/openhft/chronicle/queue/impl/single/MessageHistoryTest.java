@@ -94,7 +94,7 @@ public final class MessageHistoryTest {
     }
 
     private ChronicleQueue createQueue(final File queueDir, final int sourceId) {
-        return SingleChronicleQueueBuilder.binary(queueDir).sourceId(sourceId).
+        return ChronicleQueue.singleBuilder(queueDir).sourceId(sourceId).
                 timeProvider(clock::get).
                 testBlockSize().build();
     }

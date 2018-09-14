@@ -1,10 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.DumpQueueMain;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -37,7 +34,7 @@ public class StuckQueueTest {
 
             DumpQueueMain.dump(tmpDir.toString());
 
-            try (RollingChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.MINUTELY).readOnly(true).build()) {
+            try (RollingChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).readOnly(true).build()) {
 
                 ExcerptTailer tailer = q.createTailer();
 
@@ -54,7 +51,7 @@ public class StuckQueueTest {
                 }
 
                 //  Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
-                try (DocumentContext dc = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.MINUTELY).build().acquireAppender().writingDocument()) {
+                try (DocumentContext dc = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).build().acquireAppender().writingDocument()) {
                     dc.wire().write("hello").text("world");
                 }
                 try (DocumentContext dc = tailer.readingDocument()) {

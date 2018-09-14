@@ -136,7 +136,7 @@ will create an in-memory `ByteStore`.
 
 ```
     // process 1
-    SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(path);
+    SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
     try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
@@ -150,7 +150,7 @@ will create an in-memory `ByteStore`.
     }
 
     // process 2
-    SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(path); // same path as process 1
+    SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path); // same path as process 1
     try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)

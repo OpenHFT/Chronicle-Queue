@@ -10,7 +10,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 
@@ -33,7 +32,7 @@ public class ThroughputPerfMain {
         nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
 
         long blockSize = OS.is64Bit() ? 4L << 30 : 256L << 20;
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base)
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSize)
                 .build()) {
@@ -70,7 +69,7 @@ public class ThroughputPerfMain {
         long time1 = mid - start;
 
         Bytes bytes = Bytes.allocateElasticDirect(64);
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base)
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSize)
                 .build()) {

@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.util.ThrowingConsumer;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
@@ -69,7 +70,7 @@ public class SingleChronicleQueueStoreTest {
     }
 
     private void runTest(final ThrowingConsumer<RollingChronicleQueue, Exception> testMethod) throws Exception {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir.newFolder()).
+        try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(tmpDir.newFolder()).
                 testBlockSize().timeProvider(clock::get).
                 rollCycle(ROLL_CYCLE).indexSpacing(INDEX_SPACING).
                 build()) {

@@ -4,7 +4,6 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,8 +35,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
             };
             AtomicLong time = new AtomicLong(1000l);
             TimeProvider tp = () -> time.getAndAccumulate(1000, (x, y) -> x + y);
-            ChronicleQueue queue = SingleChronicleQueueBuilder
-                    .binary(dir)
+            ChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY)
                     .storeFileListener(sfl)

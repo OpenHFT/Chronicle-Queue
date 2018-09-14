@@ -8,7 +8,6 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 
@@ -100,9 +99,7 @@ public class QueuePingPongMain {
 
     @NotNull
     private static ChronicleQueue createQueue(String path) {
-        return SingleChronicleQueueBuilder.single(path)
-//                .blockSize(1 << 30)
-                .build();
+        return ChronicleQueue.single(path);
     }
 
 }

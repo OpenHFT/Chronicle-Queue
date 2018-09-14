@@ -121,7 +121,7 @@ For more details on how to do this https://vanilla-java.github.io/2016/03/23/Mic
 
 Chronicle has three types of excerpt, each optimised for different purposes.
 
-    ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath).build();
+    ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build();
     ExcerptAppender appender = queue.acquireAppender(); // sequential writes.
     ExcerptTailer tailer = queue.createTailer();       // sequential reads ideally, but random reads/write also possible.
 

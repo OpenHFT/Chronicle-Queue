@@ -1,9 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.junit.Test;
@@ -46,7 +43,7 @@ public final class QueueEpochTest {
         final CapturingStoreFileListener fileListener = new CapturingStoreFileListener();
         setCurrentTime(MIDNIGHT_UTC_BASE_TIME);
 
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).
+        try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
                 rollTime(LocalTime.of(21, 15), ZoneOffset.UTC). // epoch is deprecated in favour of rollTime
                 timeProvider(this::getCurrentTime). // override the clock used by the queue to detect roll-over
                 storeFileListener(fileListener). // capture file-roll events

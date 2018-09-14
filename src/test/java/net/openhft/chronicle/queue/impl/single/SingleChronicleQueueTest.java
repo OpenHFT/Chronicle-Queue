@@ -3707,7 +3707,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // remove change of cycle roll in test, cross-cycle atomicity is covered elsewhere
         final AtomicLong fixedClock = new AtomicLong(System.currentTimeMillis());
         try {
-            ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).
+            ChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
                     rollCycle(RollCycles.TEST_SECONDLY).
                     timeoutMS(3_000).timeProvider(fixedClock::get).
                     testBlockSize().build();
@@ -4081,7 +4081,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         final Random random = new Random(0xDEADBEEF);
         final File queueFolder = DirectoryUtils.tempDir("mappedSegmentsShouldBeUnmappedAsCycleRolls");
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueFolder).
+        try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(queueFolder).
                 timeProvider(clock::get).
                 testBlockSize().rollCycle(RollCycles.HOURLY).
                 build()) {

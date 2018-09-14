@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.junit.Test;
@@ -33,7 +34,7 @@ public final class TailerPollingEmptyQueueTest {
     }
 
     private SingleChronicleQueue createQueue() {
-        return SingleChronicleQueueBuilder.binary(
+        return ChronicleQueue.singleBuilder(
                 DirectoryUtils.tempDir(TailerPollingEmptyQueueTest.class.getName())).
                 testBlockSize().
                 build();

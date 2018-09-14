@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -111,7 +112,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @NotNull
     public static String dump(@NotNull String directoryFilePath) {
-        return SingleChronicleQueueBuilder.binary(directoryFilePath).build().dump();
+        return ChronicleQueue.singleBuilder(directoryFilePath).build().dump();
     }
 
     private static WireOut intForBinding(ValueOut wireOut, final LongValue value) {

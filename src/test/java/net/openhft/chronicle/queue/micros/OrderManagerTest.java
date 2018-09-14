@@ -24,7 +24,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.Test;
 
@@ -66,7 +65,7 @@ public class OrderManagerTest {
     public void testWithQueue() {
         File queuePath = new File(OS.TARGET, "testWithQueue-" + System.nanoTime());
         try {
-            try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).testBlockSize().build()) {
+            try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
                 OrderIdeaListener orderManager = queue.acquireAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
                 SidedMarketDataCombiner combiner = new SidedMarketDataCombiner((MarketDataListener) orderManager);
 
@@ -86,7 +85,7 @@ public class OrderManagerTest {
             listener.onOrder(new Order("EURUSD", Side.Buy, 1.1167, 1_000_000));
             replay(listener);
 
-            try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).testBlockSize().build()) {
+            try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
                 // build our scenario
                 OrderManager orderManager = new OrderManager(listener);
                 MethodReader reader = queue.createTailer().methodReader(orderManager);
@@ -111,7 +110,7 @@ public class OrderManagerTest {
         File queuePath = new File(OS.TARGET, "testWithQueueHistory-" + System.nanoTime());
         File queuePath2 = new File(OS.TARGET, "testWithQueueHistory-down-" + System.nanoTime());
         try {
-            try (ChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath).testBlockSize().build()) {
+            try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
                 OrderIdeaListener orderManager = out.acquireAppender()
                         .methodWriterBuilder(OrderIdeaListener.class)
                         .addInterface(MarketDataListener.class)
@@ -130,11 +129,11 @@ public class OrderManagerTest {
                 orderManager.onOrderIdea(new OrderIdea("EURUSD", Side.Buy, 1.1165, 1e6)); // expected to trigger
             }
 
-            try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath)
+            try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
                     .sourceId(1)
                     .build();
-                 ChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath2).testBlockSize().build()) {
+                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().build()) {
 
                 OrderListener listener = out.acquireAppender()
                         .methodWriterBuilder(OrderListener.class)
@@ -150,7 +149,7 @@ public class OrderManagerTest {
 //                System.out.println(out.dump());
             }
 
-            try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath2).testBlockSize().sourceId(2).build()) {
+            try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build()) {
                 MethodReader reader = in.createTailer().methodReader((OrderListener) order -> {
                     MessageHistory x = MessageHistory.get();
                     // Note: this will have one extra timing, the time it was written to the console.
@@ -177,7 +176,7 @@ public class OrderManagerTest {
         File queuePath2 = new File(OS.TARGET, "testRestartingAService-down-" + System.nanoTime());
         try {
 
-            try (ChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath)
+            try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
@@ -198,11 +197,11 @@ public class OrderManagerTest {
             // TODO FIx for more.
             for (int i = 0; i < 10; i++) {
                 // read one message at a time
-                try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath)
+                try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath)
                         .testBlockSize()
                         .sourceId(1)
                         .build();
-                     ChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath2)
+                     ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2)
                              .testBlockSize()
                              .rollCycle(RollCycles.TEST_DAILY)
                              .build()) {

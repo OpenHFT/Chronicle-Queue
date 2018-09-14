@@ -62,7 +62,7 @@ public final class StageMain {
 
     @NotNull
     private static SingleChronicleQueue outputQueue(final Path path, final int index) {
-        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(path);
+        final SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
         builder.rollTime(RollTimeCalculator.getNextRollWindow(), ZoneId.of("UTC"));
         if (index != UNSET_SOURCE) {
             builder.sourceId(index);

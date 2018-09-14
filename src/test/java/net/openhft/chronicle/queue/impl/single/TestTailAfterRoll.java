@@ -46,7 +46,7 @@ public class TestTailAfterRoll {
     public void test()  {
         File tmpDir = getTmpDir();
         File[] files;
-        try (ChronicleQueue writeQ = SingleChronicleQueueBuilder.binary(tmpDir).build()) {
+        try (ChronicleQueue writeQ = ChronicleQueue.singleBuilder(tmpDir).build()) {
             ExcerptAppender appender = writeQ.acquireAppender();
             long wp;
             Wire wire;
@@ -69,7 +69,7 @@ public class TestTailAfterRoll {
         File file = files[0];
         file.delete();
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir).build()) {
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).build()) {
             ExcerptTailer excerptTailer = q.createTailer().toEnd();
             q.acquireAppender()
                     .writeText(EXPECTED);

@@ -42,7 +42,7 @@ public class ReadWriteTest {
     @Before
     public void setup() {
         chroniclePath = new File(OS.TARGET, "read_only");
-        try (ChronicleQueue readWrite = SingleChronicleQueueBuilder.binary(chroniclePath)
+        try (ChronicleQueue readWrite = ChronicleQueue.singleBuilder(chroniclePath)
                 .readOnly(false)
                 .testBlockSize()
                 .build()) {

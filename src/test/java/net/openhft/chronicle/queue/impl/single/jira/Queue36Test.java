@@ -19,12 +19,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -36,7 +34,7 @@ public class Queue36Test extends ChronicleQueueTestBase {
     @Test
     public void testTail() {
         File basePath = getTmpDir();
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
                 .testBlockSize()
                 .build()) {
 

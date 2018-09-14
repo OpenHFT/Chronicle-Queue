@@ -21,7 +21,7 @@ public final class MoveToIndexTest {
     public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws Exception {
         File queuePath = tmpFolder.newFolder("cq");
 
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).build()) {
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).build()) {
             ExcerptAppender appender = queue.acquireAppender();
             for (int i = 1; i < 10; ++i) {
                 appender.writeText("id" + i);

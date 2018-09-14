@@ -46,7 +46,7 @@ public final class PublisherMain {
 
     @NotNull
     private static SingleChronicleQueue outputQueue(final Path path) {
-        return SingleChronicleQueueBuilder.binary(path).sourceId(0).
+        return ChronicleQueue.singleBuilder(path).sourceId(0).
                 rollTime(RollTimeCalculator.getNextRollWindow(), ZoneId.of("UTC")).
                 rollCycle(RollCycles.HOURLY).build();
     }

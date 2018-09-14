@@ -36,9 +36,9 @@ public final class PublishDeltaGenerator {
                 get(allStageConfigs.size() - 1);
         try (
                 final SingleChronicleQueue pubQueue =
-                        SingleChronicleQueueBuilder.binary(configParser.getPublisherConfig().outputDir()).build();
+                        ChronicleQueue.singleBuilder(configParser.getPublisherConfig().outputDir()).build();
                 final SingleChronicleQueue queue =
-                        SingleChronicleQueueBuilder.binary(lastStageConfig.getOutputPath()).build();
+                        ChronicleQueue.singleBuilder(lastStageConfig.getOutputPath()).build();
                 final Writer resultsWriter = new FileWriter("publish-deltas.txt", false);
                 final Writer s0Pub = new FileWriter("s0-deltas.txt", false);
                 final Writer s1Pub = new FileWriter("s1-deltas.txt", false);

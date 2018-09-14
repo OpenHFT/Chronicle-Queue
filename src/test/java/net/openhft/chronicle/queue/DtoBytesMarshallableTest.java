@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesIn;
 import net.openhft.chronicle.bytes.BytesOut;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.AbstractBytesMarshallable;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -26,7 +25,7 @@ public class DtoBytesMarshallableTest {
         dto.age = 45;
         dto.name.append("rob");
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmp).build()) {
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmp).build()) {
 
             try (DocumentContext dc = q.acquireAppender().writingDocument()) {
                 dc.wire().write("who").object(dto);
@@ -55,7 +54,7 @@ public class DtoBytesMarshallableTest {
         dto.age = 45;
         dto.name.append("rob");
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmp).build()) {
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmp).build()) {
 
             try (DocumentContext dc = q.acquireAppender().writingDocument()) {
                 dc.wire().write("who").object(dto);
