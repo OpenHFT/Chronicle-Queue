@@ -204,42 +204,47 @@ public class SingleChronicleQueueExcerpts {
             return wire;
         }
 
-        @Override
-        public long batchAppend(final int timeout, final int size, BatchAppender batchAppender) {
+        private NativeBytesStore<Void> batchTmp;
 
-            long maxMsgSize = (long) (this.queue.blockSize() * 0.25);
-            NativeBytesStore<Void> tmp = NativeBytesStore.lazyNativeBytesStoreWithFixedCapacity(maxMsgSize);
-            long startTime = System.nanoTime();
+        @Override
+        public long batchAppend(final int timeoutMS, BatchAppender batchAppender) {
+
+            long maxMsgSize = this.queue.blockSize() / 4;
+            long startTime = System.currentTimeMillis();
             long count = 0;
             long lastIndex = -1;
             do {
-                int batch = Math.max(1, (128 << 10) / size);
                 int defaultIndexSpacing = this.queue.rollCycle().defaultIndexSpacing();
-                for (int i = 0; i < batch; i++) {
-                    Wire wire = wire();
-                    int writeCount = (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
-                    if (wire != null && writeCount > 0) {
-                        MappedBytes bytes = (MappedBytes) wire.bytes();
-                        long address = bytes.addressForWrite(bytes.writePosition());
-                        long bstart = bytes.start();
-                        long bcap = bytes.realCapacity();
-                        long canWrite = bcap - (bytes.writePosition() - bstart);
-                        long lengthCount = batchAppender.writeMessages(address, canWrite, writeCount);
-                        bytes.writeSkip((int) lengthCount);
-                        lastIndex += lengthCount >> 32;
-                        count += lengthCount >> 32;
+                Wire wire = wire();
+                int writeCount = Math.min(128 << 10,
+                        (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1));
 
-                    } else {
-                        try (DocumentContext dc = writingDocument()) {
-                            long lengthCount = batchAppender.writeMessages(tmp.addressForWrite(0), maxMsgSize, 1);
-                            int len = (int) lengthCount;
-                            dc.wire().bytes().write(tmp, 0L, len);
-                        }
-                        lastIndex = lastIndexAppended();
-                        count++;
+                if (wire != null && writeCount > 0) {
+                    MappedBytes bytes = (MappedBytes) wire.bytes();
+                    long address = bytes.addressForWrite(bytes.writePosition());
+                    long bstart = bytes.start();
+                    long bcap = bytes.realCapacity();
+                    long canWrite = bcap - (bytes.writePosition() - bstart);
+                    long lengthCount = batchAppender.writeMessages(address, canWrite, writeCount);
+                    bytes.writeSkip((int) lengthCount);
+                    lastIndex += lengthCount >> 32;
+                    count += lengthCount >> 32;
+
+                } else {
+                    if (batchTmp == null) {
+                        batchTmp = NativeBytesStore.lazyNativeBytesStoreWithFixedCapacity(maxMsgSize);
                     }
+
+                    try (DocumentContext dc = writingDocument()) {
+                        long lengthCount = batchAppender.writeMessages(batchTmp.addressForWrite(0), maxMsgSize, 1);
+                        int len = (int) lengthCount;
+                        dc.wire().bytes().write(batchTmp, (long) Integer.BYTES, len - Integer.BYTES);
+                    }
+                    lastIndex = lastIndexAppended();
+                    count++;
                 }
-            } while (startTime + timeout * 1e9 > System.nanoTime());
+            }
+            while (startTime + timeoutMS > System.currentTimeMillis());
 
             return count;
         }

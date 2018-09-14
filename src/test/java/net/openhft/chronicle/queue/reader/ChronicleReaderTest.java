@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -432,5 +433,10 @@ public class ChronicleReaderTest {
 
             return documentContext;
         }
+    }
+
+    @After
+    public void clearInterrupt() {
+        Thread.interrupted();
     }
 }

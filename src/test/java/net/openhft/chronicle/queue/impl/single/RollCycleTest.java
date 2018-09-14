@@ -193,4 +193,9 @@ public class RollCycleTest {
             System.out.println("Releasing " + file);
         }
     }
+
+    @After
+    public void clearInterrupt() {
+        Thread.interrupted();
+    }
 }

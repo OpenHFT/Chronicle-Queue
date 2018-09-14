@@ -14,9 +14,14 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 
+/*
+ARMv7 Processor rev 10 (v7l), Quad 1 GHz.
+Writing 36,699,566 messages took 20.297 seconds, at a rate of 1,808,092 per second
+Reading 36,699,566 messages took 28.283 seconds, at a rate of 1,297,576 per second
+ */
 public class ThroughputPerfMain {
     static final int time = Integer.getInteger("time", 20);
-    static final int size = Integer.getInteger("size", 48);
+    static final int size = Integer.getInteger("size", 40);
     static final String path = System.getProperty("path", OS.TMP);
 
     static NativeBytesStore nbs;
@@ -27,47 +32,46 @@ public class ThroughputPerfMain {
         long count = 0;
         nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
 
-        long blockSize = 4L << 30;
+        long blockSize = OS.is64Bit() ? 4L << 30 : 256L << 20;
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base)
-                .rollCycle(RollCycles.LARGE_HOURLY_SPARSE)
+                .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSize)
                 .build()) {
+
             ExcerptAppender appender = q.acquireAppender();
             long lastIndex = -1;
             do {
-                int batch = Math.max(1, (128 << 10) / size);
                 int defaultIndexSpacing = q.rollCycle().defaultIndexSpacing();
-                for (int i = 0; i < batch; i++) {
-                    Wire wire = appender.wire();
-                    int writeCount = (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
-                    if (wire != null && writeCount > 0) {
-                        MappedBytes bytes = (MappedBytes) wire.bytes();
-                        long address = bytes.addressForWrite(bytes.writePosition());
-                        long bstart = bytes.start();
-                        long bcap = bytes.realCapacity();
-                        long canWrite = bcap - (bytes.writePosition() - bstart);
-                        long lengthCount = writeMessages(address, canWrite, writeCount);
-                        bytes.writeSkip((int) lengthCount);
-                        lastIndex += lengthCount >> 32;
-                        count += lengthCount >> 32;
+                Wire wire = appender.wire();
+                int writeCount = (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
+                if (wire != null && writeCount > 0) {
+                    MappedBytes bytes = (MappedBytes) wire.bytes();
+                    long address = bytes.addressForWrite(bytes.writePosition());
+                    long bstart = bytes.start();
+                    long bcap = bytes.realCapacity();
+                    long canWrite = bcap - (bytes.writePosition() - bstart);
+                    long lengthCount = writeMessages(address, canWrite, writeCount);
+                    bytes.writeSkip((int) lengthCount);
+                    lastIndex += lengthCount >> 32;
+                    count += lengthCount >> 32;
 
-                    } else {
-                        try (DocumentContext dc = appender.writingDocument()) {
-                            dc.wire().bytes().write(nbs);
-                        }
-                        lastIndex = appender.lastIndexAppended();
-                        count++;
+                } else {
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        dc.wire().bytes().write(nbs);
                     }
+                    lastIndex = appender.lastIndexAppended();
+                    count++;
                 }
             } while (start + time * 1e9 > System.nanoTime());
         }
+
         nbs.release();
         long mid = System.nanoTime();
         long time1 = mid - start;
 
         Bytes bytes = Bytes.allocateElasticDirect(64);
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(base)
-                .rollCycle(RollCycles.LARGE_HOURLY_SPARSE)
+                .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSize)
                 .build()) {
             ExcerptTailer tailer = q.createTailer();

@@ -347,10 +347,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
                 (toIndex - fromKnownIndex));
         // ignored  for the first message
-        if (toIndex > 0 && end > start + 250e3)
+        int time = Jvm.isArm() ? 20_000_000 : 250_000;
+        if (toIndex > 0 && end > start + time)
             // has to be change to debug because is being reported as an an
-            Jvm.debug().on(getClass(), new StackTrace("This is a profile stack trace, not an " +
-                    "ERROR"));
+            Jvm.debug().on(getClass(),
+                    new StackTrace("This is a profile stack trace, not an ERROR"));
         return true;
     }
 
@@ -409,7 +410,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long start = System.nanoTime();
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
         long end = System.nanoTime();
-        if (end > start + 50e3) {
+        int time = Jvm.isArm() ? 1_000_000 : 50_000;
+        if (end > start + time) {
             printLinearScanTime(toPosition, startAddress, start, end, "linearScan by position");
         }
         return index;

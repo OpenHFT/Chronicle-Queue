@@ -433,4 +433,9 @@ public class NotCompleteTest {
                     '}';
         }
     }
+
+    @After
+    public void clearInterrupt() {
+        Thread.interrupted();
+    }
 }
