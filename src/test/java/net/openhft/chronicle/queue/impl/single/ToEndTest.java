@@ -160,7 +160,7 @@ public class ToEndTest {
 
         final SingleChronicleQueueExcerpts.StoreAppender appender = (SingleChronicleQueueExcerpts.StoreAppender) queue.acquireAppender();
         Field storeF1 = SingleChronicleQueueExcerpts.StoreAppender.class.getDeclaredField("store");
-        storeF1.setAccessible(true);
+        Jvm.setAccessible(storeF1);
         SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
         System.out.println(store1);
 
@@ -172,7 +172,7 @@ public class ToEndTest {
         System.out.println(tailer);
 
         Field storeF2 = SingleChronicleQueueExcerpts.StoreTailer.class.getDeclaredField("store");
-        storeF2.setAccessible(true);
+        Jvm.setAccessible(storeF2);
         SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
         // the reference count here is 1, the queue itself

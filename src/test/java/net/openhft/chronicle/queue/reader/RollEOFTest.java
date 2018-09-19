@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -175,7 +176,7 @@ public class RollEOFTest {
     private SingleChronicleQueueStore loadStore(Wire wire) {
         try {
             Method loadStoreMethod = SingleChronicleQueueBuilder.class.getDeclaredMethod("loadStore", Wire.class);
-            loadStoreMethod.setAccessible(true);
+            Jvm.setAccessible(loadStoreMethod);
             return (SingleChronicleQueueStore) loadStoreMethod.invoke(null, wire);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);

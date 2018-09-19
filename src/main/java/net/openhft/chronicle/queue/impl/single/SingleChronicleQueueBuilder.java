@@ -84,7 +84,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
             Constructor co;
             try {
                 co = ((Class) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
-                co.setAccessible(true);
+                Jvm.setAccessible(co);
             } catch (Exception e) {
                 co = null;
             }
