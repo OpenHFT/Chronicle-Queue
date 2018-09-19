@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.TSQueueLock;
@@ -70,7 +71,7 @@ public class QueueUnlockMain {
     private static void forceUnlock(AbstractTSQueueLock lock) {
         try {
             Method forceUnlock = AbstractTSQueueLock.class.getDeclaredMethod("forceUnlock");
-            forceUnlock.setAccessible(true);
+            Jvm.setAccessible(forceUnlock);
             forceUnlock.invoke(lock);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
