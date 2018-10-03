@@ -104,7 +104,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
      * @param mappedBytes used to mapped the data store file
      * @param recovery    used to recover from concurrent modifications
      */
-    public SingleTableStore(@NotNull final WireType wireType,
+    SingleTableStore(@NotNull final WireType wireType,
                             @NotNull MappedBytes mappedBytes,
                             @NotNull StoreRecovery recovery,
                             @NotNull T metadata) {
