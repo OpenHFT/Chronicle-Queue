@@ -719,7 +719,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     @Override
     public String toString() {
-        return "SingleChronicleQueue{" +
+        return this.getClass().getSimpleName() + "{" +
                 "sourceId=" + sourceId +
                 ", file=" + path +
                 '}';
