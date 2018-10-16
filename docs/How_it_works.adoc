@@ -1,6 +1,7 @@
-image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
-
 = Chronicle Queue
+Peter Lawrey
+
+image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
 == How Chronicle Works
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
@@ -36,11 +37,11 @@ An appender is used to write/add data to the queue.
 == Getting Started
 In the following example we will:
 
-- Create a Chronicle queue,
+- Create a Chronicle queue
 - Put a record to the queue
 - Read the record from queue.
 
-[source,java]
+[source, Java]
 ----
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -77,7 +78,7 @@ ExcerptTailer tailer = queue.createTailer();
 
 The `write` and `read` an object 
 
-[source,java]
+[source, java]
 ----
 package net.openhft.chronicle.queue;
 
@@ -138,6 +139,7 @@ outputs the following:
 Chronicle Queue uses tiered multi-level indexing to provide a fast and efficient method for searching for messages in a large queue.
 
 === Primary index
+[source, YAML]
 ----
 # position: 385, header: -1 #  <1>
 --- !!meta-data #binary
@@ -147,11 +149,8 @@ index2index: [ #  <2>
   0, 0, 0, 0, 0,
 ]
 ----
-
 <1> `position` specifies the starting address of the data that follows, within the the queue (*.cq4) file.
-
 <2> `index2Index` defines a pointer to the next lower level of index.
-
 <3> specifies the point to the next level index.
 
 NOTE: In this way, indexes can be tiered (primary, secondary, tertiary, etc.) as required to enhance indexing speed and efficiency.
