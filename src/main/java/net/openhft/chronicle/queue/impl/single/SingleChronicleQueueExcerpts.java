@@ -72,7 +72,7 @@ public class SingleChronicleQueueExcerpts {
         private final WriteLock writeLock;
         @NotNull
         private final StoreAppenderContext context;
-        private final ClosableResources closableResources;
+        private final ClosableResources<?> closableResources;
         private final WireStorePool storePool;
         private final boolean checkInterrupts;
         @Nullable
@@ -101,7 +101,7 @@ public class SingleChronicleQueueExcerpts {
 
             this.writeLock = queue.writeLock();
             this.context = new StoreAppenderContext();
-            this.closableResources = new ClosableResources(queue);
+            this.closableResources = new ClosableResources<>(storePool);
 
             // always put references to "this" last.
             queue.addCloseListener(this, StoreAppender::close);
@@ -836,15 +836,16 @@ public class SingleChronicleQueueExcerpts {
 //
 // *************************************************************************
 
-    private static final class ClosableResources {
-        private final RollingChronicleQueue queue;
+    private static final class ClosableResources<T extends StoreReleasable> {
+        @NotNull
+        private final T storeReleasable;
         private volatile Bytes wireReference = null;
         private volatile Bytes bufferWireReference = null;
         private volatile Bytes wireForIndexReference = null;
         private volatile CommonStore storeReference = null;
 
-        ClosableResources(final RollingChronicleQueue queue) {
-            this.queue = queue;
+        ClosableResources(@NotNull final T storeReleasable) {
+            this.storeReleasable = storeReleasable;
         }
 
         private static void releaseIfNotNull(final Bytes bytesReference) {
@@ -861,7 +862,7 @@ public class SingleChronicleQueueExcerpts {
 
             // Object is no longer reachable, check that it has not already been released
             if (storeReference != null && storeReference.refCount() > 0) {
-                queue.release(storeReference);
+                storeReleasable.release(storeReference);
             }
         }
     }
@@ -874,7 +875,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
-        private final ClosableResources closableResources;
+        private final ClosableResources<?> closableResources;
         private final MoveToState moveToState = new MoveToState();
         long index; // index of the next read.
         @Nullable
@@ -896,7 +897,7 @@ public class SingleChronicleQueueExcerpts {
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
-            closableResources = new ClosableResources(queue);
+            closableResources = new ClosableResources<>(queue);
         }
 
         @Nullable

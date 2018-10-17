@@ -27,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import java.text.ParseException;
 import java.util.function.Function;
 
-public interface RollingChronicleQueue extends ChronicleQueue {
+public interface RollingChronicleQueue extends ChronicleQueue, StoreReleasable {
 
     long epoch();
 
@@ -42,11 +42,6 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     @org.jetbrains.annotations.Nullable
     @Nullable
     WireStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent);
-
-    /**
-     * @param store the {@code store} to release
-     */
-    void release(CommonStore store);
 
     /**
      * @return the first cycle number found, or Integer.MAX_VALUE is none found.

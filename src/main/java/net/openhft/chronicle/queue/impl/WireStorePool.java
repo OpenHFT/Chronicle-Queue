@@ -29,7 +29,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WireStorePool {
+public class WireStorePool implements StoreReleasable {
     // must be power-of-two
     private static final int ROLL_CYCLE_CACHE_SIZE = 64;
     private static final int INDEX_MASK = ROLL_CYCLE_CACHE_SIZE - 1;
@@ -107,6 +107,7 @@ public class WireStorePool {
         return supplier.nextCycle(currentCycle, direction);
     }
 
+    @Override
     public synchronized void release(@NotNull CommonStore store) {
         store.release();
 
