@@ -10,10 +10,10 @@ import java.util.UUID;
 /**
  * Created by Rob Austin
  */
-public class BackwardWithPretouch {
+public class BackwardWithPretouchTest {
 
     @Test
-    public void excerptAppender() throws Exception {
+    public void testAppenderBackwardWithPretoucher() throws Exception {
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(UUID.randomUUID().toString()).rollCycle(RollCycles.TEST_SECONDLY).build();
         ExcerptAppender excerptAppender = queue.acquireAppender();
