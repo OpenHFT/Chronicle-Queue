@@ -1221,7 +1221,7 @@ public class SingleChronicleQueueExcerpts {
             if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
             Jvm.optionalSafepoint();
-            if (direction != TailerDirection.FORWARD && inACycleNotForward()) return false;
+            if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
             Jvm.optionalSafepoint();
 
             switch (wire.readDataHeader(includeMetaData)) {
@@ -1258,18 +1258,21 @@ public class SingleChronicleQueueExcerpts {
                     Jvm.optionalSafepoint();
                     // after toEnd() call, index is past the end of the queue
                     // so try to go back one (to the last record in the queue)
+                    if ((int) queue.rollCycle().toSequenceNumber(index) < 0) {
+                        return moveToIndexInternal(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                    }
                     if (!moveToIndexInternal(index - 1)) {
                         Jvm.optionalSafepoint();
-                        return true;
+                        return false;
                     }
-                } catch (RuntimeException e) {
+                } catch (Exception e) {
                     // can happen if index goes negative
                     Jvm.optionalSafepoint();
-                    return true;
+                    return false;
                 }
             }
             Jvm.optionalSafepoint();
-            return false;
+            return true;
         }
 
         private void inACycleFound(Bytes<?> bytes) {
