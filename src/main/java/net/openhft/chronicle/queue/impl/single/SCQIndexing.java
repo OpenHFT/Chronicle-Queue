@@ -326,7 +326,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
             assert printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
         } else if (fromKnownIndex > 0x284d34000000000L) {
-            Jvm.warn().on(getClass(),
+            Jvm.debug().on(getClass(),
                     "Unexpectedly high " + TimeUnit.NANOSECONDS.toMicros(end - start) + "us " +
                             "fromKnownIndex 0x" + Long
                             .toHexString(fromKnownIndex) +
