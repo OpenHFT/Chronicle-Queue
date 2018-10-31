@@ -17,11 +17,13 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,6 +52,7 @@ public class TestEmptyFile {
 
     @Test(expected = TimeoutException.class)
     public void shouldHandleEmptyFile() {
+        Assume.assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue =
                      ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()
