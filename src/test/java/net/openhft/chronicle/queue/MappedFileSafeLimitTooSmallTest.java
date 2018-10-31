@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.util.DecoratedBufferOverflowException;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -15,7 +14,7 @@ import java.util.Arrays;
  */
 public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
 
-    @org.junit.Test(expected = DecoratedBufferOverflowException.class)
+    @org.junit.Test
     public void testMappedFileSafeLimitTooSmall() {
 
         final int arraySize = 40_000;
@@ -50,38 +49,4 @@ public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
 
     }
 
-    @org.junit.Test
-    public void testMappedFileSafeLimit() {
-
-        final int arraySize = 40_000;
-        final int blockSize = arraySize * 7;
-        byte[] data = new byte[arraySize];
-        Arrays.fill(data, (byte) 'x');
-        File tmpDir = getTmpDir();
-
-        try (final ChronicleQueue queue =
-                     SingleChronicleQueueBuilder.builder(tmpDir, WireType.BINARY).blockSize(blockSize).build()) {
-
-            for (int i = 0; i < 5; i++) {
-                try (DocumentContext dc = queue.acquireAppender().writingDocument()) {
-                    System.out.println(dc.wire().bytes().writeRemaining());
-                    dc.wire().write("data").bytes(data);
-                }
-
-            }
-        }
-
-        try (final ChronicleQueue queue =
-                     SingleChronicleQueueBuilder.builder(tmpDir, WireType.BINARY).blockSize(blockSize).build()) {
-
-            for (int i = 0; i < 5; i++) {
-                try (DocumentContext dc = queue.createTailer().readingDocument()) {
-                    Assert.assertArrayEquals(data, dc.wire().read("data").bytes());
-                }
-
-            }
-
-        }
-
-    }
 }
