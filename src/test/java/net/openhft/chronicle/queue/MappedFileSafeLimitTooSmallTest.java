@@ -4,7 +4,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
-import org.junit.Ignore;
 
 import java.io.File;
 import java.util.Arrays;
@@ -13,7 +12,6 @@ import java.util.Arrays;
  * see https://github.com/OpenHFT/Chronicle-Queue/issues/535
  * Created by Rob Austin
  */
-@Ignore
 public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
 
     @org.junit.Test
