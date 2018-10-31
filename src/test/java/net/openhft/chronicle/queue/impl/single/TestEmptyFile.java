@@ -17,11 +17,12 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -30,7 +31,7 @@ import java.io.FileOutputStream;
 import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
 
 public class TestEmptyFile {
     Path tmpDir = DirectoryUtils.tempDir(TestEmptyFile.class.getSimpleName()).toPath();
@@ -50,6 +51,7 @@ public class TestEmptyFile {
 
     @Test(expected = TimeoutException.class)
     public void shouldHandleEmptyFile() {
+        Assume.assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue =
                      ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()
