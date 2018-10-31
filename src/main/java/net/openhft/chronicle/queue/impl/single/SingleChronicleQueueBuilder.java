@@ -245,10 +245,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return storeFactory;
     }
 
-    public boolean hasPretouchIntervalMillis() {
-        return pretouchIntervalMillis != null;
-    }
-
     @NotNull
     public SingleChronicleQueue build() {
         boolean needEnterprise = checkEnterpriseFeaturesRequested();
@@ -276,7 +272,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         if (key != null)
             result = onlyAvailableInEnterprise("Encryption");
         if (hasPretouchIntervalMillis())
-            result = onlyAvailableInEnterprise("Pretouching");
+            result = onlyAvailableInEnterprise("Out of process pretouching");
 
         return result;
     }
@@ -423,11 +419,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2);
     }
 
-    public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
-        this.pretouchIntervalMillis = pretouchIntervalMillis;
-        return this;
-    }
-
     public int deltaCheckpointInterval() {
         return deltaCheckpointInterval == -1 ? 64 : deltaCheckpointInterval;
     }
@@ -477,11 +468,27 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return bufferBytesStoreCreator;
     }
 
-
-    public long pretouchIntervalMillis() {
-        return pretouchIntervalMillis == null ? 1_000L : pretouchIntervalMillis;
+    /**
+     * Enable out-of-process pretoucher (AKA preloader) (Queue Enterprise feature)
+     * @param pretouchIntervalMillis
+     * @return
+     */
+    public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
+        this.pretouchIntervalMillis = pretouchIntervalMillis;
+        return this;
     }
 
+    /**
+     * Interval in ms to invoke out of process pretoucher. Default is not to turn on
+     * @return interval ms
+     */
+    public long pretouchIntervalMillis() {
+        return pretouchIntervalMillis;
+    }
+
+    public boolean hasPretouchIntervalMillis() {
+        return pretouchIntervalMillis != null;
+    }
 
     public SingleChronicleQueueBuilder path(String path) {
         return path(new File(path));
