@@ -68,26 +68,25 @@ public class RollCycleMultiThreadStressTest {
     final SetTimeProvider timeProvider = new SetTimeProvider();
 
     @Rule
-    public SingleChronicleQueueTest.RepeatRule repeatRule = new SingleChronicleQueueTest.RepeatRule();
+    public RepeatRule repeatRule = new RepeatRule();
 
     public static class RepeatRule implements TestRule {
 
         @Override
-        public Statement apply(Statement statement, Description description )
-        {
+        public Statement apply(Statement statement, Description description) {
             Statement result = statement;
-            SingleChronicleQueueTest.RepeatRule.Repeat repeat = description.getAnnotation( SingleChronicleQueueTest.RepeatRule.Repeat.class );
-            if( repeat != null ) {
+            RepeatRule.Repeat repeat = description.getAnnotation(RepeatRule.Repeat.class);
+            if (repeat != null) {
                 int times = repeat.times();
-                result = new RepeatRule.RepeatStatement( times, statement );
+                result = new RepeatRule.RepeatStatement(times, statement);
             }
             return result;
         }
 
-        @Retention( RetentionPolicy.RUNTIME )
-        @Target( {
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target({
                 java.lang.annotation.ElementType.METHOD
-        } )
+        })
         public @interface Repeat {
             int times();
         }
@@ -97,14 +96,14 @@ public class RollCycleMultiThreadStressTest {
             private final int times;
             private final Statement statement;
 
-            private RepeatStatement( int times, Statement statement ) {
+            private RepeatStatement(int times, Statement statement) {
                 this.times = times;
                 this.statement = statement;
             }
 
             @Override
             public void evaluate() throws Throwable {
-                for( int i = 0; i < times; i++ ) {
+                for (int i = 0; i < times; i++) {
                     statement.evaluate();
                 }
             }
@@ -277,9 +276,9 @@ public class RollCycleMultiThreadStressTest {
     @NotNull
     SingleChronicleQueueBuilder queueBuilder(File path) {
         return SingleChronicleQueueBuilder.binary(path)
-                    .testBlockSize()
-                    .timeProvider(timeProvider)
-                    .rollCycle(RollCycles.TEST_SECONDLY);
+                .testBlockSize()
+                .timeProvider(timeProvider)
+                .rollCycle(RollCycles.TEST_SECONDLY);
     }
 
     static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
@@ -384,7 +383,7 @@ public class RollCycleMultiThreadStressTest {
         volatile Throwable exception;
 
         Writer(final File path, final AtomicInteger wrote,
-                       final int expectedNumberOfMessages) {
+               final int expectedNumberOfMessages) {
             this.path = path;
             this.wrote = wrote;
             this.expectedNumberOfMessages = expectedNumberOfMessages;
