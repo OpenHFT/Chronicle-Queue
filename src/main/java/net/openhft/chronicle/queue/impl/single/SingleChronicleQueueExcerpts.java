@@ -1191,8 +1191,7 @@ public class SingleChronicleQueueExcerpts {
             long nextIndex = nextIndexWithNextAvailableCycle(currentCycle);
 
             if (nextIndex != Long.MIN_VALUE) {
-                if (nextEndOfCycle(nextIndex))
-                    return true;
+                return nextEndOfCycle(nextIndex);
             } else {
                 state = END_OF_CYCLE;
             }
@@ -1276,26 +1275,32 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean inACycle(boolean includeMetaData, boolean first)
                 throws EOFException, StreamCorruptedException {
+
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
+
             if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
-            if (direction != TailerDirection.FORWARD && inACycleNotForward()) return false;
+            if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
 
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
                     return inACycleNone(includeMetaData, first, bytes);
 
                 case META_DATA:
+
                     context.metaData(true);
                     break;
                 case DATA:
+
                     context.metaData(false);
                     break;
             }
 
+
             inACycleFound(bytes);
+
             return true;
         }
 
@@ -1306,19 +1311,27 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean inACycleNotForward() {
+
             if (!moveToIndexInternal(index)) {
                 try {
+
                     // after toEnd() call, index is past the end of the queue
                     // so try to go back one (to the last record in the queue)
-                    if (!moveToIndexInternal(index - 1)) {
-                        return true;
+                    if ((int) queue.rollCycle().toSequenceNumber(index) < 0) {
+                        return moveToIndexInternal(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
                     }
-                } catch (RuntimeException e) {
+                    if (!moveToIndexInternal(index - 1)) {
+
+                        return false;
+                    }
+                } catch (Exception e) {
                     // can happen if index goes negative
-                    return true;
+
+                    return false;
                 }
             }
-            return false;
+
+            return true;
         }
 
         private void inACycleFound(Bytes<?> bytes) throws StreamCorruptedException {

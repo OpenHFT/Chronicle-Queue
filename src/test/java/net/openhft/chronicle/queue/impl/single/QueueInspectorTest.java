@@ -5,10 +5,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
@@ -39,6 +36,7 @@ public final class QueueInspectorTest {
         }
     }
 
+    @Ignore("flakey test")
     @Test
     public void shouldDetermineWritingProcessIdWhenDocumentIsNotComplete() throws IOException {
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir.newFolder()).
