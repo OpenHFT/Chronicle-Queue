@@ -9,11 +9,18 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -60,14 +67,56 @@ public class RollCycleMultiThreadStressTest {
 
     final SetTimeProvider timeProvider = new SetTimeProvider();
 
-    /*@Ignore("run manually")
-    @Test
-    public void repeatStress() throws InterruptedException {
-        //Jvm.setExceptionHandlers(null, null, null);
-        for (int i = 0; i < 100; i++) {
-            stress();
+    @Rule
+    public SingleChronicleQueueTest.RepeatRule repeatRule = new SingleChronicleQueueTest.RepeatRule();
+
+    public static class RepeatRule implements TestRule {
+
+        @Override
+        public Statement apply(Statement statement, Description description )
+        {
+            Statement result = statement;
+            SingleChronicleQueueTest.RepeatRule.Repeat repeat = description.getAnnotation( SingleChronicleQueueTest.RepeatRule.Repeat.class );
+            if( repeat != null ) {
+                int times = repeat.times();
+                result = new RepeatRule.RepeatStatement( times, statement );
+            }
+            return result;
         }
-    }*/
+
+        @Retention( RetentionPolicy.RUNTIME )
+        @Target( {
+                java.lang.annotation.ElementType.METHOD
+        } )
+        public @interface Repeat {
+            int times();
+        }
+
+        private static class RepeatStatement extends Statement {
+
+            private final int times;
+            private final Statement statement;
+
+            private RepeatStatement( int times, Statement statement ) {
+                this.times = times;
+                this.statement = statement;
+            }
+
+            @Override
+            public void evaluate() throws Throwable {
+                for( int i = 0; i < times; i++ ) {
+                    statement.evaluate();
+                }
+            }
+        }
+    }
+
+//    @Test
+//    @RepeatRule.Repeat(times = 10000)
+//    @Ignore("run manually")
+//    public void repeatStress() throws InterruptedException {
+//        stress();
+//    }
 
     @Test
     public void stress() throws InterruptedException {
