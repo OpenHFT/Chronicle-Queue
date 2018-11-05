@@ -29,6 +29,7 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -40,7 +41,7 @@ import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
-
+@Ignore
 public class NotCompleteTest {
 
     /**

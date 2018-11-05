@@ -602,11 +602,8 @@ public class SingleChronicleQueueExcerpts {
             return closableResources::releaseResources;
         }
 
-        /**
+        /*
          * overwritten in delta wire
-         *
-         * @param wire
-         * @param index
          */
         void beforeAppend(Wire wire, long index) {
         }
@@ -880,9 +877,7 @@ public class SingleChronicleQueueExcerpts {
         long index; // index of the next read.
         @Nullable
         WireStore store;
-        int notPresentCounter = 0;
         private int cycle;
-        private long timeForNextCycle = Long.MAX_VALUE;
         private TailerDirection direction = TailerDirection.FORWARD;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
@@ -1221,7 +1216,7 @@ public class SingleChronicleQueueExcerpts {
             if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
             Jvm.optionalSafepoint();
-            if (direction != TailerDirection.FORWARD && inACycleNotForward()) return false;
+            if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
             Jvm.optionalSafepoint();
 
             switch (wire.readDataHeader(includeMetaData)) {
@@ -1258,18 +1253,21 @@ public class SingleChronicleQueueExcerpts {
                     Jvm.optionalSafepoint();
                     // after toEnd() call, index is past the end of the queue
                     // so try to go back one (to the last record in the queue)
+                    if ((int) queue.rollCycle().toSequenceNumber(index) < 0) {
+                        return moveToIndexInternal(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                    }
                     if (!moveToIndexInternal(index - 1)) {
                         Jvm.optionalSafepoint();
-                        return true;
+                        return false;
                     }
-                } catch (RuntimeException e) {
+                } catch (Exception e) {
                     // can happen if index goes negative
                     Jvm.optionalSafepoint();
-                    return true;
+                    return false;
                 }
             }
             Jvm.optionalSafepoint();
-            return false;
+            return true;
         }
 
         private void inACycleFound(Bytes<?> bytes) {
@@ -1868,9 +1866,6 @@ public class SingleChronicleQueueExcerpts {
 
         public void setCycle(int cycle) {
             this.cycle = cycle;
-
-            timeForNextCycle = cycle == Integer.MIN_VALUE ? Long.MAX_VALUE :
-                    (long) (cycle + 1) * queue.rollCycle().length() + queue.epoch();
 
         }
 

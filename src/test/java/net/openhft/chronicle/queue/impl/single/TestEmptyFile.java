@@ -17,56 +17,49 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Test;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Path;
+import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
 
 public class TestEmptyFile {
     Path tmpDir = DirectoryUtils.tempDir(TestEmptyFile.class.getSimpleName()).toPath();
 
-    /*@SuppressWarnings("ResultOfMethodCallIgnored")
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Before
     public void setup() throws Exception {
         tmpDir.toFile().mkdirs();
-        Path templatePath = Paths.get(OS.USER_DIR, "src/test/resources/tr2/" + DirectoryListing.DIRECTORY_LISTING_FILE);
-        Path to = tmpDir.resolve(templatePath.getFileName());
-        Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
         File file = tmpDir.resolve("20170320.cq4").toFile();
         new FileOutputStream(file).close();
-    }*/
+    }
 
     @After
     public void cleanup() {
         DirectoryUtils.deleteDir(tmpDir.toFile());
     }
 
-    /*@Test
-    @Ignore("This test  crashes JVM, but even with obvious fixes it will not pass as the queue doesn't know how to progress " +
-            "past the empty/truncated file. Needs investigation if this is a supported situation - see issue #470")*/
+    @Test(expected = TimeoutException.class)
     public void shouldHandleEmptyFile() {
+        Assume.assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue =
                      ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()
+                             .timeoutMS(100)
                              .readOnly(true)
                              .build()) {
             ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.readingDocument().isPresent());
-
-            try (DocumentContext dc = ChronicleQueue.singleBuilder(tmpDir)
-                    .testBlockSize().build().acquireAppender().writingDocument()) {
-                dc.wire().write("hello").text("world");
-            }
-
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
-                assertEquals("world", dc.wire().read("hello").text());
-            }
         }
     }
 }

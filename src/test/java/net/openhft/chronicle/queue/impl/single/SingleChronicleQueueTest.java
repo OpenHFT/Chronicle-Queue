@@ -2253,12 +2253,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testToEnd() {
+    public void testToEnd() throws InterruptedException {
         File dir = getTmpDir();
-        try (ChronicleQueue chronicle = builder(dir, wireType)
+        try (ChronicleQueue queue = builder(dir, wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
-            ExcerptTailer tailer = chronicle.createTailer();
+            ExcerptTailer tailer = queue.createTailer();
 
             // move to the end even though it doesn't exist yet.
             tailer.toEnd();
@@ -2271,7 +2271,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 append.writeDocument(w -> w.write(() -> "test").text("text"));
 
             }
-            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
+            // this is needed to avoid caching of first and last cycle, see SingleChronicleQueue#setFirstAndLastCycle
+            Thread.sleep(1);
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                String message = "dump: " + builder(dir, wireType).rollCycle(RollCycles.HOURLY).build().dump();
+                assertTrue(message, dc.isPresent());
+                assertEquals(message, "text", dc.wire().read("test").text());
+            }
         }
     }
 
