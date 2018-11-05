@@ -602,11 +602,8 @@ public class SingleChronicleQueueExcerpts {
             return closableResources::releaseResources;
         }
 
-        /**
+        /*
          * overwritten in delta wire
-         *
-         * @param wire
-         * @param index
          */
         void beforeAppend(Wire wire, long index) {
         }
@@ -880,9 +877,7 @@ public class SingleChronicleQueueExcerpts {
         long index; // index of the next read.
         @Nullable
         WireStore store;
-        int notPresentCounter = 0;
         private int cycle;
-        private long timeForNextCycle = Long.MAX_VALUE;
         private TailerDirection direction = TailerDirection.FORWARD;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
@@ -1871,9 +1866,6 @@ public class SingleChronicleQueueExcerpts {
 
         public void setCycle(int cycle) {
             this.cycle = cycle;
-
-            timeForNextCycle = cycle == Integer.MIN_VALUE ? Long.MAX_VALUE :
-                    (long) (cycle + 1) * queue.rollCycle().length() + queue.epoch();
 
         }
 
