@@ -22,7 +22,6 @@ You can use Chronicle 5 to read messages written with Chronicle 4, however you s
 
 ==== About Chronicle Software
 
-video::201990017[vimeo,width=640,height=360]
 
 https://player.vimeo.com/video/201989439
 
