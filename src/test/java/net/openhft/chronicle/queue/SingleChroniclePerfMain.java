@@ -11,7 +11,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.assertEquals;
@@ -33,17 +32,10 @@ public class SingleChroniclePerfMain {
 
     public static void main(String[] args) throws IOException {
         for (int t = 0; t < 2; t++) {
-            doPerfTest(new TestWriter<Bytes>() {
-                @Override
-                public void writeTo(Bytes bytes) {
-                    writeMany(bytes, size);
-                }
-            }, new TestReader<Bytes>() {
-                @Override
-                public void readFrom(Bytes bytes) {
-                    readMany(bytes, size);
-                }
-            }, t == 0 ? 100_000 : count, t > 0);
+            doPerfTest(
+                    bytes -> writeMany(bytes, size),
+                    bytes -> readMany(bytes, size),
+                    t == 0 ? 100_000 : count, t > 0);
         }
     }
 
