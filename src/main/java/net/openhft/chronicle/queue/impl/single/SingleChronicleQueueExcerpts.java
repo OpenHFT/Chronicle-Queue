@@ -1209,15 +1209,15 @@ public class SingleChronicleQueueExcerpts {
         private boolean inACycle(boolean includeMetaData)
                 throws EOFException {
             Jvm.optionalSafepoint();
-            Wire wire = wire();
-            Bytes<?> bytes = wire.bytes();
-            bytes.readLimit(bytes.capacity());
-            Jvm.optionalSafepoint();
             if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
             Jvm.optionalSafepoint();
             if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
             Jvm.optionalSafepoint();
+
+            Wire wire = wire();
+            Bytes<?> bytes = wire.bytes();
+            bytes.readLimit(bytes.capacity());
 
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
@@ -1254,7 +1254,13 @@ public class SingleChronicleQueueExcerpts {
                     // after toEnd() call, index is past the end of the queue
                     // so try to go back one (to the last record in the queue)
                     if ((int) queue.rollCycle().toSequenceNumber(index) < 0) {
-                        return moveToIndexInternal(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                        long lastSeqNum = store.lastSequenceNumber(this);
+                        if (lastSeqNum == -1) {
+                            windBackCycle(cycle);
+                            return moveToIndexInternal(index);
+                        }
+
+                        return moveToIndexInternal(queue.rollCycle().toIndex(cycle, lastSeqNum));
                     }
                     if (!moveToIndexInternal(index - 1)) {
                         Jvm.optionalSafepoint();

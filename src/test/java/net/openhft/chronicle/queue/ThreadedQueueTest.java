@@ -117,7 +117,7 @@ public class ThreadedQueueTest {
     }
 
     @Test//(timeout = 5000)
-    public void testTailerReadingEmptyQueue() throws java.io.IOException {
+    public void testTailerReadingEmptyQueue() {
         assumeFalse(Jvm.isArm());
         final File path = DirectoryUtils.tempDir("testTailerReadingEmptyQueue");
 
