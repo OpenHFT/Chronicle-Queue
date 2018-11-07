@@ -116,6 +116,7 @@ public final class DocumentOrderingTest {
         }
     }
 
+    @Ignore
     @Test
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws Exception {
 
@@ -133,7 +134,7 @@ public final class DocumentOrderingTest {
              final SingleChronicleQueue queue3 =
                      builder(dir, 5_000L).build();
              final SingleChronicleQueue queue4 =
-                     builder(dir, 5_000L).build();
+                     builder(dir, 5_000L).build()
         ) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -170,6 +171,7 @@ public final class DocumentOrderingTest {
         }
     }
 
+    @Ignore
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws Exception {
         try (final SingleChronicleQueue queue =

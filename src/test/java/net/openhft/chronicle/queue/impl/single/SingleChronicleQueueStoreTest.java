@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -72,6 +73,7 @@ public class SingleChronicleQueueStoreTest {
         });
     }
 
+    @Ignore
     @Test
     public void shouldPerformIndexingOnRead() throws Exception {
         runTest(queue -> {
