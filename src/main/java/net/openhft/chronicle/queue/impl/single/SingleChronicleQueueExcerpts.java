@@ -1185,6 +1185,9 @@ public class SingleChronicleQueueExcerpts {
             throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
         }
 
+
+
+
         private boolean endOfCycle() {
             long oldIndex = this.index;
             int currentCycle = queue.rollCycle().toCycle(oldIndex);
@@ -1273,21 +1276,24 @@ public class SingleChronicleQueueExcerpts {
             return false;
         }
 
-        private boolean inACycle(boolean includeMetaData, boolean first)
-                throws EOFException, StreamCorruptedException {
+        private boolean inACycle(boolean includeMetaData,boolean first)
+                throws EOFException {
+
+            if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
+
+
+            if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
+
 
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
 
-            if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
-
-            if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
-
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
-                    return inACycleNone(includeMetaData, first, bytes);
 
+                    // no more polling - appender will always write (or recover) EOF
+                    return false;
                 case META_DATA:
 
                     context.metaData(true);
@@ -1343,7 +1349,7 @@ public class SingleChronicleQueueExcerpts {
             context.closeReadPosition(end);
         }
 
-        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException, StreamCorruptedException {
+        private boolean inACycleNone(boolean includeMetaData, boolean first, Bytes<?> bytes) throws EOFException {
             // if current time is not the current cycle, then write an EOF marker and
             // re-read from here, you may find that in the mean time an appender writes
             // another message, however the EOF marker will always be at the end.
@@ -1367,7 +1373,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean checkMoveToNextCycle(boolean includeMetaData, @NotNull Bytes<?> bytes)
-                throws EOFException, StreamCorruptedException {
+                throws EOFException {
             if (bytes.readWrite()) {
                 long pos = bytes.readPosition();
                 long lim = bytes.readLimit();
