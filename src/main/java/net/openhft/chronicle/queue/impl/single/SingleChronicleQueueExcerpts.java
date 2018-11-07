@@ -1310,6 +1310,8 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
+
+
         private boolean inACycleCheckRep() {
             long lastSequenceAck = store().lastAcknowledgedIndexReplicated();
             long seq = queue.rollCycle().toSequenceNumber(index);
@@ -1340,9 +1342,7 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-        private void inACycleFound(Bytes<?> bytes) throws StreamCorruptedException {
-            indexEntry(bytes);
-
+        private void inACycleFound(Bytes<?> bytes) {
             context.closeReadLimit(bytes.capacity());
             wire().readAndSetLength(bytes.readPosition());
             long end = bytes.readLimit();
