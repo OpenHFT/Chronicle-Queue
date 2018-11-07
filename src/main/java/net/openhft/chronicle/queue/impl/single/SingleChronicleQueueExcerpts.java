@@ -1185,9 +1185,6 @@ public class SingleChronicleQueueExcerpts {
             throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
         }
 
-
-
-
         private boolean endOfCycle() {
             long oldIndex = this.index;
             int currentCycle = queue.rollCycle().toCycle(oldIndex);
@@ -1276,14 +1273,12 @@ public class SingleChronicleQueueExcerpts {
             return false;
         }
 
-        private boolean inACycle(boolean includeMetaData,boolean first)
+        private boolean inACycle(boolean includeMetaData, boolean first)
                 throws EOFException {
 
             if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
-
             if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
-
 
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
@@ -1304,13 +1299,10 @@ public class SingleChronicleQueueExcerpts {
                     break;
             }
 
-
             inACycleFound(bytes);
 
             return true;
         }
-
-
 
         private boolean inACycleCheckRep() {
             long lastSequenceAck = store().lastAcknowledgedIndexReplicated();
@@ -1326,7 +1318,13 @@ public class SingleChronicleQueueExcerpts {
                     // after toEnd() call, index is past the end of the queue
                     // so try to go back one (to the last record in the queue)
                     if ((int) queue.rollCycle().toSequenceNumber(index) < 0) {
-                        return moveToIndexInternal(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                        long lastSeqNum = store.lastSequenceNumber(this);
+                        if (lastSeqNum == -1) {
+                            windBackCycle(cycle);
+                            return moveToIndexInternal(index);
+                        }
+
+                        return moveToIndexInternal(queue.rollCycle().toIndex(cycle, lastSeqNum));
                     }
                     if (!moveToIndexInternal(index - 1)) {
 
@@ -1840,7 +1838,6 @@ public class SingleChronicleQueueExcerpts {
 
             if (nextStore == this.store)
                 return true;
-
 
             context.wire(null);
             this.store = nextStore;

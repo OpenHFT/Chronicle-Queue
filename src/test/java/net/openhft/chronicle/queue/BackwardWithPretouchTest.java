@@ -15,7 +15,21 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppenderBackwardWithPretoucher() {
+        test(1000);
+    }
 
+    @Test
+    public void testAppenderBackwardWithPretoucherPause2Seconds() {
+        test(2000);
+    }
+
+    @Test
+    public void testAppenderBackwardWithPretoucherPause3Seconds() {
+        test(3000);
+    }
+
+
+    private void test(final int pause) {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis());
         File tmpDir = getTmpDir();
@@ -25,7 +39,7 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
             dc.wire().write("hello").text("world");
         }
 
-        timeProvider.advanceMillis(1000);
+        timeProvider.advanceMillis(pause);
 
         {
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD);
@@ -47,4 +61,7 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
             }
         }
     }
+
+
+
 }
