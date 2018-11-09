@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -16,6 +17,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.Assume.assumeFalse;
 
 public class TestDeleteQueueFile {
 
@@ -36,6 +39,9 @@ public class TestDeleteQueueFile {
 
     @Test
     public void testQueueFileDeletionWhileInUse() throws Exception {
+
+        assumeFalse(OS.isWindows());
+
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         String queueName = "unitTestQueue";
