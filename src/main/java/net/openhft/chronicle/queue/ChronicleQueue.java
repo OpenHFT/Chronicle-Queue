@@ -211,6 +211,10 @@ public interface ChronicleQueue extends Closeable {
 
     /**
      * call this method if you delete file from a chronicle-queue directory
+     *
+     * The problem that we have, is that we cache the structure of your directory, this is because
+     * hitting the file system adds latency. Call this method, if you delete .cq4 files, then it
+     * will update our caches accordingly,
      */
     void refreshDirectlyListing();
 }
