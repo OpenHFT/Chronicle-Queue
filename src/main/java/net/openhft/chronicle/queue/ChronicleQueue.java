@@ -209,4 +209,8 @@ public interface ChronicleQueue extends Closeable {
         return SingleChronicleQueueBuilder.binary(path);
     }
 
+    /**
+     * call this method if you delete file from a chronicle-queue directory
+     */
+    void refreshDirectlyListing();
 }

@@ -56,8 +56,9 @@ final class TableDirectoryListing implements DirectoryListing {
         if (readOnly) {
             return;
         }
-        refreshIndex();
+        forceRefresh();
     }
+
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
@@ -116,7 +117,7 @@ final class TableDirectoryListing implements DirectoryListing {
         return (int) minCycleValue.getVolatileValue();
     }
 
-    private void refreshIndex() {
+    public void forceRefresh() {
         if (tableStore.isClosed())
             return;
         while (true) {

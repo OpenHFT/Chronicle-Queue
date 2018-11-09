@@ -228,6 +228,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
 
+    @Override
+    public void refreshDirectlyListing() {
+        directoryListing.forceRefresh();
+        firstCycle = directoryListing.getMinCreatedCycle();
+        lastCycle = directoryListing.getMaxCreatedCycle();
+    }
+
     /**
      * when using replication to another host, this is the last index that has been sent to the remote host.
      */
@@ -710,7 +717,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return readOnly;
     }
 
-    private int toCycle(@Nullable Map.Entry<Long, File> entry) throws ParseException {
+    private int toCycle(@Nullable Map.Entry<Long, File> entry) {
         if (entry == null || entry.getValue() == null)
             return -1;
         return dateCache.parseCount(fileToText().apply(entry.getValue()));
