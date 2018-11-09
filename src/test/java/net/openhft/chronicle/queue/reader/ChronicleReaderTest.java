@@ -80,7 +80,7 @@ public class ChronicleReaderTest {
             methodWriterBuilder.recordHistory(true);
             final StringEvents events = methodWriterBuilder.build();
 
-            for (int i = 0; i < 24; i++) {                                          TestDeleteQueueFile
+            for (int i = 0; i < 24; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
