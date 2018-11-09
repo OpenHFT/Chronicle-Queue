@@ -68,8 +68,8 @@ public class ChronicleReaderTest {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
-    // //   if (OS.isWindows())
-     //       return;             // see https://github.com/OpenHFT/Chronicle-Queue/issues/523
+        if (OS.isWindows())
+            return;
 
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
@@ -91,8 +91,8 @@ public class ChronicleReaderTest {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
-    //    if (OS.isWindows())
-        //    return;   // see https://github.com/OpenHFT/Chronicle-Queue/issues/523
+        if (OS.isWindows())
+            return;   
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
