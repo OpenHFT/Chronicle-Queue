@@ -68,8 +68,9 @@ public class ChronicleReaderTest {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
-        if (OS.isWindows())
-            return;             // see https://github.com/OpenHFT/Chronicle-Queue/issues/523      - 
+    // //   if (OS.isWindows())
+     //       return;             // see https://github.com/OpenHFT/Chronicle-Queue/issues/523
+
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
@@ -90,8 +91,8 @@ public class ChronicleReaderTest {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
-        if (OS.isWindows())
-            return;   // see https://github.com/OpenHFT/Chronicle-Queue/issues/523
+    //    if (OS.isWindows())
+        //    return;   // see https://github.com/OpenHFT/Chronicle-Queue/issues/523
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
@@ -282,7 +283,7 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldConvertEntriesToText() throws Exception {
+    public void shouldConvertEntriesToText() {
         basicReader().execute();
 
         assertThat(capturedOutput.size(), is(48));
@@ -290,7 +291,7 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldFilterByInclusionRegex() throws Exception {
+    public void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
         assertThat(capturedOutput.size(), is(24));
@@ -299,7 +300,7 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldFilterByMultipleInclusionRegex() throws Exception {
+    public void shouldFilterByMultipleInclusionRegex() {
         basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
 
         assertThat(capturedOutput.size(), is(24));
@@ -310,12 +311,12 @@ public class ChronicleReaderTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void shouldThrowExceptionIfInputDirectoryDoesNotExist() throws Exception {
+    public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
         basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
     }
 
     @Test
-    public void shouldFilterByExclusionRegex() throws Exception {
+    public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
         assertThat(capturedOutput.size(), is(24));
@@ -323,14 +324,14 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldFilterByMultipleExclusionRegex() throws Exception {
+    public void shouldFilterByMultipleExclusionRegex() {
         basicReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
         assertThat(capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count(), is(0L));
     }
 
     @Test
-    public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() throws Exception {
+    public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReader().historyRecords(5).execute();
 
         assertThat(capturedOutput.stream().
@@ -338,7 +339,7 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldForwardToSpecifiedIndex() throws Exception {
+    public void shouldForwardToSpecifiedIndex() {
         final long knownIndex = Long.decode(findAnExistingIndex());
         basicReader().withStartIndex(knownIndex).execute();
 
@@ -354,7 +355,7 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() throws Exception {
+    public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
         assertThat(capturedOutput.stream().
@@ -362,7 +363,7 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldContinueToPollQueueWhenTailModeIsEnabled() throws Exception {
+    public void shouldContinueToPollQueueWhenTailModeIsEnabled() {
         final int expectedPollCountWhenDocumentIsEmpty = 3;
         final FiniteDocumentPollMethod pollMethod = new FiniteDocumentPollMethod(expectedPollCountWhenDocumentIsEmpty);
         try {
