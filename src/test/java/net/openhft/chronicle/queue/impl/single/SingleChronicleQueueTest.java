@@ -302,8 +302,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void shouldBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
+    @Test
+    public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
@@ -312,7 +312,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            assertEquals(TEST_SECONDLY, ignored.rollCycle());
+        }
+    }
 
+    @Test
+    public void shouldOverrideDifferentEpoch() {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).epoch(100).build()) {
+            try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                documentContext.wire().write("somekey").text("somevalue");
+            }
+        }
+
+        try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).epoch(10).build()) {
+            assertEquals(100, ((SingleChronicleQueue) ignored).epoch());
         }
     }
 

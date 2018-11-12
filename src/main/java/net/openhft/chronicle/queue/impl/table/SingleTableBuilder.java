@@ -55,7 +55,6 @@ public class SingleTableBuilder<T extends Metadata> {
 
     private WireType wireType;
     private boolean readOnly;
-    private boolean validateMetadata;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private long timeoutMS = TimeUnit.SECONDS.toMillis(5);
 
@@ -121,10 +120,7 @@ public class SingleTableBuilder<T extends Metadata> {
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
                             @NotNull TableStore<T> existing = Objects.requireNonNull(valueIn.typedMarshallable());
-                            if (validateMetadata)
-                                metadata.ensureSame(existing.metadata());
-                            else
-                                metadata = existing.metadata();
+                            metadata.overrideFrom(existing.metadata());
                             return existing;
                         } else {
                             //noinspection unchecked
@@ -184,11 +180,6 @@ public class SingleTableBuilder<T extends Metadata> {
 
     public SingleTableBuilder<T> readOnly(boolean readOnly) {
         this.readOnly = readOnly;
-        return this;
-    }
-
-    public SingleTableBuilder<T> validateMetadata(boolean validateMetadata) {
-        this.validateMetadata = validateMetadata;
         return this;
     }
 

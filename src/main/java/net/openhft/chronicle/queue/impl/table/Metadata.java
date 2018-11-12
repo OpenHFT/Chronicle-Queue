@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 
 public interface Metadata extends Demarshallable, WriteMarshallable {
 
-    default <T extends Metadata> void ensureSame(T metadata) {
+    default <T extends Metadata> void overrideFrom(T metadata) {
     }
 
     enum NoMeta implements Metadata {

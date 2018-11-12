@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.wire.WireIn;
@@ -27,9 +28,9 @@ import java.util.Objects;
 
 public class SCQMeta implements Metadata {
     @NotNull
-    private final SCQRoll roll;
-    private final int deltaCheckpointInterval;
-    private final int sourceId;
+    private SCQRoll roll;
+    private int deltaCheckpointInterval;
+    private int sourceId;
 
     @SuppressWarnings("unused")
     @UsedViaReflection
@@ -67,20 +68,37 @@ public class SCQMeta implements Metadata {
     }
 
     @Override
-    public <T extends Metadata> void ensureSame(T metadata) {
+    public <T extends Metadata> void overrideFrom(T metadata) {
         if (!(metadata instanceof SCQMeta))
             throw new IllegalStateException("Expected SCQMeta, got " + metadata.getClass());
 
         SCQMeta other = (SCQMeta) metadata;
 
         SCQRoll roll = other.roll;
-        if (roll.epoch() != this.roll.epoch())
-            throw new IllegalStateException("Roll epoch mismatch, expected " + roll.epoch() + ", got " + this.roll.epoch());
+        if (roll.epoch() != this.roll.epoch()) {
+            Jvm.warn().on(getClass(), "Overriding roll epoch from existing metadata, was " + this.roll.epoch() + ", overriding to " + roll.epoch());
+            this.roll.epoch(roll.epoch());
+        }
 
-        if (roll.length() != this.roll.length())
-            throw new IllegalStateException("Roll length mismatch, expected " + roll.length() + ", got " + this.roll.length());
+        if (roll.length() != this.roll.length()) {
+            Jvm.warn().on(getClass(), "Overriding roll length from existing metadata, was " + this.roll.length() + ", overriding to " + roll.length());
+            this.roll.length(roll.length());
+            this.roll.format(roll.format());
+        }
 
-        assert other.sourceId == 0 || sourceId == 0 || other.sourceId == sourceId
-                : "inconsistency with of source ids, existing sourceid=" + other.sourceId + ", requested sourceid=" + sourceId;
+        if (roll.rollTime() != null && !Objects.equals(roll.rollTime(), this.roll.rollTime())) {
+            Jvm.warn().on(getClass(), "Overriding roll time from existing metadata, was " + this.roll.rollTime() + ", overriding to " + roll.rollTime());
+            this.roll.rollTime(roll.rollTime());
+        }
+
+        if (roll.rollTimeZone() != null && !Objects.equals(roll.rollTimeZone(), this.roll.rollTimeZone())) {
+            Jvm.warn().on(getClass(), "Overriding roll time zone from existing metadata, was " + this.roll.rollTimeZone() + ", overriding to " + roll.rollTimeZone());
+            this.roll.rollTimeZone(roll.rollTimeZone());
+        }
+
+        if (!(other.sourceId == 0 || sourceId == 0 || other.sourceId == sourceId)) {
+            Jvm.warn().on(getClass(), "inconsistency with of source ids, existing sourceid=" + other.sourceId + ", requested sourceid=" + sourceId);
+        }
+
     }
 }
