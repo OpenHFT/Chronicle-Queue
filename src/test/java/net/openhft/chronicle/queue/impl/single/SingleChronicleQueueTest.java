@@ -265,40 +265,50 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final String expected = "some long message";
 
             ExecutorService service1 = Executors.newSingleThreadExecutor();
-            Future f = service1.submit(() -> {
-                final ExcerptAppender appender = queue.acquireAppender();
+            ScheduledExecutorService service2 = null;
+            try {
+                Future f = service1.submit(() -> {
+                    final ExcerptAppender appender = queue.acquireAppender();
 
-                try (final DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().writeEventName(() -> "key").text(expected);
+                    try (final DocumentContext dc = appender.writingDocument()) {
+                        dc.wire().writeEventName(() -> "key").text(expected);
+                    }
+
+                });
+
+                BlockingQueue<Bytes> result = new ArrayBlockingQueue<>(10);
+
+                service2 = Executors.newSingleThreadScheduledExecutor();
+                service2.scheduleAtFixedRate(() -> {
+                    Bytes b = Bytes.elasticHeapByteBuffer(128);
+                    final ExcerptTailer tailer = queue.createTailer();
+                    tailer.readBytes(b);
+                    if (b.readRemaining() == 0)
+                        return;
+                    b.readPosition(0);
+                    result.add(b);
+                    throw new RejectedExecutionException();
+                }, 1, 1, TimeUnit.MICROSECONDS);
+
+                final Bytes bytes = result.poll(10, TimeUnit.SECONDS);
+                try {
+                    if (bytes == null) {
+                        // troubleshoot failed test http://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
+                        f.get(1, TimeUnit.SECONDS);
+                        throw new NullPointerException("nothing in result");
+                    }
+                    final String actual = this.wireType.apply(bytes).read(() -> "key").text();
+                    Assert.assertEquals(expected, actual);
+                    f.get(1, TimeUnit.SECONDS);
+                } finally {
+                    bytes.release();
                 }
-
-            });
-
-            BlockingQueue<Bytes> result = new ArrayBlockingQueue<>(10);
-
-            ScheduledExecutorService service2 = Executors.newSingleThreadScheduledExecutor();
-            service2.scheduleAtFixedRate(() -> {
-                Bytes b = Bytes.elasticHeapByteBuffer(128);
-                final ExcerptTailer tailer = queue.createTailer();
-                tailer.readBytes(b);
-                if (b.readRemaining() == 0)
-                    return;
-                b.readPosition(0);
-                result.add(b);
-                throw new RejectedExecutionException();
-            }, 1, 1, TimeUnit.MICROSECONDS);
-
-            final Bytes poll = result.poll(10, TimeUnit.SECONDS);
-            if (poll == null) {
-                // troubleshoot failed test http://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.higherfrequencytrading.com:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
-                f.get(1, TimeUnit.SECONDS);
-                throw new NullPointerException("nothing in result");
+            } finally {
+                service1.shutdownNow();
+                if (service2 != null)
+                    service2.shutdownNow();
             }
-            final String actual = this.wireType.apply(poll).read(() -> "key").text();
-            Assert.assertEquals(expected, actual);
-            f.get(1, TimeUnit.SECONDS);
-            service1.shutdown();
-            service2.shutdown();
+
         }
     }
 
