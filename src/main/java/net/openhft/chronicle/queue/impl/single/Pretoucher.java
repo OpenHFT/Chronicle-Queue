@@ -74,7 +74,13 @@ public final class Pretoucher implements Closeable {
         if (qCycle != currentCycle) {
             releaseResources();
 
-            currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), true);
+            queue.writeLock().lock();
+            try {
+                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), true);
+            } finally {
+                queue.writeLock().unlock();
+            }
+
             currentCycleMappedBytes = currentCycleWireStore.bytes();
             currentCycle = qCycle;
             if (chunkListener != null)
