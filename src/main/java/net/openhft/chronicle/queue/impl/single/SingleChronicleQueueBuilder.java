@@ -346,27 +346,31 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     protected void initializeMetadata() {
         File metapath = metapath();
         validateRollCycle(metapath);
-        SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle(), epoch()), deltaCheckpointInterval(),
+        SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle(), epoch(), rollTime, rollTimeZone), deltaCheckpointInterval(),
                 sourceId());
         try {
 
             boolean readOnly = readOnly();
-            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS())
-                    .readOnly(readOnly).validateMetadata(!readOnly).build();
+            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly).build();
             // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
             if (sourceId() == 0)
                 sourceId(newMeta.sourceId());
 
-            if (readOnly && !newMeta.roll().format().equals(rollCycle().format())) {
+            if (!newMeta.roll().format().equals(rollCycle().format())) {
                 // roll cycle changed
                 overrideRollCycleForFileNameLength(newMeta.roll().format().length());
             }
+
+            // if it was overriden - reset
+            rollTime = newMeta.roll().rollTime();
+            rollTimeZone = newMeta.roll().rollTimeZone();
+            epoch = newMeta.roll().epoch();
         } catch (IORuntimeException ex) {
             // readonly=true and file doesn't exist
             if (OS.isWindows())
-                throw ex; // we cant have a read-only table store on windows so we have no option
-            // but to throw the ex.
+                throw ex; // we cant have a read-only table store on windows so we have no option but to throw the ex.
+            Jvm.warn().on(getClass(), "Failback to readonly tablestore", ex);
             metaStore = new ReadonlyTableStore<>(metadata);
         }
     }
