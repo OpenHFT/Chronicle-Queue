@@ -50,8 +50,6 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         byteable.bytesStore(NativeBytesStore.nativeStore(capacity), 0, capacity);
         datumBytes = ((Byteable) datum).bytesStore();
         datumWrite = datumBytes.bytesForWrite();
-        System.out.println(datum);
-
 
         sourceQueue = single("replica").build();
         sinkQueue = single("replica").build();
