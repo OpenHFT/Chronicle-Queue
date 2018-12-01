@@ -395,11 +395,12 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private void overrideRollCycleForFileNameLength(int patternLength) {
         for (RollCycles cycle : RollCycles.values()) {
             if (cycle.format().length() == patternLength) {
-                LOGGER.warn("Overriding roll cycle to " + cycle);
+                LOGGER.warn("Overriding roll cycle from {} to {}", rollCycle, cycle);
                 rollCycle = cycle;
-                break;
+                return;
             }
         }
+        throw new IllegalStateException("Can't find an appropriate RollCycles to override to");
     }
 
     private File metapath() {

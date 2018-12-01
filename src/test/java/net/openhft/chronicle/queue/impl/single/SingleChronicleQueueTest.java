@@ -312,17 +312,33 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test
-    public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
+    @Test(expected = IllegalStateException.class)
+    public void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle() {
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).build()) {
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
                 documentContext.wire().write("somekey").text("somevalue");
             }
         }
 
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-            assertEquals(TEST_SECONDLY, ignored.rollCycle());
+        }
+    }
+
+    @Test
+    public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(DAILY).build()) {
+            try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                documentContext.wire().write("somekey").text("somevalue");
+            }
+        }
+
+        // we don't store which RollCycles enum was used and we try and match by format string, we
+        // match the first RollCycles with the same format string, which may not
+        // be the RollCycles it was written with
+        try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            assertEquals(TEST_DAILY, ignored.rollCycle());
         }
     }
 

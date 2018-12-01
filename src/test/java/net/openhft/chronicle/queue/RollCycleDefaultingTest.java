@@ -44,44 +44,46 @@ public class RollCycleDefaultingTest {
     }
 
     public static class MyRollcycle implements RollCycle {
+        private final RollCycle delegate = RollCycles.TEST_SECONDLY;
+
         @Override
         public String format() {
-            return null;
+            return "xyz";
         }
 
         @Override
         public int length() {
-            return 0;
+            return delegate.length();
         }
 
         @Override
         public int defaultIndexCount() {
-            return 0;
+            return delegate.defaultIndexCount();
         }
 
         @Override
         public int defaultIndexSpacing() {
-            return 0;
+            return delegate.defaultIndexSpacing();
         }
 
         @Override
         public int current(TimeProvider time, long epoch) {
-            return 0;
+            return delegate.current(time, epoch);
         }
 
         @Override
         public long toIndex(int cycle, long sequenceNumber) {
-            return 0;
+            return delegate.toIndex(cycle, sequenceNumber);
         }
 
         @Override
         public long toSequenceNumber(long index) {
-            return 0;
+            return delegate.toSequenceNumber(index);
         }
 
         @Override
         public int toCycle(long index) {
-            return 0;
+            return delegate.toCycle(index);
         }
     }
 }
