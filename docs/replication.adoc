@@ -126,6 +126,19 @@ public void shouldReplicate() throws Exception {
 }
 ```
 
+== Q/A's
+
+== Question
+
+If the Chronicle-Queue is cleared in the primary host, will this be replicated in the secondary?
+
+== Answer
+
+There's no such thing as clearing the queue (it's unsupported). So you can manually delete the files, but that will have unpredictable results if you don't recreate your queues and don't restart your process.
+The queue is append-only, and replication works in append-only manner, that is, it will never ever delete anything. It will continue replication from where it left off which is determined by the entry index, which means, if you delete the files for the previous roll cycles, it will not even notice it. However if you delete the file for the current cycle and then later recreate it without deleting the corresponding file on the other host - you will lose data, as the same index in the primary queue will correspond to old entries in the secondary queue.
+
+
+
 '''
 
 <<../README.adoc#,Back to Chronicle Queue>>
