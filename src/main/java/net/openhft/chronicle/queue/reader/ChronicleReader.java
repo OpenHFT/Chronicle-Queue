@@ -78,46 +78,48 @@ public final class ChronicleReader {
         long lastObservedTailIndex;
         long highestReachedIndex = 0L;
         boolean isFirstIteration = true;
-        boolean retryLastOperation = false;
-        boolean queueHasBeenModified = false;
+        boolean retryLastOperation;
+        boolean queueHasBeenModified;
         do {
             try (final ChronicleQueue queue = createQueue();
                  final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
                 final ExcerptTailer tailer = queue.createTailer();
-                queueHasBeenModified = false;
 
-                if (highestReachedIndex != 0L) {
-                    tailer.moveToIndex(highestReachedIndex);
-                }
-                final Bytes textConversionTarget = Bytes.elasticByteBuffer();
-                try {
-                    moveToSpecifiedPosition(queue, tailer, isFirstIteration);
-                    lastObservedTailIndex = tailer.index();
+                do {
+                    if (highestReachedIndex != 0L) {
+                        tailer.moveToIndex(highestReachedIndex);
+                    }
+                    final Bytes textConversionTarget = Bytes.elasticByteBuffer();
+                    try {
+                        moveToSpecifiedPosition(queue, tailer, isFirstIteration);
+                        lastObservedTailIndex = tailer.index();
 
-                    while (!Thread.currentThread().isInterrupted()) {
-                        try (DocumentContext dc = pollMethod.apply(tailer)) {
-                            if (!dc.isPresent()) {
-                                if (tailInputSource) {
-                                    pauser.pause();
+                        while (!Thread.currentThread().isInterrupted()) {
+                            try (DocumentContext dc = pollMethod.apply(tailer)) {
+                                if (!dc.isPresent()) {
+                                    if (tailInputSource) {
+                                        pauser.pause();
+                                    }
+                                    break;
                                 }
-                                break;
-                            }
-                            pauser.reset();
+                                pauser.reset();
 
-                            if (customPlugin == null) {
-                                messageConverter.accept(dc.wire(), text -> applyFiltersAndLog(text, tailer.index()));
-                            } else {
-                                customPlugin.onReadDocument(dc);
+                                if (customPlugin == null) {
+                                    messageConverter.accept(dc.wire(), text -> applyFiltersAndLog(text, tailer.index()));
+                                } else {
+                                    customPlugin.onReadDocument(dc);
+                                }
                             }
                         }
-                    }
 
-                } finally {
-                    textConversionTarget.release();
-                    highestReachedIndex = tailer.index();
-                    isFirstIteration = false;
-                }
-                queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex);
+                    } finally {
+                        textConversionTarget.release();
+                        highestReachedIndex = tailer.index();
+                        isFirstIteration = false;
+                    }
+                    queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex, queue);
+                    retryLastOperation = false;
+                } while (tailInputSource || queueHasBeenModified);
             } catch (final RuntimeException e) {
                 if (e.getCause() != null && e.getCause() instanceof DateTimeParseException) {
                     // ignore this error - due to a race condition between
@@ -128,7 +130,7 @@ public final class ChronicleReader {
                     throw e;
                 }
             }
-        } while (tailInputSource || retryLastOperation || queueHasBeenModified);
+        } while (retryLastOperation);
 
     }
 
@@ -198,8 +200,8 @@ public final class ChronicleReader {
         return this;
     }
 
-    private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex) {
-        long currentTailIndex = getCurrentTailIndex();
+    private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex, ChronicleQueue queue) {
+        long currentTailIndex = getCurrentTailIndex(queue);
         return currentTailIndex > lastObservedTailIndex;
     }
 
@@ -226,10 +228,8 @@ public final class ChronicleReader {
         }
     }
 
-    private long getCurrentTailIndex() {
-        try (final ChronicleQueue queue = createQueue()) {
-            return queue.createTailer().toEnd().index();
-        }
+    private long getCurrentTailIndex(ChronicleQueue queue) {
+        return queue.createTailer().toEnd().index();
     }
 
     @NotNull
