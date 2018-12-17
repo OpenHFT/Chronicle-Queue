@@ -32,11 +32,10 @@ import static java.util.Arrays.stream;
 /**
  * Display records in a Chronicle in a text form.
  */
-public enum ChronicleReaderMain {
-    INSTANCE;
+public class ChronicleReaderMain {
 
     public static void main(@NotNull String[] args) {
-        INSTANCE.run(args);
+        new ChronicleReaderMain().run(args);
     }
 
     protected void run(@NotNull String[] args) {
