@@ -144,6 +144,10 @@ public final class ChronicleReader {
         return this;
     }
 
+    public Consumer<String> messageSink() {
+        return messageSink;
+    }
+
     public ChronicleReader withBasePath(final Path path) {
         this.basePath = path;
         return this;

@@ -31,30 +31,30 @@ import static java.util.Arrays.stream;
 
 /**
  * Display records in a Chronicle in a text form.
- *
- * @author peter.lawrey
  */
 public enum ChronicleReaderMain {
-    ;
+    INSTANCE;
 
     public static void main(@NotNull String[] args) {
+        INSTANCE.run(args);
+    }
 
+    protected void run(@NotNull String[] args) {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
-        final Consumer<String> messageSink = commandLine.hasOption('l') ?
-                s -> System.out.println(s.replaceAll("\n", "")) :
-                System.out::println;
-        final ChronicleReader chronicleReader = new ChronicleReader().
-                withMessageSink(messageSink).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+        final ChronicleReader chronicleReader = chronicleReader();
 
         configureReader(chronicleReader, commandLine);
 
         chronicleReader.execute();
     }
 
-    private static CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {
+    protected ChronicleReader chronicleReader() {
+        return new ChronicleReader();
+    }
+
+    protected CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
         try {
@@ -76,7 +76,7 @@ public enum ChronicleReaderMain {
         return commandLine;
     }
 
-    private static void printUsageAndExit(final Options options) {
+    protected void printUsageAndExit(final Options options) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printUsage(writer, 180,
                 ChronicleReaderMain.class.getSimpleName(), options);
@@ -84,7 +84,14 @@ public enum ChronicleReaderMain {
         System.exit(1);
     }
 
-    private static void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
+    protected void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
+        final Consumer<String> messageSink = commandLine.hasOption('l') ?
+                s -> System.out.println(s.replaceAll("\n", "")) :
+                System.out::println;
+        chronicleReader.
+                withMessageSink(messageSink).
+                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+
         if (commandLine.hasOption('i')) {
             stream(commandLine.getOptionValues('i')).forEach(chronicleReader::withInclusionRegex);
         }
@@ -112,7 +119,7 @@ public enum ChronicleReaderMain {
     }
 
     @NotNull
-    private static Options options() {
+    protected Options options() {
         final Options options = new Options();
 
         addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
