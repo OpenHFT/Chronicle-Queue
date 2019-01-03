@@ -13,8 +13,6 @@ through two different implementations of the `ChronicleQueue` interface.
 https://jerryshea.github.io/2018/07/27/RingBuffer.html[This article] gives some examples of how high-percentile
 latencies can be reduced.
 
-
-
 [NOTE]
 ====
 Ring buffer functionality is still under development; you will still see UnsupportedOperationExceptions

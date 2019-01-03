@@ -92,7 +92,7 @@ public class ChronicleReaderTest {
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
         if (OS.isWindows())
-            return;   
+            return;
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
@@ -389,6 +389,11 @@ public class ChronicleReaderTest {
                 withBasePath(dataDir).withMessageSink(capturedOutput::add);
     }
 
+    @After
+    public void clearInterrupt() {
+        Thread.interrupted();
+    }
+
     @FunctionalInterface
     private interface StringEvents {
         void say(final String msg);
@@ -434,10 +439,5 @@ public class ChronicleReaderTest {
 
             return documentContext;
         }
-    }
-
-    @After
-    public void clearInterrupt() {
-        Thread.interrupted();
     }
 }

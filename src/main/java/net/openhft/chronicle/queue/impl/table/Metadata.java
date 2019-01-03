@@ -30,9 +30,14 @@ public interface Metadata extends Demarshallable, WriteMarshallable {
 
     enum NoMeta implements Metadata {
         INSTANCE;
-        NoMeta() {}
+
+        NoMeta() {
+        }
+
         @SuppressWarnings("unused")
-        NoMeta(@NotNull WireIn in) {}
+        NoMeta(@NotNull WireIn in) {
+        }
+
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
         }

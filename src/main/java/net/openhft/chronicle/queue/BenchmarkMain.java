@@ -19,6 +19,13 @@ public class BenchmarkMain {
     static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 300); // seconds
     static String basePath = System.getProperty("path", OS.TMP);
+    static volatile long readerLoopTime = 0;
+    static volatile long readerEndLoopTime = 0;
+    static int counter = 0;
+
+    static {
+        System.setProperty("jvm.safepoint.enabled", "true");
+    }
 
     public static void main(String[] args) {
         System.out.println(
@@ -32,14 +39,6 @@ public class BenchmarkMain {
         for (int size = 64; size <= 16 << 20; size *= 4) {
             benchmark(size);
         }
-    }
-
-    static volatile long readerLoopTime = 0;
-    static volatile long readerEndLoopTime = 0;
-    static int counter = 0;
-
-    static {
-        System.setProperty("jvm.safepoint.enabled", "true");
     }
 
     static void benchmark(int messageSize) {

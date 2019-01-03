@@ -38,6 +38,14 @@ public class ChronicleReaderMain {
         new ChronicleReaderMain().run(args);
     }
 
+    public static void addOption(final Options options, final String opt, final String argName, final boolean hasArg,
+                                 final String description, final boolean isRequired) {
+        final Option option = new Option(opt, hasArg, description);
+        option.setArgName(argName);
+        option.setRequired(isRequired);
+        options.addOption(option);
+    }
+
     protected void run(@NotNull String[] args) {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
@@ -133,13 +141,5 @@ public class ChronicleReaderMain {
         addOption(options, "l", "single-line", false, "Squash each output message into a single line", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
         return options;
-    }
-
-    public static void addOption(final Options options, final String opt, final String argName, final boolean hasArg,
-                                 final String description, final boolean isRequired) {
-        final Option option = new Option(opt, hasArg, description);
-        option.setArgName(argName);
-        option.setRequired(isRequired);
-        options.addOption(option);
     }
 }

@@ -21,7 +21,9 @@ import java.io.Closeable;
 
 public interface WriteLock extends Closeable {
     void lock();
+
     void unlock();
+
     void close();
 
     default boolean locked() {

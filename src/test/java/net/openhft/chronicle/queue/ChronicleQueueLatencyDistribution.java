@@ -114,7 +114,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 .blockSize(128 << 20)
                 .build()) {
 
-            runTest(queue, args.length>0 ? Integer.parseInt(args[0]) : 1_200_000);
+            runTest(queue, args.length > 0 ? Integer.parseInt(args[0]) : 1_200_000);
         }
     }
 
@@ -170,7 +170,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                                 long now = System.nanoTime();
                                 histogramCo.sample(now - startCo);
                                 histogramIn.sample(now - startIn);
-                                if (count % 1_000_000 == 0) System.out.println("read  "+count);
+                                if (count % 1_000_000 == 0) System.out.println("read  " + count);
                             }
                         }
 /*
@@ -243,7 +243,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                         }
                     }
                     next += interval;
-                    if (i % 1_000_000 == 0) System.out.println("wrote "+i);
+                    if (i % 1_000_000 == 0) System.out.println("wrote " + i);
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)

@@ -275,6 +275,5 @@ We use object pools where appropriate, and we support reading into mutable objec
 
 For text data we support both a `String` pool and reading to/from `StringBuilder`.
 
-
 '''
 <<../README.adoc#,Back to ReadMe>>

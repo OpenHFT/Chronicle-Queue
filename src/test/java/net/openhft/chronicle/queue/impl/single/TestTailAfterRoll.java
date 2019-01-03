@@ -32,7 +32,7 @@ public class TestTailAfterRoll {
 
     /**
      * the following steps
-     *
+     * <p>
      * (1) write to a queue
      * (2) force and end for file marker
      * (3) write to the queue again, this will cause it to be written to tomorrows .cq4 file
@@ -43,7 +43,7 @@ public class TestTailAfterRoll {
      * (7) when you now try to read from this queue you will not be able to read back what you have just written in (6)
      */
     @Test
-    public void test()  {
+    public void test() {
         File tmpDir = getTmpDir();
         File[] files;
         try (ChronicleQueue writeQ = ChronicleQueue.singleBuilder(tmpDir).build()) {
@@ -77,6 +77,5 @@ public class TestTailAfterRoll {
         }
 
     }
-
 
 }

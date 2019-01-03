@@ -28,7 +28,6 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
         test(3000);
     }
 
-
     private void test(final int pause) {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis());
@@ -61,7 +60,5 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
             }
         }
     }
-
-
 
 }

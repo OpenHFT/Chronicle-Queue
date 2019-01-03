@@ -7,7 +7,6 @@ import org.junit.Test;
 import java.io.File;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Random;
@@ -22,8 +21,8 @@ public class RollingResourcesCacheTest {
 
     private static final long AM_EPOCH = 1523498933145L; //2018-04-12 02:08:53.145 UTC
     private static final int AM_DAILY_CYCLE_NUMBER = 1;
-    private static final int AM_HOURLY_CYCLE_NUMBER = (AM_DAILY_CYCLE_NUMBER*24);
-    private static final int AM_MINUTELY_CYCLE_NUMBER = (AM_HOURLY_CYCLE_NUMBER*60);
+    private static final int AM_HOURLY_CYCLE_NUMBER = (AM_DAILY_CYCLE_NUMBER * 24);
+    private static final int AM_MINUTELY_CYCLE_NUMBER = (AM_HOURLY_CYCLE_NUMBER * 60);
     private static final String AM_DAILY_FILE_NAME = "20180413";
     private static final String AM_HOURLY_FILE_NAME_0 = "20180413-00";
     private static final String AM_HOURLY_FILE_NAME_15 = "20180413-15";
@@ -32,8 +31,8 @@ public class RollingResourcesCacheTest {
 
     private static final long PM_EPOCH = 1284739200000L; //2010-09-17 16:00:00.000 UTC
     private static final int PM_DAILY_CYCLE_NUMBER = 2484;
-    private static final int PM_HOURLY_CYCLE_NUMBER = (PM_DAILY_CYCLE_NUMBER*24);
-    private static final int PM_MINUTELY_CYCLE_NUMBER = (PM_HOURLY_CYCLE_NUMBER*60);
+    private static final int PM_HOURLY_CYCLE_NUMBER = (PM_DAILY_CYCLE_NUMBER * 24);
+    private static final int PM_MINUTELY_CYCLE_NUMBER = (PM_HOURLY_CYCLE_NUMBER * 60);
     private static final String PM_DAILY_FILE_NAME = "20170706";
     private static final String PM_HOURLY_FILE_NAME_0 = "20170706-00";
     private static final String PM_HOURLY_FILE_NAME_15 = "20170706-15";
@@ -42,8 +41,8 @@ public class RollingResourcesCacheTest {
 
     private static final long POSITIVE_RELATIVE_EPOCH = 18000000L; // +5 hours
     private static final int POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER = 2484;
-    private static final int POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER*24);
-    private static final int POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER*60);
+    private static final int POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER * 24);
+    private static final int POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER * 60);
     private static final String POSITIVE_RELATIVE_DAILY_FILE_NAME = "19761020";
     private static final String POSITIVE_RELATIVE_HOURLY_FILE_NAME_0 = "19761020-00";
     private static final String POSITIVE_RELATIVE_HOURLY_FILE_NAME_15 = "19761020-15";
@@ -52,8 +51,8 @@ public class RollingResourcesCacheTest {
 
     private static final long BIG_POSITIVE_RELATIVE_EPOCH = 54000000L; // +15 hours
     private static final int BIG_POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER = 2484;
-    private static final int BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (BIG_POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER*24);
-    private static final int BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER*60);
+    private static final int BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (BIG_POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER * 24);
+    private static final int BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER * 60);
     private static final String BIG_POSITIVE_RELATIVE_DAILY_FILE_NAME = "19761020";
     private static final String BIG_POSITIVE_RELATIVE_HOURLY_FILE_NAME_0 = "19761020-00";
     private static final String BIG_POSITIVE_RELATIVE_HOURLY_FILE_NAME_15 = "19761020-15";
@@ -62,8 +61,8 @@ public class RollingResourcesCacheTest {
 
     private static final long NEGATIVE_RELATIVE_EPOCH = -10800000L; // -3 hours
     private static final int NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER = 2484;
-    private static final int NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER*24);
-    private static final int NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER*60);
+    private static final int NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER * 24);
+    private static final int NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER * 60);
     private static final String NEGATIVE_RELATIVE_DAILY_FILE_NAME = "19761019";
     private static final String NEGATIVE_RELATIVE_HOURLY_FILE_NAME_0 = "19761019-00";
     private static final String NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15 = "19761019-15";
@@ -72,8 +71,8 @@ public class RollingResourcesCacheTest {
 
     private static final long BIG_NEGATIVE_RELATIVE_EPOCH = -10800000L; // -13 hours
     private static final int BIG_NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER = 2484;
-    private static final int BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (BIG_NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER*24);
-    private static final int BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER*60);
+    private static final int BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER = (BIG_NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER * 24);
+    private static final int BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER = (BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER * 60);
     private static final String BIG_NEGATIVE_RELATIVE_DAILY_FILE_NAME = "19761019";
     private static final String BIG_NEGATIVE_RELATIVE_HOURLY_FILE_NAME_0 = "19761019-00";
     private static final String BIG_NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15 = "19761019-15";
@@ -85,6 +84,13 @@ public class RollingResourcesCacheTest {
     private static final boolean LOG_TEST_DEBUG =
             Boolean.valueOf(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
 
+    private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
+                                                final Instant instant, final DateTimeFormatter formatter) {
+        final String expectedFileName = formatter.format(instant);
+        assertThat(cache.resourceFor(cycle).text, is(expectedFileName));
+        assertThat(cache.parseCount(expectedFileName), is(cycle));
+    }
+
     @Test
     public void shouldConvertCyclesToResourceNamesWithNoEpoch() throws Exception {
         final int epoch = 0;
@@ -94,13 +100,6 @@ public class RollingResourcesCacheTest {
         final int cycle = RollCycles.DAILY.current(System::currentTimeMillis, 0);
         assertCorrectConversion(cache, cycle, Instant.now(),
                 DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.of("GMT")));
-    }
-
-    private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
-                                                final Instant instant, final DateTimeFormatter formatter) {
-        final String expectedFileName = formatter.format(instant);
-        assertThat(cache.resourceFor(cycle).text, is(expectedFileName));
-        assertThat(cache.parseCount(expectedFileName), is(cycle));
     }
 
     private void doTestCycleAndResourceNames(long epoch, RollCycle rollCycle, int cycleNumber, String filename) {
@@ -120,9 +119,9 @@ public class RollingResourcesCacheTest {
         // 1523585333145 = Friday, 13 April 2018 02:08:53.145 UTC ie. filename is 20180413 local
         doTestCycleAndResourceNames(AM_EPOCH, RollCycles.DAILY, AM_DAILY_CYCLE_NUMBER, AM_DAILY_FILE_NAME);
         doTestCycleAndResourceNames(AM_EPOCH, RollCycles.HOURLY, AM_HOURLY_CYCLE_NUMBER, AM_HOURLY_FILE_NAME_0);
-        doTestCycleAndResourceNames(AM_EPOCH, RollCycles.HOURLY, AM_HOURLY_CYCLE_NUMBER+15, AM_HOURLY_FILE_NAME_15);
+        doTestCycleAndResourceNames(AM_EPOCH, RollCycles.HOURLY, AM_HOURLY_CYCLE_NUMBER + 15, AM_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(AM_EPOCH, RollCycles.MINUTELY, AM_MINUTELY_CYCLE_NUMBER, AM_MINUTELY_FILE_NAME_0);
-        doTestCycleAndResourceNames(AM_EPOCH, RollCycles.MINUTELY, AM_MINUTELY_CYCLE_NUMBER+10, AM_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(AM_EPOCH, RollCycles.MINUTELY, AM_MINUTELY_CYCLE_NUMBER + 10, AM_MINUTELY_FILE_NAME_10);
 
         // PM_EPOCH is 2010-09-17 16:00:00.000 UTC
         // cycle 2484 should be formatted as:
@@ -132,9 +131,9 @@ public class RollingResourcesCacheTest {
         // 1499356800000 = Thursday, 6 July 2017 16:00:00 UTC ie. filename is 20170706 local
         doTestCycleAndResourceNames(PM_EPOCH, RollCycles.DAILY, PM_DAILY_CYCLE_NUMBER, PM_DAILY_FILE_NAME);
         doTestCycleAndResourceNames(PM_EPOCH, RollCycles.HOURLY, PM_HOURLY_CYCLE_NUMBER, PM_HOURLY_FILE_NAME_0);
-        doTestCycleAndResourceNames(PM_EPOCH, RollCycles.HOURLY, PM_HOURLY_CYCLE_NUMBER+15, PM_HOURLY_FILE_NAME_15);
+        doTestCycleAndResourceNames(PM_EPOCH, RollCycles.HOURLY, PM_HOURLY_CYCLE_NUMBER + 15, PM_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(PM_EPOCH, RollCycles.MINUTELY, PM_MINUTELY_CYCLE_NUMBER, PM_MINUTELY_FILE_NAME_0);
-        doTestCycleAndResourceNames(PM_EPOCH, RollCycles.MINUTELY, PM_MINUTELY_CYCLE_NUMBER+10, PM_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(PM_EPOCH, RollCycles.MINUTELY, PM_MINUTELY_CYCLE_NUMBER + 10, PM_MINUTELY_FILE_NAME_10);
 
         // POSITIVE_RELATIVE_EPOCH is 5 hours (18000000 millis)
         // cycle 2484 should be formatted as:
@@ -144,9 +143,9 @@ public class RollingResourcesCacheTest {
         // 214635600000 - Wednesday, 20 October 1976 05:00:00 UTC ie. filename is 19761020 local
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.DAILY, POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER, POSITIVE_RELATIVE_DAILY_FILE_NAME);
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER, POSITIVE_RELATIVE_HOURLY_FILE_NAME_0);
-        doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER+15, POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
+        doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, POSITIVE_RELATIVE_MINUTELY_FILE_NAME_0);
-        doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER+10, POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
 
         // BIG_POSITIVE_RELATIVE_EPOCH is 15 hours (54000000 millis)
         // cycle 2484 should be formatted as:
@@ -156,9 +155,9 @@ public class RollingResourcesCacheTest {
         // 214671600000 - Wednesday, 20 October 1976 15:00:00 UTC ie. filename is 19761020 local
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.DAILY, BIG_POSITIVE_RELATIVE_DAILY_CYCLE_NUMBER, BIG_POSITIVE_RELATIVE_DAILY_FILE_NAME);
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER, BIG_POSITIVE_RELATIVE_HOURLY_FILE_NAME_0);
-        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER+15, BIG_POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
+        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, BIG_POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, BIG_POSITIVE_RELATIVE_MINUTELY_FILE_NAME_0);
-        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER+10, BIG_POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, BIG_POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
 
         // NEGATIVE_RELATIVE_EPOCH is -3 hours (-10800000 millis)
         // cycle 2484 should be formatted as:
@@ -168,9 +167,9 @@ public class RollingResourcesCacheTest {
         // 214520400000 - Monday, 18 October 1976 21:00:00 UTC ie. filename is 19761019 local
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.DAILY, NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER, NEGATIVE_RELATIVE_DAILY_FILE_NAME);
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER, NEGATIVE_RELATIVE_HOURLY_FILE_NAME_0);
-        doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER+15, NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
+        doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0);
-        doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER+10, NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
 
         // NEGATIVE_RELATIVE_EPOCH is -13 hours (-46800000 millis)
         // cycle 2484 should be formatted as:
@@ -180,9 +179,9 @@ public class RollingResourcesCacheTest {
         // 214484400000 - Monday, 18 October 1976 11:00:00 UTC ie. filename is 19761019 local
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.DAILY, BIG_NEGATIVE_RELATIVE_DAILY_CYCLE_NUMBER, BIG_NEGATIVE_RELATIVE_DAILY_FILE_NAME);
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER, BIG_NEGATIVE_RELATIVE_HOURLY_FILE_NAME_0);
-        doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER+15, BIG_NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
+        doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, BIG_NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0);
-        doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER+10, BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
     }
 
     @Test(expected = RuntimeException.class)
@@ -244,6 +243,7 @@ public class RollingResourcesCacheTest {
             }
         }
     }
+
     @Test
     public void testToLong() {
         doTestToLong(RollCycles.DAILY, AM_EPOCH, 0, Long.valueOf("17633"));

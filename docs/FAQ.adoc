@@ -150,7 +150,6 @@ For example, you can prefix the data that you write to a Chronicle queue with a 
 
 You can also write/read a generic object. This will be slightly slower than using your own schema, but is it a simple way to always read the type you wrote.
 
-
 === How does reading work?
 
 When you read an excerpt, it first checks that the index entry is there; the last thing that was written.
@@ -178,7 +177,6 @@ Never the less, there is less maintenance overhead if the Chronicle logs rotate 
 
 Chronicle Queue is designed for replay.  While it can be used as an off-heap persisted cache, it does not do this very easily.
 Chronicle Map is likely to be a better choice for this requirement.
-
 
 === Can records be updated?
 
@@ -284,7 +282,6 @@ No. Chronicle Queue is designed to be both reliable and deterministic.  UDP is n
 === How do I know the consumer is up to date?
 
 For the tailer, either replicated or notreplicated, you can assume you are up-to-date when either `isPresent()` is `false`, or your read method returns `false`
-
 
 '''
 <<../README.adoc#,Back to ReadMe>>

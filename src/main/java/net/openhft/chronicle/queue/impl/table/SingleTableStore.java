@@ -105,9 +105,9 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
      * @param recovery    used to recover from concurrent modifications
      */
     SingleTableStore(@NotNull final WireType wireType,
-                            @NotNull MappedBytes mappedBytes,
-                            @NotNull StoreRecovery recovery,
-                            @NotNull T metadata) {
+                     @NotNull MappedBytes mappedBytes,
+                     @NotNull StoreRecovery recovery,
+                     @NotNull T metadata) {
         this.wireType = wireType;
         this.metadata = metadata;
         this.recovery = recovery;
@@ -115,6 +115,31 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
         this.mappedFile = mappedBytes.mappedFile();
         this.refCount = ReferenceCounter.onReleased(this::onCleanup);
         mappedWire = wireType.apply(mappedBytes);
+    }
+
+    public static <T, R> R doWithExclusiveLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
+        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
+        boolean warnedOnFailure = false;
+        try (final FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE)) {
+            while (System.currentTimeMillis() < timeoutAt) {
+                try {
+                    FileLock fileLock = channel.tryLock();
+                    if (fileLock != null) {
+                        return code.apply(target.get());
+                    }
+                } catch (IOException | OverlappingFileLockException e) {
+                    // failed to acquire the lock, wait until other operation completes
+                    if (!warnedOnFailure) {
+                        LOG.debug("Failed to acquire a lock on the table store file. Retrying");
+                        warnedOnFailure = true;
+                    }
+                }
+                Jvm.pause(50L);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Couldn't perform operation with file lock", e);
+        }
+        throw new IllegalStateException("Unable to claim exclusive lock on file " + file);
     }
 
     @Override
@@ -190,13 +215,13 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
                 '}';
     }
 
-    private void onCleanup() {
-        mappedBytes.release();
-    }
-
     // *************************************************************************
     // Marshalling
     // *************************************************************************
+
+    private void onCleanup() {
+        mappedBytes.release();
+    }
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
@@ -264,31 +289,6 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     @Override
     public T metadata() {
         return metadata;
-    }
-
-    public static <T, R> R doWithExclusiveLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
-        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
-        boolean warnedOnFailure = false;
-        try (final FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE)) {
-            while (System.currentTimeMillis() < timeoutAt) {
-                try {
-                    FileLock fileLock = channel.tryLock();
-                    if (fileLock != null) {
-                        return code.apply(target.get());
-                    }
-                } catch (IOException | OverlappingFileLockException e) {
-                    // failed to acquire the lock, wait until other operation completes
-                    if (!warnedOnFailure) {
-                        LOG.debug("Failed to acquire a lock on the table store file. Retrying");
-                        warnedOnFailure = true;
-                    }
-                }
-                Jvm.pause(50L);
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Couldn't perform operation with file lock", e);
-        }
-        throw new IllegalStateException("Unable to claim exclusive lock on file " + file);
     }
 }
 

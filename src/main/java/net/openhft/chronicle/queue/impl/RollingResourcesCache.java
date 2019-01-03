@@ -49,8 +49,8 @@ public class RollingResourcesCache {
     private final String format;
     private final ConcurrentMap<File, Long> filenameToTimestampCache =
             new ConcurrentHashMap<>(MAX_TIMESTAMP_CACHE_SIZE);
-    private ParseCount lastParseCount = NO_PARSE_COUNT;
     private final long epoch;
+    private ParseCount lastParseCount = NO_PARSE_COUNT;
 
     public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
                                  @NotNull Function<String, File> nameToFile,
@@ -111,7 +111,7 @@ public class RollingResourcesCache {
             if (parse.isSupported(ChronoField.SECOND_OF_DAY))
                 epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
 
-            return Maths.toInt32((epochDay-((epoch)/1000)) / (length / 1000));
+            return Maths.toInt32((epochDay - ((epoch) / 1000)) / (length / 1000));
         } catch (DateTimeParseException e) {
             throw new RuntimeException(String.format(
                     "Unable to parse %s using format %s", name, format), e);

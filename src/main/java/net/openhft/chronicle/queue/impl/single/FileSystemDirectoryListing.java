@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import java.io.File;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ToIntFunction;
 
 final class FileSystemDirectoryListing implements DirectoryListing {

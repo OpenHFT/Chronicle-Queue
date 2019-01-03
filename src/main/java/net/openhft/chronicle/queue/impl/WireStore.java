@@ -32,8 +32,6 @@ public interface WireStore extends CommonStore {
     @NotNull
     WireStore writePosition(long position);
 
-
-
     /**
      * @return the start of the last written excerpt to this cycle/store
      */
@@ -53,8 +51,6 @@ public interface WireStore extends CommonStore {
             throws UnrecoverableTimeoutException, StreamCorruptedException;
 
     long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException;
-
-
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 

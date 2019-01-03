@@ -137,6 +137,11 @@ public class RollCycleTest {
         MappedFile.checkMappedFiles();
     }
 
+    @After
+    public void clearInterrupt() {
+        Thread.interrupted();
+    }
+
     class ParallelQueueObserver implements Runnable, StoreFileListener {
         ChronicleQueue queue;
         CountDownLatch progressLatch;
@@ -192,10 +197,5 @@ public class RollCycleTest {
         public void onReleased(int cycle, File file) {
             System.out.println("Releasing " + file);
         }
-    }
-
-    @After
-    public void clearInterrupt() {
-        Thread.interrupted();
     }
 }

@@ -68,7 +68,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         return true;
     }
 
-
     @Override
     public void unlock() {
         closeCheck();

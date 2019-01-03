@@ -128,14 +128,13 @@ public class TestDeleteQueueFile {
             //AFTER CREATING A BRAND NEW TAILER, BELOW ASSERTION ALSO FAILS
             //WAS EXPECTING THAT TAILER CAN READ FROM START OF QUEUE BUT INDEX IS LONG.MAX
 
-            Assert.assertEquals(indexAfter5Records -5, excerptTailer2.index() -1);
+            Assert.assertEquals(indexAfter5Records - 5, excerptTailer2.index() - 1);
 
             //BELOW THROWS NPE, WAS EXPECTING THAT WE CAN READ FROM SECOND DAILY QUEUE FILE
             System.out.println("excerptTailer2: " + excerptTailer2.peekDocument());
             for (int i = 0; i < 5; i++) {
                 Assert.assertEquals("test2", excerptTailer2.readText());
             }
-
 
         }
 

@@ -10,60 +10,11 @@ import java.util.function.Function;
 public final class QueueOffsetSpec {
 
     private static final String TOKEN_DELIMITER = ";";
-
-    public enum Type {
-        EPOCH(args -> args[0]),
-        ROLL_TIME(args -> args[0] + TOKEN_DELIMITER + args[1]),
-        NONE(args -> "");
-
-        private final Function<String[], String> argFormatter;
-
-        Type(final Function<String[], String> argFormatter) {
-            this.argFormatter = argFormatter;
-        }
-    }
-
     private final Type type;
     private final String[] spec;
-
     private QueueOffsetSpec(final Type type, final String[] spec) {
         this.type = type;
         this.spec = spec;
-    }
-
-    public void apply(final SingleChronicleQueueBuilder builder) {
-        switch (type) {
-            case EPOCH:
-                builder.epoch(Long.parseLong(spec[0]));
-                break;
-            case ROLL_TIME:
-                builder.rollTime(toLocalTime(spec[0]), toZoneId(spec[1]));
-                break;
-            case NONE:
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown type: " + type);
-        }
-    }
-
-    public String format() {
-        return type.name() + TOKEN_DELIMITER + type.argFormatter.apply(spec);
-    }
-
-    public void validate() {
-        switch (type) {
-            case EPOCH:
-                Long.parseLong(spec[0]);
-                break;
-            case ROLL_TIME:
-                toLocalTime(spec[0]);
-                toZoneId(spec[1]);
-                break;
-            case NONE:
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown type: " + type);
-        }
     }
 
     public static QueueOffsetSpec ofEpoch(final long epoch) {
@@ -119,6 +70,53 @@ public final class QueueOffsetSpec {
     private static void expectArgs(final String[] tokens, final int expectedLength) {
         if (tokens.length != expectedLength) {
             throw new IllegalArgumentException("Expected " + expectedLength + " tokens in " + Arrays.toString(tokens));
+        }
+    }
+
+    public void apply(final SingleChronicleQueueBuilder builder) {
+        switch (type) {
+            case EPOCH:
+                builder.epoch(Long.parseLong(spec[0]));
+                break;
+            case ROLL_TIME:
+                builder.rollTime(toLocalTime(spec[0]), toZoneId(spec[1]));
+                break;
+            case NONE:
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+
+    public String format() {
+        return type.name() + TOKEN_DELIMITER + type.argFormatter.apply(spec);
+    }
+
+    public void validate() {
+        switch (type) {
+            case EPOCH:
+                Long.parseLong(spec[0]);
+                break;
+            case ROLL_TIME:
+                toLocalTime(spec[0]);
+                toZoneId(spec[1]);
+                break;
+            case NONE:
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+
+    public enum Type {
+        EPOCH(args -> args[0]),
+        ROLL_TIME(args -> args[0] + TOKEN_DELIMITER + args[1]),
+        NONE(args -> "");
+
+        private final Function<String[], String> argFormatter;
+
+        Type(final Function<String[], String> argFormatter) {
+            this.argFormatter = argFormatter;
         }
     }
 }

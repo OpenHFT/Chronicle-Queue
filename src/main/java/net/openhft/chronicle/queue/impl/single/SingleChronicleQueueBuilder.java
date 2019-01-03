@@ -93,6 +93,8 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     }
 
+    public BufferMode writeBufferMode = BufferMode.None;
+    public BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
     private File path;
@@ -101,10 +103,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Long bufferCapacity;
     private Integer indexSpacing;
     private Integer indexCount;
-
-    public BufferMode writeBufferMode = BufferMode.None;
-    public BufferMode readBufferMode = BufferMode.None;
-
     private Boolean enableRingBufferMonitoring;
     @Nullable
     private EventLoop eventLoop;
@@ -142,14 +140,17 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private ZoneId rollTimeZone;
     private QueueOffsetSpec queueOffsetSpec;
 
-    public static void addAliases() {
-        // static initialiser.
+    protected SingleChronicleQueueBuilder() {
     }
     /*
      * ========================
      * Builders
      * ========================
      */
+
+    public static void addAliases() {
+        // static initialiser.
+    }
 
     /**
      * @return an empty builder
@@ -238,7 +239,77 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return ret;
     }
 
-    protected SingleChronicleQueueBuilder() {
+    @NotNull
+    static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue,
+                                                 @NotNull Wire wire) {
+        final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
+                queue.rollCycle(),
+                queue.wireType(),
+                (MappedBytes) wire.bytes(),
+                queue.indexCount(),
+                queue.indexSpacing());
+
+        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+
+        return wireStore;
+    }
+
+    @Nullable
+    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
+        final StringBuilder eventName = new StringBuilder();
+        wire.readEventName(eventName);
+        if (eventName.toString().equals(MetaDataKeys.header.name())) {
+            final SingleChronicleQueueStore store = wire.read().typedMarshallable();
+            if (store == null) {
+                throw new IllegalArgumentException("Unable to load wire store");
+            }
+            return store;
+        }
+
+        LOGGER.warn("Unable to load store file from input. Queue file may be corrupted.");
+        return null;
+    }
+
+    private static boolean isQueueReplicationAvailable() {
+        return ENTERPISE_QUEUE_CONSTRUCTOR != null;
+    }
+
+    private static RollCycle loadDefaultRollCycle() {
+        if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
+            return RollCycles.DAILY;
+        }
+
+        String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
+        String[] rollCyclePropertyParts = rollCycleProperty.split(":");
+        if (rollCyclePropertyParts.length > 0) {
+            try {
+                Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
+                if (Enum.class.isAssignableFrom(rollCycleClass)) {
+                    if (rollCyclePropertyParts.length < 2) {
+                        LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
+                    } else {
+                        Class<Enum> eClass = (Class<Enum>) rollCycleClass;
+                        Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
+                        if (instance instanceof RollCycle) {
+                            return (RollCycle) instance;
+                        } else {
+                            LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                        }
+                    }
+                } else {
+                    Object instance = ObjectUtils.newInstance(rollCycleClass);
+                    if (instance instanceof RollCycle) {
+                        return (RollCycle) instance;
+                    } else {
+                        LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                    }
+                }
+            } catch (ClassNotFoundException ignored) {
+                LOGGER.warn("Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
+            }
+        }
+
+        return RollCycles.DAILY;
     }
 
     public WireStoreFactory storeFactory() {
@@ -475,6 +546,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     /**
      * Enable out-of-process pretoucher (AKA preloader) (Queue Enterprise feature)
+     *
      * @param pretouchIntervalMillis
      * @return
      */
@@ -485,6 +557,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     /**
      * Interval in ms to invoke out of process pretoucher. Default is not to turn on
+     *
      * @return interval ms
      */
     public long pretouchIntervalMillis() {
@@ -808,7 +881,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return this;
     }
 
-
     public Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier() {
         return encodingSupplier;
     }
@@ -843,6 +915,10 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     public boolean strongAppenders() {
         return Boolean.TRUE.equals(strongAppenders);
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     public boolean checkInterrupts() {
         if (checkInterrupts == null) {
@@ -895,83 +971,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
         }
         return this;
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @NotNull
-    static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue,
-                                                 @NotNull Wire wire) {
-        final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
-                queue.rollCycle(),
-                queue.wireType(),
-                (MappedBytes) wire.bytes(),
-                queue.indexCount(),
-                queue.indexSpacing());
-
-        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
-
-        return wireStore;
-    }
-
-    @Nullable
-    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
-        final StringBuilder eventName = new StringBuilder();
-        wire.readEventName(eventName);
-        if (eventName.toString().equals(MetaDataKeys.header.name())) {
-            final SingleChronicleQueueStore store = wire.read().typedMarshallable();
-            if (store == null) {
-                throw new IllegalArgumentException("Unable to load wire store");
-            }
-            return store;
-        }
-
-        LOGGER.warn("Unable to load store file from input. Queue file may be corrupted.");
-        return null;
-    }
-
-    private static boolean isQueueReplicationAvailable() {
-        return ENTERPISE_QUEUE_CONSTRUCTOR != null;
-    }
-
-    private static RollCycle loadDefaultRollCycle() {
-        if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
-            return RollCycles.DAILY;
-        }
-
-        String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
-        String[] rollCyclePropertyParts = rollCycleProperty.split(":");
-        if (rollCyclePropertyParts.length > 0) {
-            try {
-                Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
-                if (Enum.class.isAssignableFrom(rollCycleClass)) {
-                    if (rollCyclePropertyParts.length < 2) {
-                        LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
-                    } else {
-                        Class<Enum> eClass = (Class<Enum>) rollCycleClass;
-                        Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
-                        if (instance instanceof RollCycle) {
-                            return (RollCycle) instance;
-                        } else {
-                            LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
-                        }
-                    }
-                } else {
-                    Object instance = ObjectUtils.newInstance(rollCycleClass);
-                    if (instance instanceof RollCycle) {
-                        return (RollCycle) instance;
-                    } else {
-                        LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
-                    }
-                }
-            } catch (ClassNotFoundException ignored) {
-                LOGGER.warn("Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
-            }
-        }
-
-        return RollCycles.DAILY;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

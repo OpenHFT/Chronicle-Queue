@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
-
 public class LastAppendedTest extends ChronicleQueueTestBase {
     @Test
     public void testLastWritten() {

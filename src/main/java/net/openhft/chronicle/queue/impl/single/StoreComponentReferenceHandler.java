@@ -12,7 +12,6 @@ import java.lang.ref.ReferenceQueue;
 import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.LockSupport;
 
 public enum StoreComponentReferenceHandler implements Closeable {
     INSTANCE;

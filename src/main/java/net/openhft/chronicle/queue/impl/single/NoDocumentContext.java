@@ -17,7 +17,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wire;
 
 /*
  * Created by Peter Lawrey on 12/02/2016.

@@ -91,6 +91,7 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private Pretoucher pretoucher = null;
         private Padding padToCacheLines = Jvm.isArm() ? Padding.WORD : Padding.SMART;
+        private NativeBytesStore<Void> batchTmp;
 
         StoreAppender(@NotNull SingleChronicleQueue queue,
                       @NotNull WireStorePool storePool,
@@ -203,8 +204,6 @@ public class SingleChronicleQueueExcerpts {
         public Wire wire() {
             return wire;
         }
-
-        private NativeBytesStore<Void> batchTmp;
 
         @Override
         public long batchAppend(final int timeoutMS, BatchAppender batchAppender) {
@@ -1774,7 +1773,6 @@ public class SingleChronicleQueueExcerpts {
 
             if (nextStore == this.store)
                 return true;
-
 
             context.wire(null);
             this.store = nextStore;

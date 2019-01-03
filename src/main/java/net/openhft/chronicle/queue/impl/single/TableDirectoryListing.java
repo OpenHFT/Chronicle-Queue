@@ -59,7 +59,6 @@ final class TableDirectoryListing implements DirectoryListing {
         forceRefresh();
     }
 
-
     @Override
     public void onFileCreated(final File file, final int cycle) {
         closeCheck();

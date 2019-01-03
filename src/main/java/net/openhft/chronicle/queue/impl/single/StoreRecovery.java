@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.Sequence;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -28,8 +27,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.EOFException;
-import java.io.IOException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 

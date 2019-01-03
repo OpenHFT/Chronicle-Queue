@@ -38,10 +38,17 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 public class ToEndTest {
+    private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
-    private static List<File> pathsToDelete = new LinkedList<>();
+
+    @AfterClass
+    public static void afterClass() {
+        for (File file : pathsToDelete) {
+            IOTools.shallowDeleteDirWithFiles(file);
+        }
+    }
 
     @Before
     public void before() {
@@ -60,13 +67,6 @@ public class ToEndTest {
             fail();
         }
         Jvm.resetExceptionHandlers();
-    }
-
-    @AfterClass
-    public static void afterClass() {
-        for (File file : pathsToDelete) {
-            IOTools.shallowDeleteDirWithFiles(file);
-        }
     }
 
     @Test

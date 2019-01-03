@@ -18,7 +18,6 @@ import static org.junit.Assume.assumeFalse;
 
 public class StuckQueueTest {
 
-
     @Test
     public void test() throws IOException {
         Path tmpDir = DirectoryUtils.tempDir(StuckQueueTest.class.getSimpleName()).toPath();

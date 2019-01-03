@@ -116,5 +116,4 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     @Deprecated
     long batchAppend(final int timeoutMS, BatchAppender batchAppender);
 
-
 }

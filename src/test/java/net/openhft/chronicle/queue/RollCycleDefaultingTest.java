@@ -27,7 +27,7 @@ public class RollCycleDefaultingTest {
     }
 
     @Test
-    public void unknownClassDefaultsToDaily(){
+    public void unknownClassDefaultsToDaily() {
         String configuredCycle = "foobarblah";
         System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
@@ -36,7 +36,7 @@ public class RollCycleDefaultingTest {
     }
 
     @Test
-    public void nonRollCycleDefaultsToDaily(){
+    public void nonRollCycleDefaultsToDaily() {
         String configuredCycle = String.class.getName();
         System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");

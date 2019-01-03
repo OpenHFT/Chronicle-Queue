@@ -13,7 +13,7 @@ import java.nio.ByteBuffer;
 
 /**
  * Created by Rob Austin
- *
+ * <p>
  * see Chronicle-Queue/c++/src/BatchAppenderNative.cpp
  */
 public class BatchAppenderNativeTest {

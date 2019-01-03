@@ -37,11 +37,25 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
+    private Datum datum = new Datum();
+
+    public static void main(String[] args) {
+        JLBHOptions lth = new JLBHOptions()
+                .warmUpIterations(50000)
+                .iterations(1000_000)
+                .throughput(100_000)
+                .recordOSJitter(false)
+                // disable as otherwise single GC event skews results heavily
+                .accountForCoordinatedOmmission(false)
+                .skipFirstRun(true)
+                .runs(5)
+                .jlbhTask(new QueueMultiThreadedJLBHBenchmark());
+        new JLBH(lth).start();
+    }
 
     @Override
     public void init(JLBH jlbh) {
         IOTools.deleteDirWithFiles("replica", 10);
-
 
         sourceQueue = single("replica").build();
         sinkQueue = single("replica").build();
@@ -68,28 +82,12 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         }
     }
 
-    public static void main(String[] args) {
-        JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(50000)
-                .iterations(1000_000)
-                .throughput(100_000)
-                .recordOSJitter(false)
-                // disable as otherwise single GC event skews results heavily
-                .accountForCoordinatedOmmission(false)
-                .skipFirstRun(true)
-                .runs(5)
-                .jlbhTask(new QueueMultiThreadedJLBHBenchmark());
-        new JLBH(lth).start();
-    }
-
     @Override
     public void complete() {
         sinkQueue.close();
         sourceQueue.close();
         System.exit(0);
     }
-
-    private Datum datum = new Datum();
 
     private static class Datum implements BytesMarshallable {
         public long ts = 0;

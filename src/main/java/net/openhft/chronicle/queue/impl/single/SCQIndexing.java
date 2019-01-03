@@ -44,6 +44,12 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     private static final boolean IGNORE_INDEXING_FAILURE = Boolean.getBoolean("queue.ignoreIndexingFailure");
+    private static Boolean REPORT_LINEAR_SCAN;
+
+    static {
+        REPORT_LINEAR_SCAN = Boolean.getBoolean("chronicle.queue.report.linear.scan.latency");
+    }
+
     final LongValue nextEntryToBeIndexed;
     private final int indexCount, indexCountBits;
     private final int indexSpacing, indexSpacingBits;
@@ -61,12 +67,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     Sequence sequence;
     // visible for testing
     int linearScanCount;
-
-    private static Boolean REPORT_LINEAR_SCAN;
-
-    static {
-        REPORT_LINEAR_SCAN = Boolean.getBoolean("chronicle.queue.report.linear.scan.latency");
-    }
 
     /**
      * used by {@link Demarshallable}
@@ -366,12 +366,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         // optimized if the `toIndex` is the last sequence
         long lastAddress = writePosition.getVolatileValue();
         long lastIndex = this.sequence.getSequence(lastAddress);
-        if (toIndex == lastIndex ) {
+        if (toIndex == lastIndex) {
             assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
             knownAddress = lastAddress;
             fromKnownIndex = lastIndex;
         }
-
 
         bytes.readPositionUnlimited(knownAddress);
 
@@ -430,9 +429,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long lastIndex = this.sequence.getSequence(lastAddress);
 
         if (lastAddress > 0 && toPosition == lastAddress
-                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY ) {
+                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
             bytes.readPositionUnlimited(toPosition);
-            i = lastIndex-1;
+            i = lastIndex - 1;
         } else {
             bytes.readPositionUnlimited(startAddress);
             i = indexOfNext - 1;
@@ -515,7 +514,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     continue;
 
                 long posN = indexValues.getVolatileValueAt(0);
-                assert posN >= 0;                                      
+                assert posN >= 0;
                 if (posN > position)
                     continue;
 
@@ -657,7 +656,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
-                   break;
+                    break;
                 return sequence;
             }
         }

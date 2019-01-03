@@ -41,6 +41,7 @@ import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
+
 @Ignore
 public class NotCompleteTest {
 
@@ -398,6 +399,11 @@ public class NotCompleteTest {
         MappedFile.checkMappedFiles();
     }
 
+    @After
+    public void clearInterrupt() {
+        Thread.interrupted();
+    }
+
     private interface PersonListener {
         void accept(Person name);
     }
@@ -433,10 +439,5 @@ public class NotCompleteTest {
                     ", name='" + name + '\'' +
                     '}';
         }
-    }
-
-    @After
-    public void clearInterrupt() {
-        Thread.interrupted();
     }
 }

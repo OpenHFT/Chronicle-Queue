@@ -17,8 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import java.io.IOException;
-
 public class ReadOnlyWriteLock implements WriteLock {
     @Override
     public void lock() {

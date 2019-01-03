@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
-    final Logger LOG = LoggerFactory.getLogger(getClass());
     static final long SLEEP_PER_WRITE_NANOS;
     static final int TEST_TIME;
     static final int ROLL_EVERY_MS;
@@ -65,49 +64,24 @@ public class RollCycleMultiThreadStressTest {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
     }
 
+    final Logger LOG = LoggerFactory.getLogger(getClass());
     final SetTimeProvider timeProvider = new SetTimeProvider();
 
     @Rule
     public RepeatRule repeatRule = new RepeatRule();
 
-    public static class RepeatRule implements TestRule {
+    static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
+        boolean allReadersComplete = true;
 
-        @Override
-        public Statement apply(Statement statement, Description description) {
-            Statement result = statement;
-            RepeatRule.Repeat repeat = description.getAnnotation(RepeatRule.Repeat.class);
-            if (repeat != null) {
-                int times = repeat.times();
-                result = new RepeatRule.RepeatStatement(times, statement);
-            }
-            return result;
-        }
-
-        @Retention(RetentionPolicy.RUNTIME)
-        @Target({
-                java.lang.annotation.ElementType.METHOD
-        })
-        public @interface Repeat {
-            int times();
-        }
-
-        private static class RepeatStatement extends Statement {
-
-            private final int times;
-            private final Statement statement;
-
-            private RepeatStatement(int times, Statement statement) {
-                this.times = times;
-                this.statement = statement;
-            }
-
-            @Override
-            public void evaluate() throws Throwable {
-                for (int i = 0; i < times; i++) {
-                    statement.evaluate();
-                }
+        int count = 0;
+        for (Reader reader : readers) {
+            ++count;
+            if (reader.lastRead < expectedNumberOfMessages - 1) {
+                allReadersComplete = false;
+                System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
             }
         }
+        return allReadersComplete;
     }
 
 //    @Test
@@ -281,18 +255,44 @@ public class RollCycleMultiThreadStressTest {
                 .rollCycle(RollCycles.TEST_SECONDLY);
     }
 
-    static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
-        boolean allReadersComplete = true;
+    public static class RepeatRule implements TestRule {
 
-        int count = 0;
-        for (Reader reader : readers) {
-            ++count;
-            if (reader.lastRead < expectedNumberOfMessages - 1) {
-                allReadersComplete = false;
-                System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
+        @Override
+        public Statement apply(Statement statement, Description description) {
+            Statement result = statement;
+            RepeatRule.Repeat repeat = description.getAnnotation(RepeatRule.Repeat.class);
+            if (repeat != null) {
+                int times = repeat.times();
+                result = new RepeatRule.RepeatStatement(times, statement);
+            }
+            return result;
+        }
+
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target({
+                java.lang.annotation.ElementType.METHOD
+        })
+        public @interface Repeat {
+            int times();
+        }
+
+        private static class RepeatStatement extends Statement {
+
+            private final int times;
+            private final Statement statement;
+
+            private RepeatStatement(int times, Statement statement) {
+                this.times = times;
+                this.statement = statement;
+            }
+
+            @Override
+            public void evaluate() throws Throwable {
+                for (int i = 0; i < times; i++) {
+                    statement.evaluate();
+                }
             }
         }
-        return allReadersComplete;
     }
 
     final class Reader implements Callable<Throwable> {

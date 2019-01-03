@@ -41,7 +41,6 @@ public final class QueueInspectorTest {
     @Test
     public void shouldDetermineWritingProcessIdWhenDocumentIsNotComplete() throws IOException {
 
-
         try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
                 testBlockSize().
                 build()) {

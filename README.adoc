@@ -22,7 +22,6 @@ You can use Chronicle 5 to read messages written with Chronicle 4, however you s
 
 ==== About Chronicle Software
 
-
 https://player.vimeo.com/video/201989439
 
 === World Wide Adoption
@@ -811,7 +810,6 @@ should use new file.
 
 If the process was shutdown, and restarted later when the roll cycle should be using a new file, appender will try to locate old file and write `EOF` mark in it to help tailers reading it. However, tailers are robust enough to understand that the `EOF` mark should
 be present in the file from previous roll cycle even if it's not written, after certain timeout.
-
 
 === File Handles and Flushing Data to the Disk
 

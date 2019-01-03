@@ -68,13 +68,16 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
+    @NotNull
+    protected final EventLoop eventLoop;
+    @NotNull
+    protected final TableStore<SCQMeta> metaStore;
     final Supplier<TimingPauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
     final File path;
     final String fileAbsolutePath;
     final AtomicBoolean isClosed = new AtomicBoolean();
-    private StoreFileListener storeFileListener;
     private final StoreSupplier storeSupplier;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
     @NotNull
@@ -86,8 +89,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final long blockSize, overlapSize;
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
-    @NotNull
-    protected final EventLoop eventLoop;
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
@@ -100,8 +101,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final boolean readOnly;
     @NotNull
     private final CycleCalculator cycleCalculator;
-    @NotNull
-    protected final TableStore<SCQMeta> metaStore;
     @Nullable
     private final LongValue lastAcknowledgedIndexReplicated;
     @Nullable
@@ -114,13 +113,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final WriteLock writeLock;
     private final boolean strongAppenders;
     private final boolean checkInterrupts;
+    @NotNull
+    private final RollingResourcesCache dateCache;
     protected int sourceId;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
+    private StoreFileListener storeFileListener;
     @NotNull
     private RollCycle rollCycle;
-    @NotNull
-    private final RollingResourcesCache dateCache;
     private int deltaCheckpointInterval;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {

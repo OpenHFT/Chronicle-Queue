@@ -2,10 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.threads.NamedThreadFactory;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;

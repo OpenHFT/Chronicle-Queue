@@ -68,6 +68,26 @@ import java.nio.file.Path;
 public interface ChronicleQueue extends Closeable {
     int TEST_BLOCK_SIZE = 64 * 1024; // smallest safe block size for Windows 8+
 
+    static ChronicleQueue single(String path) {
+        return SingleChronicleQueueBuilder.single(path).build();
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder() {
+        return SingleChronicleQueueBuilder.single();
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder(String path) {
+        return SingleChronicleQueueBuilder.binary(path);
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder(File path) {
+        return SingleChronicleQueueBuilder.binary(path);
+    }
+
+    static SingleChronicleQueueBuilder singleBuilder(Path path) {
+        return SingleChronicleQueueBuilder.binary(path);
+    }
+
     /**
      * <b>
      * Tailers are NOT thread-safe, sharing the Tailer between threads will lead to errors and unpredictable behaviour.
@@ -181,37 +201,19 @@ public interface ChronicleQueue extends Closeable {
      * when using replication to another host, this is the last index that has been sent to the remote host.
      */
     long lastIndexReplicated();
+
     long lastAcknowledgedIndexReplicated();
 
     /**
      * @param lastIndex last index that has been sent to the remote host.
      */
     void lastIndexReplicated(long lastIndex);
+
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
-
-    static ChronicleQueue single(String path) {
-        return SingleChronicleQueueBuilder.single(path).build();
-    }
-
-    static SingleChronicleQueueBuilder singleBuilder() {
-        return SingleChronicleQueueBuilder.single();
-    }
-
-    static SingleChronicleQueueBuilder singleBuilder(String path) {
-        return SingleChronicleQueueBuilder.binary(path);
-    }
-
-    static SingleChronicleQueueBuilder singleBuilder(File path) {
-        return SingleChronicleQueueBuilder.binary(path);
-    }
-
-    static SingleChronicleQueueBuilder singleBuilder(Path path) {
-        return SingleChronicleQueueBuilder.binary(path);
-    }
 
     /**
      * call this method if you delete file from a chronicle-queue directory
-     *
+     * <p>
      * The problem that we have, is that we cache the structure of your directory, this is because
      * hitting the file system adds latency. Call this method, if you delete .cq4 files, then it
      * will update our caches accordingly,

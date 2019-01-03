@@ -1,7 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThreadStressTest {
