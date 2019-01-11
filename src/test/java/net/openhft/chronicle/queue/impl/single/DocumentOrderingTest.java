@@ -4,6 +4,8 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -231,5 +233,10 @@ public final class DocumentOrderingTest {
         RecordInfo(final int counterValue) {
             this.counterValue = counterValue;
         }
+    }
+
+    @Before
+    public void multiCPU() {
+        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
     }
 }

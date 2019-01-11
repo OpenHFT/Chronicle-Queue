@@ -9,6 +9,8 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -463,5 +465,10 @@ public class RollCycleMultiThreadStressTest {
             }
             return null;
         }
+    }
+
+    @Before
+    public void multiCPU() {
+        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
     }
 }
