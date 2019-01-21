@@ -41,7 +41,7 @@
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
                 <!-- PLEASE DON'T LEAVE THIS ON A SNAPSHOT because they get missed in a release  -->
-                <version>3.6.5</version>
+                <version>3.6.9</version>
                 <scope>import</scope>
             </dependency>
 
