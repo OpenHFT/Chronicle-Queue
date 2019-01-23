@@ -833,13 +833,13 @@ public class SingleChronicleQueueExcerpts {
 //
 // *************************************************************************
 
-    private static final class ClosableResources<T extends StoreReleasable> {
+    static final class ClosableResources<T extends StoreReleasable> {
         @NotNull
         private final T storeReleasable;
         private volatile Bytes wireReference = null;
         private volatile Bytes bufferWireReference = null;
         private volatile Bytes wireForIndexReference = null;
-        private volatile CommonStore storeReference = null;
+        volatile CommonStore storeReference = null;
 
         ClosableResources(@NotNull final T storeReleasable) {
             this.storeReleasable = storeReleasable;
@@ -899,6 +899,12 @@ public class SingleChronicleQueueExcerpts {
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
             closableResources = new ClosableResources<>(queue);
+
+            if (indexValue == null) {
+                toStart();
+            } else {
+                moveToIndex(indexValue.getVolatileValue());
+            }
         }
 
         @Nullable

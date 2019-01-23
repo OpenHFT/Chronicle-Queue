@@ -441,7 +441,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
-        LongValue index = id == null ? null : metaStore.acquireValueFor("index." + id);
+        LongValue index = id == null
+                ? null
+                : metaStore.acquireValueFor("index." + id, 0);
         final StoreTailer storeTailer = new StoreTailer(this, index);
         directoryListing.refresh();
         if (SHOULD_RELEASE_RESOURCES) {
@@ -449,7 +451,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     new WeakReference<>(storeTailer, StoreComponentReferenceHandler.tailerQueue()),
                     storeTailer.getCloserJob());
         }
-        return storeTailer.toStart();
+        return storeTailer;
     }
 
     @NotNull

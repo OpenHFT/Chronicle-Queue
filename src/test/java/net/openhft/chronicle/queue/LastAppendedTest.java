@@ -37,7 +37,8 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                             .methodWriterBuilder(Msg.class)
                             .recordHistory(true)
                             .build();
-                    MethodReader methodReader = inQueue.createTailer().methodReader((Msg) out::msg);
+                    MethodReader methodReader = inQueue.createTailer()
+                            .methodReader((Msg) out::msg);
 
                     // reads the somedata-0
                     methodReader.readOne();
