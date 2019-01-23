@@ -99,6 +99,17 @@ public interface ChronicleQueue extends Closeable {
     ExcerptTailer createTailer();
 
     /**
+     * <b>
+     * Tailers are NOT thread-safe, sharing the Tailer between threads will lead to errors and unpredictable behaviour.
+     * </b>
+     *
+     * @param id unique id for a tailer which uses to track where it was up to
+     * @return a new ExcerptTailer to read sequentially.
+     */
+    @NotNull
+    ExcerptTailer createTailer(String id);
+
+    /**
      * <p>
      * An Appender can be used to writeBytes new excerpts sequentially to the upper.
      * </p>
