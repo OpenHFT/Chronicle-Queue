@@ -3582,7 +3582,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         if (!rdc.isPresent())
                             break;
 
-                        try (DocumentContext wdc = appender.writingDocument(rdc.index())) {
+                        try (DocumentContext wdc = appender.writingDocument()) {
                             final Bytes<?> bytes = rdc.wire().bytes();
                             wdc.wire().bytes().write(bytes);
                         }

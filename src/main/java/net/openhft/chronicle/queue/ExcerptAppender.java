@@ -39,17 +39,6 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
-     *
-     * @param index to write the byte to or fail.
-     * @return DocumentContext to write to.
-     */
-    @NotNull
-    default DocumentContext writingDocument(long index) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
      * @return the index last written, this index includes the cycle and the sequence number
      * @throws IllegalStateException if no index is available
      */

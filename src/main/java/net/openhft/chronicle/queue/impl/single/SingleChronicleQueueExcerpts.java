@@ -82,8 +82,6 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private Wire wire;
         @Nullable
-        private Wire bufferWire; // if you have a buffered write.
-        @Nullable
         private Wire wireForIndex;
         private long position = 0;
         private long lastIndex = Long.MIN_VALUE;
@@ -171,10 +169,6 @@ public class SingleChronicleQueueExcerpts {
 
             if (store != null) {
                 storePool.release(store);
-            }
-            if (bufferWire != null) {
-                bufferWire.bytes().release();
-                bufferWire = null;
             }
             store = null;
             storePool.close();
@@ -436,17 +430,6 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-        @NotNull
-        @Override
-        public DocumentContext writingDocument(long index) {
-            writeLock.lock();
-            context.isClosed = false;
-            context.wire = acquireBufferWire();
-            context.wire.headerNumber(index);
-            context.isClosed = false;
-            return context;
-        }
-
         @Override
         public int sourceId() {
             return queue.sourceId;
@@ -478,18 +461,6 @@ public class SingleChronicleQueueExcerpts {
             } finally {
                 writeLock.unlock();
             }
-        }
-
-        @NotNull
-        Wire acquireBufferWire() {
-            if (bufferWire == null) {
-                bufferWire = queue.wireType().apply(Bytes.elasticByteBuffer());
-                closableResources.bufferWireReference = bufferWire.bytes();
-
-            } else {
-                bufferWire.clear();
-            }
-            return bufferWire;
         }
 
         /**
