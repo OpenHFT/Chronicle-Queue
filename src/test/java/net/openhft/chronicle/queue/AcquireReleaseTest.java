@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -11,6 +12,7 @@ import java.io.File;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+@RequiredForClient
 public class AcquireReleaseTest extends ChronicleQueueTestBase {
     @Test
     public void testAccquireAndRelease() throws Exception {

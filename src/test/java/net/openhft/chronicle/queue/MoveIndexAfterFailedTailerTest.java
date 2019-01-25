@@ -17,6 +17,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
@@ -31,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import static java.lang.System.currentTimeMillis;
 import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 
+@RequiredForClient
 public class MoveIndexAfterFailedTailerTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MoveIndexAfterFailedTailerTest.class);
 

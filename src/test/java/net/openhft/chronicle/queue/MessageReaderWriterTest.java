@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -37,6 +38,7 @@ import static org.junit.Assert.assertTrue;
 /*
  * Created by Peter Lawrey on 25/03/2016.
  */
+@RequiredForClient
 public class MessageReaderWriterTest {
     private ThreadDump threadDump;
 

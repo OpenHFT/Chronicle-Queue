@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
@@ -13,6 +14,7 @@ import static org.junit.Assert.assertEquals;
 /*
  * Created by Peter Lawrey on 08/05/2017.
  */
+@RequiredForClient
 public class MethodReaderObjectReuseTest {
     @Test
     public void testOneOne() {

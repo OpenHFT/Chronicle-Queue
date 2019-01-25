@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -15,6 +16,7 @@ import static org.junit.Assert.*;
 /**
  * Index runs away on double close - AM
  */
+@RequiredForClient
 public class OvertakeTest {
 
     private String path;

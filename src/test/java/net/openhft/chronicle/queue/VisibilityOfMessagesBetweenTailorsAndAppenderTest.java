@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
@@ -11,6 +12,7 @@ import java.io.File;
 import java.util.UUID;
 import java.util.concurrent.*;
 
+@RequiredForClient
 public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
     @Rule
     public final TestName testName = new TestName();

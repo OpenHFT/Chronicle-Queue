@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertEquals;
 
+@RequiredForClient
 public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
     private static final int NUMBER_OF_TAILERS = 10;

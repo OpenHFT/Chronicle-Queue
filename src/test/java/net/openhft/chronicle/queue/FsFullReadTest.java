@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.CommonStore;
@@ -27,6 +28,7 @@ import static org.junit.Assert.assertTrue;
  * The standard DC present code can read only 1 entry, while the dumper can read 31k entries.
  * It would be great if the normal code could read most of the entries also.
  */
+@RequiredForClient
 public class FsFullReadTest {
 
     @NotNull

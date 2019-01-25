@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.BytesOut;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
@@ -23,6 +24,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import org.jetbrains.annotations.NotNull;
 
+@RequiredForClient
 public class LongRunTestMain {
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
