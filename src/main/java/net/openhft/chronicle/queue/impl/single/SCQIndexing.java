@@ -319,7 +319,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return scanResult;
     }
 
-    private boolean checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
+    private void checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
             start) {
         long end = System.nanoTime();
         if (end > start + 50e3) {
@@ -337,7 +337,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     new StackTrace("This is a profile stack trace, not an ERROR"));
 
         }
-        return true;
     }
 
     private boolean printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end,
