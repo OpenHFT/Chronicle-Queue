@@ -17,6 +17,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.io.IORuntimeException;
@@ -32,6 +33,7 @@ import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
 
+@RequiredForClient
 public class WriteBytesTest {
     final Bytes outgoingBytes = Bytes.elasticByteBuffer();
     private final byte[] incomingMsgBytes = new byte[100];

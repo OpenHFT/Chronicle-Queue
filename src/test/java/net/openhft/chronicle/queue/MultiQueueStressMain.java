@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -11,6 +12,7 @@ import java.io.FileNotFoundException;
 -Dtarget=/home/peter/tmp/ -Dthroughput=1000 -Dorg.slf4j.simpleLogger.defaultLogLevel=info -Druns=40
  */
 
+@RequiredForClient
 public class MultiQueueStressMain {
     static final int queueCount = Integer.getInteger("queues", 25);
     static final int throughput = Integer.getInteger("throughput", 50); // MB/s

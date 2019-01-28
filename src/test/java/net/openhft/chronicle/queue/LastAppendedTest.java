@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -10,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
+@RequiredForClient
 public class LastAppendedTest extends ChronicleQueueTestBase {
     @Test
     public void testLastWritten() {

@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
@@ -34,6 +35,7 @@ import static org.junit.Assert.assertTrue;
 /*
  * Created by Jerry Shea on 14/08/16.
  */
+@RequiredForClient
 public class ReadWriteTest {
 
     private static final String STR1 = "hello", STR2 = "hey";

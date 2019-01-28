@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.TimeProvider;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,6 +16,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 @RunWith(Parameterized.class)
+@RequiredForClient
 public class RollCyclesTest {
     private static final long NO_EPOCH_OFFSET = 0L;
     private static final long SOME_EPOCH_OFFSET = 17L * 37L;

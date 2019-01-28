@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -37,6 +38,7 @@ import static org.junit.Assert.*;
 /*
  * Created by Marcus Spiegel on 29/09/16.
  */
+@RequiredForClient
 public class TailerDirectionTest extends ChronicleQueueTestBase {
 
     public static final int MILLIS = 86_400_000;

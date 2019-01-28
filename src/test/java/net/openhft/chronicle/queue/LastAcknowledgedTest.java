@@ -1,11 +1,13 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+@RequiredForClient
 public class LastAcknowledgedTest {
     @Test
     public void testLastAcknowledge() {

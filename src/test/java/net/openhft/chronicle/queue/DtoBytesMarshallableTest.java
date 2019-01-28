@@ -5,6 +5,7 @@ import net.openhft.chronicle.bytes.BytesOut;
 import net.openhft.chronicle.wire.AbstractBytesMarshallable;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,6 +14,7 @@ import java.io.File;
 /**
  * Created by Rob Austin
  */
+@RequiredForClient
 public class DtoBytesMarshallableTest {
 
     @Test
