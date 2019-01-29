@@ -255,7 +255,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             long primaryOffset = toAddress0(index);
 
             long secondaryAddress = 0;
-            long startIndex = index & ~(indexSpacing - 1);
+            long startIndex = index & -indexSpacing;
             while (primaryOffset >= 0) {
                 secondaryAddress = index2index.getValueAt(primaryOffset);
                 if (secondaryAddress != 0)

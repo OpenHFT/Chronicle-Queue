@@ -1393,7 +1393,6 @@ public class SingleChronicleQueueExcerpts {
                 return END_OF_FILE;
             }
 
-            bytes.readLimit(bytes.readPosition());
             return scanResult;
         }
 
