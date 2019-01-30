@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -51,6 +52,11 @@ public class MoveToWrongIndexThenToEndTest {
         SingleChronicleQueue appenderChronicle = createChronicle(basePath);
         appender = appenderChronicle.acquireAppender();
         outbound = Bytes.elasticByteBuffer();
+    }
+
+    @After
+    public void after() {
+        outbound.release();
     }
 
     @Test

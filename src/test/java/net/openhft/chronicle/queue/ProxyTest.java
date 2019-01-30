@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.AbstractMarshallable;
@@ -59,30 +60,31 @@ public class ProxyTest {
         StringBuilder result = new StringBuilder();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
 
-            TestMessageListener writer = queue.acquireAppender().methodWriterBuilder(TestMessageListener.class).proxyClass(MyProxy.class).build();
-            Message message = new ProxyTest.Message();
+            TestMessageListener writer = queue.acquireAppender().methodWriterBuilder(TestMessageListener.class).build();
+            try (Message message = new ProxyTest.Message()) {
 
-            StringBuilder sb = new StringBuilder("test ");
-            int length = sb.length();
+                StringBuilder sb = new StringBuilder("test ");
+                int length = sb.length();
 
-            for (int i = 0; i < 10; i++) {
-                sb.append(i);
-                message.message(sb);
-                writer.onMessage(message);
-                sb.setLength(length);
-            }
-
-            MethodReader methodReader = queue.createTailer().methodReader(new TestMessageListener() {
-
-                @Override
-                public void onMessage(final Message message) {
-                    result.append(message);
+                for (int i = 0; i < 10; i++) {
+                    sb.append(i);
+                    message.message(sb);
+                    writer.onMessage(message);
+                    sb.setLength(length);
                 }
 
-            });
+                MethodReader methodReader = queue.createTailer().methodReader(new TestMessageListener() {
 
-            for (int i = 0; i < 10; i++) {
-                methodReader.readOne();
+                    @Override
+                    public void onMessage(final Message message) {
+                        result.append(message);
+                    }
+
+                });
+
+                for (int i = 0; i < 10; i++) {
+                    methodReader.readOne();
+                }
             }
 
         }
@@ -122,9 +124,9 @@ public class ProxyTest {
         void onMessage(ProxyTest.Message message);
     }
 
-    public static class Message extends AbstractMarshallable {
+    public static class Message extends AbstractMarshallable implements Closeable {
 
-        private final net.openhft.chronicle.bytes.Bytes message = Bytes.elasticByteBuffer();
+        private final Bytes message = Bytes.elasticByteBuffer();
 
         CharSequence message() {
             return message;
@@ -133,6 +135,11 @@ public class ProxyTest {
         Message message(final CharSequence message) {
             this.message.clear().append(message);
             return this;
+        }
+
+        @Override
+        public void close() {
+            message.release();
         }
     }
 
