@@ -58,6 +58,7 @@ public class ProxyTest {
         File tempDir = DirectoryUtils.tempDir("to-be-deleted");
         StringBuilder result = new StringBuilder();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
+
             TestMessageListener writer = queue.acquireAppender().methodWriterBuilder(TestMessageListener.class).proxyClass(MyProxy.class).build();
             Message message = new ProxyTest.Message();
 
