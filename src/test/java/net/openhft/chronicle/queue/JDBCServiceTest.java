@@ -79,11 +79,9 @@ public class JDBCServiceTest {
                 AtomicLong updates = new AtomicLong();
                 CountingJDBCResult countingJDBCResult = new CountingJDBCResult(queries, updates);
                 MethodReader methodReader = service.createReader(countingJDBCResult);
-                int counter = 0;
+
                 while (updates.get() < noUpdates) {
-                    if (methodReader.readOne())
-                        counter++;
-                    else
+                    if (!methodReader.readOne())
                         Thread.yield();
                 }
                 Closeable.closeQuietly(service);

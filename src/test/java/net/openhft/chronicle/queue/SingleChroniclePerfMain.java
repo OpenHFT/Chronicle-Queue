@@ -66,9 +66,6 @@ public class SingleChroniclePerfMain {
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
                     Bytes<?> bytes0 = dc.wire().bytes();
-                    long remaining = bytes0.readRemaining();
-//                    if (remaining < size)
-//                        fail("remaining: " + remaining);
                     bytes.setBytes(bytes0);
                     reader.readFrom(bytes);
                 }

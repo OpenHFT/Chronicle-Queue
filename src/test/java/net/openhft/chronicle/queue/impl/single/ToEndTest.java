@@ -184,7 +184,6 @@ public class ToEndTest {
         File baseDir = DirectoryUtils.tempDir("toEndTest");
 
         List<Integer> results = new ArrayList<>();
-        final ChronicleQueue chronicleQueue = null;
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -234,6 +233,7 @@ public class ToEndTest {
             checkOneFile(baseDir);
 
             // if this appender isn't created, the tailer toEnd doesn't cause a roll.
+            @SuppressWarnings("unused")
             ExcerptAppender appender = queue.acquireAppender();
             checkOneFile(baseDir);
 
