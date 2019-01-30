@@ -20,6 +20,38 @@ import java.lang.reflect.Method;
  */
 public class ProxyTest {
 
+    public static class MyProxy implements TestMessageListener {
+        static Object[] a1 = null;
+        static Method m1 = null;
+
+        static {
+            try {
+                m1 = MyProxy.class.getMethod("onMessage", Message.class);
+                a1 = new Object[m1.getParameterTypes().length];
+            } catch (NoSuchMethodException e) {
+                Jvm.rethrow(e);
+            }
+        }
+
+        private final Object proxy;
+        private final InvocationHandler handler;
+
+        public MyProxy(Object proxy, InvocationHandler handler) {
+            this.proxy = proxy;
+            this.handler = handler;
+        }
+
+        @Override
+        public void onMessage(final Message message) {
+            a1[0] = message;
+            try {
+                handler.invoke(proxy, m1, a1);
+            } catch (Throwable throwable) {
+                Jvm.rethrow(throwable);
+            }
+        }
+    }
+
     @Test
     public void testReadWrite() {
 
@@ -103,36 +135,6 @@ public class ProxyTest {
         }
     }
 
-    public static class MyProxy implements TestMessageListener {
-        static Object[] a1 = null;
-        static Method m1 = null;
 
-        static {
-            try {
-                m1 = MyProxy.class.getMethod("onMessage", Message.class);
-                a1 = new Object[m1.getParameterTypes().length];
-            } catch (NoSuchMethodException e) {
-                Jvm.rethrow(e);
-            }
-        }
-
-        private final Object proxy;
-        private final InvocationHandler handler;
-
-        public MyProxy(Object proxy, InvocationHandler handler) {
-            this.proxy = proxy;
-            this.handler = handler;
-        }
-
-        @Override
-        public void onMessage(final Message message) {
-            a1[0] = message;
-            try {
-                handler.invoke(proxy, m1, a1);
-            } catch (Throwable throwable) {
-                Jvm.rethrow(throwable);
-            }
-        }
-    }
 
 }
