@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.AbstractMarshallable;
@@ -62,28 +61,27 @@ public class ProxyTest {
             TestMessageListener writer = queue.acquireAppender().methodWriterBuilder(TestMessageListener.class).build();
             Message message = new ProxyTest.Message();
 
-                StringBuilder sb = new StringBuilder("test ");
-                int length = sb.length();
+            StringBuilder sb = new StringBuilder("test ");
+            int length = sb.length();
 
-                for (int i = 0; i < 10; i++) {
-                    sb.append(i);
-                    message.message(sb);
-                    writer.onMessage(message);
-                    sb.setLength(length);
+            for (int i = 0; i < 10; i++) {
+                sb.append(i);
+                message.message(sb);
+                writer.onMessage(message);
+                sb.setLength(length);
+            }
+
+            MethodReader methodReader = queue.createTailer().methodReader(new TestMessageListener() {
+
+                @Override
+                public void onMessage(final Message message) {
+                    result.append(message);
                 }
 
-                MethodReader methodReader = queue.createTailer().methodReader(new TestMessageListener() {
+            });
 
-                    @Override
-                    public void onMessage(final Message message) {
-                        result.append(message);
-                    }
-
-                });
-
-                for (int i = 0; i < 10; i++) {
-                    methodReader.readOne();
-                }
+            for (int i = 0; i < 10; i++) {
+                methodReader.readOne();
             }
 
         }
@@ -123,7 +121,7 @@ public class ProxyTest {
         void onMessage(ProxyTest.Message message);
     }
 
-    public static class Message extends AbstractMarshallable implements Closeable {
+    public static class Message extends AbstractMarshallable {
 
         private final StringBuilder message = new StringBuilder();
 
