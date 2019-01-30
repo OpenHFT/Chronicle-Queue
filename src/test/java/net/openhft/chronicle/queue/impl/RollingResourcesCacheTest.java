@@ -79,7 +79,6 @@ public class RollingResourcesCacheTest {
     private static final String BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0 = "19761019-0000";
     private static final String BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10 = "19761019-0010";
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final long ONE_DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1L);
     private static final boolean LOG_TEST_DEBUG =
             Boolean.valueOf(RollingResourcesCacheTest.class.getSimpleName() + ".debug");

@@ -175,7 +175,6 @@ public class ContendedWriterTest {
     }
 
     private static class SlowToSerialiseAndDeserialise implements Marshallable {
-        private final StringBuilder sb = new StringBuilder();
         private final long writePauseMs;
 
         private SlowToSerialiseAndDeserialise(long writePauseMs) {

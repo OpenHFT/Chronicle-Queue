@@ -1016,9 +1016,13 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
     }
 
     private static class MyData extends AbstractMarshallable {
+        @SuppressWarnings("unused")
         final String name;
+        @SuppressWarnings("unused")
         final long num;
+        @SuppressWarnings("unused")
         final double d;
+        @SuppressWarnings("unused")
         final int counter;
 
         MyData(String name, long num, double d, int counter) {
