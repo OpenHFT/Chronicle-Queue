@@ -107,7 +107,9 @@ public interface ChronicleQueue extends Closeable {
      * @return a new ExcerptTailer to read sequentially.
      */
     @NotNull
-    ExcerptTailer createTailer(String id);
+    default ExcerptTailer createTailer(String id) {
+        throw new UnsupportedOperationException("not currently supported in this implementation.");
+    }
 
     /**
      * <p>
