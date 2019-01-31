@@ -214,7 +214,6 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 for (int i = -WARMUP; i < ITERATIONS; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
-                        busyLoop:
                         do ; while (System.nanoTime() < next);
                         next = System.nanoTime(); // if we failed to come out of the spin loop on time, reset next.
                     }
