@@ -78,8 +78,8 @@ public class TestDeleteQueueFile {
                 appender.writeText("test2");
             }
 
-            Map<String, List> queueToRollFilesOnAcquireMap = listener.getQueueToRollFilesOnAcquireMap();
-            Map<String, List> queueToRollFilesOnReleaseMap = listener.getQueueToRollFilesOnReleaseMap();
+            Map<String, List<String>> queueToRollFilesOnAcquireMap = listener.getQueueToRollFilesOnAcquireMap();
+            Map<String, List<String>> queueToRollFilesOnReleaseMap = listener.getQueueToRollFilesOnReleaseMap();
 
             Assert.assertEquals(1, queueToRollFilesOnAcquireMap.size());
             List<String> files = queueToRollFilesOnAcquireMap.get(queueName);
@@ -143,8 +143,8 @@ public class TestDeleteQueueFile {
     final class QueueStoreFileListener implements StoreFileListener {
 
         private String queueName;
-        private Map<String, List> queueToRollFilesOnReleaseMap = new HashMap<>();
-        private Map<String, List> queueToRollFilesOnAcquireMap = new HashMap<>();
+        private Map<String, List<String>> queueToRollFilesOnReleaseMap = new HashMap<>();
+        private Map<String, List<String>> queueToRollFilesOnAcquireMap = new HashMap<>();
 
         public QueueStoreFileListener(String queueName) {
             this.queueName = queueName;
@@ -190,11 +190,11 @@ public class TestDeleteQueueFile {
 
         }
 
-        public Map<String, List> getQueueToRollFilesOnAcquireMap() {
+        public Map<String, List<String>> getQueueToRollFilesOnAcquireMap() {
             return queueToRollFilesOnAcquireMap;
         }
 
-        public Map<String, List> getQueueToRollFilesOnReleaseMap() {
+        public Map<String, List<String>> getQueueToRollFilesOnReleaseMap() {
             return queueToRollFilesOnReleaseMap;
         }
     }
