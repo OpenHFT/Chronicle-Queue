@@ -53,7 +53,7 @@ public class OvertakeTest {
         path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (ChronicleQueue appender_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
-                .buffered(false)
+                .writeBufferMode(BufferMode.None)
                 .build()) {
             ExcerptAppender appender = appender_queue.acquireAppender();
             for (int i = 0; i < messages; i++) {
@@ -72,7 +72,7 @@ public class OvertakeTest {
     public void appendAndTail() {
         ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
-                .buffered(false)
+                .writeBufferMode(BufferMode.None)
                 .build();
         ExcerptTailer tailer = tailer_queue.createTailer();
         tailer = tailer.toStart();
@@ -105,7 +105,7 @@ public class OvertakeTest {
         Future<Long> f = execService.submit(myapp);
         ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
-                .buffered(false)
+                .writeBufferMode(BufferMode.None)
                 .build();
         t_index = 0;
         MyTailer mytailer = new MyTailer(tailer_queue, t_index, sync);
@@ -134,7 +134,7 @@ public class OvertakeTest {
             queue = ChronicleQueue.singleBuilder(path)
                     //.testBlockSize()
                     //.rollCycle(TEST_DAILY)
-                    .buffered(false)
+                    .writeBufferMode(BufferMode.None)
                     .build();
             appender = queue.acquireAppender();
             for (int i = 0; i < 50; i++) {
