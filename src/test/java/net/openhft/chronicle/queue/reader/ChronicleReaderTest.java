@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.reader;
 
-import net.openhft.chronicle.bytes.MethodWriterBuilder;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.*;
@@ -8,6 +7,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -58,7 +58,7 @@ public class ChronicleReaderTest {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
             methodWriterBuilder.recordHistory(true);
             final StringEvents events = methodWriterBuilder.build();
 
@@ -78,7 +78,7 @@ public class ChronicleReaderTest {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
             methodWriterBuilder.recordHistory(true);
             final StringEvents events = methodWriterBuilder.build();
 
@@ -100,7 +100,7 @@ public class ChronicleReaderTest {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
             methodWriterBuilder.recordHistory(true);
             final StringEvents events = methodWriterBuilder.build();
 
@@ -148,7 +148,7 @@ public class ChronicleReaderTest {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
             methodWriterBuilder.recordHistory(true);
             final StringEvents events = methodWriterBuilder.build();
 
