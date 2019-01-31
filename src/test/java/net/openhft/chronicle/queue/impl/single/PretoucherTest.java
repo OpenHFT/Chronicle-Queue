@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -35,6 +36,7 @@ public class PretoucherTest {
                 build();
     }
 
+    @Ignore("flakey test see http://teamcity.higherfrequencytrading.com/repository/download/OpenHFT_ReleaseJob_ReleaseByArtifact/320311:id/ReleaseAutomation/projects/chronicle-queue-runTests-1548952667748.log")
     @Test
     public void shouldHandleCycleRoll() {
         File dir = tempDir("shouldHandleCycleRoll");
