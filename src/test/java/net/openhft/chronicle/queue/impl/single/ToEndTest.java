@@ -184,7 +184,6 @@ public class ToEndTest {
         File baseDir = DirectoryUtils.tempDir("toEndTest");
 
         List<Integer> results = new ArrayList<>();
-        final ChronicleQueue chronicleQueue = null;
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)

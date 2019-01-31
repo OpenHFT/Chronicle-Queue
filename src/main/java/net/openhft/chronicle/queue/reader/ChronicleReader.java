@@ -70,10 +70,6 @@ public final class ChronicleReader {
         return configValue != UNSET_VALUE;
     }
 
-    private static boolean isBinaryFormat(final byte dataFormatIndicator) {
-        return dataFormatIndicator < 0;
-    }
-
     public void execute() {
         long lastObservedTailIndex;
         long highestReachedIndex = 0L;

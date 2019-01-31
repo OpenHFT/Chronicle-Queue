@@ -82,9 +82,7 @@ public class ChronicleRollingIssueTest {
                         lastIndex = index;
                     }
                 }
-                final int i = count.get();
                 if (System.currentTimeMillis() > start + 60000) {
-//                    System.out.println(queue.dump());
                     throw new AssertionError("Wrote: " + count
                             + " read: " + count2
                             + " index: " + Long.toHexString(index));

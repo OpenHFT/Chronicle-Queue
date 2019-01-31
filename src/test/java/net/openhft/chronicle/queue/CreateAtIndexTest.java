@@ -146,7 +146,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = queue.createTailer();
             try (DocumentContext dc = tailer.readingDocument()) {
 
-                String text = dc.wire().read().text();
+                dc.wire().read().text();
 
                 {
                     long actualIndex = dc.index();
