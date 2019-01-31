@@ -41,8 +41,7 @@ public class ChronicleRollingIssueTest {
 
         Runnable appendRunnable = () -> {
             try (final ChronicleQueue writeQueue = ChronicleQueue
-                    .singleBuilder()
-                    .single(path)
+                    .singleBuilder(path)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY).build()) {
                 for (int i = 0; i < messages; i++) {
@@ -65,8 +64,7 @@ public class ChronicleRollingIssueTest {
         long start = System.currentTimeMillis();
         long lastIndex = 0;
         try (final ChronicleQueue queue = ChronicleQueue
-                .singleBuilder()
-                .single(path)
+                .singleBuilder(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY).build()) {
             ExcerptTailer tailer = queue.createTailer();
