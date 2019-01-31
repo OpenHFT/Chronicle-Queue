@@ -3689,6 +3689,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void checkReferenceCountingWhenRollingAndCheckFileDeletion() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
+        @SuppressWarnings("unused")
         MappedFile mappedFile1, mappedFile2, mappedFile3, mappedFile4;
 
         try (ChronicleQueue queue =

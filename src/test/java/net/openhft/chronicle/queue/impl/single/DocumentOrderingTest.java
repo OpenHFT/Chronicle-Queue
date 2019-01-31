@@ -50,6 +50,7 @@ public final class DocumentOrderingTest {
             // move time to beyond the next cycle
             clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
 
+            @SuppressWarnings("unused")
             final Future<RecordInfo> otherDocumentWriter = attemptToWriteDocument(queue);
 
             firstOpenDocument.close();
