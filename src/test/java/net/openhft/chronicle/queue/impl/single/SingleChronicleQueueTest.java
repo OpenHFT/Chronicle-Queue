@@ -3645,23 +3645,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     private long action(@NotNull final ExcerptTailer tailer1, @NotNull final RollCycle rollCycle) {
-
-        //  tailer1.direction(direction);
-        long readvalue = 0;
-        long seqNumRead = 0;
         try (final DocumentContext dc = tailer1.readingDocument()) {
-
-            readvalue = dc.wire().read("value").int64();
-            seqNumRead = dc.index();
+            return dc.wire().read("value").int64();
+        } finally {
+            rollCycle.toSequenceNumber(tailer1.index());
         }
-
-        final long nextSeq = rollCycle.toSequenceNumber(tailer1.index());
-        /*System.out.println("Return-value=" + readvalue +
-                ", seq=" + rollCycle.toSequenceNumber(seqNumRead) +
-                ", next-seq=" + nextSeq + "(" + Long.toHexString(nextSeq) + "x0)" + ",direction="
-                + tailer1.direction());*/
-
-        return readvalue;
     }
 
     @Test

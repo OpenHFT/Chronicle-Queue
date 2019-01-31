@@ -16,7 +16,6 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.OS;
@@ -53,15 +52,6 @@ public class SingleCQFormatTest {
     }
 
     private ThreadDump threadDump;
-
-    private static void expected(@NotNull ExcerptTailer tailer, String expected) {
-        try (DocumentContext dc = tailer.readingDocument()) {
-            assertTrue("No document found", dc.isPresent());
-            Bytes bytes2 = Bytes.elasticHeapByteBuffer(128);
-            dc.wire().copyTo(new TextWire(bytes2));
-            assertEquals(expected, bytes2.toString());
-        }
-    }
 
     @Test
     public void testEmptyDirectory() {

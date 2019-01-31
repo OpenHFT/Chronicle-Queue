@@ -36,7 +36,6 @@ import static org.junit.Assert.assertEquals;
 public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
 
     private static final int BYTES_LENGTH = 256;
-    private static final int BLOCK_SIZE = 256 << 20;
     private static final long INTERVAL_US = 10;
 
     @Ignore("long running test")

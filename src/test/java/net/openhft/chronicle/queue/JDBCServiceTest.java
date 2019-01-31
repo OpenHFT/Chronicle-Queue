@@ -82,17 +82,11 @@ public class JDBCServiceTest {
                 AtomicLong updates = new AtomicLong();
                 CountingJDBCResult countingJDBCResult = new CountingJDBCResult(queries, updates);
                 MethodReader methodReader = service.createReader(countingJDBCResult);
-                int counter = 0;
                 while (updates.get() < noUpdates) {
-                    if (methodReader.readOne())
-                        counter++;
-                    else
+                    if (!methodReader.readOne())
                         Thread.yield();
                 }
                 Closeable.closeQuietly(service);
-
-//            System.out.println(in.dump());
-//            System.out.println(out.dump());
 
                 long time = System.nanoTime() - start;
                 System.out.printf("Average time to write each update %.1f us, average time to perform each update %.1f us%n",
