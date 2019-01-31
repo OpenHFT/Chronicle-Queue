@@ -45,9 +45,11 @@ public class ChronicleReaderTest {
     private Path dataDir;
 
     private static long getCurrentQueueFileLength(final Path dataDir) throws IOException {
-        return new RandomAccessFile(
+        try (RandomAccessFile file = new RandomAccessFile(
                 Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
-                        orElseThrow(AssertionError::new).toFile(), "r").length();
+                        orElseThrow(AssertionError::new).toFile(), "r")) {
+            return file.length();
+        }
     }
 
     @Before
