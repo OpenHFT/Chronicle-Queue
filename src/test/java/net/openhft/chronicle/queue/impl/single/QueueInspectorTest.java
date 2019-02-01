@@ -40,25 +40,19 @@ public final class QueueInspectorTest {
 
     @Test
     public void shouldDetermineWritingProcessIdWhenDocumentIsNotComplete() throws IOException {
-
         try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
                 testBlockSize().
                 build()) {
-            final QueueInspector inspector = new QueueInspector(queue);
             final ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(37L, ValueOut::int64);
             try (final DocumentContext ctx = appender.writingDocument()) {
                 ctx.wire().write("foo").int32(17L);
-                final int writingThreadId = inspector.getWritingThreadId();
-// commentedVanillaMsgSequenceHandler out as fails on Mac OS
-//                assertThat(writingThreadId, is(Affinity.getThreadId()));
-                // we no longer write header before the document is closed
-                // assertThat(QueueInspector.isValidThreadId(writingThreadId), is(true));
             }
         }
     }
 
-    @Test
+    @SuppressWarnings("deprecation")
+	@Test
     public void shouldIndicateNoProcessIdWhenDocumentIsComplete() throws IOException {
         try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
                 testBlockSize().
