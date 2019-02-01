@@ -82,7 +82,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                         .fieldlessBinary(name)
                         .rollCycle(SMALL_DAILY)
                         .testBlockSize()
-                        .buffered(buffered)
+                        .writeBufferMode(buffered ? BufferMode.Asynchronous : BufferMode.None)
                         .build();
 
                 ExcerptAppender appender = wqueue.acquireAppender();

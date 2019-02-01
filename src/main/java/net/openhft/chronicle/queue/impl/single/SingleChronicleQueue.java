@@ -133,7 +133,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         storeFileListener = builder.storeFileListener();
         storeSupplier = new StoreSupplier();
         pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
-        isBuffered = builder.buffered();
+        isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
         path = builder.path();
         if (!readOnly)
             //noinspection ResultOfMethodCallIgnored
