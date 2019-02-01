@@ -1015,6 +1015,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         MappedFile.checkMappedFiles();
     }
 
+    @SuppressWarnings("unused")
     private static class MyData extends AbstractMarshallable {
         final String name;
         final long num;
