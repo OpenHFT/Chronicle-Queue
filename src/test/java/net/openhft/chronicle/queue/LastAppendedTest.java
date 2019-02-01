@@ -140,7 +140,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
         }
     }
 
-    interface Msg {
+    public interface Msg {
         void msg(String s);
     }
 }
