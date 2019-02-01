@@ -776,6 +776,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 new ReferenceCountedCache<>(MappedBytes::mappedBytes, SingleChronicleQueue.this::mappedFile);
         private boolean queuePathExists;
 
+        @SuppressWarnings("resource")
         @Override
         public WireStore acquire(int cycle, boolean createIfAbsent) {
 
