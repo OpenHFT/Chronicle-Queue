@@ -24,7 +24,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 final Msg msg = inQueue.acquireAppender()
                         .methodWriterBuilder(Msg.class)
                         .recordHistory(true)
-                        .build();
+                        .get();
 
                 msg.msg("somedata-0");
 
@@ -38,7 +38,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                     Msg out = outQueue.acquireAppender()
                             .methodWriterBuilder(Msg.class)
                             .recordHistory(true)
-                            .build();
+                            .get();
                     MethodReader methodReader = inQueue.createTailer()
                             .methodReader((Msg) out::msg);
 
@@ -90,7 +90,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 final Msg msg = inQueue.acquireAppender()
                         .methodWriterBuilder(Msg.class)
                         .recordHistory(true)
-                        .build();
+                        .get();
 
                 msg.msg("somedata-0");
                 msg.msg("somedata-1");
@@ -100,7 +100,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                     Msg out = outQueue.acquireAppender()
                             .methodWriterBuilder(Msg.class)
                             .recordHistory(true)
-                            .build();
+                            .get();
                     MethodReader methodReader = inQueue.createTailer().methodReader((Msg) out::msg);
 
                     // reads the somedata-0
