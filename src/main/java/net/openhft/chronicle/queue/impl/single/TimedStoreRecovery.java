@@ -63,6 +63,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
         out.write("timeStamp").int64forBinding(0);
     }
 
+    @SuppressWarnings("resource")
     @Override
     public long recoverAndWriteHeader(@NotNull Wire wire, long timeoutMS, final LongValue lastPosition, Sequence sequence) throws UnrecoverableTimeoutException {
         Bytes<?> bytes = wire.bytes();

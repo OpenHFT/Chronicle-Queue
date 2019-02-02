@@ -446,6 +446,7 @@ public class RollCycleMultiThreadStressTest {
             this.path = path;
         }
 
+        @SuppressWarnings("resource")
         @Override
         public Throwable call() throws Exception {
             ChronicleQueue queue0 = null;
