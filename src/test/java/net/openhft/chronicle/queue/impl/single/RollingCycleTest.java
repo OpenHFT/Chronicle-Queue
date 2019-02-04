@@ -15,7 +15,7 @@
  *
  */
 
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.BytesIn;
 import net.openhft.chronicle.bytes.BytesOut;
@@ -26,9 +26,13 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Random;
@@ -37,6 +41,11 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 
 public class RollingCycleTest {
+
+    @Before
+    public void sync() {
+        QueueFileShrinkManager.RUN_SYNCHRONOUSLY = true;
+    }
 
     @Test
     public void testRollCycle() {
