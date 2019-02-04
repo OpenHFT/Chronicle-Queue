@@ -145,9 +145,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Before
     public void before() {
+        QueueFileShrinkManager.RUN_SYNCHRONOUSLY = true;
         threadDump = new ThreadDump();
         threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
-        threadDump.ignore(QueueFileShrinkManager.THREAD_NAME);
         threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
