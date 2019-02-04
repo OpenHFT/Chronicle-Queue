@@ -106,9 +106,9 @@ public class RollingCycleTest {
                     "000001f0 31 35 30 37 39 90 45 c5  e6 f7 b9 1a 4b ea c3 2f 15079·E· ····K··/\n" +
                     "00000200 7f 17 5f 10 01 5c 6e 62  fc cc 5e cc da 8f 8f 8f ··_··\\nb ··^·····\n" +
                     "# position: 528, header: 2 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130540 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -154,9 +154,9 @@ public class RollingCycleTest {
                     "000001f0 31 35 30 37 39 90 45 c5  e6 f7 b9 1a 4b ea c3 2f 15079·E· ····K··/\n" +
                     "00000200 7f 17 5f 10 01 5c 6e 62  fc cc 5e cc da 8f 8f 8f ··_··\\nb ··^·····\n" +
                     "# position: 528, header: 2 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130540 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -250,9 +250,9 @@ public class RollingCycleTest {
                     "000001f0 45 c5 e6 f7 b9 1a 4b ea  c3 2f 7f 17 5f 10 01 5c E·····K· ·/··_··\\\n" +
                     "00000200 6e 62 fc cc 5e cc da                             nb··^··          \n" +
                     "# position: 519, header: 2 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130549 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -299,9 +299,9 @@ public class RollingCycleTest {
                     "000001f0 45 c5 e6 f7 b9 1a 4b ea  c3 2f 7f 17 5f 10 01 5c E·····K· ·/··_··\\\n" +
                     "00000200 6e 62 fc cc 5e cc da                             nb··^··          \n" +
                     "# position: 519, header: 2 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130549 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
