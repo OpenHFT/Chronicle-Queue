@@ -76,21 +76,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
-    /**
-     * @param config     test config
-     * @param wireType   the type of wire
-     * @param encryption
-     */
-    public SingleChronicleQueueTest(String config, @NotNull WireType wireType, boolean encryption) {
+    public SingleChronicleQueueTest(@NotNull WireType wireType, boolean encryption) {
         this.wireType = wireType;
         this.encryption = encryption;
     }
 
-    @Parameters(name = "{0}")
+    @Parameters(name = "wireType={0}, encrypted={1}")
     public static Collection<Object[]> data() {
         return Arrays.asList(//  {WireType.TEXT},
-                testConfiguration(WireType.BINARY, false),
-                testConfiguration(WireType.BINARY_LIGHT, false)
+                new Object[]{WireType.BINARY, false},
+                new Object[]{WireType.BINARY_LIGHT, false}
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
         );
@@ -152,6 +147,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void before() {
         threadDump = new ThreadDump();
         threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
+        threadDump.ignore(QueueFileShrinkManager.THREAD_NAME);
         threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
@@ -877,9 +873,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "test2: !short 1000\n" +
                         "# position: 412, header: 1 EOF\n" +
-                        "--- !!not-ready-meta-data! #binary\n" +
+                        "--- !!not-ready-meta-data!\n" +
                         "...\n" +
-                        "# 130656 bytes remaining\n" +
+                        "# 0 bytes remaining\n" +
                         "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
@@ -915,9 +911,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "test2: !short 1001\n" +
                         "# position: 412, header: 1 EOF\n" +
-                        "--- !!not-ready-meta-data! #binary\n" +
+                        "--- !!not-ready-meta-data!\n" +
                         "...\n" +
-                        "# 130656 bytes remaining\n" +
+                        "# 0 bytes remaining\n" +
                         "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
@@ -953,9 +949,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "test2: !short 1002\n" +
                         "# position: 412, header: 1 EOF\n" +
-                        "--- !!not-ready-meta-data! #binary\n" +
+                        "--- !!not-ready-meta-data!\n" +
                         "...\n" +
-                        "# 130656 bytes remaining\n" +
+                        "# 0 bytes remaining\n" +
                         "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
@@ -991,9 +987,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "test2: !short 1003\n" +
                         "# position: 412, header: 1 EOF\n" +
-                        "--- !!not-ready-meta-data! #binary\n" +
+                        "--- !!not-ready-meta-data!\n" +
                         "...\n" +
-                        "# 130656 bytes remaining\n" +
+                        "# 0 bytes remaining\n" +
                         "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
@@ -1029,9 +1025,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "test2: !short 1004\n" +
                         "# position: 412, header: 1 EOF\n" +
-                        "--- !!not-ready-meta-data! #binary\n" +
+                        "--- !!not-ready-meta-data!\n" +
                         "...\n" +
-                        "# 130656 bytes remaining\n" +
+                        "# 0 bytes remaining\n" +
                         "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
@@ -1103,9 +1099,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1141,9 +1137,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1179,9 +1175,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1217,9 +1213,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1255,9 +1251,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1331,9 +1327,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1369,9 +1365,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1407,9 +1403,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1445,9 +1441,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1483,9 +1479,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
                     "# position: 407, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130661 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -4103,9 +4099,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         if (!passed) {
             fail(builder.toString());
-        }/* else {
-            System.out.println(builder.toString());
-        }*/
+        }
     }
 
     private AtomicLong setTime(AtomicLong clock, long newValue) {

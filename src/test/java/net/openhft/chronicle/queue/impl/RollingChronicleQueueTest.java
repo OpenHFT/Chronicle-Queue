@@ -91,9 +91,9 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "\"3. some more text\"\n" +
                     "# position: 580, header: 2 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130488 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -125,9 +125,9 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "\"4. some text - first cycle\"\n" +
                     "# position: 544, header: 0 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130524 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -202,9 +202,9 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "\"3. some more text\"\n" +
                     "# position: 576, header: 2 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130492 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -236,9 +236,9 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "\"4. some text - first cycle\"\n" +
                     "# position: 543, header: 0 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
+                    "--- !!not-ready-meta-data!\n" +
                     "...\n" +
-                    "# 130525 bytes remaining\n" +
+                    "# 0 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

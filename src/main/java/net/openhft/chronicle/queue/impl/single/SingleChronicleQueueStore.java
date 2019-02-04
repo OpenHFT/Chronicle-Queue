@@ -321,7 +321,7 @@ public class SingleChronicleQueueStore implements WireStore {
         // just in case we are about to release this
         if (wire.bytes().tryReserve()) {
             wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
-            if (Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4))) {
+            if (wire.bytes().writePosition() > 4 && Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4))) {
                 // only if we just written EOF
                 QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
             }

@@ -28,7 +28,8 @@ import java.util.concurrent.ExecutorService;
 public enum QueueFileShrinkManager {
     ;
     private static final Boolean DISABLE_QUEUE_FILE_SHRINKING = Boolean.getBoolean("chronicle.queue.disableFileShrinking");
-    private static final ExecutorService executor = Threads.acquireExecutorService("queue-file-shrink-daemon", 1, true);
+    public static final String THREAD_NAME = "queue-file-shrink-daemon";
+    private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
 
     public static void scheduleShrinking(File queueFile, long writePos) {
         if (DISABLE_QUEUE_FILE_SHRINKING)
