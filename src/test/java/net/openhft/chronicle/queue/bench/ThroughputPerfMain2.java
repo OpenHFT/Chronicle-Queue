@@ -23,6 +23,7 @@ public class ThroughputPerfMain2 {
     static final String path = System.getProperty("path", OS.TMP);
     static NativeBytesStore nbs;
 
+    @SuppressWarnings("deprecation")
     public static void main(String[] args) {
         String base = path + "/delete-" + System.nanoTime() + ".me";
         long start = System.nanoTime();
