@@ -21,7 +21,7 @@ public class PretoucherSoakTest {
                 .rollCycle(RollCycles.TEST_SECONDLY).build();
         ExcerptAppender outQueueAppender = outQueue.acquireAppender();
 
-        HeartbeatListener heartbeatWriter = outQueueAppender.methodWriterBuilder(HeartbeatListener.class).methodWriterListener((m, a) -> validateAll(a)).recordHistory(true).build();
+        HeartbeatListener heartbeatWriter = outQueueAppender.methodWriterBuilder(HeartbeatListener.class).methodWriterListener((m, a) -> validateAll(a)).get();
 
         Monitor.addPeriodicUpdateSource(10, () -> currentTimeMillis -> {
             outQueueAppender.pretouch();

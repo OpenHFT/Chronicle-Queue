@@ -71,7 +71,7 @@ public final class MessageHistoryTest {
 
     private void generateTestData(final ChronicleQueue inputQueue, final ChronicleQueue outputQueue) {
         final First first = inputQueue.acquireAppender().
-                methodWriterBuilder(First.class).recordHistory(true).build();
+                methodWriterBuilder(First.class).recordHistory(true).get();
         first.say("one");
         first.say("two");
         first.say("three");
