@@ -3225,7 +3225,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final SingleChronicleQueueBuilder builder = binary(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY).timeProvider(timeProvider);
         final RollingChronicleQueue queue = builder.build();
-        final ExcerptAppender appender = queue.createAppender();
+        final ExcerptAppender appender = queue.acquireAppender();
 
         long[] indexs = new long[10];
         for (int i = 0; i < indexs.length; i++) {
