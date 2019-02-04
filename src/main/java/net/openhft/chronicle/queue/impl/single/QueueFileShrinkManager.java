@@ -35,14 +35,20 @@ public enum QueueFileShrinkManager {
         if (DISABLE_QUEUE_FILE_SHRINKING)
             return;
         executor.submit(() -> {
-            try {
-                Jvm.debug().on(QueueFileShrinkManager.class, "Shrinking " + queueFile + " to " + writePos);
-                RandomAccessFile raf = new RandomAccessFile(queueFile, "rw");
+            while (true) {
+                try {
+                    Jvm.debug().on(QueueFileShrinkManager.class, "Shrinking " + queueFile + " to " + writePos);
+                    RandomAccessFile raf = new RandomAccessFile(queueFile, "rw");
 
-                raf.setLength(writePos);
-                raf.close();
-            } catch (IOException ex) {
-                Jvm.warn().on(QueueFileShrinkManager.class, "Failed to shrink file " + queueFile, ex);
+                    raf.setLength(writePos);
+                    raf.close();
+                } catch (IOException ex) {
+                    // on macrosux windows, keep retrying until the file is unmapped
+                    if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open"))
+                        continue;
+                    Jvm.warn().on(QueueFileShrinkManager.class, "Failed to shrink file " + queueFile, ex);
+                }
+                break;
             }
         });
     }
