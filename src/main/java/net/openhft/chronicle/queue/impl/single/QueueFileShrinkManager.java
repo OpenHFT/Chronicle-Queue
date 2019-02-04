@@ -35,7 +35,7 @@ public enum QueueFileShrinkManager {
             return;
         executor.submit(() -> {
             try {
-                Jvm.warn().on(QueueFileShrinkManager.class, "Shrinking " + queueFile + " to " + writePos);
+                Jvm.debug().on(QueueFileShrinkManager.class, "Shrinking " + queueFile + " to " + writePos);
                 RandomAccessFile raf = new RandomAccessFile(queueFile, "rw");
 
                 raf.setLength(writePos);
