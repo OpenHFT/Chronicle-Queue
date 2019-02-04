@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -32,6 +33,18 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 queue.close();
             }
         }
+    }
+
+    @Test
+    public void testEntryCount() {
+        SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build();
+        assertEquals(0, queue.entryCount());
+
+        try (DocumentContext dc = queue.acquireAppender().writingDocument()) {
+            dc.wire().write("test").text("value");
+        }
+
+        assertEquals(1, queue.entryCount());
     }
 
     @Test

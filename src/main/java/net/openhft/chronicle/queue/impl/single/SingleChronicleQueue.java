@@ -632,15 +632,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return rollCycle().toIndex(cycle, 0);
     }
 
-    /**
-     * Counts the number of messages in this queue instance.
-     *
-     * @return the number of document excerpts
-     */
+    @Override
     public long entryCount() {
         final ExcerptTailer tailer = createTailer();
         tailer.toEnd();
-        return countExcerpts(firstIndex(), tailer.index());
+        long lastIndex = tailer.index();
+        if (lastIndex == 0)
+            return 0;
+        return countExcerpts(firstIndex(), lastIndex);
     }
 
     @Nullable

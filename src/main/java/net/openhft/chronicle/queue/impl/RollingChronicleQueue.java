@@ -54,6 +54,13 @@ public interface RollingChronicleQueue extends ChronicleQueue, StoreReleasable {
     int lastCycle();
 
     /**
+     * Counts the number of messages in this queue instance.
+     *
+     * @return the number of document excerpts
+     */
+    long entryCount();
+
+    /**
      * the next available cycle, no cycle will be created by this method, this method is typically
      * used by a tailer to jump to the next cycle when the cycles are not adjacent.
      *
