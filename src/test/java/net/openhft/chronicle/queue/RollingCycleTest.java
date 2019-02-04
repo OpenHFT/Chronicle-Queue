@@ -349,7 +349,6 @@ public class RollingCycleTest {
                     "00000200 6e 62 fc cc 5e cc da                             nb··^··          \n" +
                     "...\n" +
                     "# 130549 bytes remaining\n";
-            assertEquals(expectedEager, queue.dump());
 
             System.out.println("Wrote: " + numWritten + " messages");
 
@@ -375,6 +374,9 @@ public class RollingCycleTest {
             assertFalse(currentPosTailer.readBytes(reusableData));
 
             System.out.println("Wrote " + numWritten + " Read " + numRead);
+
+            Thread.yield();
+            assertEquals(expectedEager, queue.dump());
             try {
                 IOTools.deleteDirWithFiles(basePath, 2);
             } catch (IORuntimeException e) {

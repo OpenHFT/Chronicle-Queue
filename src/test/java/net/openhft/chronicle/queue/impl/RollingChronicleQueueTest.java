@@ -274,9 +274,11 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "some more text\n" +
                     "...\n" +
                     "# 130505 bytes remaining\n";
-            assertEquals(expectedEager, q.dump());
 
             assertEquals(5, q.countExcerpts(start, end));
+
+            Thread.yield();
+            assertEquals(expectedEager, q.dump());
         }
     }
 

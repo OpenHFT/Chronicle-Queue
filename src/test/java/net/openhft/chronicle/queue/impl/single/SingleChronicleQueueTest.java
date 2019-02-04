@@ -813,8 +813,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             --- !!not-ready-meta-data! #binary
             ...
              */
-            assertEquals(expectedAppendAndReadWithRolling(), queue.dump());
-
             assumeFalse(encryption);
             assumeFalse(wireType == WireType.DEFAULT_ZERO_BINARY);
             final ExcerptTailer tailer = queue.createTailer().toStart();
@@ -830,6 +828,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertTrue("i2 : " + i, condition2);
                 assertEquals(cycle + i, tailer.cycle());
             }
+
+            Thread.yield();
+            assertEquals(expectedAppendAndReadWithRolling(), queue.dump());
         }
     }
 
