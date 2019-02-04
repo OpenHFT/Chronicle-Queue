@@ -190,6 +190,7 @@ public interface ChronicleQueue extends Closeable {
 
     int sourceId();
 
+    @SuppressWarnings("unchecked")
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
         Class[] interfaces = ObjectUtils.addAll(tClass, additional);
 
