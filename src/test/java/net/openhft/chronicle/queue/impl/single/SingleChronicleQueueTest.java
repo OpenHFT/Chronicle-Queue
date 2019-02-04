@@ -591,6 +591,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         assertTrue(dir.delete());
     }
 
+
     @Test
     public void testReadingLessBytesThanWritten() {
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
@@ -2848,8 +2849,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     /**
-     * if one appender if much further ahead than the other, then the new append should jump
-     * straight to the end rather than attempting to write a positions that are already occupied
+     * if one appender if much further ahead than the other, then the new append should jump straight to the end rather than attempting to write a
+     * positions that are already occupied
      */
     @Test
     public void testAppendedSkipToEnd() {
