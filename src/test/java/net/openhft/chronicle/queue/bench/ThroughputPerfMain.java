@@ -94,6 +94,7 @@ public class ThroughputPerfMain {
         IOTools.deleteDirWithFiles(base, 2);
     }
 
+    @SuppressWarnings("restriction")
     private static long writeMessages(long address, long canWrite, int writeCount) {
         long length = 0;
         long count = 0;

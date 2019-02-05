@@ -1054,6 +1054,7 @@ public class SingleChronicleQueueExcerpts {
             return net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
         }
 
+        @SuppressWarnings("restriction")
         @Override
         public boolean peekDocument() {
             int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
