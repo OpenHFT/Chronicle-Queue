@@ -119,7 +119,6 @@ public class LongRunTestMain {
         }
 
         @Override
-        @SuppressWarnings({"rawtypes", "No way to provide generic type and override WriteBytesMarshallable."})
         public void writeMarshallable(@NotNull final BytesOut bytes) {
             bytes.writeLong(this.logEntry.getSessionId());
             bytes.writeInt(this.logEntry.getLogLevel());
