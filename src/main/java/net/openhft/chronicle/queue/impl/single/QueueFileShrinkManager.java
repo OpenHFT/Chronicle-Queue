@@ -32,7 +32,7 @@ public enum QueueFileShrinkManager {
     public static final String THREAD_NAME = "queue-file-shrink-daemon";
     static boolean RUN_SYNCHRONOUSLY = false;
     private static final Logger LOG = LoggerFactory.getLogger(QueueFileShrinkManager.class);
-    private static final boolean DISABLE_QUEUE_FILE_SHRINKING = !OS.isWindows() && Boolean.getBoolean("chronicle.queue.disableFileShrinking");
+    private static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
     private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
 
     public static void scheduleShrinking(File queueFile, long writePos) {
