@@ -1197,8 +1197,6 @@ public class SingleChronicleQueueExcerpts {
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
-            if (bytes.readPosition() == 132882)
-                System.out.println("header readPosition=" + bytes.readPosition());
 
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
