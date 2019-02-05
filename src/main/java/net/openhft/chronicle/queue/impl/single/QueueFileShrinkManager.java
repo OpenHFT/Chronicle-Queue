@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.threads.Threads;
 
 import java.io.File;
@@ -29,7 +30,7 @@ public enum QueueFileShrinkManager {
     ;
     public static final String THREAD_NAME = "queue-file-shrink-daemon";
     static boolean RUN_SYNCHRONOUSLY = false;
-    private static final boolean DISABLE_QUEUE_FILE_SHRINKING = Boolean.getBoolean("chronicle.queue.disableFileShrinking");
+    private static final boolean DISABLE_QUEUE_FILE_SHRINKING = !OS.isWindows() && Boolean.getBoolean("chronicle.queue.disableFileShrinking");
     private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
 
     public static void scheduleShrinking(File queueFile, long writePos) {
