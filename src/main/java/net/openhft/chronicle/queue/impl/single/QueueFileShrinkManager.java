@@ -17,9 +17,10 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.threads.Threads;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +31,7 @@ public enum QueueFileShrinkManager {
     ;
     public static final String THREAD_NAME = "queue-file-shrink-daemon";
     static boolean RUN_SYNCHRONOUSLY = false;
+    private static final Logger LOG = LoggerFactory.getLogger(QueueFileShrinkManager.class);
     private static final boolean DISABLE_QUEUE_FILE_SHRINKING = !OS.isWindows() && Boolean.getBoolean("chronicle.queue.disableFileShrinking");
     private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
 
@@ -39,7 +41,7 @@ public enum QueueFileShrinkManager {
         Runnable task = () -> {
             while (true) {
                 try {
-                    Jvm.debug().on(QueueFileShrinkManager.class, "Shrinking " + queueFile + " to " + writePos);
+                    LOG.debug("Shrinking {} to {}", queueFile, writePos);
                     RandomAccessFile raf = new RandomAccessFile(queueFile, "rw");
 
                     raf.setLength(writePos);
@@ -48,7 +50,7 @@ public enum QueueFileShrinkManager {
                     // on macrosux windows, keep retrying until the file is unmapped
                     if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open"))
                         continue;
-                    Jvm.warn().on(QueueFileShrinkManager.class, "Failed to shrink file " + queueFile, ex);
+                    LOG.warn("Failed to shrink file " + queueFile, ex);
                 }
                 break;
             }
