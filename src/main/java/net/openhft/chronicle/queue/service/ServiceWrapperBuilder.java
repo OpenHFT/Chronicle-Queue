@@ -177,6 +177,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         return reader;
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     public <T> T inputWriter(Class<T> tClass) {
         ChronicleQueue queue = inputQueue();
