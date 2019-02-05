@@ -318,6 +318,10 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void writeEOF(@NotNull Wire wire, long timeoutMS) {
+        String fileName = mappedFile.file().getAbsolutePath();
+        Jvm.warn().on(getClass(), "About to write EOF file=" + fileName);
+
+
         // just in case we are about to release this
         if (wire.bytes().tryReserve()) {
             wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
@@ -327,15 +331,15 @@ public class SingleChronicleQueueStore implements WireStore {
             }
             wire.bytes().release();
         } else {
-            Jvm.warn().on(getClass(), "Tried to writeEOF to as it was being closed, mappped-Bytes == wire.bytes => " + (wire.bytes() == mappedBytes));
+            Jvm.warn().on(getClass(), "Tried to writeEOF to as it was being closed, mapppedBytes == wire.bytes => " + (wire.bytes() == mappedBytes) + ", file=" + fileName);
 
             try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
                 Wire wire0 = WireType.valueOf(wire).apply(bytes);
                 wire0.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
                 // todo change to info later
-                Jvm.warn().on(getClass(), "Successfully wrote EOF");
+                Jvm.warn().on(getClass(), "Successfully wrote EOF file=" + fileName);
             } catch (Exception e) {
-                Jvm.warn().on(getClass(), "unable to write the EOF", e);
+                Jvm.warn().on(getClass(), "unable to write the EOF file=" + fileName, e);
             }
 
         }
