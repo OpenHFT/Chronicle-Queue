@@ -589,6 +589,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return isClosed.get();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void close() {
 

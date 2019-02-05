@@ -64,6 +64,7 @@ public class RollCycleMultiThreadTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testRead2() throws Exception {
         File path = DirectoryUtils.tempDir("testRead2");
