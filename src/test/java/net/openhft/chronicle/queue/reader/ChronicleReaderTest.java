@@ -6,6 +6,7 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.junit.After;
@@ -193,7 +194,7 @@ public class ChronicleReaderTest {
     public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
         basicReader().
                 // matches goodbye, but not hello or history
-                        withInclusionRegex("goodbye").
+                withInclusionRegex("goodbye").
                 asMethodReader().
                 execute();
         assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(false));
@@ -377,6 +378,25 @@ public class ChronicleReaderTest {
         assertThat(pollMethod.invocationCount, is(expectedPollCountWhenDocumentIsEmpty));
     }
 
+    @Test
+    public void methodReader() {
+        Path path = DirectoryUtils.tempDir("methodReader").toPath();
+        path.toFile().mkdirs();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).testBlockSize().build()) {
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final MethodWriterBuilder<ComplexEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(ComplexEvents.class);
+            methodWriterBuilder.recordHistory(false);
+            final ComplexEvents events = methodWriterBuilder.build();
+
+            for (int i = 0; i < 24; i++) {
+                events.complex(new Complex(i, i % 2 == 0 ? "hello" : "goodbye"));
+            }
+        }
+
+        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        assertFalse(capturedOutput.isEmpty());
+    }
+
     private String findAnExistingIndex() {
         basicReader().execute();
         final List<String> indicies = capturedOutput.stream().
@@ -399,6 +419,23 @@ public class ChronicleReaderTest {
     @FunctionalInterface
     private interface StringEvents {
         void say(final String msg);
+    }
+
+    @FunctionalInterface
+    private interface ComplexEvents {
+        void complex(final IComplex complex);
+    }
+
+    private interface IComplex { }
+
+    private static class Complex extends AbstractMarshallable implements IComplex {
+        final int age;
+        final String name;
+
+        private Complex(int age, String name) {
+            this.age = age;
+            this.name = name;
+        }
     }
 
     private static final class RecordCounter implements Consumer<String> {

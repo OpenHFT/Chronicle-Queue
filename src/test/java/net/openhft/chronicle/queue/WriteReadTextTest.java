@@ -57,6 +57,7 @@ public class WriteReadTextTest {
         doTest(CONSTRUCTED);
     }
 
+    // this takes the longest time
     @Test
     public void testExtremelyLarge() {
         doTest(EXTREMELY_LARGE);

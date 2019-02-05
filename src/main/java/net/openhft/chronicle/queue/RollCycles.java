@@ -36,6 +36,7 @@ public enum RollCycles implements RollCycle {
     XLARGE_DAILY(/*----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 128 << 10, 256), // 4 trillion entries per day
     HUGE_DAILY(/*------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 512 << 10, 1024), // 256 trillion entries per day
     HUGE_DAILY_XSPARSE("yyyyMMdd", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20), // 256 trillion entries per day with super-sparse indexing
+    //TEST_NOINDEX
     ;
 
     final String format;
@@ -45,12 +46,20 @@ public enum RollCycles implements RollCycle {
     final int indexSpacing;
     final long sequenceMask;
 
+    /**
+     *
+     * @param format
+     * @param length length of cycle in ms
+     * @param indexCount number of entries in the index block? What happens if we go over? xxxx
+     * @param indexSpacing how often we attempt to index xxxx
+     */
     RollCycles(String format, int length, int indexCount, int indexSpacing) {
         this.format = format;
         this.length = length;
         this.indexCount = Maths.nextPower2(indexCount, 8);
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
         cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
+        assert cycleShift >= 32 : "cycles are represented as ints";
         sequenceMask = (1L << cycleShift) - 1;
     }
 

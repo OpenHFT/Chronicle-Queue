@@ -496,7 +496,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             final LongArrayValues index2indexArr = getIndex2index(wire);
 
             int used2 = Maths.toUInt31(index2indexArr.getUsed());
-            assert used2 > 0;
+            assert used2 > 0;//xxxxx
             Outer:
             for (int index2 = used2 - 1; index2 >= 0; index2--) {
                 long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);

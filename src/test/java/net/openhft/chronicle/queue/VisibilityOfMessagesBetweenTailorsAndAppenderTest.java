@@ -32,17 +32,16 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
                 .rollCycle(RollCycles.MINUTELY)
                 .build();
 
+        int max = 1_000_000;
         ExecutorService e1 = Executors.newSingleThreadExecutor();
-        e1.submit(() -> {
+        Future f1 = e1.submit(() -> {
             ExcerptAppender excerptAppender = x.acquireAppender();
-            for (long i = 0; i < 1_000_000; i++) {
+            for (long i = 0; i < max; i++) {
                 try (DocumentContext dc = excerptAppender.writingDocument()) {
                     dc.wire().getValueOut().int64(i);
                 }
                 lastWrittenIndex = excerptAppender.lastIndexAppended();
-
             }
-
         });
 
         ExecutorService e2 = Executors.newSingleThreadExecutor();
@@ -53,11 +52,15 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
                 long i = lastWrittenIndex;
                 if (i != Long.MIN_VALUE)
                     if (!tailer.moveToIndex(i))
-                        throw new ExecutionException("non atomic, index=" + Long.toHexString(i), null);
+                        throw new IllegalStateException("non atomic, index=" + Long.toHexString(i), null);
+                if (i == max - 1)
+                    break;
             }
+            return;
         });
 
         try {
+            // this won't necessarily run for full number of items
             f2.get(5, TimeUnit.SECONDS);
         } catch (TimeoutException ignore) {
 

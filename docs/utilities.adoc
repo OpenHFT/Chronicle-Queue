@@ -166,6 +166,11 @@ usage: ChronicleReaderMain [-d <directory>] [-e <exclude-regex>] [-f]
     [-h] [-i <include-regex>] [-m <max-history>] [-n <from-index>] [-r]
 ....
 
+
+history reader
+
+
+freq reader
 '''
 
 <<../README.adoc#,Back to Chronicle Queue>>

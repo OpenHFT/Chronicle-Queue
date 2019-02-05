@@ -1,7 +1,9 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.time.TimeProvider;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -49,6 +51,27 @@ public class RollCyclesTest {
 
     private static TimeProvider minusOneMillisecond(final TimeProvider delegate) {
         return () -> delegate.currentTimeMillis() - 1;
+    }
+
+    @Test @Ignore
+    public void numbers() {
+        long maxSequence = cycle.sequenceMask;
+        // need to cut this in half so it is unsigned
+        long maxCycleL = (1L << (64 - cycle.cycleShift)) - 1;
+        int maxCycle = (int)Maths.toUInt32(maxCycleL);
+        long maxIndexL = -1 ^ maxCycleL;
+        System.out.println(Integer.toHexString(maxCycle) + "_" + Long.toHexString(cycle.sequenceMask));
+        String cycleSequenceMask = Integer.toHexString(maxCycle) + "_" + Long.toHexString(cycle.sequenceMask);
+        testConversion(0, 0);
+        testConversion(maxCycle, 0);
+        testConversion(0, maxSequence);
+        testConversion(maxCycle, maxSequence);
+    }
+
+    private void testConversion(int cycleNumber, long sequenceNumber) {
+        long index = cycle.toIndex(cycleNumber, sequenceNumber);
+        assertEquals(cycleNumber, cycle.toCycle(index));
+        assertEquals(sequenceNumber, cycle.toSequenceNumber(index));
     }
 
     @Test
