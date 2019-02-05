@@ -44,7 +44,7 @@ public class SingleChroniclePerfMain {
         Histogram readHdr = new Histogram(30, 7);
         String file = OS.TARGET + "/deleteme-" + System.nanoTime();
         try (ChronicleQueue chronicle = single(file).blockSize(64 << 20).build()) {
-            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptAppender appender = chronicle.acquireAppender();
             UncheckedBytes bytes = new UncheckedBytes(NoBytesStore.NO_BYTES);
             for (int i = 0; i < count; i++) {
                 long start = System.nanoTime();
