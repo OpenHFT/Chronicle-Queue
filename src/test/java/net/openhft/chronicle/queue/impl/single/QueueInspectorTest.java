@@ -52,7 +52,7 @@ public final class QueueInspectorTest {
     }
 
     @SuppressWarnings("deprecation")
-	@Test
+    @Test
     public void shouldIndicateNoProcessIdWhenDocumentIsComplete() throws IOException {
         try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
                 testBlockSize().
