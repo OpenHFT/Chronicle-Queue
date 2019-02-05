@@ -327,7 +327,17 @@ public class SingleChronicleQueueStore implements WireStore {
             }
             wire.bytes().release();
         } else {
-            Jvm.debug().on(getClass(), "Tried to writeEOF to as it was being closed");
+            Jvm.warn().on(getClass(), "Tried to writeEOF to as it was being closed, mappped-Bytes == wire.bytes => " + (wire.bytes() == mappedBytes));
+
+            try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
+                Wire wire0 = WireType.valueOf(wire).apply(bytes);
+                wire0.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+                // todo change to info later
+                Jvm.warn().on(getClass(), "Successfully wrote EOF");
+            } catch (Exception e) {
+                Jvm.warn().on(getClass(), "unable to write the EOF", e);
+            }
+
         }
     }
 

@@ -122,13 +122,10 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * @param padToCacheLines the default for chronicle queue is Padding.SMART, which
-         *                        automatically pads all method calls other than {@link
-         *                        StoreAppender#writeBytes(net.openhft.chronicle.bytes.WriteBytesMarshallable)}
-         *                        and   {@link StoreAppender#writeText(java.lang.CharSequence)}.
-         *                        Which can not be padded with out changing the message format, The
-         *                        reason we pad is to ensure that a message header does not straggle
-         *                        a cache line.
+         * @param padToCacheLines the default for chronicle queue is Padding.SMART, which automatically pads all method calls other than {@link
+         *                        StoreAppender#writeBytes(net.openhft.chronicle.bytes.WriteBytesMarshallable)} and   {@link
+         *                        StoreAppender#writeText(java.lang.CharSequence)}. Which can not be padded with out changing the message format, The
+         *                        reason we pad is to ensure that a message header does not straggle a cache line.
          */
         @Override
         public void padToCacheAlign(Padding padToCacheLines) {
@@ -175,9 +172,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * pretouch() has to be run on the same thread, as the thread that created the appender.
-         * If you want to use pretouch() in another thread, you must first create or have an appender that
-         * was created on this thread, and then use this appender to call the pretouch()
+         * pretouch() has to be run on the same thread, as the thread that created the appender. If you want to use pretouch() in another thread, you
+         * must first create or have an appender that was created on this thread, and then use this appender to call the pretouch()
          */
         @Override
         public void pretouch() {
@@ -464,9 +460,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * Write bytes at an index, but only if the index is at the end of the chronicle.
-         * If index is after the end of the chronicle, throw an IllegalStateException. If the
-         * index is before the end of the chronicle then do not change the state of the chronicle.
+         * Write bytes at an index, but only if the index is at the end of the chronicle. If index is after the end of the chronicle, throw an
+         * IllegalStateException. If the index is before the end of the chronicle then do not change the state of the chronicle.
          * <p>Thread-safe</p>
          *
          * @param index index to write at. Only if index is at the end of the chronicle will the bytes get written
@@ -597,9 +592,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * Write an EOF marker on the current cycle if it is about to roll. It would do this any way
-         * if a new message was written, but this doesn't create a new cycle or add a message.
-         * Only used by tests.
+         * Write an EOF marker on the current cycle if it is about to roll. It would do this any way if a new message was written, but this doesn't
+         * create a new cycle or add a message. Only used by tests.
          */
         void writeEndOfCycleIfRequired() {
             if (wire != null && queue.cycle() != cycle) {
@@ -694,8 +688,7 @@ public class SingleChronicleQueueExcerpts {
             }
 
             /**
-             * Call this if you have detected an error condition and you want the context
-             * rolled back when it is closed, rather than committed
+             * Call this if you have detected an error condition and you want the context rolled back when it is closed, rather than committed
              */
             @Override
             public void rollbackOnClose() {
@@ -1203,6 +1196,8 @@ public class SingleChronicleQueueExcerpts {
             Wire wire = wire();
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
+            if (bytes.readPosition() == 132882)
+                System.out.println("header readPosition=" + bytes.readPosition());
 
             switch (wire.readDataHeader(includeMetaData)) {
                 case NONE:
@@ -1431,9 +1426,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * gives approximately the last index, can not be relied on as the last index may have
-         * changed just after this was called. For this reason, this code is not in queue as it
-         * should only be an internal method
+         * gives approximately the last index, can not be relied on as the last index may have changed just after this was called. For this reason,
+         * this code is not in queue as it should only be an internal method
          *
          * @return the last index at the time this method was called, or Long.MIN_VALUE if none.
          */
@@ -1665,8 +1659,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * Can be used to manually release resources when this
-         * StoreTailer is no longer used.
+         * Can be used to manually release resources when this StoreTailer is no longer used.
          */
         public void releaseResources() {
             queue.removeCloseListener(this);
