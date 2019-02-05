@@ -181,18 +181,13 @@ public class BenchmarkMain {
     private static long readMessage(Bytes<?> bytes) {
         Jvm.safepoint();
         long start = bytes.readLong();
-        if (true) {
-            long rp = bytes.readPosition();
-            long rl = bytes.readLimit();
-            long addr = bytes.addressForRead(rp);
-            long addrEnd = bytes.addressForRead(rl);
-            Memory memory = OS.memory();
-            for (addr += 8; addr + 7 < addrEnd; addr += 8)
-                memory.readLong(addr);
-        } else {
-            while (bytes.readRemaining() > 7)
-                bytes.readLong();
-        }
+        long rp = bytes.readPosition();
+        long rl = bytes.readLimit();
+        long addr = bytes.addressForRead(rp);
+        long addrEnd = bytes.addressForRead(rl);
+        Memory memory = OS.memory();
+        for (addr += 8; addr + 7 < addrEnd; addr += 8)
+            memory.readLong(addr);
         Jvm.safepoint();
         return start;
     }
@@ -200,21 +195,14 @@ public class BenchmarkMain {
     private static void writeMessage(Wire wire, int messageSize) {
         Bytes<?> bytes = wire.bytes();
         long wp = bytes.writePosition();
-        // TODO Optimise wire to give similar performance.
-        if (false) {
-            for (int i = 0; i < messageSize; i += 8)
-                bytes.writeLong(0L);
-
-        } else {
-            long addr = bytes.addressForWrite(wp);
-            Memory memory = OS.memory();
-            for (int i = 0; i < messageSize; i += 16) {
-                memory.writeLong(addr + i, 0L);
-                memory.writeLong(addr + i + 8, 0L);
-            }
-
-            bytes.writeSkip(messageSize);
+        long addr = bytes.addressForWrite(wp);
+        Memory memory = OS.memory();
+        for (int i = 0; i < messageSize; i += 16) {
+            memory.writeLong(addr + i, 0L);
+            memory.writeLong(addr + i + 8, 0L);
         }
+
+        bytes.writeSkip(messageSize);
         bytes.writeLong(wp, System.nanoTime());
     }
 }
