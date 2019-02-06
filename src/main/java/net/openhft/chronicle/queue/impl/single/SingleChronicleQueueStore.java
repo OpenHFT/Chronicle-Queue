@@ -328,8 +328,10 @@ public class SingleChronicleQueueStore implements WireStore {
             if (wire.bytes().writePosition() > 4 && Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4))) {
                 // only if we just written EOF
                 QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
+                Jvm.warn().on(getClass(), "Successfully wrote EOF file=" + fileName + " and scheduled the Shrink");
             }
             wire.bytes().release();
+
         } else {
             Jvm.warn().on(getClass(), "Tried to writeEOF to as it was being closed, mapppedBytes == wire.bytes => " + (wire.bytes() == mappedBytes) + ", file=" + fileName);
 
