@@ -284,6 +284,10 @@ public class SingleChronicleQueueExcerpts {
 
             // only set the cycle after the wire is set.
             this.cycle = cycle;
+
+            if (store == null)
+                return;
+
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
@@ -295,18 +299,18 @@ public class SingleChronicleQueueExcerpts {
             WireType wireType = queue.wireType();
             {
                 Wire oldw = this.wire;
-                this.wire = wireType.apply(store.bytes());
+                this.wire = store == null ? null : wireType.apply(store.bytes());
                 closableResources.wireReference = this.wire.bytes();
-                assert wire != oldw;
+                assert wire != oldw || wire == null;
                 if (oldw != null) {
                     releaseWireResources(oldw);
                 }
             }
             {
                 Wire old = this.wireForIndex;
-                this.wireForIndex = wireType.apply(store.bytes());
+                this.wireForIndex = store == null ? null : wireType.apply(store.bytes());
                 closableResources.wireForIndexReference = wireForIndex.bytes();
-                assert wire != old;
+                assert wire != old || wire == null;
                 if (old != null) {
                     releaseWireResources(old);
                 }
@@ -595,6 +599,11 @@ public class SingleChronicleQueueExcerpts {
             int lastCycle = queue.lastCycle;
 
             if (lastCycle != cycle && lastCycle > this.cycle) {
+                for (int interCycle = this.cycle + 1; interCycle < lastCycle; interCycle++) {
+                    setCycle2(interCycle, false);
+                    if (wire != null)
+                        store.writeEOF(wire, timeoutMS());
+                }
                 setCycle2(lastCycle, false);
                 rollCycleTo(cycle);
             } else {

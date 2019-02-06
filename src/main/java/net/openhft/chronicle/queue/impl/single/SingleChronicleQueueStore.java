@@ -74,7 +74,6 @@ public class SingleChronicleQueueStore implements WireStore {
             this.mappedFile = mappedBytes.mappedFile();
             this.refCount = ReferenceCounter.onReleased(this::onCleanup);
             this.indexing = Objects.requireNonNull(wire.read(MetaDataField.indexing).typedMarshallable());
-            assert indexing != null;
             this.indexing.writePosition = writePosition;
             this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
             this.indexing.sequence = sequence;
@@ -338,6 +337,10 @@ public class SingleChronicleQueueStore implements WireStore {
             try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
                 Wire wire0 = WireType.valueOf(wire).apply(bytes);
                 wire0.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+
+                if (wire.bytes().writePosition() > 4 && Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4)))
+                    QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
+
                 // todo change to info later
                 Jvm.warn().on(getClass(), "Successfully wrote EOF file=" + fileName);
             } catch (Exception e) {
