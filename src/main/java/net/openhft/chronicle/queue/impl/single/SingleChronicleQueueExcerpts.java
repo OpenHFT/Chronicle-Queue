@@ -367,6 +367,18 @@ public class SingleChronicleQueueExcerpts {
             int lastCycle = queue.lastCycle();
             if (lastCycle == Integer.MIN_VALUE)
                 lastCycle = cycle;
+            else {
+                int cur = lastCycle - 1;
+                int firstCycle = queue.firstCycle();
+                while (cur >= firstCycle) {
+                    setCycle2(cur, false);
+                    if (wire != null) {
+                        if (!store.writeEOF(wire, timeoutMS()))
+                            break;
+                        cur--;
+                    }
+                }
+            }
 
             setCycle2(lastCycle, true);
         }
@@ -599,11 +611,6 @@ public class SingleChronicleQueueExcerpts {
             int lastCycle = queue.lastCycle;
 
             if (lastCycle != cycle && lastCycle > this.cycle) {
-                for (int interCycle = this.cycle + 1; interCycle < lastCycle; interCycle++) {
-                    setCycle2(interCycle, false);
-                    if (wire != null)
-                        store.writeEOF(wire, timeoutMS());
-                }
                 setCycle2(lastCycle, false);
                 rollCycleTo(cycle);
             } else {

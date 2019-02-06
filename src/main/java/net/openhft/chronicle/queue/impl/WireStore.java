@@ -54,7 +54,10 @@ public interface WireStore extends CommonStore {
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
-    void writeEOF(Wire wire, long timeoutMS);
+    /**
+     * @return true if EOF was written
+     */
+    boolean writeEOF(Wire wire, long timeoutMS);
 
     boolean indexable(long index);
 
