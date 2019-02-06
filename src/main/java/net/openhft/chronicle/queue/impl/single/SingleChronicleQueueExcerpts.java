@@ -436,7 +436,10 @@ public class SingleChronicleQueueExcerpts {
             writeLock.lock();
             try {
                 int cycle = queue.cycle();
-                if (this.cycle != cycle || wire == null)
+                if (wire == null)
+                    setWireIfNull(cycle);
+
+                if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
                 position(writeHeader(wire, (int) queue.overlapSize()));
@@ -574,13 +577,16 @@ public class SingleChronicleQueueExcerpts {
         void beforeAppend(Wire wire, long index) {
         }
 
+        /*
+         * wire must be not null when this method is called
+         */
         private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
-            if (wire != null) {
-                // only a valid check if the wire was set.
-                if (this.cycle == cycle)
-                    throw new AssertionError();
-                store.writeEOF(wire, timeoutMS());
-            }
+            // only a valid check if the wire was set.
+            if (this.cycle == cycle)
+                throw new AssertionError();
+
+            store.writeEOF(wire, timeoutMS());
+
             int lastCycle = queue.lastCycle;
 
             if (lastCycle != cycle && lastCycle > this.cycle) {
