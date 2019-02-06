@@ -72,6 +72,9 @@ public final class Pretoucher implements Closeable {
     private void assignCurrentCycle() {
         final int qCycle = queue.cycle(pretouchTimeProvider);
         if (qCycle != currentCycle) {
+            if (currentCycleWireStore != null) {
+                ((SingleChronicleQueueStore) currentCycleWireStore).writeEOF(queue.timeoutMS, queue.wireType());
+            }
             releaseResources();
 
             queue.writeLock().lock();
