@@ -285,7 +285,7 @@ public class SingleChronicleQueueExcerpts {
             // only set the cycle after the wire is set.
             this.cycle = cycle;
 
-            if (store == null)
+            if (this.store == null)
                 return;
 
             assert wire.startUse();

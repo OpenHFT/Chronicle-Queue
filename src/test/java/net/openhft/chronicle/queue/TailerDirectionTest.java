@@ -16,9 +16,9 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -35,13 +35,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 
-/*
- * Created by Marcus Spiegel on 29/09/16.
- */
 @RequiredForClient
 public class TailerDirectionTest extends ChronicleQueueTestBase {
 
-    public static final int MILLIS = 86_400_000;
     private static final String TEST_MESSAGE_PREFIX = "Test entry: ";
 
     /**
@@ -168,7 +164,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testTailerBackwardsReadBeyondCycle() throws Exception {
+    public void testTailerBackwardsReadBeyondCycle() {
         File basePath = DirectoryUtils.tempDir("tailerForwardBackwardBeyondCycle");
         SetTimeProvider timeProvider = new SetTimeProvider();
         ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
