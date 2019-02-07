@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import org.jetbrains.annotations.NotNull;
@@ -9,9 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.util.function.LongSupplier;
 
-/*
- * Created by Peter Lawrey on 25/11/2016.
- */
 class PretoucherState {
     private static final int HEAD_ROOM = 256 << 10;
     @NotNull
@@ -36,13 +32,7 @@ class PretoucherState {
         if (bytes == null)
             return new File("none");
 
-        MappedFile mappedFile = bytes.mappedFile();
-        assert (mappedFile != null);
-
-        File file = mappedFile.file();
-        assert (file != null);
-
-        return file;
+        return bytes.mappedFile().file();
     }
 
     // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null

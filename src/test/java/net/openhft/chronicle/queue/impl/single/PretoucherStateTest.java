@@ -25,9 +25,6 @@ import java.util.function.LongSupplier;
 
 import static org.junit.Assert.assertEquals;
 
-/*
- * Created by Peter Lawrey on 28/11/16.
- */
 public class PretoucherStateTest {
     @Test
     public void pretouch() {
@@ -80,7 +77,7 @@ public class PretoucherStateTest {
         final StringBuilder record = new StringBuilder();
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 1024, 16 << 10, record, () -> true);
         for (int i = 0; i <= 20; i++) {
-            record.append("pos: " + pos[0] + ", i:" + i + "\n");
+            record.append("pos: ").append(pos[0]).append(", i:").append(i).append("\n");
             ps.pretouch(null);
         }
         assertEquals("pos: 0, i:0\n" +
@@ -139,7 +136,7 @@ public class PretoucherStateTest {
         }
 
         @Override
-        protected boolean touchPage(MappedBytes bytes, long offset) {
+        protected boolean touchPage(@NotNull MappedBytes bytes, long offset) {
             if (first) {
                 record.append("touchPage ").append(offset / 4096);
                 first = false;
