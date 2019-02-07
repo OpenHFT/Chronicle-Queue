@@ -371,7 +371,6 @@ public class SingleChronicleQueueExcerpts {
                 int cur = lastCycle - 1;
                 int firstCycle = queue.firstCycle();
                 while (cur >= firstCycle) {
-                    System.err.println("\n\nsetting! cur=" + cur + " first/last:" + firstCycle + "/" + lastCycle);
                     setCycle2(cur, false);
                     if (wire != null) {
                         if (!store.writeEOF(wire, timeoutMS()))

@@ -3867,6 +3867,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testTailerSnappingRollWithNewAppender() throws Exception {
         SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
         final File dir = DirectoryUtils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
@@ -3908,8 +3909,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             });
 
-            f1.get(1, TimeUnit.SECONDS);
-            f2.get(1, TimeUnit.SECONDS);
+            f1.get(10, TimeUnit.SECONDS);
+            System.out.println(queue.dump());
+            f2.get(10, TimeUnit.SECONDS);
 
             executorService.shutdownNow();
         }
