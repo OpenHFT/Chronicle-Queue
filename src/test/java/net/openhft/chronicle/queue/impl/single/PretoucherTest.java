@@ -1,11 +1,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.NewChunkListener;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -71,6 +73,7 @@ public class PretoucherTest {
 
     @Test
     public void shouldHandleEarlyCycleRoll() {
+        Assume.assumeNotNull(OS.isWindows());
         assert System.getProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle") == null;
         assert System.getProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs") == null;
         System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
