@@ -600,12 +600,10 @@ public class SingleChronicleQueueExcerpts {
          */
         private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
 
-            Jvm.warn().on(getClass(), "rollCycleTo(" + cycle + "), file=" + queue().file().getAbsolutePath());
             // only a valid check if the wire was set.
             if (this.cycle == cycle)
                 throw new AssertionError();
 
-            Jvm.warn().on(getClass(), "about to call store.writeEOF(), file=" + queue().file().getAbsolutePath());
             store.writeEOF(wire, timeoutMS());
 
             int lastCycle = queue.lastCycle;
@@ -623,13 +621,8 @@ public class SingleChronicleQueueExcerpts {
          * create a new cycle or add a message. Only used by tests.
          */
         void writeEndOfCycleIfRequired() {
-            Jvm.warn().on(getClass(), "writeEndOfCycleIfRequired, file=" + queue().file().getAbsolutePath());
-            if (wire != null && queue.cycle() != cycle) {
-                Jvm.warn().on(getClass(), "doing -> writeEndOfCycleIfRequired, file=" + queue().file().getAbsolutePath());
+            if (wire != null && queue.cycle() != cycle)
                 store.writeEOF(wire, timeoutMS());
-            } else {
-                Jvm.warn().on(getClass(), "skipped -> writeEndOfCycleIfRequired, wire=null, queue.cycle() =" + queue.cycle() + ",cycle=" + cycle);
-            }
         }
 
         void writeIndexForPosition(long index, long position)
