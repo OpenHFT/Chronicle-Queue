@@ -300,7 +300,7 @@ public class SingleChronicleQueueExcerpts {
             {
                 Wire oldw = this.wire;
                 this.wire = store == null ? null : wireType.apply(store.bytes());
-                closableResources.wireReference = this.wire.bytes();
+                closableResources.wireReference = this.wire == null ? null : this.wire.bytes();
                 assert wire != oldw || wire == null;
                 if (oldw != null) {
                     releaseWireResources(oldw);
@@ -309,7 +309,7 @@ public class SingleChronicleQueueExcerpts {
             {
                 Wire old = this.wireForIndex;
                 this.wireForIndex = store == null ? null : wireType.apply(store.bytes());
-                closableResources.wireForIndexReference = wireForIndex.bytes();
+                closableResources.wireForIndexReference = this.wireForIndex == null ? null : wireForIndex.bytes();
                 assert wire != old || wire == null;
                 if (old != null) {
                     releaseWireResources(old);
@@ -371,12 +371,13 @@ public class SingleChronicleQueueExcerpts {
                 int cur = lastCycle - 1;
                 int firstCycle = queue.firstCycle();
                 while (cur >= firstCycle) {
+                    System.err.println("\n\nsetting! cur=" + cur + " first/last:" + firstCycle + "/" + lastCycle);
                     setCycle2(cur, false);
                     if (wire != null) {
                         if (!store.writeEOF(wire, timeoutMS()))
                             break;
-                        cur--;
                     }
+                    cur--;
                 }
             }
 
