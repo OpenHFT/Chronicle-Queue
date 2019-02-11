@@ -488,6 +488,17 @@ If you wish to find the index of the last record written, then you have to call:
 long index = queue.createTailer().toEnd().index();
 ```
 
+=== How to determine how many messages are between between two indexes
+
+to count the number of message between between two indexes you can use:
+
+```
+((SingleChronicleQueue)queue).countExcerpts(firstLast,lastIndex)
+````
+
+for more information on this see net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
+
+
 === Dumping a Chronicle Queue, cq4 file as text to the Command Line
 
 Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
