@@ -496,7 +496,7 @@ to count the number of messages between two indexes you can use:
 ((SingleChronicleQueue)queue).countExcerpts(firstLast,lastIndex)
 ```
 
-NOTE: You should avoid calling this method on latency code.
+NOTE: You should avoid calling this method on latency sensitive code, because if the indexes are in different cycles this method may have to access the .cq4 files from the file system.
 
 for more information on this see :
 
