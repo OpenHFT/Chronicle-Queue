@@ -476,7 +476,7 @@ the `acquireAppender()` uses a thread-local pool to give you an appender which w
 
 As such, the method call to:
 
-
+```
 long index = appender.lastIndexAppended();
 ```
 
