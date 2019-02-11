@@ -318,8 +318,6 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public boolean writeEOF(@NotNull Wire wire, long timeoutMS) {
         String fileName = mappedFile.file().getAbsolutePath();
-        Jvm.warn().on(getClass(), "About to write EOF file=" + fileName);
-
 
         // just in case we are about to release this
         if (wire.bytes().tryReserve()) {
@@ -328,7 +326,6 @@ public class SingleChronicleQueueStore implements WireStore {
                 if (wire.bytes().writePosition() > 4 && Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4))) {
                     // only if we just written EOF
                     QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
-                    Jvm.warn().on(getClass(), "Successfully wrote EOF file=" + fileName + " and scheduled the Shrink");
                     return true;
                 }
             } finally {
@@ -336,7 +333,6 @@ public class SingleChronicleQueueStore implements WireStore {
             }
 
         } else {
-            Jvm.warn().on(getClass(), "Tried to writeEOF to as it was being closed, mapppedBytes == wire.bytes => " + (wire.bytes() == mappedBytes) + ", file=" + fileName);
 
             try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
                 Wire wire0 = WireType.valueOf(wire).apply(bytes);
@@ -344,7 +340,6 @@ public class SingleChronicleQueueStore implements WireStore {
 
                 if (wire.bytes().writePosition() > 4 && Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4))) {
                     QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
-                    Jvm.warn().on(getClass(), "Successfully wrote EOF file=" + fileName);
                     return true;
                 }
             } catch (Exception e) {
