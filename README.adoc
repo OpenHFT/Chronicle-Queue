@@ -498,6 +498,41 @@ to count the number of message between between two indexes you can use:
 
 for more information on this see net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
 
+=== How to write 10 messages, then move to the 5th message to read it.
+
+```
+@Test
+public void read5thMessageTest() {
+    try (final ChronicleQueue queue = singleBuilder(getTmpDir()).build()) {
+
+        final ExcerptAppender appender = queue.acquireAppender();
+
+        int i = 0;
+        for (int j = 0; j < 10; j++) {
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("hello").text("world " + (i++));
+                long indexWritten = dc.index();
+            }
+        }
+
+        // get the current cycle
+        int cycle;
+        final ExcerptTailer tailer = queue.createTailer();
+        try (DocumentContext documentContext = tailer.readingDocument()) {
+            long index = documentContext.index();
+            cycle = queue.rollCycle().toCycle(index);
+        }
+
+        long index = queue.rollCycle().toIndex(cycle, 5);
+        tailer.moveToIndex(index);
+        try (DocumentContext dc = tailer.readingDocument()) {
+            System.out.println(dc.wire().read("hello").text());
+        }
+
+    }
+}
+```
 
 === Dumping a Chronicle Queue, cq4 file as text to the Command Line
 
