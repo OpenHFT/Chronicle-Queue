@@ -20,12 +20,9 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.QueueLock;
-import net.openhft.chronicle.queue.impl.single.StoreRecovery;
-import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.ParseException;
-import java.util.function.Function;
 
 public interface RollingChronicleQueue extends ChronicleQueue, StoreReleasable {
 
@@ -107,8 +104,6 @@ public interface RollingChronicleQueue extends ChronicleQueue, StoreReleasable {
 
     @NotNull
     RollCycle rollCycle();
-
-    Function<WireType, StoreRecovery> recoverySupplier();
 
     /**
      * @return the checkpointInterval used by delta wire

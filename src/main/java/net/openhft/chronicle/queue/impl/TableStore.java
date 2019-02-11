@@ -15,6 +15,8 @@ public interface TableStore<T extends Metadata> extends CommonStore {
      * that different threads or processes acquire {@link LongValue}s pointing to different fields in the underlying
      * file. To prevent this, it is advised to use {@link #doWithExclusiveLock(Function)} to wrap calls to this method,
      * which will ensure exclusive access to file while initially acquiring values.
+     * Additionally, if this call is not guarded with {@link #doWithExclusiveLock(Function)} it may potentially overwrite
+     * incomplete records done by other instances leading to data corruption.
      * <p>
      * If the value isn't found, it is created with {@link Long#MIN_VALUE } value by default. To specify other default
      * value, use {@link #acquireValueFor(CharSequence, long)}

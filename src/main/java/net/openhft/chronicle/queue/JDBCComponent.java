@@ -24,9 +24,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/*
- * Created by Peter Lawrey on 12/04/16.
- */
 public class JDBCComponent implements JDBCStatement {
     @NotNull
     private final Connection connection;
