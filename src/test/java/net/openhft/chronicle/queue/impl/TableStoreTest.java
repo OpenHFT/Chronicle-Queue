@@ -26,19 +26,16 @@ public class TableStoreTest {
             assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2));
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  }\n" +
+                    "  wireType: !WireType BINARY_LIGHT\n" +
                     "}\n" +
-                    "# position: 112, header: 0\n" +
+                    "# position: 60, header: 0\n" +
                     "--- !!data #binary\n" +
                     "a: 1\n" +
-                    "# position: 128, header: 1\n" +
+                    "# position: 80, header: 1\n" +
                     "--- !!data #binary\n" +
                     "b: 2\n" +
                     "...\n" +
-                    "# 65388 bytes remaining\n", table.dump());
+                    "# 65436 bytes remaining\n", table.dump());
         }
 
         try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
@@ -51,22 +48,19 @@ public class TableStoreTest {
             assertTrue(b.compareAndSwapValue(2, 22));
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  }\n" +
+                    "  wireType: !WireType BINARY_LIGHT\n" +
                     "}\n" +
-                    "# position: 112, header: 0\n" +
+                    "# position: 60, header: 0\n" +
                     "--- !!data #binary\n" +
                     "a: 1\n" +
-                    "# position: 128, header: 1\n" +
+                    "# position: 80, header: 1\n" +
                     "--- !!data #binary\n" +
                     "b: 22\n" +
-                    "# position: 144, header: 2\n" +
+                    "# position: 96, header: 2\n" +
                     "--- !!data #binary\n" +
                     "c: 3\n" +
                     "...\n" +
-                    "# 65372 bytes remaining\n", table.dump());
+                    "# 65420 bytes remaining\n", table.dump());
             System.out.println(table.dump());
         }
     }

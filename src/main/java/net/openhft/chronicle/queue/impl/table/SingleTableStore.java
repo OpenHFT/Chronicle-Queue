@@ -77,6 +77,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
             this.mappedFile = mappedBytes.mappedFile();
             this.refCount = ReferenceCounter.onReleased(this::onCleanup);
 
+            wire.consumePadding();
             if (wire.bytes().readRemaining() > 0) {
                 this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
             } else {
