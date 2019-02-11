@@ -21,9 +21,6 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
-import net.openhft.chronicle.queue.impl.single.StoreRecovery;
-import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
-import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -35,8 +32,6 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 
@@ -45,7 +40,6 @@ public class SingleTableBuilder<T extends Metadata> {
     static {
         CLASS_ALIASES.addAlias(WireType.class);
         CLASS_ALIASES.addAlias(SingleTableStore.class, "STStore");
-        CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
 
     @NotNull
@@ -55,8 +49,6 @@ public class SingleTableBuilder<T extends Metadata> {
 
     private WireType wireType;
     private boolean readOnly;
-    private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
-    private long timeoutMS = TimeUnit.SECONDS.toMillis(5);
 
     private SingleTableBuilder(@NotNull File path, @NotNull T metadata) {
         this.file = path;
@@ -107,14 +99,13 @@ public class SingleTableBuilder<T extends Metadata> {
             // to allocate the first byte store and that will cause lock overlap
             bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
-            StoreRecovery recovery = recoverySupplier.apply(wireType);
             return SingleTableStore.doWithExclusiveLock(file, (v) -> {
                 try {
                     if ((!readOnly) && wire.writeFirstHeader()) {
-                        return writeTableStore(bytes, wire, recovery);
+                        return writeTableStore(bytes, wire);
 
                     } else {
-                        wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+                        wire.readFirstHeader();
 
                         StringBuilder name = Wires.acquireStringBuilder();
                         ValueIn valueIn = wire.readEventName(name);
@@ -129,9 +120,6 @@ public class SingleTableBuilder<T extends Metadata> {
                     }
                 } catch (IOException ex) {
                     throw Jvm.rethrow(ex);
-                } catch (TimeoutException ex) {
-                    recovery.recoverAndWriteHeader(wire, 10_000, null, null);
-                    return writeTableStore(bytes, wire, recovery);
                 }
             }, () -> null);
         } catch (IOException e) {
@@ -140,8 +128,8 @@ public class SingleTableBuilder<T extends Metadata> {
     }
 
     @NotNull
-    private TableStore<T> writeTableStore(MappedBytes bytes, Wire wire, StoreRecovery recovery) {
-        TableStore<T> store = new SingleTableStore<>(wireType, bytes, recovery, metadata);
+    private TableStore<T> writeTableStore(MappedBytes bytes, Wire wire) {
+        TableStore<T> store = new SingleTableStore<>(wireType, bytes, metadata);
         wire.writeEventName("header").object(store);
         wire.updateFirstHeader();
         return store;
@@ -180,24 +168,6 @@ public class SingleTableBuilder<T extends Metadata> {
 
     public SingleTableBuilder<T> readOnly(boolean readOnly) {
         this.readOnly = readOnly;
-        return this;
-    }
-
-    public StoreRecoveryFactory recoverySupplier() {
-        return recoverySupplier;
-    }
-
-    public SingleTableBuilder<T> recoverySupplier(StoreRecoveryFactory recoverySupplier) {
-        this.recoverySupplier = recoverySupplier;
-        return this;
-    }
-
-    public long timeoutMS() {
-        return timeoutMS;
-    }
-
-    public SingleTableBuilder<T> timeoutMS(long timeoutMS) {
-        this.timeoutMS = timeoutMS;
         return this;
     }
 }

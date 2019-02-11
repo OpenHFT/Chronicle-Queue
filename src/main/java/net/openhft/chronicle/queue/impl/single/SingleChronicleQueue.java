@@ -96,7 +96,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final TimeProvider time;
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
-    private final StoreRecoveryFactory recoverySupplier;
     private final Map<Object, Consumer> closers = new WeakHashMap<>();
     private final boolean readOnly;
     @NotNull
@@ -178,7 +177,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
 
         sourceId = builder.sourceId();
-        recoverySupplier = builder.recoverySupplier();
     }
 
     protected CycleCalculator cycleCalculator(ZoneId zoneId) {
@@ -356,11 +354,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public StoreRecoveryFactory recoverySupplier() {
-        return recoverySupplier;
-    }
-
-    @Override
     public int deltaCheckpointInterval() {
         return deltaCheckpointInterval;
     }
@@ -443,7 +436,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public ExcerptTailer createTailer(String id) {
         LongValue index = id == null
                 ? null
-                : metaStore.acquireValueFor("index." + id, 0);
+                : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
         final StoreTailer storeTailer = new StoreTailer(this, index);
         directoryListing.refresh();
         if (SHOULD_RELEASE_RESOURCES) {

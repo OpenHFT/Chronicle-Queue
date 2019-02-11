@@ -26,8 +26,6 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataField;
-import net.openhft.chronicle.queue.impl.single.SimpleStoreRecovery;
-import net.openhft.chronicle.queue.impl.single.StoreRecovery;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -62,8 +60,6 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     private final Wire mappedWire;
     @NotNull
     private final ReferenceCounter refCount;
-    @NotNull
-    private final StoreRecovery recovery;
     private volatile boolean isClosed;
 
     /**
@@ -82,14 +78,9 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
             this.refCount = ReferenceCounter.onReleased(this::onCleanup);
 
             if (wire.bytes().readRemaining() > 0) {
-                this.recovery = Objects.requireNonNull(wire.read(MetaDataField.recovery).typedMarshallable());
-            } else {
-                this.recovery = new SimpleStoreRecovery(); // disabled.
-            }
-
-            if (wire.bytes().readRemaining() > 0) {
                 this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
             } else {
+                //noinspection unchecked
                 this.metadata = (T) Metadata.NoMeta.INSTANCE;
             }
 
@@ -102,15 +93,12 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     /**
      * @param wireType    the wire type that is being used
      * @param mappedBytes used to mapped the data store file
-     * @param recovery    used to recover from concurrent modifications
      */
     SingleTableStore(@NotNull final WireType wireType,
                      @NotNull MappedBytes mappedBytes,
-                     @NotNull StoreRecovery recovery,
                      @NotNull T metadata) {
         this.wireType = wireType;
         this.metadata = metadata;
-        this.recovery = recovery;
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
         this.refCount = ReferenceCounter.onReleased(this::onCleanup);
@@ -226,9 +214,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
 
-        wire
-                .write(MetaDataField.wireType).object(wireType)
-                .write(MetaDataField.recovery).typedMarshallable(recovery);
+        wire.write(MetaDataField.wireType).object(wireType);
 
         if (metadata != Metadata.NoMeta.INSTANCE)
             wire.write(MetaDataField.metadata).typedMarshallable(this.metadata);
@@ -263,11 +249,11 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
             int safeLength = Maths.toUInt31(mappedBytes.realCapacity() - mappedBytes.readPosition());
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             mappedBytes.writePosition(mappedBytes.readPosition());
-            long pos = recovery.writeHeader(mappedWire, safeLength, timeoutMS, null, null);
+            long pos = mappedWire.enterHeader(safeLength);
             LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
             mappedWire.writeAlignTo(Integer.BYTES, 0);
-            mappedWire.updateHeader(pos, false);
+            mappedWire.updateHeader(pos, false, 0);
             return longValue;
 
         } catch (StreamCorruptedException | EOFException e) {

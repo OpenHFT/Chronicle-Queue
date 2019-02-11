@@ -78,7 +78,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         CLASS_ALIASES.addAlias(SCQRoll.class, "SCQSRoll");
         CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
-        CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
 
         {
             Constructor co;
@@ -116,7 +115,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Supplier<TimingPauser> pauserSupplier = () -> new TimeoutPauser(500_000);
     private Long timeoutMS; // 10 seconds.
     private Integer sourceId;
-    private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private StoreFileListener storeFileListener;
 
     private Boolean readOnly;
@@ -422,7 +420,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         try {
 
             boolean readOnly = readOnly();
-            metaStore = SingleTableBuilder.binary(metapath, metadata).timeoutMS(timeoutMS()).readOnly(readOnly).build();
+            metaStore = SingleTableBuilder.binary(metapath, metadata).readOnly(readOnly).build();
             // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
             if (sourceId() == 0)
@@ -855,15 +853,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     public int sourceId() {
         return sourceId == null ? 0 : sourceId;
-    }
-
-    public StoreRecoveryFactory recoverySupplier() {
-        return recoverySupplier;
-    }
-
-    public SingleChronicleQueueBuilder recoverySupplier(StoreRecoveryFactory recoverySupplier) {
-        this.recoverySupplier = recoverySupplier;
-        return this;
     }
 
     public boolean readOnly() {
