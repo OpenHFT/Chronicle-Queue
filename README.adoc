@@ -490,7 +490,7 @@ long index = queue.createTailer().toEnd().index();
 
 === How to determine how many messages are between two indexes
 
-to count the number of message between two indexes you can use:
+to count the number of messages between two indexes you can use:
 
 ```
 ((SingleChronicleQueue)queue).countExcerpts(firstLast,lastIndex)
@@ -498,7 +498,11 @@ to count the number of message between two indexes you can use:
 
 NOTE: You should avoid calling this method on latency code.
 
-for more information on this see net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
+for more information on this see :
+
+```
+net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
+```
 
 === How to write 10 messages, then move to the 5th message to read it.
 
