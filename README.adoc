@@ -476,7 +476,7 @@ the `acquireAppender()` uses a thread-local pool to give you an appender which w
 
 As such, the method call to:
 
-```
+
 long index = appender.lastIndexAppended();
 ```
 
@@ -494,7 +494,7 @@ to count the number of message between between two indexes you can use:
 
 ```
 ((SingleChronicleQueue)queue).countExcerpts(firstLast,lastIndex)
-````
+```
 
 for more information on this see net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
 
