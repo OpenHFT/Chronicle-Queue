@@ -488,13 +488,15 @@ If you wish to find the index of the last record written, then you have to call:
 long index = queue.createTailer().toEnd().index();
 ```
 
-=== How to determine how many messages are between between two indexes
+=== How to determine how many messages are between two indexes
 
-to count the number of message between between two indexes you can use:
+to count the number of message between two indexes you can use:
 
 ```
 ((SingleChronicleQueue)queue).countExcerpts(firstLast,lastIndex)
 ```
+
+NOTE: You should avoid calling this method on latency code.
 
 for more information on this see net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
 
