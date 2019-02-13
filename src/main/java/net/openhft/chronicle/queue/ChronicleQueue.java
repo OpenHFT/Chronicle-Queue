@@ -17,7 +17,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
@@ -28,7 +27,6 @@ import java.io.File;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
@@ -192,11 +190,10 @@ public interface ChronicleQueue extends Closeable {
 
     @SuppressWarnings("unchecked")
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
-        Class[] interfaces = ObjectUtils.addAll(tClass, additional);
-
-        //noinspection unchecked
-        return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces,
-                new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
+        VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
+        for (Class clazz : additional)
+            builder.addInterface(clazz);
+        return builder.build();
     }
 
     @NotNull
