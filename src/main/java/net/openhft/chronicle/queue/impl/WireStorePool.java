@@ -16,7 +16,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
@@ -68,7 +68,6 @@ public class WireStorePool implements StoreReleasable {
                 .forEach(this::release);
     }
 
-    @org.jetbrains.annotations.Nullable
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
         final int cacheIndex = cacheIndex(cycle);

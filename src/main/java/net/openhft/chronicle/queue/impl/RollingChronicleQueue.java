@@ -15,7 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
@@ -36,7 +36,6 @@ public interface RollingChronicleQueue extends ChronicleQueue, StoreReleasable {
      * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent
      * is false and absent
      */
-    @org.jetbrains.annotations.Nullable
     @Nullable
     WireStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent);
 
