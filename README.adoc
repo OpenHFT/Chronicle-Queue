@@ -1025,14 +1025,6 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").buil
 
 === FAQ
 
-=== Can Chronicle Queue Work on OpenJ9
-
-The byte[] methods on StringUtils are designed to work only on those Java 9+ VMs that have the compact strings feature enabled, but not on ones that have non-compact strings. This is not specific to OpenJ9, and HotSpot should fail with Java9 (but it doesn't because compact strings are enabled by default).
-
-Conversely, OpenJ9 should be able to run Chronicle Queue with compact strings. We can confirm ( with limited testing ) that Chronicle Queue is able to work on OpenJ9 VM with the -XX:+CompactStrings option enabled.
-
-In summary, Chronicle Queue can be considered compatible with OpenJ9, provided the -XX:+CompactStrings option is used.
-
 === If you are seeing "OutOfMemoryError: Map failed"
 
 [source, Java]
@@ -1359,6 +1351,14 @@ In the test described above, the typical latency varied between 14 and 40 micros
 |===
 
 == FAQs
+
+=== Can Chronicle Queue Work on OpenJ9
+
+The byte[] methods on StringUtils are designed to work only on those Java 9+ VMs that have the compact strings feature enabled, but not on ones that have non-compact strings. This is not specific to OpenJ9, and HotSpot should fail with Java9 (but it doesn't because compact strings are enabled by default).
+
+Conversely, OpenJ9 should be able to run Chronicle Queue with compact strings. We can confirm ( with limited testing ) that Chronicle Queue is able to work on OpenJ9 VM with the -XX:+CompactStrings option enabled.
+
+In summary, Chronicle Queue can be considered compatible with OpenJ9, provided the -XX:+CompactStrings option is used.
 
 === How can I determine the speed of my disk sub system
 
