@@ -1360,6 +1360,8 @@ Conversely, OpenJ9 should be able to run Chronicle Queue with compact strings. W
 
 In summary, Chronicle Queue can be considered compatible with OpenJ9, provided the -XX:+CompactStrings option is used.
 
+OpenJ9 version 0.12.1 and earlier requires the file descriptor limit to be manually adjusted to a higher value - for example, using the command `ulimit -Sn 500`.
+
 === How can I determine the speed of my disk sub system
 
 [source,ssh]
