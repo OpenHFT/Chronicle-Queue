@@ -724,7 +724,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testCheckIndexWithWriteBytes() {
         doTestCheckIndex(
-                (appender, n) -> appender.writeBytes(Bytes.from("Message-" + n)));
+                (appender, n) -> appender.writeBytes(Bytes.fromString("Message-" + n)));
     }
 
     @Test

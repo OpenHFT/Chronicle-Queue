@@ -19,11 +19,11 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,10 +41,10 @@ import static org.junit.Assert.fail;
 @RequiredForClient
 public class CreateAtIndexTest extends ChronicleQueueTestBase {
 
-    public static final Bytes HELLO_WORLD = Bytes.from("hello world");
 
     @Test
     public void testWriteBytesWithIndex() {
+        final Bytes HELLO_WORLD = Bytes.fromString("hello world");
         File tmp = getTmpDir();
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()

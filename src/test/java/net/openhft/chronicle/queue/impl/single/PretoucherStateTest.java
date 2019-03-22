@@ -136,7 +136,7 @@ public class PretoucherStateTest {
         }
 
         @Override
-        protected boolean touchPage(@NotNull MappedBytes bytes, long offset) {
+        protected boolean touchPage(MappedBytes bytes, long offset) {
             if (first) {
                 record.append("touchPage ").append(offset / 4096);
                 first = false;
