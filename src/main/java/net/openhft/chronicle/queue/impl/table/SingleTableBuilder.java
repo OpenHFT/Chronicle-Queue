@@ -99,31 +99,38 @@ public class SingleTableBuilder<T extends Metadata> {
             // to allocate the first byte store and that will cause lock overlap
             bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
-            return SingleTableStore.doWithExclusiveLock(file, (v) -> {
-                try {
-                    if ((!readOnly) && wire.writeFirstHeader()) {
-                        return writeTableStore(bytes, wire);
-
-                    } else {
-                        wire.readFirstHeader();
-
-                        StringBuilder name = Wires.acquireStringBuilder();
-                        ValueIn valueIn = wire.readEventName(name);
-                        if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                            @NotNull TableStore<T> existing = Objects.requireNonNull(valueIn.typedMarshallable());
-                            metadata.overrideFrom(existing.metadata());
-                            return existing;
+            if (readOnly)
+                return readTableStore(wire);
+            else
+                return SingleTableStore.doWithExclusiveLock(file, (v) -> {
+                    try {
+                        if (wire.writeFirstHeader()) {
+                            return writeTableStore(bytes, wire);
                         } else {
-                            //noinspection unchecked
-                            throw new StreamCorruptedException("The first message should be the header, was " + name);
+                            return readTableStore(wire);
                         }
+                    } catch (IOException ex) {
+                        throw Jvm.rethrow(ex);
                     }
-                } catch (IOException ex) {
-                    throw Jvm.rethrow(ex);
-                }
-            }, () -> null);
+                }, () -> null);
         } catch (IOException e) {
             throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
+        }
+    }
+
+    @NotNull
+    private TableStore<T> readTableStore(Wire wire) throws StreamCorruptedException {
+        wire.readFirstHeader();
+
+        StringBuilder name = Wires.acquireStringBuilder();
+        ValueIn valueIn = wire.readEventName(name);
+        if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+            @NotNull TableStore<T> existing = Objects.requireNonNull(valueIn.typedMarshallable());
+            metadata.overrideFrom(existing.metadata());
+            return existing;
+        } else {
+            //noinspection unchecked
+            throw new StreamCorruptedException("The first message should be the header, was " + name);
         }
     }
 

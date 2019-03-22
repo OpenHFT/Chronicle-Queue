@@ -3075,7 +3075,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
         }
 
-        Files.list(queueDir.toPath()).filter(p -> p.endsWith(SingleChronicleQueue.SUFFIX)).forEach(p -> assertTrue(p.toFile().setWritable(false)));
+        Files.list(queueDir.toPath()).forEach(p -> assertTrue(p.toFile().setReadOnly()));
 
         try (final ChronicleQueue queue = builder(queueDir, wireType).
                 readOnly(true).
