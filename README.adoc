@@ -97,7 +97,7 @@ see https://github.com/OpenHFT/Chronicle-Queue-Sample
 
 Chronicle Queue is a Java project focused on building a persisted low-latency messaging framework for high performance and critical applications.
 
-image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[]
+image::images/Queue_line.png[]
 
 At first glance Chronicle Queue can be seen as simply **another queue implementation**. However, it has major design choices that should be emphasised.
 
