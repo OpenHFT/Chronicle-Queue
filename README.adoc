@@ -97,8 +97,6 @@ see https://github.com/OpenHFT/Chronicle-Queue-Sample
 
 Chronicle Queue is a Java project focused on building a persisted low-latency messaging framework for high performance and critical applications.
 
-image::images/Queue_line.png[]
-
 At first glance Chronicle Queue can be seen as simply **another queue implementation**. However, it has major design choices that should be emphasised.
 
 Using *non-heap storage options* (`RandomAccessFile`), Chronicle Queue provides a processing environment where applications do not suffer from Garbage Collection (GC). When implementing high-performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java, one of the biggest problems is garbage collection.
