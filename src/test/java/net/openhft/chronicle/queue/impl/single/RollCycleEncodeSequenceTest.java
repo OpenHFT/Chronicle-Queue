@@ -15,9 +15,6 @@ import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
 
-/**
- * Created by Jerry Shea on 22/11/17.
- */
 @RunWith(Parameterized.class)
 public class RollCycleEncodeSequenceTest {
     private final BinaryTwoLongReference longValue;

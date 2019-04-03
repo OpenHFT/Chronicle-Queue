@@ -1,8 +1,5 @@
 package net.openhft.chronicle.queue.impl.single.preroucher;
 
-/**
- * Created by peter.lawrey@chronicle.software on 03/07/2017.
- */
 public enum ValidFields {
     ;
 

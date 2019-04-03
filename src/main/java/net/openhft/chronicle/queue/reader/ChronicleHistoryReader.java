@@ -19,9 +19,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-/**
- * Created by Jerry Shea on 29/09/17.
- */
 public class ChronicleHistoryReader {
 
     private static final int SUMMART_OUTPUT_UNSET = -999;

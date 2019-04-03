@@ -16,9 +16,6 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 
-/**
- * Created by Jerry Shea on 13/09/17.
- */
 public class Monitor {
     static final EventLoop loop = new MonitorEventLoop(null, Pauser.millis(10));
     private static final Logger LOG = LoggerFactory.getLogger(Monitor.class);

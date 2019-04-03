@@ -7,9 +7,6 @@ import net.openhft.chronicle.threads.TimedEventHandler;
 import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
-/**
- * Created by Jerry Shea on 13/09/17.
- */
 public final class PeriodicUpdateEventHandler extends TimedEventHandler {
     private final Supplier<LongConsumer> methodSupplier;
     private final long periodInMicroseconds;
