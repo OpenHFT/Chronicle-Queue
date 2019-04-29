@@ -744,7 +744,7 @@ boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
         readingDocument().isPresent();
 ....
 
-==== Restartable Tailers
+=== Restartable Tailers
 
 It can be useful to have a tailer which continues from where it was up to on restart of the application.
 
@@ -774,6 +774,8 @@ try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
 This is from the `RestartableTailerTest` where there is two tailers, with a unique name each. These tailers store their index within the Queue itself and this index is maintained as the tailer uses `toStart()`, `toEnd()`, `moveToIndex()` or reads a message.
 
 NOTE: The `direction()` is not preserved across restarts, only the next index to be read.
+
+NOTE: The index of a tailer is only progressed when the `DocumentContext.close()` is called. If this is prevented by an error, the same message will be read on each restart.
 
 === High level interface
 
