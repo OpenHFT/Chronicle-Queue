@@ -744,6 +744,37 @@ boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
         readingDocument().isPresent();
 ....
 
+==== Restartable Tailers
+
+It can be useful to have a tailer which continues from where it was up to on restart of the application.
+
+[source, Java]
+----
+try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
+    ExcerptTailer atailer = cq.createTailer("a");
+    assertEquals("test 0", atailer.readText());
+    assertEquals("test 1", atailer.readText());
+    assertEquals("test 2", atailer.readText());
+
+    ExcerptTailer btailer = cq.createTailer("b");
+    assertEquals("test 0", btailer.readText());
+}
+
+try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
+    ExcerptTailer atailer = cq.createTailer("a");
+    assertEquals("test 3", atailer.readText());
+    assertEquals("test 4", atailer.readText());
+    assertEquals("test 5", atailer.readText());
+
+    ExcerptTailer btailer = cq.createTailer("b");
+    assertEquals("test 1", btailer.readText());
+}
+----
+
+This is from the `RestartableTailerTest` where there is two tailers, with a unique name each. These tailers store their index within the Queue itself and this index is maintained as the tailer uses `toStart()`, `toEnd()`, `moveToIndex()` or reads a message.
+
+NOTE: The `direction()` is not preserved across restarts, only the next index to be read.
+
 === High level interface
 
 Chronicle v4.4+ supports the use of proxies to send and consume messages.  You start by defining an asynchronous `interface`, where all methods have:
