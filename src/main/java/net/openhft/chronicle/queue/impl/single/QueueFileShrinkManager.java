@@ -41,7 +41,8 @@ public enum QueueFileShrinkManager {
         Runnable task = () -> {
             while (true) {
                 try {
-                    LOG.debug("Shrinking {} to {}", queueFile, writePos);
+                    if (LOG.isDebugEnabled())
+                        LOG.debug("Shrinking {} to {}", queueFile, writePos);
                     RandomAccessFile raf = new RandomAccessFile(queueFile, "rw");
 
                     raf.setLength(writePos);
