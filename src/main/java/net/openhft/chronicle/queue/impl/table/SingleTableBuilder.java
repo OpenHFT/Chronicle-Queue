@@ -100,7 +100,13 @@ public class SingleTableBuilder<T extends Metadata> {
             bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
             if (readOnly)
-                return readTableStore(wire);
+                return SingleTableStore.doWithSharedLock(file, (v) -> {
+                    try {
+                        return readTableStore(wire);
+                    } catch (IOException ex) {
+                        throw Jvm.rethrow(ex);
+                    }
+                }, () -> null);
             else
                 return SingleTableStore.doWithExclusiveLock(file, (v) -> {
                     try {
