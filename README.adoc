@@ -1,18 +1,18 @@
 = Chronicle Queue
 Peter Lawrey, Rob Austin
-:toc: manual
 :css-signature: demo
-:toc-placement: preamble
+:toc: macro
 
-image::images/Queue_line.png[width=20%]
+image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
+image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 
-==== Version
+image::images/Queue_line.png[]
 
-[#image-maven]
-[caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
-image::https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[]
+== Contents
 
-==== The Changes from Chronicle Queue version 4 to version 5
+toc::[]
+
+== The Changes from Chronicle Queue version 4 to version 5
 
 In Chronicle Queue 5 tailers are now read-only, in Chronicle Queue 4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise,  when lazy indexing was turned on the indexing was done by the first tailer that read the data. Since in chronicle queue 4 tailers could do the indexing we could not rely on them to be read only. We decided to drop lazy indexing in chronicle queue 5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations else where in the code.
 
@@ -20,7 +20,7 @@ The locking model of Chronicle Queue was changed, in Chronicle Queue 4 a write l
 
 You can use Chronicle 5 to read messages written with Chronicle 4, however you should not concurrently run chronicle queue 4 and chronicle queue 5 at the same time. In other words avoid running Chronicle Queue 4’s appenders and tailers on a queue which at the same time is also be read and written to via Chronicle Queue 5.
 
-==== About Chronicle Software
+== About Chronicle Software
 
 https://player.vimeo.com/video/201989439
 
@@ -28,7 +28,7 @@ https://player.vimeo.com/video/201989439
 
 http://jrvis.com/red-dwarf/?user=openhft&repo=chronicle-queue[Chronicle Queue usage Heatmap]
 
-=== What is Chronicle Queue
+== What is Chronicle Queue
 
 What is Chronicle Queue
 
@@ -64,11 +64,11 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 
 IMPORTANT: This performance is not achieved using a *large cluster of machines*. This is using one thread to publish, and one thread to consume.
 
-==== More benchmarks
+=== More benchmarks
 
 https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
 
-=== Downloading Chronicle Queue
+== Downloading Chronicle Queue
 
 Releases are available on Maven Central as:
 
@@ -90,10 +90,10 @@ https://github.com/OpenHFT/Chronicle-Queue/releases[Chronicle Queue Release Note
 ===  Java Doc (3.6)
 see http://openhft.github.io/Chronicle-Queue/apidocs/
 
-=== Simple Step-By-Step Guide
+== Simple Step-By-Step Guide
 see https://github.com/OpenHFT/Chronicle-Queue-Sample
 
-=== Overview
+== Overview
 
 Chronicle Queue is a Java project focused on building a persisted low-latency messaging framework for high performance and critical applications.
 
