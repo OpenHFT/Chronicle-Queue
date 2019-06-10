@@ -573,7 +573,7 @@ public class SingleChronicleQueueExcerpts {
                 int cycle = this.queue.lastCycle();
                 if (cycle < 0)
                     cycle = queue.cycle();
-                setCycle2(cycle, true);
+                return cycle;
             }
             return cycle;
         }

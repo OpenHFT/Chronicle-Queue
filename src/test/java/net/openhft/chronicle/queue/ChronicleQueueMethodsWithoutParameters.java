@@ -11,9 +11,6 @@ import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/**
- * Created on 19.10.2016.
- */
 public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBase {
 
     protected static final Logger LOG = LoggerFactory.getLogger(ChronicleQueueMethodsWithoutParameters.class);
