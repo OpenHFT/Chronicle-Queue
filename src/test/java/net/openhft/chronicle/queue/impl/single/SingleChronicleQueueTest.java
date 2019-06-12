@@ -196,6 +196,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    {
+        final ExcerptAppender appender = queue.acquireAppender();
+
+        try (DocumentContext dc = appender.writingDocument()) {
+            dc.wire().write("hello").text("world");
+        }
+
+    }
+
+    builder(tmpDir, wireType)
+                             .
+
+    build())
     @Test
     public void testCleanupDir() {
 
@@ -216,6 +229,31 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } else {
             Assert.assertFalse(tmpDir.exists());
         }
+
+        // writer
+
+        //field
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary("q");
+        ExcerptAppender excerptAppender = queue.acquireAppender();
+
+        ReadMarshallable messageNotifier;
+
+        try (DocumentContext dc = excerptAppender.writingDocument()) {
+            messageNotifier.writeMarshallable(dc.wire());
+        }
+
+        // reader
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary("q");
+
+        ExcerptTailer tailer = queue.createTailer();
+
+        try (DocumentContext dc = tailer.readingDocument()) {
+            messageNotifier.readMarshallable(dc.wire());
+        }
+
+    }
+
+
     }
 
     @Test
