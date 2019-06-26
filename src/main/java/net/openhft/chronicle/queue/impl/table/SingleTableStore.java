@@ -106,6 +106,31 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
         mappedWire = wireType.apply(mappedBytes);
     }
 
+    public static <T, R> R doWithSharedLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
+        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
+        boolean warnedOnFailure = false;
+        try (final FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ)) {
+            while (System.currentTimeMillis() < timeoutAt) {
+                try {
+                    FileLock fileLock = channel.tryLock( 0L, Long.MAX_VALUE, true );
+                    if (fileLock != null) {
+                        return code.apply(target.get());
+                    }
+                } catch (IOException | OverlappingFileLockException e) {
+                    // failed to acquire the lock, wait until other operation completes
+                    if (!warnedOnFailure) {
+                        LOG.debug("Failed to acquire a lock on the table store file. Retrying");
+                        warnedOnFailure = true;
+                    }
+                }
+                Jvm.pause(50L);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Couldn't perform operation with file lock", e);
+        }
+        throw new IllegalStateException("Unable to claim shared lock on file " + file);
+    }
+
     public static <T, R> R doWithExclusiveLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
         final long timeoutAt = System.currentTimeMillis() + timeoutMS;
         boolean warnedOnFailure = false;

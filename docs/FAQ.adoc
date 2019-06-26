@@ -283,5 +283,9 @@ No. Chronicle Queue is designed to be both reliable and deterministic.  UDP is n
 
 For the tailer, either replicated or notreplicated, you can assume you are up-to-date when either `isPresent()` is `false`, or your read method returns `false`
 
+=== What are the differences between the `files directory-listing.cq4t` and `metadata.cq4t` ?
+
+They are almost the same, except `files directory-listing.cq4t` was in earlier versions of Chronicle Queue, while `metadata.cq4t` is applicable for Chronicle Queue 5.0 onwards.
+
 '''
 <<../README.adoc#,Back to ReadMe>>

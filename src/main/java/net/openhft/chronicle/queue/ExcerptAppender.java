@@ -45,7 +45,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     long lastIndexAppended();
 
     /**
-     * @return the cycle this tailer is on, usually with chronicle-queue each cycle will have its
+     * @return the cycle this appender is on, usually with chronicle-queue each cycle will have its
      * own unique data file to store the excerpt
      */
     int cycle();

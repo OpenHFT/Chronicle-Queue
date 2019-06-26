@@ -103,6 +103,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Integer indexSpacing;
     private Integer indexCount;
     private Boolean enableRingBufferMonitoring;
+    private Boolean ringBufferReaderCanDrain;
     @Nullable
     private EventLoop eventLoop;
     private WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -781,6 +782,18 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     public SingleChronicleQueueBuilder enableRingBufferMonitoring(boolean enableRingBufferMonitoring) {
         this.enableRingBufferMonitoring = enableRingBufferMonitoring;
+        return this;
+    }
+
+    /**
+     * @return if ring buffer reader processes can invoke the CQ drainer, otherwise only writer processes can
+     */
+    public boolean ringBufferReaderCanDrain() {
+        return ringBufferReaderCanDrain == null ? false : ringBufferReaderCanDrain;
+    }
+
+    public SingleChronicleQueueBuilder ringBufferReaderCanDrain(boolean ringBufferReaderCanDrain) {
+        this.ringBufferReaderCanDrain = ringBufferReaderCanDrain;
         return this;
     }
 
