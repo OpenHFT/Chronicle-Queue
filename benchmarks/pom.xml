@@ -20,7 +20,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.openhft</groupId>
     <artifactId>chronicle-queue-benchmarks</artifactId>
-    <version>5.17.13</version>
+    <version>5.17.14</version>
     <name>OpenHFT/Chronicle-Queue/Benchmarks</name>
     <description>Chronicle-Queue-Benchmarks</description>
 
@@ -42,7 +42,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>2.17.241</version>
+                <version>2.17.266</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
