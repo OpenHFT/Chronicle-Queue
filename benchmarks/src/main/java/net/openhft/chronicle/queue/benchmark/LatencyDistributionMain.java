@@ -219,7 +219,7 @@ public class LatencyDistributionMain {
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
                 NativeBytesStore bytes24 = NativeBytesStore.from(new byte[Main.size - 16]);
-                for (int i = -WARMUP; i < ITERATIONS; i++) {
+                for (int i = -WARMUP; i < interations; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
                         do ; while (System.nanoTime() < next);
@@ -276,8 +276,8 @@ public class LatencyDistributionMain {
         tailerThread.interrupt();
         tailerThread.join();
 
-        System.out.println("wr: " + histogramWr.toMicrosFormat());
-        System.out.println("in: " + histogramIn.toMicrosFormat());
-        System.out.println("co: " + histogramCo.toMicrosFormat());
+        System.out.println("wr: " + histogramWr.toLongMicrosFormat());
+        System.out.println("in: " + histogramIn.toLongMicrosFormat());
+        System.out.println("co: " + histogramCo.toLongMicrosFormat());
     }
 }
