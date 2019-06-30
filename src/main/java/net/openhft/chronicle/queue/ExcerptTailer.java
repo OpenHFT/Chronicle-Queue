@@ -130,6 +130,12 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
 
+    /**
+     * Enterprise Queue only: if replication enabled, setting this to true on a source queue ensures that
+     * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
+     * This will block forever if no sinks acknowledge receipt.
+     * @param readAfterReplicaAcknowledged enable
+     */
     default void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
     }
 

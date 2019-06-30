@@ -3,6 +3,8 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
@@ -56,5 +58,19 @@ public class SingleChronicleQueueBuilderTest {
         b2.bufferCapacity(98765);
         b1.blockSize(1234567);
         b2.setAllNullFields(b1);
+    }
+
+    @Test
+    public void readMarshallable() {
+        SingleChronicleQueueBuilder builder = Marshallable.fromString("!net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder {\n" +
+                "  writeBufferMode: None,\n" +
+                "  readBufferMode: None,\n" +
+                "  wireType: BINARY_LIGHT,\n" +
+                "  path: " + DirectoryUtils.tempDir("marshallable") +
+                "  rollCycle: !net.openhft.chronicle.queue.RollCycles DAILY,\n" +
+                "  onRingBufferStats: !net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder$NoBytesRingBufferStats NONE,\n" +
+                "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +
+                "}\n");
+        builder.build().close();
     }
 }

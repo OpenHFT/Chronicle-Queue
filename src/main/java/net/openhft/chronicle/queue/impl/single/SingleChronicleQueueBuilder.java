@@ -108,7 +108,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private EventLoop eventLoop;
     private WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     /**
-     * by default logs the performance stats of the ring buffer
+     * by default does not log any stats of the ring buffer
      */
     @NotNull
     private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
