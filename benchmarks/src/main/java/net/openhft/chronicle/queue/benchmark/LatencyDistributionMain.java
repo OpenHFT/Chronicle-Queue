@@ -23,6 +23,7 @@ import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.StackSampler;
 import net.openhft.chronicle.core.util.Histogram;
+import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -104,6 +105,7 @@ import static net.openhft.chronicle.queue.benchmark.Main.*;
  * mvn -DenableAffinity=true exec:java -Dexec.classpathScope="test" -Dexec.mainClass=net.openhft.chronicle.queue.ChronicleQueueLatencyDistribution
  */
 public class LatencyDistributionMain {
+    private static final int INTLOG_INTERVAL = 20_000_000;
     @Nullable
     final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
@@ -113,12 +115,19 @@ public class LatencyDistributionMain {
     }
 
     public void run(String[] args) throws InterruptedException {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder
                 .fieldlessBinary(getTmpDir())
-                .blockSize(128 << 20)
-                .build()) {
+                .blockSize(128 << 20);
+        try (ChronicleQueue queue = builder
+                .writeBufferMode(BUFFER_MODE)
+                .readBufferMode(BufferMode.None)
+                .build();
+             ChronicleQueue queue2 = builder
+                     .writeBufferMode(BufferMode.None)
+                     .readBufferMode(BUFFER_MODE)
+                     .build()) {
 
-            runTest(queue, args.length > 0 ? Integer.parseInt(args[0]) : throughput);
+            runTest(queue, queue2);
         }
     }
 
@@ -126,12 +135,7 @@ public class LatencyDistributionMain {
         return new File(Main.path + "/delete-" + System.nanoTime() + ".me");
     }
 
-    protected void runTest(@NotNull ChronicleQueue queue, int throughput) throws InterruptedException {
-/*
-        Jvm.setExceptionHandlers(PrintExceptionHandler.ERR,
-                PrintExceptionHandler.OUT,
-                PrintExceptionHandler.OUT);
-*/
+    protected void runTest(@NotNull ChronicleQueue queue, @NotNull ChronicleQueue queue2) throws InterruptedException {
 
         Histogram histogramCo = new Histogram();
         Histogram histogramIn = new Histogram();
@@ -147,7 +151,8 @@ public class LatencyDistributionMain {
         pretoucher.start();
 
         ExcerptAppender appender = queue.acquireAppender();
-        ExcerptTailer tailer = queue.createTailer();
+        // seperate queue as most like in a different process.
+        ExcerptTailer tailer = queue2.createTailer();
 
         String name = getClass().getName();
         Thread tailerThread = new Thread(() -> {
@@ -178,7 +183,7 @@ public class LatencyDistributionMain {
                                 long now = System.nanoTime();
                                 histogramCo.sample(now - startCo);
                                 histogramIn.sample(now - startIn);
-                                if (count % 10_000_000 == 0) System.out.println("read  " + count);
+                                if (count % INTLOG_INTERVAL == 0) System.out.println("read  " + count);
                             }
                         }
 /*
@@ -252,7 +257,7 @@ public class LatencyDistributionMain {
                         }
                     }
                     next += interval;
-                    if (i % 10_000_000 == 0) System.out.println("wrote " + i);
+                    if (i % INTLOG_INTERVAL == 0) System.out.println("wrote " + i);
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)
