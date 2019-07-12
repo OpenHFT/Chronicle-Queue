@@ -534,9 +534,9 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     /**
      * Creator for BytesStore for underlying ring buffer. Allows visibility of RB's data to be controlled.
-     * See also RB_BYTES_STORE_CREATOR_NATIVE, RB_BYTES_STORE_CREATOR_MAPPED_FILE
+     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE, EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_MAPPED_FILE
      *
-     * @return
+     * @return bufferBytesStoreCreator
      */
     @Nullable
     public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
@@ -711,13 +711,13 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     /**
      * when set to {@code true}. uses a ring buffer to buffer appends, excerpts are written to the
-     * Chronicle Queue using a background thread
+     * Chronicle Queue using a background thread. See also {@link #writeBufferMode()}
      *
      * @param isBuffered {@code true} if the append is buffered
      * @return this
      */
     @NotNull
-    @Deprecated
+    @Deprecated // use writeBufferMode(Asynchronous) instead
     public SingleChronicleQueueBuilder buffered(boolean isBuffered) {
         this.writeBufferMode = isBuffered ? BufferMode.Asynchronous : BufferMode.None;
         return this;
@@ -741,6 +741,16 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
                 ? BufferMode.None : writeBufferMode;
     }
 
+    /**
+     * When writeBufferMode is set to {@code Asynchronous}, uses a ring buffer to buffer appends, excerpts are written to the
+     * Chronicle Queue using a background thread.
+     * See also {@link #bufferCapacity()}
+     * See also {@link #bufferBytesStoreCreator()}
+     * See also {@link software.chronicle.enterprise.ring.EnterpriseRingBuffer}
+     *
+     * @param writeBufferMode bufferMode for writing
+     * @return this
+     */
     public SingleChronicleQueueBuilder writeBufferMode(BufferMode writeBufferMode) {
         this.writeBufferMode = writeBufferMode;
         return this;
@@ -753,6 +763,16 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return readBufferMode == null ? BufferMode.None : readBufferMode;
     }
 
+    /**
+     * When readBufferMode is set to {@code Asynchronous}, reads from the ring buffer. This requires
+     * that {@link #writeBufferMode()} is also set to {@code Asynchronous}.
+     * See also {@link #bufferCapacity()}
+     * See also {@link #bufferBytesStoreCreator()}
+     * See also {@link software.chronicle.enterprise.ring.EnterpriseRingBuffer}
+     *
+     * @param readBufferMode BufferMode for read
+     * @return this
+     */
     public SingleChronicleQueueBuilder readBufferMode(BufferMode readBufferMode) {
         this.readBufferMode = readBufferMode;
         return this;
