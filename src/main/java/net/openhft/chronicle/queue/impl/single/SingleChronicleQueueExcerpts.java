@@ -1245,8 +1245,8 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean inACycleCheckRep() {
             long lastSequenceAck = queue.lastAcknowledgedIndexReplicated();
-            long seq = queue.rollCycle().toSequenceNumber(index());
-            return seq > lastSequenceAck;
+            long index = index();
+            return index > lastSequenceAck;
         }
 
         private boolean inACycleNotForward() {
