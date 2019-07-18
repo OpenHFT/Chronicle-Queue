@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.impl.single.preroucher;
+package net.openhft.chronicle.queue.impl.single.pretoucher;
 
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
@@ -8,8 +8,6 @@ import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.MessageHistory;
 
 import java.util.UUID;
-
-import static net.openhft.chronicle.queue.impl.single.preroucher.ValidFields.validateAll;
 
 /**
  * Created by Rob Austin
@@ -21,7 +19,7 @@ public class PretoucherSoakTest {
                 .rollCycle(RollCycles.TEST_SECONDLY).build();
         ExcerptAppender outQueueAppender = outQueue.acquireAppender();
 
-        HeartbeatListener heartbeatWriter = outQueueAppender.methodWriterBuilder(HeartbeatListener.class).methodWriterListener((m, a) -> validateAll(a)).get();
+        HeartbeatListener heartbeatWriter = outQueueAppender.methodWriterBuilder(HeartbeatListener.class).methodWriterListener((m, a) -> ValidFields.validateAll(a)).get();
 
         Monitor.addPeriodicUpdateSource(10, () -> currentTimeMillis -> {
             outQueueAppender.pretouch();
