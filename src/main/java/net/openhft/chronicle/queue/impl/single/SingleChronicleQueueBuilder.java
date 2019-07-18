@@ -40,6 +40,7 @@ import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.EventGroup;
+import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -104,6 +105,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Integer indexCount;
     private Boolean enableRingBufferMonitoring;
     private Boolean ringBufferReaderCanDrain;
+    private Pauser ringBufferPauser = Pauser.busy();
     @Nullable
     private EventLoop eventLoop;
     private WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -814,6 +816,19 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     public SingleChronicleQueueBuilder ringBufferReaderCanDrain(boolean ringBufferReaderCanDrain) {
         this.ringBufferReaderCanDrain = ringBufferReaderCanDrain;
+        return this;
+    }
+
+    /**
+     * Pauser to be used by ring buffer when waiting to write
+     * @return pauser
+     */
+    public Pauser ringBufferPauser() {
+        return ringBufferPauser;
+    }
+
+    public SingleChronicleQueueBuilder ringBufferPauser(Pauser ringBufferPauser) {
+        this.ringBufferPauser = ringBufferPauser;
         return this;
     }
 
