@@ -104,7 +104,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Integer indexSpacing;
     private Integer indexCount;
     private Boolean enableRingBufferMonitoring;
-    private Boolean ringBufferReaderCanDrain;
+    private Boolean ringBufferReaderCanDrain = true;
     private Pauser ringBufferPauser = Pauser.busy();
     @Nullable
     private EventLoop eventLoop;
