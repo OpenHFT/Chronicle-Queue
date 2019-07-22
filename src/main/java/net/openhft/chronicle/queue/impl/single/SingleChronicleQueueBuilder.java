@@ -104,7 +104,8 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Integer indexSpacing;
     private Integer indexCount;
     private Boolean enableRingBufferMonitoring;
-    private Boolean ringBufferReaderCanDrain = true;
+    private Boolean ringBufferReaderCanDrain;
+    private Boolean ringBufferForceCreateReader;
     private Pauser ringBufferPauser = Pauser.busy();
     @Nullable
     private EventLoop eventLoop;
@@ -811,11 +812,23 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
      * @return if ring buffer reader processes can invoke the CQ drainer, otherwise only writer processes can
      */
     public boolean ringBufferReaderCanDrain() {
-        return ringBufferReaderCanDrain == null ? false : ringBufferReaderCanDrain;
+        return ringBufferReaderCanDrain == null ? true : ringBufferReaderCanDrain;
     }
 
     public SingleChronicleQueueBuilder ringBufferReaderCanDrain(boolean ringBufferReaderCanDrain) {
         this.ringBufferReaderCanDrain = ringBufferReaderCanDrain;
+        return this;
+    }
+
+    /**
+     * @return whether to force creating a reader (to recover from crash)
+     */
+    public boolean ringBufferForceCreateReader() {
+        return ringBufferForceCreateReader == null ? false : ringBufferForceCreateReader;
+    }
+
+    public SingleChronicleQueueBuilder ringBufferForceCreateReader(boolean ringBufferForceCreateReader) {
+        this.ringBufferForceCreateReader = ringBufferForceCreateReader;
         return this;
     }
 
