@@ -7,7 +7,6 @@ image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-que
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 
 image::images/Queue_line.png[]
-
 == Contents
 
 toc::[]
