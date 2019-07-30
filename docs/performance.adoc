@@ -21,7 +21,7 @@ image::../images/cq-performance.png[cq-performance.png]
 image::../images/cq-performance-java.png[cq-performance-java.png]
 
 === Chronicle Queue Zero
-Chronicle Queue Zero ( refered to as Queue Zero ) is a high performance queue which trades some of Queue's functionality for significantly higher performance with applicability across a wide range of applications. 
+Chronicle Queue Zero ( abbreviated to Queue Zero ) is a high performance queue which trades some of Chronicle Queue's functionality for significantly higher performance with applicability across a wide range of applications. 
 Plots for equivalent tests using Queue Zero are shown below and demonstrate the significant performance benefit of Queue Zero vs Queue (around x10), and also the better scaling at high percentiles. 
 
 Further details of Queue Zero are available at the following link https://github.com/ChronicleEnterprise/Chronicle-Queue-Zero-Demo/blob/master/README.adoc or by contacting sales@chronicle.software
@@ -31,7 +31,7 @@ image::../images/cqz-performance.png[cqz-performance.png]
 image::../images/cqz-performance-java.png[cqz-performance-java.png]
 
 === Chronicle Queue vs Chronicle Queue Zero
-To make the comparison between Chronicle Queue and Chronicle Queue Zero performance even clearer, the below plots show the end-to-end latencies for sending a 1024-byte message using Queue and Queue Zero, for C++ and Java respectively. These plots again show both the much reduced latency using Queue Zero, as well as the reduction of outliers at higher percentiles.
+To make the comparison between Chronicle Queue ( abbreviated to Queue ) and Chronicle Queue Zero ( abbreviated to Queue Zero ) performance even clearer, the below plots show the end-to-end latencies for sending a 1024-byte message using Queue and Queue Zero, for C++ and Java respectively. These plots again show both the much reduced latency using Queue Zero, as well as the reduction of outliers at higher percentiles.
 
 image::../images/cq-vs-cqz.png[cq-vs-cqz.png]
 
