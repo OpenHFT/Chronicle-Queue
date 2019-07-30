@@ -30,6 +30,13 @@ image::../images/cqz-performance.png[cqz-performance.png]
 
 image::../images/cqz-performance-java.png[cqz-performance-java.png]
 
+=== Queue vs Queue Zero
+To make the comparison between Queue and Queue-Zero performance even clearer, the below plots show the end-to-end latencies for sending a 1024-byte message using Queue and Queue Zero, for C++ and Java respectively. These plots again show both the much reduced latency using Queue Zero, as well as the reduction of outliers at higher percentiles.
+
+image::../images/cq-vs-cqz.png[cq-vs-cqz.png]
+
+image::../images/cq-vs-cqz-java.png[cq-vs-cqz-java.png]
+
 ==== Notes:
 
 * These results where generated using `net.openhft.chronicle.queue.bench.QueueMultiThreadedJLBHBenchmark` for Java, and `c++/test/queue/bench/QueueMultiThreadedJLBHBenchmark.cpp` for {cpp}.
