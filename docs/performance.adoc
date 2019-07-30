@@ -1,6 +1,6 @@
 
 
-= Chronicle Queue Zero Performance
+= Chronicle Queue Performance
 Neil Clifford
 :toc: macro
 :toclevels: 1
