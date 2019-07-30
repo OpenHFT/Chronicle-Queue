@@ -1,0 +1,47 @@
+
+
+= Chronicle Queue Zero Performance
+Neil Clifford
+:toc: macro
+:toclevels: 1
+:css-signature: demo
+:toc-placement: macro
+:icons: font
+
+== Test Results
+
+The tests shown below measure the latency from the appender writing a packet of 64, 128, 1024, or 1500 bytes, and then the data being received by the tailer.
+
+The data includes an embedded timestamp, which is extracted by the tailer and used to determine the end-to-end latency.
+
+Note, the C++ plot uses a linear scale for the latency axis; the Java plot uses a logarithmic scale.
+
+image::../images/cq-performance.png[cq-performance.png]
+
+image::../images/cq-performance-java.png[cq-performance-java.png]
+
+=== Queue Zero
+Queue Zero is a high performance queue which trades some of Queue's functionality for significantly higher performance with applicability across a wide range of applications. 
+Plots for equivalent tests using Queue Zero are shown below and demonstrate the significant performance benefit of Queue Zero vs Queue (around x10), and also the better scaling at high percentiles. 
+
+Further details of Queue Zero are available at the following link https://github.com/ChronicleEnterprise/Chronicle-Queue-Zero-Demo/blob/master/README.adoc or by contacting sales@chronicle.software
+
+image::../images/cqz-performance.png[cqz-performance.png]
+
+image::../images/cqz-performance-java.png[cqz-performance-java.png]
+
+==== Notes:
+
+* These results where generated using `net.openhft.chronicle.queue.bench.QueueMultiThreadedJLBHBenchmark` for Java, and `c++/test/queue/bench/QueueMultiThreadedJLBHBenchmark.cpp` for {cpp}.
+
+* The platform used to generate the results is a 24-core E5-2650 v4 running at 2.2GHz (turbo to 2.9GHz).
+
+* The tests are run across two threads (one for the appender, one for the tailer) with each thread pinned to a separate core.
+
+* The tests show the write-to-read latency, from the point just before the data is written to queue zero, to the point the data is available to read from the tailer.
+
+
+'''
+
+<<../ReadMe.adoc#,Back to ReadMe>>
+
