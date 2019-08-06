@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -709,7 +710,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @NotNull
-    private MappedFile mappedFile(File file) throws FileNotFoundException {
+    @PackageLocal
+    MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
         return MappedFile.of(file, chunkSize, overlapSize, readOnly);
