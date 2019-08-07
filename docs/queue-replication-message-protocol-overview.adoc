@@ -19,7 +19,7 @@ In order to make the messages human-readable in this document, the messages are 
 
 === Who should read this document
 
-Anyone who wants to get more information into the data that is transfered between the remote hosts, used by Chronicle
+Anyone who wants to get more information into the data that is transferred between the remote hosts, used by Chronicle
  Queue Enterprise, to do TCP/IP replication. This document is not a queue functionality overview document.
 
 == UberHandler
@@ -87,7 +87,7 @@ Heartbeat handlers are set up on both the source, and the sink machines. Periodi
 
 === Exchanging data between Source and Sink 
 
-Chronicle queues are repliated using the `SourceReplicationHandler`, which sends its messages to the `SinkReplicationHandler`. Both the `SourceReplicationHandler` and `SinkReplicationHandler` are SubHandlers.
+Chronicle queues are replicated using the `SourceReplicationHandler`, which sends its messages to the `SinkReplicationHandler`. Both the `SourceReplicationHandler` and `SinkReplicationHandler` are SubHandlers.
 
 However, handshaking messages are sent back from the `SinkReplicationHandler` to the `SourceReplicationHandler`. One such message is the acknowledgement message which the sink sends the source. By inspecting the `idx: 0x451600000000` (see example message below) this allows you to add code on your source machine to ensure that the message was received by the remote machine, and therefore successfully replicated.
 
@@ -99,7 +99,7 @@ idx: 0x451600000000
 ns: 10849029994071
 ```
 
-The Sink and Source handers are as follows:
+The Sink and Source handlers are as follows:
 
 [%autowidth]
 |===
@@ -167,7 +167,7 @@ eos: !!null "" #  END_OF_STREAM
 
 The sink replication handler then receives new messages from the SourceReplicationHandler. When it receives these new messages it uses a chronicle queue appender to write them to a chronicle queue. 
 
-NOTE: When the messages are written to the chronicle queue by the `SinkReplicationHandler`, we write the message and take account of the source index, to guarantee that the order of messages from the source exactly matches the order of messages on the sink. In addition, using the index also ensures that the message has always been written to the correct queue file. This is even if events such has roll-over have occured. This would typically cause a normal appender to write the message to the next queue file. This is not what we want, because we create an exact copy of messages, from the source to the sink.
+NOTE: When the messages are written to the chronicle queue by the `SinkReplicationHandler`, we write the message and take account of the source index, to guarantee that the order of messages from the source exactly matches the order of messages on the sink. In addition, using the index also ensures that the message has always been written to the correct queue file. This is even if events such has roll-over have occurred. This would typically cause a normal appender to write the message to the next queue file. This is not what we want, because we create an exact copy of messages, from the source to the sink.
 
 == Sending data with the SourceReplicationHandler
 

@@ -61,7 +61,7 @@ System.out.println(tailer.readText());
 
 ----
 
-Create a tmp directoyr for the Chronicle queue giving the name starting `Java_temp_directory/SimpleChronicle` as the base folder.
+Create a tmp directory for the Chronicle queue giving the name starting `Java_temp_directory/SimpleChronicle` as the base folder.
 
 [source,java]
 ----

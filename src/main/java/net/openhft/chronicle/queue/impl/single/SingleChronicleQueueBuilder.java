@@ -69,7 +69,7 @@ import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
-    private static final Constructor ENTERPISE_QUEUE_CONSTRUCTOR;
+    private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
 
@@ -88,7 +88,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
             } catch (Exception e) {
                 co = null;
             }
-            ENTERPISE_QUEUE_CONSTRUCTOR = co;
+            ENTERPRISE_QUEUE_CONSTRUCTOR = co;
         }
 
     }
@@ -273,7 +273,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     private static boolean isQueueReplicationAvailable() {
-        return ENTERPISE_QUEUE_CONSTRUCTOR != null;
+        return ENTERPRISE_QUEUE_CONSTRUCTOR != null;
     }
 
     private static RollCycle loadDefaultRollCycle() {
@@ -290,6 +290,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
                     if (rollCyclePropertyParts.length < 2) {
                         LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
                     } else {
+                        @SuppressWarnings("unchecked")
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
@@ -351,18 +352,18 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     private boolean onlyAvailableInEnterprise(final String feature) {
-        if (ENTERPISE_QUEUE_CONSTRUCTOR == null)
+        if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
             LOGGER.warn(feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
         return true;
     }
 
     @NotNull
     private SingleChronicleQueue buildEnterprise() {
-        if (ENTERPISE_QUEUE_CONSTRUCTOR == null)
+        if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
             throw new IllegalStateException("Enterprise features requested but Chronicle Queue Enterprise is not in the class path!");
 
         try {
-            return (SingleChronicleQueue) ENTERPISE_QUEUE_CONSTRUCTOR.newInstance(this);
+            return (SingleChronicleQueue) ENTERPRISE_QUEUE_CONSTRUCTOR.newInstance(this);
         } catch (Exception e) {
             throw new IllegalStateException("Couldn't create an instance of Enterprise queue", e);
         }
@@ -435,7 +436,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
                 overrideRollCycleForFileNameLength(newMeta.roll().format().length());
             }
 
-            // if it was overriden - reset
+            // if it was overridden - reset
             rollTime = newMeta.roll().rollTime();
             rollTimeZone = newMeta.roll().rollTimeZone();
             epoch = newMeta.roll().epoch();

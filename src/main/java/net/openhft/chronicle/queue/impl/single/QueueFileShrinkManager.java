@@ -48,7 +48,7 @@ public enum QueueFileShrinkManager {
                     raf.setLength(writePos);
                     raf.close();
                 } catch (IOException ex) {
-                    // on macrosux windows, keep retrying until the file is unmapped
+                    // on microsoft windows, keep retrying until the file is unmapped
                     if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open"))
                         continue;
                     LOG.warn("Failed to shrink file " + queueFile, ex);

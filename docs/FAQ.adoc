@@ -268,7 +268,7 @@ You can have any number of writers. However, you may get higher throughput if yo
 
 === Does Chronicle Queue support replication?
 
-Replication features are availabler in Chronicle Queue Enterprise.  Replication supports:
+Replication features are available in Chronicle Queue Enterprise.  Replication supports:
 
 - replication of a single master to multiple slave nodes.
 - writers can wait for replication to be acknowledged.
@@ -281,7 +281,7 @@ No. Chronicle Queue is designed to be both reliable and deterministic.  UDP is n
 
 === How do I know the consumer is up to date?
 
-For the tailer, either replicated or notreplicated, you can assume you are up-to-date when either `isPresent()` is `false`, or your read method returns `false`
+For the tailer, either replicated or not replicated, you can assume you are up-to-date when either `isPresent()` is `false`, or your read method returns `false`
 
 === What are the differences between the `files directory-listing.cq4t` and `metadata.cq4t` ?
 

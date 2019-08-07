@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 public class ChronicleHistoryReader {
 
-    private static final int SUMMART_OUTPUT_UNSET = -999;
+    private static final int SUMMARY_OUTPUT_UNSET = -999;
     protected Path basePath;
     protected Consumer<String> messageSink;
     protected boolean progress = false;
@@ -33,7 +33,7 @@ public class ChronicleHistoryReader {
     protected long measurementWindowNanos = 0;
     protected long firstTimeStampNanos = 0;
     protected long lastWindowCount = 0;
-    protected int summaryOutputOffset = SUMMART_OUTPUT_UNSET;
+    protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
     protected int lastHistosSize = 0;
 
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
@@ -112,7 +112,7 @@ public class ChronicleHistoryReader {
     }
 
     public void outputData() {
-        if (summaryOutputOffset != SUMMART_OUTPUT_UNSET)
+        if (summaryOutputOffset != SUMMARY_OUTPUT_UNSET)
             printSummary();
         else
             printPercentilesSummary();
@@ -148,7 +148,7 @@ public class ChronicleHistoryReader {
         }
         long tsSinceStart = (lastWindowCount * measurementWindowNanos) - firstTimeStampNanos;
         messageSink.accept(
-                Long.toString(timeUnit.convert(tsSinceStart, TimeUnit.NANOSECONDS)) + "," +
+                timeUnit.convert(tsSinceStart, TimeUnit.NANOSECONDS) + "," +
                         histos.values().stream().
                                 map(h -> Long.toString(timeUnit.convert((long) offset(h.getPercentiles(), summaryOutputOffset), TimeUnit.NANOSECONDS))).
                                 collect(Collectors.joining(",")));
@@ -225,7 +225,7 @@ public class ChronicleHistoryReader {
                 Histogram histo1 = histos.computeIfAbsent("startTo" + histoId, s -> histogram());
                 histo1.sample(receivedByThisComponent - history.timing(0));
             } else if (lastTime != 0) {
-                Histogram histo1 = histos.computeIfAbsent(Integer.toString(history.sourceId(sourceIndex - 1)) + "to" + histoId, s -> histogram());
+                Histogram histo1 = histos.computeIfAbsent(history.sourceId(sourceIndex - 1) + "to" + histoId, s -> histogram());
                 // here we are comparing System.nanoTime across processes. YMMV
                 histo1.sample(receivedByThisComponent - lastTime);
             }

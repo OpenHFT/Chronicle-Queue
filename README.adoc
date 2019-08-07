@@ -1177,7 +1177,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 ==== Ensure long Running tasks are not performed with a writingDocument()
 
 The `writingDocument()` should be performed as quickly as possible because a write lock is held until the `DocumentContext` is closed by the try-with-resources. This blocks other appenders and tailers. More dangerously,
-if something keeps the thread busy long enough(more than recovery timeout, which is 20 seconds by defult) between call to `appender.writingDocument()` and code that actually writes something into bytes,
+if something keeps the thread busy long enough(more than recovery timeout, which is 20 seconds by default) between call to `appender.writingDocument()` and code that actually writes something into bytes,
 it can cause recovery to kick in from other appenders (potentially in other process), which will rewrite message header, and if your thread subsequently continues writing its own message it will corrupt queue file.
 
 [source, Java]

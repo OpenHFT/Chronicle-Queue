@@ -27,7 +27,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted, V, E extends T
     @NotNull
     V get(@NotNull final K key) throws E {
 
-        // remove all which have been dereferenced. Garbagy but rare
+        // remove all which have been dereferenced. Garbagey but rare
         cache.entrySet().removeIf(entry -> entry.getValue().refCount() == 0);
 
         @Nullable T value = cache.get(key);

@@ -30,13 +30,13 @@ public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
 ....
 
 == Customer specified encryption
-You can supply a bespoke encryption method to encrpypt your messages using, perhaps, a more complex encryption method.
+You can supply a bespoke encryption method to encrypt your messages using, perhaps, a more complex encryption method.
 
 For example, you could perhaps combine encryption with salting, and/or compression.
 
 Another example could be to write simple custom code that will encrypt the more important messages, while saving on overhead by not encrypting unimportant messages.
 
-To enable this form of queue encrpyption, specify `codingSuppliers` at queue build time and supply the bespoke encryption method.
+To enable this form of queue encryption, specify `codingSuppliers` at queue build time and supply the bespoke encryption method.
 
 For example:
 

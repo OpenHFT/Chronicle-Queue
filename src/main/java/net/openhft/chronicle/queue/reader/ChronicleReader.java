@@ -213,9 +213,7 @@ public final class ChronicleReader {
             }
 
             messageSink.accept("Waiting for startIndex " + startIndex);
-            for (; ; ) {
-                if (tailer.moveToIndex(startIndex))
-                    break;
+            while (!tailer.moveToIndex(startIndex)) {
                 Jvm.pause(100);
             }
         }

@@ -64,28 +64,25 @@ public class BenchmarkMain {
 
         Thread reader = new Thread(() -> {
 //            try (ChronicleQueue queue2 = createQueue(path))
-            ChronicleQueue queue2 = queue;
-            {
-                ExcerptTailer tailer = queue2.createTailer().toEnd();
-                long endLoop = System.nanoTime();
-                while (running) {
-                    loopTime.sample(System.nanoTime() - endLoop);
-                    Jvm.safepoint();
+            ExcerptTailer tailer = queue.createTailer().toEnd();
+            long endLoop = System.nanoTime();
+            while (running) {
+                loopTime.sample(System.nanoTime() - endLoop);
+                Jvm.safepoint();
 
 //                    readerLoopTime = System.nanoTime();
 //                    if (readerLoopTime - readerEndLoopTime > 1000)
 //                        System.out.println("r " + (readerLoopTime - readerEndLoopTime));
-                    try {
-                        runInner(transportTime, readTime, tailer);
-                        runInner(transportTime, readTime, tailer);
-                        runInner(transportTime, readTime, tailer);
-                        runInner(transportTime, readTime, tailer);
-                    } finally {
+//                try {
+                runInner(transportTime, readTime, tailer);
+                runInner(transportTime, readTime, tailer);
+                runInner(transportTime, readTime, tailer);
+                runInner(transportTime, readTime, tailer);
+//                } finally {
 //                        readerEndLoopTime = System.nanoTime();
-                    }
-                    Jvm.safepoint();
-                    endLoop = System.nanoTime();
-                }
+//                }
+                Jvm.safepoint();
+                endLoop = System.nanoTime();
             }
         });
         reader.start();

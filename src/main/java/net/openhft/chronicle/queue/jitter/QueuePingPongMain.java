@@ -48,15 +48,10 @@ public class QueuePingPongMain {
 
                     long wakeTime = System.nanoTime();
                     while (running) {
-                        int count = 0;
                         try (DocumentContext dc = tailer.readingDocument(true)) {
-                            if (!dc.isPresent()) {
-                                count++;
+                            if (!dc.isPresent())
                                 continue;
-                            }
                         }
-                        if (count > 0)
-                            System.out.println(count);
                         break;
                     }
                     long delay = wakeTime - writeTime;

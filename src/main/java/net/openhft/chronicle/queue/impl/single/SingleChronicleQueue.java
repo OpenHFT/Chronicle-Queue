@@ -559,7 +559,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (cycles.size() == 2)
             return result;
 
-        final Long[] array = cycles.toArray(new Long[cycles.size()]);
+        final long[] array = cycles.stream().mapToLong(i -> i).toArray();
         for (int i = 1; i < array.length - 1; i++) {
             long x = exceptsPerCycle(Math.toIntExact(array[i]));
             result += x;
