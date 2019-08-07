@@ -37,7 +37,6 @@ import java.io.EOFException;
 import java.io.StreamCorruptedException;
 import java.lang.ref.WeakReference;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
@@ -321,21 +320,15 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     private void checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
             start) {
+        boolean assertOn = false;
+        assert assertOn = true;
+        //noinspection ConstantConditions
+        if (!assertOn)
+            return;
+
         long end = System.nanoTime();
-        if (end > start + 50e3) {
-
-            assert printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
-        } else if (fromKnownIndex > 0x284d34000000000L) {
-            Jvm.debug().on(getClass(),
-                    "Unexpectedly high " + TimeUnit.NANOSECONDS.toMicros(end - start) + "us " +
-                            "fromKnownIndex 0x" + Long
-                            .toHexString(fromKnownIndex) +
-                            " " +
-                            "to 0x" + Long.toHexString(toIndex) + "= ( 0x" + Long.toHexString
-                            (toIndex) + "- 0x" + Long.toHexString(fromKnownIndex) + ") = " +
-                            (toIndex - fromKnownIndex),
-                    new StackTrace("This is a profile stack trace, not an ERROR"));
-
+        if (end > start + 100_000) {
+            printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
         }
     }
 
@@ -408,7 +401,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long start = System.nanoTime();
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
         long end = System.nanoTime();
-        int time = Jvm.isArm() ? 1_000_000 : 50_000;
+        int time = Jvm.isArm() ? 1_000_000 : 100_000;
         if (end > start + time) {
             printLinearScanTime(toPosition, startAddress, start, end, "linearScan by position");
         }
