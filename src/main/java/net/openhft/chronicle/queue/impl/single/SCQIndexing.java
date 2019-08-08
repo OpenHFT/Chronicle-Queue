@@ -334,16 +334,20 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     private boolean printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end,
                                         String desc) {
-        Jvm.warn().on(getClass(), "Took " + (end - start) / 1000 + " us to " + desc + " from " +
+        StackTrace st = null;
+        if (Jvm.isDebugEnabled(getClass())) {
+            int time = Jvm.isArm() ? 20_000_000 : 250_000;
+            // ignore the time for the first message
+            if (toIndex > 0 && end > start + time)
+                st = new StackTrace("This is a profile stack trace, not an ERROR");
+        }
+
+        long tookUS = (end - start) / 1000;
+        Jvm.warn().on(getClass(), "Took " + tookUS + " us to " + desc + " from " +
                 fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
                 + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
-                (toIndex - fromKnownIndex));
-        // ignored  for the first message
-        int time = Jvm.isArm() ? 20_000_000 : 250_000;
-        if (toIndex > 0 && end > start + time)
-            // has to be change to debug because is being reported as an an
-            Jvm.debug().on(getClass(),
-                    new StackTrace("This is a profile stack trace, not an ERROR"));
+                        (toIndex - fromKnownIndex),
+                st);
         return true;
     }
 
