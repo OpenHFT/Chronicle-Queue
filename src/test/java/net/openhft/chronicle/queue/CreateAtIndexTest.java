@@ -41,7 +41,6 @@ import static org.junit.Assert.fail;
 @RequiredForClient
 public class CreateAtIndexTest extends ChronicleQueueTestBase {
 
-
     @Test
     public void testWriteBytesWithIndex() {
         final Bytes HELLO_WORLD = Bytes.fromString("hello world");

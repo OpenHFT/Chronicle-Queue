@@ -588,7 +588,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         assertTrue(dir.delete());
     }
 
-
     @Test
     public void testReadingLessBytesThanWritten() {
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
