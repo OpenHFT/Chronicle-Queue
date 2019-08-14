@@ -38,6 +38,9 @@ public enum RollCycles implements RollCycle {
     HUGE_DAILY_XSPARSE("yyyyMMdd", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20), // 256 trillion entries per day with super-sparse indexing
     ;
 
+    // don't alter this or you will confuse yourself.
+    public static final RollCycles[] VALUES = values();
+
     final String format;
     final int length;
     final int cycleShift;
