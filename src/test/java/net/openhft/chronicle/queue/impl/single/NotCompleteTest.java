@@ -88,7 +88,6 @@ public class NotCompleteTest {
         } finally {
             IOTools.deleteDirWithFiles(tmpDir, 20);
         }
-
     }
 
     @Test
@@ -132,7 +131,6 @@ public class NotCompleteTest {
         } finally {
             IOTools.deleteDirWithFiles(tmpDir, 20);
         }
-
     }
 
     @Test
@@ -240,7 +238,6 @@ public class NotCompleteTest {
                 throw e;
             }
         }
-
     }
 
     @Test
@@ -351,7 +348,6 @@ public class NotCompleteTest {
                 throw e;
             }
         }
-
     }
 
     // the last line of the dump changes - haven't spent the time to get to the bottom of this

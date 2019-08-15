@@ -85,7 +85,6 @@ public class MoveToWrongIndexThenToEndTest {
                     for (int i = 0; i < numOfToEndCalls; ++i) {
                         tailer.toEnd(); // BufferUnderflowException in readSkip()
                     }
-
                 } catch (Throwable e) {
                     e.printStackTrace();
                     refThrowable.set(e);

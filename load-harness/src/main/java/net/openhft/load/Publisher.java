@@ -69,7 +69,6 @@ public final class Publisher {
 //                                    nanosToMicros(DebugTimestamps.getDurationNanos(operation)));
 //                        }
 //                    }
-
                 }
 
             } catch (Exception e) {

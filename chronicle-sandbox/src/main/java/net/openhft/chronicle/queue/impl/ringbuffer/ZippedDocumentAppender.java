@@ -134,7 +134,6 @@ public class ZippedDocumentAppender implements Closeable {
 
                     chronicleQueue.appendDocument(outputBuffer);
                 }
-
             } catch (Exception e) {
                 LOG.error("", e);
             }

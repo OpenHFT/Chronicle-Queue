@@ -208,7 +208,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("hello").text("world");
             }
-
         }
         DirectoryUtils.deleteDir(tmpDir);
         if (OS.isWindows()) {
@@ -250,7 +249,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = tailer.readingDocument()) {
                 Assert.assertEquals("world2", dc.wire().read("hello").text());
             }
-
         }
     }
 
@@ -270,7 +268,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     try (final DocumentContext dc = appender.writingDocument()) {
                         dc.wire().writeEventName(() -> "key").text(expected);
                     }
-
                 });
 
                 BlockingQueue<Bytes> result = new ArrayBlockingQueue<>(10);
@@ -305,7 +302,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 if (service2 != null)
                     service2.shutdownNow();
             }
-
         }
     }
 
@@ -403,7 +399,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (DocumentContext documentContext = appender.writingDocument()) {
                     documentContext.wire().getValueOut().text("four");
                 }
-
             }
             {
 
@@ -576,7 +571,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (final DocumentContext dc = queue.createTailer().readingDocument()) {
                 assertEquals("foo", dc.wire().read().text());
             }
-
         }
 
         Files.walk(dir.toPath()).forEach(p -> {
@@ -1111,7 +1105,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 jobs.release();
                 bytes.release();
             }
-
         }
     }
 
@@ -2180,7 +2173,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
         }
-
     }
 
     @NotNull
@@ -2591,7 +2583,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertEquals("first message", tailer.readText());
             Assert.assertEquals("second message", tailer.readText());
         }
-
     }
 
     @Test
@@ -2700,7 +2691,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         .rollCycle(rollCycle).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
-
             });
 
             Future f2 = executorService.submit(() -> {
@@ -2714,7 +2704,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         timeProvider.advanceMillis(400);
                     }
                 }
-
             });
 
             f1.get(10, TimeUnit.SECONDS);
@@ -2797,7 +2786,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertEquals(s, out);
 
         }
-
     }
 
     @Test
@@ -2812,7 +2800,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = q.acquireAppender().writingDocument()) {
                 dc.wire().write("hello2").text("hello-world-2");
             }
-
         }
     }
 
@@ -2853,7 +2840,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                             final Bytes<?> bytes = rdc.wire().bytes();
                             wdc.wire().bytes().write(bytes);
                         }
-
                     }
                 }
             }
@@ -2890,7 +2876,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 } else {
                     dc.wire().write("value").int64(0);
                 }
-
             }
         }
 
@@ -2938,7 +2923,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 mappedFile = toMappedFile(documentContext);
                 Assert.assertEquals("some text", documentContext.wire().read().text());
             }
-
         }
 
         waitFor(mappedFile::isClosed, "mappedFile is not closed");
@@ -3197,7 +3181,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                                 "hello\n"));
 
             }
-
         }
     }
 
@@ -3250,7 +3233,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "hello: world4"));
             }
-
         }
     }
 
@@ -3311,7 +3293,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 } finally {
                     bytes.readPosition(rp).writePosition(wp).writeLimit(wl);
                 }
-
             }
 
             try (DocumentContext documentContext = tailer1.readingDocument()) {
@@ -3446,7 +3427,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         public MyMarshable() {
         }
-
     }
 
     private static class BytesWithIndex implements Closeable {

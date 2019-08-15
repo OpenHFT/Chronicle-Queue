@@ -77,13 +77,11 @@ public class ProxyTest {
                 public void onMessage(final Message message) {
                     result.append(message);
                 }
-
             });
 
             for (int i = 0; i < 10; i++) {
                 methodReader.readOne();
             }
-
         }
         Assert.assertEquals("!net.openhft.chronicle.queue.ProxyTest$Message {\n" +
                 "  message: test 0\n" +
@@ -134,7 +132,6 @@ public class ProxyTest {
             this.message.append(message);
             return this;
         }
-
     }
 
 }

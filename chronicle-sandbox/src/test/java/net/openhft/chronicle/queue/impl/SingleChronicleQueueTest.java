@@ -329,7 +329,6 @@ public class SingleChronicleQueueTest {
 
                 Assert.assertEquals("value=" + expected, sb.toString());
             }
-
         } finally {
             file.delete();
         }

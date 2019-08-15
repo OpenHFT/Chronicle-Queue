@@ -122,7 +122,6 @@ public class ChronicleHistoryReaderTest {
                 Assert.assertEquals(4, histos.size());
                 Assert.assertEquals("[1, 2, 1to2, endToEnd]", histos.keySet().toString());
             }
-
         } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);

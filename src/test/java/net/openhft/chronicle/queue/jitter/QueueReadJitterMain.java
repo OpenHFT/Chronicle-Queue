@@ -97,7 +97,6 @@ public class QueueReadJitterMain {
                     Jvm.trimStackTrace(sb, stes);
                     System.out.println(sb);
                 }
-
             } while (System.currentTimeMillis() < start0 + runTime * 1_000);
         }
         running = false;

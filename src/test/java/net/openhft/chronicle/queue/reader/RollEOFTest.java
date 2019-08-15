@@ -205,6 +205,5 @@ public class RollEOFTest {
         try (DocumentContext dc = excerptAppender.writingDocument(false)) {
             dc.wire().write(() -> "test").int64(0);
         }
-
     }
 }

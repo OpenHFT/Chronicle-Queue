@@ -50,7 +50,6 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                     time += 300;
                     stp.currentTimeMillis(time);
                 }
-
             }
             //     System.out.println(queue.dump());
 
@@ -97,12 +96,10 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                 }
                 key.bytes().release();
             }
-
         } finally {
             System.gc();
             deleteDir(tmpDir);
         }
-
     }
 
     @NotNull

@@ -32,7 +32,6 @@ public class MarshallableTest {
                 assertTrue(tailer2.readText(sb));
                 assertEquals("" + i, sb.toString());
             }
-
         } finally {
             try {
                 IOTools.deleteDirWithFiles(dir, 2);

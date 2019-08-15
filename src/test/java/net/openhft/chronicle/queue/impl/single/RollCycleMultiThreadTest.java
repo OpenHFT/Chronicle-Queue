@@ -129,7 +129,6 @@ public class RollCycleMultiThreadTest {
         void add(long addInMs) {
             this.addInMs = addInMs;
         }
-
     }
 
     private class ParallelQueueObserver implements Callable, StoreFileListener {

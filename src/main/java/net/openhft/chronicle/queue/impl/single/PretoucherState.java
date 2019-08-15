@@ -56,7 +56,6 @@ class PretoucherState {
                 String message = getFile(bytes) + " - Reset pretoucher to pos " + pos + " as the underlying MappedBytes changed.";
                 debug(message);
             }
-
         } else {
             long moved = pos - lastPos;
             averageMove = moved / 4 + averageMove * 3 / 4;

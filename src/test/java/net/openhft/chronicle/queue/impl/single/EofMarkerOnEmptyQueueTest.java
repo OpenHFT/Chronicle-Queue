@@ -54,7 +54,6 @@ public final class EofMarkerOnEmptyQueueTest {
                 try (final DocumentContext nextCtx = queue.acquireAppender().writingDocument()) {
                     nextCtx.wire().writeEventName("bar").int32(7);
                 }
-
             }).get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);
 
             final WireStore firstCycleStore = queue.storeForCycle(startCycle, 0, false);

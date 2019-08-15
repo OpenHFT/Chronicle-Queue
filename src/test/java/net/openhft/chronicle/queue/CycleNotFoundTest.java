@@ -81,7 +81,6 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                 try (DocumentContext dc = tailer.readingDocument()) {
                     Assert.assertFalse(dc.isPresent());
                 }
-
             } finally {
                 System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
             }

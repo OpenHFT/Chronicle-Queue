@@ -88,7 +88,6 @@ public class SingleCQFormatTest {
                     assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
                             e.toString());
                 }
-
             }
         }
         System.gc();

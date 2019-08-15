@@ -53,7 +53,6 @@ public enum BinarySearch {
         } finally {
             key.bytes().readPosition(readPosition);
         }
-
     }
 
     private static long findCycleLinearSearch(@NotNull NavigableSet<Long> cycles, Wire key,

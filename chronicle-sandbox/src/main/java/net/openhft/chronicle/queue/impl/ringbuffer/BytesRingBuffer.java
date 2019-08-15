@@ -107,7 +107,6 @@ public class BytesRingBuffer {
 
                 return true;
             }
-
         } catch (IllegalStateException e) {
             // when the ring buffer is full
             return false;

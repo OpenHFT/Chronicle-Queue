@@ -120,7 +120,6 @@ public class SingleTailer implements ExcerptTailer {
                     }
                 }
             }
-
         } else {
             long lastKnownIndex = 0;
             for (long count = 0; count < ((int) (1L << 17L)); count++) {

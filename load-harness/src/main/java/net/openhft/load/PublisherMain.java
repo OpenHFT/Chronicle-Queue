@@ -65,7 +65,6 @@ public final class PublisherMain {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
             }
         }
     }

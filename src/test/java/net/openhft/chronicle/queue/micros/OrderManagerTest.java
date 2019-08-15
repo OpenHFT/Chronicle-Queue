@@ -235,7 +235,6 @@ public class OrderManagerTest {
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception ignore) {
             }
-
         }
     }
 }

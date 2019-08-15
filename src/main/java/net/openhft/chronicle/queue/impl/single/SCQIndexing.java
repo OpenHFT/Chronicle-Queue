@@ -283,7 +283,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 } else {
                     return linearScan(ec.wire(), index, startIndex, fromAddress);
                 }
-
             } while (secondaryOffset >= 0);
             return null; // no index,
         } catch (IllegalStateException e) {

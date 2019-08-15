@@ -99,6 +99,5 @@ public class SCQMeta implements Metadata {
         if (!(other.sourceId == 0 || sourceId == 0 || other.sourceId == sourceId)) {
             Jvm.warn().on(getClass(), "inconsistency with of source ids, existing sourceId=" + other.sourceId + ", requested sourceId=" + sourceId);
         }
-
     }
 }

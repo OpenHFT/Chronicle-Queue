@@ -90,7 +90,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
             }
             ENTERPRISE_QUEUE_CONSTRUCTOR = co;
         }
-
     }
 
     public BufferMode writeBufferMode = BufferMode.None;
@@ -367,7 +366,6 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         } catch (Exception e) {
             throw new IllegalStateException("Couldn't create an instance of Enterprise queue", e);
         }
-
     }
 
     public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {

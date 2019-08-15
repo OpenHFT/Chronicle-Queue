@@ -75,7 +75,6 @@ public class TestTailAfterRoll {
                     .writeText(EXPECTED);
             Assert.assertEquals(EXPECTED, excerptTailer.readText());
         }
-
     }
 
 }

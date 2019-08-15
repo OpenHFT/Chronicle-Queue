@@ -149,7 +149,6 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                                 sendBackMessage(tailer, index);
                             });
                         }
-
                     } finally {
 
                         if (EventGroup.IS_DEBUG) {

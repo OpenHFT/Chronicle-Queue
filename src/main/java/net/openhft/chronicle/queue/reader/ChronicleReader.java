@@ -107,7 +107,6 @@ public final class ChronicleReader {
                                 }
                             }
                         }
-
                     } finally {
                         textConversionTarget.release();
                         highestReachedIndex = tailer.index();

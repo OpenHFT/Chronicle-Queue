@@ -41,7 +41,6 @@ public class DtoBytesMarshallableTest {
                         "  age: 45\n" +
                         "}\n", who.toString());
             }
-
         }
 
     }
@@ -71,7 +70,6 @@ public class DtoBytesMarshallableTest {
 
                 Assert.assertTrue(yaml.contains(who.toString()));
             }
-
         }
 
     }
@@ -92,7 +90,6 @@ public class DtoBytesMarshallableTest {
             bytes.writeInt(age);
             bytes.writeUtf8(name);
         }
-
     }
 
     public static class DtoAbstractMarshallable extends AbstractMarshallable {
@@ -110,7 +107,6 @@ public class DtoBytesMarshallableTest {
             bytes.writeInt(age);
             bytes.writeUtf8(name);
         }
-
     }
 
 }

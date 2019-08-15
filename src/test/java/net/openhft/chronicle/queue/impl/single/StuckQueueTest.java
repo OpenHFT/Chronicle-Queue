@@ -63,7 +63,6 @@ public class StuckQueueTest {
         } finally {
             DirectoryUtils.deleteDir(tmpDir.toFile());
         }
-
     }
 
 }

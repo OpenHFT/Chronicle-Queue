@@ -325,7 +325,6 @@ public class BytesRingBufferTest {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-
                     });
                 }
             }

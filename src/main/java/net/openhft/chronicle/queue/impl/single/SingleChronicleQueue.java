@@ -320,7 +320,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     }
                 }
             }
-
         } catch (Exception e) {
             e.printStackTrace(new PrintWriter(writer));
 

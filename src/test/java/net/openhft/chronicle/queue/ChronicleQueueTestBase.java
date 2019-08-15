@@ -73,7 +73,6 @@ public class ChronicleQueueTestBase {
                 Jvm.warn().on(ChronicleQueueTestBase.class, e);
             }
         }
-
     }
 
     public static void deleteDir(@NotNull File dir) {

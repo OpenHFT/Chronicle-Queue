@@ -287,7 +287,6 @@ public class SingleChronicleQueueStore implements WireStore {
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
-
     }
 
     @Override
@@ -331,7 +330,6 @@ public class SingleChronicleQueueStore implements WireStore {
             } finally {
                 wire.bytes().release();
             }
-
         } else {
 
             try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
@@ -345,7 +343,6 @@ public class SingleChronicleQueueStore implements WireStore {
             } catch (Exception e) {
                 Jvm.warn().on(getClass(), "unable to write the EOF file=" + fileName, e);
             }
-
         }
         return false;
     }

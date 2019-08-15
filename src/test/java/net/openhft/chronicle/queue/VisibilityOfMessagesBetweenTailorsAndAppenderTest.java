@@ -42,7 +42,6 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
                 lastWrittenIndex = excerptAppender.lastIndexAppended();
 
             }
-
         });
 
         ExecutorService e2 = Executors.newSingleThreadExecutor();

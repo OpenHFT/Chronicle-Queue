@@ -48,6 +48,5 @@ public class BatchAppenderNativeTest {
         } finally {
             bytes.release();
         }
-
     }
 }

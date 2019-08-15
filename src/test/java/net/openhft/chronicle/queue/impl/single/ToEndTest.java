@@ -330,7 +330,6 @@ public class ToEndTest {
                     break;
                 results.add(documentContext.wire().read(() -> "msg").int32());
             }
-
         }
         return results;
     }

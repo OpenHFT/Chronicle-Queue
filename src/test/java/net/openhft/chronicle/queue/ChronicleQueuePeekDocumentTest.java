@@ -50,7 +50,6 @@ public class ChronicleQueuePeekDocumentTest {
                                 "time: 12053432900\n",
                         read(tailer));
             }
-
         } finally {
             if (tempDir != null) {
                 IOTools.deleteDirWithFiles(tempDir.toFile(), 2);

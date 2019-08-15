@@ -48,7 +48,6 @@ public class DirectoryUtils {
         } catch (Throwable e) {
             e.printStackTrace();
         }
-
     }
 
     enum DeleteStatic {

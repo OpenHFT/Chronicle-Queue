@@ -31,7 +31,6 @@ public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
                     System.out.println(dc.wire().bytes().writeRemaining());
                     dc.wire().write("data").bytes(data);
                 }
-
             }
         }
 
@@ -42,11 +41,9 @@ public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
                 try (DocumentContext dc = queue.createTailer().readingDocument()) {
                     Assert.assertArrayEquals(data, dc.wire().read("data").bytes());
                 }
-
             }
 
         }
-
     }
 
 }

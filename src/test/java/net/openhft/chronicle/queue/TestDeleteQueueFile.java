@@ -135,7 +135,6 @@ public class TestDeleteQueueFile {
             for (int i = 0; i < 5; i++) {
                 Assert.assertEquals("test2", excerptTailer2.readText());
             }
-
         }
 
     }

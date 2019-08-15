@@ -315,7 +315,6 @@ public class SingleChronicleQueueExcerpts {
                     releaseWireResources(old);
                 }
             }
-
         }
 
         private void resetPosition() throws UnrecoverableTimeoutException {
@@ -436,7 +435,6 @@ public class SingleChronicleQueueExcerpts {
                     new AssertionError(message).printStackTrace();
                     throw new AssertionError(message);
                 }
-
             } catch (Exception e) {
                 Jvm.fatal().on(getClass(), e);
                 throw Jvm.rethrow(e);
@@ -532,7 +530,6 @@ public class SingleChronicleQueueExcerpts {
                 } finally {
                     context.close(false);
                 }
-
             } finally {
                 context.isClosed = true;
             }
@@ -652,7 +649,6 @@ public class SingleChronicleQueueExcerpts {
                     assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
                 }
-
             } catch (@NotNull EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
@@ -916,7 +912,6 @@ public class SingleChronicleQueueExcerpts {
             } finally {
                 wire.parent(parent);
             }
-
         }
 
         private static MessageHistory readHistoryFromBytes(final Wire wire, MessageHistory history) {
@@ -1531,7 +1526,6 @@ public class SingleChronicleQueueExcerpts {
             if (wireForIndexOld != null) {
                 releaseWireResources(wireForIndexOld);
             }
-
         }
 
         @NotNull
@@ -1943,7 +1937,6 @@ public class SingleChronicleQueueExcerpts {
                         direction == directionAtLastMoveTo &&
                         queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
             }
-
         }
 
         class StoreTailerContext extends BinaryReadDocumentContext {

@@ -64,7 +64,6 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                         counter.incrementAndGet();
                     }
                 }
-
             } finally {
                 if (rlock != null) {
                     rlock.release();
