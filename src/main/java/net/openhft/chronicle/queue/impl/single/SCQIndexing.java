@@ -293,7 +293,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     /**
      * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code
-     * fromKnownIndex} at  {@code knownAddress} <p/> note meta data is skipped and does not count to
+     * fromKnownIndex} at  {@code knownAddress} <p> note meta data is skipped and does not count to
      * the indexes
      *
      * @param wire           if successful, moves the context to an addressForRead relating to the index
