@@ -619,7 +619,9 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
 }
 ----
 
-You can turn each message into a method call based on the content of the message.
+You can turn each message into a method call based on the content of the message, and have Chronicle
+Queue automatically deserialise the method arguments. Calling `reader.readOne()` will automatically
+skip over (filter out) any messages that do not match your method reader.
 
 [source, Java]
 ----
@@ -1341,7 +1343,7 @@ http://kafka.apache.org/documentation.html[Kafka Documentation]
 
 == Replication
 
-Chronicle Queue Enterprise supports TCP replication, with optional filtering so that only the required record, or even fields, are transmitted. This improves performance and reduces bandwidth requirements.
+Chronicle Queue Enterprise supports TCP and UDP replication.
 
 image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/images/queue-replication.png[]
 
