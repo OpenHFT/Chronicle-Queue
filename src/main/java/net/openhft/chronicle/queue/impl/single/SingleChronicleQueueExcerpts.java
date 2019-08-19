@@ -46,7 +46,7 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueueExcerpts {
-
+    private static final boolean CHECK_INDEX = Boolean.getBoolean("queue.check.index");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
     private static final int MESSAGE_HISTORY_METHOD_ID = -1;
     private static StringBuilderPool SBP = new StringBuilderPool();
@@ -66,6 +66,7 @@ public class SingleChronicleQueueExcerpts {
     }
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
+
 
         @NotNull
         private final SingleChronicleQueue queue;
@@ -327,7 +328,8 @@ public class SingleChronicleQueueExcerpts {
 
                 final long headerNumber = store.lastSequenceNumber(this);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
-                assert wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
+
+                assert !CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
             } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
                 throw new AssertionError(e);
@@ -757,7 +759,7 @@ public class SingleChronicleQueueExcerpts {
                             if (lastIndex != Long.MIN_VALUE)
                                 writeIndexForPosition(lastIndex, position);
                             else
-                                assert lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
+                                assert !CHECK_INDEX || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
                         }
                         assert checkWritePositionHeaderNumber();
                     } else if (wire != null) {
