@@ -106,6 +106,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Boolean enableRingBufferMonitoring;
     private Boolean ringBufferReaderCanDrain;
     private Boolean ringBufferForceCreateReader;
+    private Boolean ringBufferReopenReader;
     private Pauser ringBufferPauser = Pauser.busy();
     private HandlerPriority drainerPriority;
     @Nullable
@@ -830,6 +831,19 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     public SingleChronicleQueueBuilder ringBufferForceCreateReader(boolean ringBufferForceCreateReader) {
         this.ringBufferForceCreateReader = ringBufferForceCreateReader;
+        return this;
+    }
+
+    /**
+     * @return if ring buffer readers are not reset on close. If true then re-opening a reader puts you back
+     * at the same place. If true, your reader can block writers if the reader is not open
+     */
+    public boolean ringBufferReopenReader() {
+        return ringBufferReopenReader == null ? false : ringBufferReopenReader;
+    }
+
+    public SingleChronicleQueueBuilder ringBufferReopenReader(boolean ringBufferReopenReader) {
+        this.ringBufferReopenReader = ringBufferReopenReader;
         return this;
     }
 
