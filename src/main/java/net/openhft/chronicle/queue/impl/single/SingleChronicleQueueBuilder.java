@@ -838,7 +838,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
      * @return drainerPriority
      */
     public HandlerPriority drainerPriority() {
-        return drainerPriority;
+        return drainerPriority == null ? HandlerPriority.REPLICATION : drainerPriority;
     }
 
     public SingleChronicleQueueBuilder drainerPriority(HandlerPriority drainerPriority) {
