@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
@@ -106,6 +107,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Boolean ringBufferReaderCanDrain;
     private Boolean ringBufferForceCreateReader;
     private Pauser ringBufferPauser = Pauser.busy();
+    private HandlerPriority drainerPriority;
     @Nullable
     private EventLoop eventLoop;
     private WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -828,6 +830,19 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     public SingleChronicleQueueBuilder ringBufferForceCreateReader(boolean ringBufferForceCreateReader) {
         this.ringBufferForceCreateReader = ringBufferForceCreateReader;
+        return this;
+    }
+
+    /**
+     * Priority for ring buffer's drainer handler
+     * @return drainerPriority
+     */
+    public HandlerPriority drainerPriority() {
+        return drainerPriority;
+    }
+
+    public SingleChronicleQueueBuilder drainerPriority(HandlerPriority drainerPriority) {
+        this.drainerPriority = drainerPriority;
         return this;
     }
 
