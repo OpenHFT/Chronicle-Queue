@@ -265,10 +265,24 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return fileAbsolutePath;
     }
 
+    @Override
+    public String dumpLastHeader() {
+        StringBuilder sb = new StringBuilder(256);
+        WireStore wireStore = storeForCycle(lastCycle(), epoch, false);
+        if (wireStore != null) {
+            try {
+                sb.append(wireStore.dumpHeader());
+            } finally {
+                release(wireStore);
+            }
+        }
+        return sb.toString();
+    }
+
     @NotNull
     @Override
     public String dump() {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(1024);
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
             CommonStore commonStore = storeForCycle(i, epoch, false);
             if (commonStore != null) {
@@ -752,6 +766,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         synchronized (closers) {
             closers.remove(storeTailer);
         }
+    }
+
+    public TableStore metaStore() {
+        return metaStore;
     }
 
     private static final class CachedCycleTree {

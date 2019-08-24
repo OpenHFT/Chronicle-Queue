@@ -66,4 +66,6 @@ public interface WireStore extends CommonStore {
     long moveToEndForRead(@NotNull Wire w);
 
     void initIndex(Wire wire);
+
+    String dumpHeader();
 }

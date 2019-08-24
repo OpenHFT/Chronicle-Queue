@@ -168,6 +168,20 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
+    public String dumpHeader() {
+        MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
+        try {
+            int size = bytes.readInt(0);
+            if ((size >> 30) != 0)
+                return "not ready";
+            bytes.readLimit(size + 4);
+            return Wires.fromSizePrefixedBlobs(bytes);
+        } finally {
+            bytes.release();
+        }
+    }
+
+    @Override
     public long writePosition() {
         return this.writePosition.getVolatileValue();
     }
