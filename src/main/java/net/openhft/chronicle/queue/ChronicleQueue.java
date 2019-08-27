@@ -230,4 +230,6 @@ public interface ChronicleQueue extends Closeable {
      * will update our caches accordingly,
      */
     void refreshDirectlyListing();
+
+    String dumpLastHeader();
 }

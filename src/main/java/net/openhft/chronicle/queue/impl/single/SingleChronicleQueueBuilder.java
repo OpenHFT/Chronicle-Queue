@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
@@ -105,7 +106,9 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Boolean enableRingBufferMonitoring;
     private Boolean ringBufferReaderCanDrain;
     private Boolean ringBufferForceCreateReader;
+    private Boolean ringBufferReopenReader;
     private Pauser ringBufferPauser = Pauser.busy();
+    private HandlerPriority drainerPriority;
     @Nullable
     private EventLoop eventLoop;
     private WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -828,6 +831,32 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     public SingleChronicleQueueBuilder ringBufferForceCreateReader(boolean ringBufferForceCreateReader) {
         this.ringBufferForceCreateReader = ringBufferForceCreateReader;
+        return this;
+    }
+
+    /**
+     * @return if ring buffer readers are not reset on close. If true then re-opening a reader puts you back
+     * at the same place. If true, your reader can block writers if the reader is not open
+     */
+    public boolean ringBufferReopenReader() {
+        return ringBufferReopenReader == null ? false : ringBufferReopenReader;
+    }
+
+    public SingleChronicleQueueBuilder ringBufferReopenReader(boolean ringBufferReopenReader) {
+        this.ringBufferReopenReader = ringBufferReopenReader;
+        return this;
+    }
+
+    /**
+     * Priority for ring buffer's drainer handler
+     * @return drainerPriority
+     */
+    public HandlerPriority drainerPriority() {
+        return drainerPriority == null ? HandlerPriority.REPLICATION : drainerPriority;
+    }
+
+    public SingleChronicleQueueBuilder drainerPriority(HandlerPriority drainerPriority) {
+        this.drainerPriority = drainerPriority;
         return this;
     }
 
