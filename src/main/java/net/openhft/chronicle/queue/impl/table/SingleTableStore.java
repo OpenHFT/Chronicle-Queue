@@ -17,13 +17,11 @@ package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataField;
@@ -43,6 +41,9 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static net.openhft.chronicle.core.Jvm.*;
+import static net.openhft.chronicle.core.util.Time.sleep;
+import static net.openhft.chronicle.core.util.Time.tickTime;
 
 public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     public static final String SUFFIX = ".cq4t";
@@ -119,11 +120,11 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
                     if (!warnedOnFailure) {
-                        Jvm.debug().on(SingleTableStore.class, "Failed to acquire a lock on the table store file. Retrying");
+                        debug().on(SingleTableStore.class, "Failed to acquire a lock on the table store file. Retrying");
                         warnedOnFailure = true;
                     }
                 }
-                Jvm.pause(50L);
+                pause(50L);
             }
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with file lock", e);
@@ -132,11 +133,11 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     }
 
     public static <T, R> R doWithExclusiveLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
-        final long timeoutAt = Time.tickTime() + timeoutMS;
+        final long timeoutAt = tickTime() + timeoutMS;
         boolean warnedOnFailure = false;
         try (final FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE)) {
 
-            while (Time.tickTime() < timeoutAt) {
+            while (tickTime() < timeoutAt) {
                 try {
                     FileLock fileLock = channel.tryLock();
                     if (fileLock != null) {
@@ -145,16 +146,11 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
                     if (!warnedOnFailure) {
-                        Jvm.warn().on(SingleTableStore.class, "Failed to acquire a lock on the table store file. Retrying");
+                        warn().on(SingleTableStore.class, "Failed to acquire a lock on the table store file. Retrying");
                         warnedOnFailure = true;
                     }
                 }
-                try {
-                    Time.wait(MILLISECONDS, 50);
-                } catch (Exception e) {
-                    Jvm.debug().on(SingleTableStore.class, e);
-                }
-
+                sleep(50, MILLISECONDS);
             }
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with file lock", e);
