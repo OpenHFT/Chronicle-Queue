@@ -23,4 +23,7 @@ public interface CommonStore extends ReferenceCounted, Demarshallable, WriteMars
     @NotNull
     String dump();
 
+    @NotNull
+    String shortDump();
+
 }

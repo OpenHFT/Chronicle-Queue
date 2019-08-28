@@ -48,8 +48,6 @@ public class QueueFileManager extends JMXFileManager implements QueueFileManager
 
     public void onExists(String filename) {
         files.add(filename);
-        if (filename.endsWith(SingleTableStore.SUFFIX)) {
-        }
     }
 
     public String getTableStore() {
@@ -73,7 +71,7 @@ public class QueueFileManager extends JMXFileManager implements QueueFileManager
                              .readOnly(true)
                              .build()) {
             TableStore ts = queue.metaStore();
-            tableStore = ts.dump();
+            tableStore = ts.shortDump();
             lastHeader = queue.dumpLastHeader();
         }
     }

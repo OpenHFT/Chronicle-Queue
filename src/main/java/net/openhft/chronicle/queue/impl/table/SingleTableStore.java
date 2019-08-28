@@ -113,7 +113,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
         try (final FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ)) {
             while (System.currentTimeMillis() < timeoutAt) {
                 try {
-                    FileLock fileLock = channel.tryLock( 0L, Long.MAX_VALUE, true );
+                    FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, true);
                     if (fileLock != null) {
                         return code.apply(target.get());
                     }
@@ -172,14 +172,24 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     @NotNull
     @Override
     public String dump() {
+        return dump(false);
+    }
+
+    private String dump(boolean abbrev) {
 
         MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
         try {
             bytes.readLimit(bytes.realCapacity());
-            return Wires.fromSizePrefixedBlobs(bytes);
+            return Wires.fromSizePrefixedBlobs(bytes, abbrev);
         } finally {
             bytes.release();
         }
+    }
+
+    @NotNull
+    @Override
+    public String shortDump() {
+        return dump(true);
     }
 
     @Override

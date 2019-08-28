@@ -79,6 +79,14 @@ public class ReadonlyTableStore<T extends Metadata> implements TableStore<T> {
         throw read_only;
     }
 
+    @NotNull
+    @Override
+    public String shortDump() {
+        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
+        read_only.printStackTrace();
+        throw read_only;
+    }
+
     @Override
     public void reserve() throws IllegalStateException {
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");

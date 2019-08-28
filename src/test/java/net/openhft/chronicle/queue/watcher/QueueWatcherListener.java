@@ -34,9 +34,11 @@ public class QueueWatcherListener implements WatcherListener {
         Path parent = path.getParent();
         QueueFileManager fileManager = queueFileManagerMap.get(parent);
         if (fileManager == null) {
-            Jvm.warn().on(getClass(), "File " + base + " " + filename + " classified as Queue");
-            fileManager = new QueueFileManager(base, Paths.get(filename).getParent().toString());
+            String relativePath = Paths.get(filename).getParent().toString();
+            Jvm.warn().on(getClass(), "File " + base + "/" + filename + " classified as Queue " + relativePath);
+            fileManager = new QueueFileManager(base, relativePath);
             fileManager.start();
+            queueFileManagerMap.put(parent, fileManager);
         }
         fileManager.onExists(path.getFileName().toString());
     }
@@ -46,6 +48,8 @@ public class QueueWatcherListener implements WatcherListener {
         Path path = Paths.get(base, filename);
         Path parent = path.getParent();
         QueueFileManager fileManager = queueFileManagerMap.get(parent);
+        if (fileManager == null)
+            return;
         fileManager.onRemoved(path.getFileName().toString());
         if (fileManager.isEmpty())
             fileManager.stop();
