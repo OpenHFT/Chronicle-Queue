@@ -39,9 +39,15 @@ public enum NoMessageHistory implements MessageHistory {
         return 0;
     }
 
+
     @Override
     public int sourceId(int n) {
         return -1;
+    }
+
+    @Override
+    public boolean sourceIdsEndsWith(int[] sourceIds) {
+        throw new UnsupportedOperationException("Unable to match a paths for a message without history");
     }
 
     @Override
