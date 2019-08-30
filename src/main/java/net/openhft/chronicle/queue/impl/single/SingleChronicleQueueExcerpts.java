@@ -873,6 +873,7 @@ public class SingleChronicleQueueExcerpts {
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
         private long address = NoBytesStore.NO_PAGE;
+        private boolean striding = false;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this(queue, null);
@@ -1546,6 +1547,17 @@ public class SingleChronicleQueueExcerpts {
             return optimizedToEnd();
         }
 
+        @Override
+        public ExcerptTailer striding(boolean striding) {
+            this.striding = striding;
+            return this;
+        }
+
+        @Override
+        public boolean striding() {
+            return striding;
+        }
+
         @NotNull
         private ExcerptTailer optimizedToEnd() {
             RollCycle rollCycle = queue.rollCycle();
@@ -1709,6 +1721,9 @@ public class SingleChronicleQueueExcerpts {
                     if (seq < 0) {
                         windBackCycle(cycle);
                         return;
+                    } else if (seq > 0 && striding) {
+                        seq -= seq % rollCycle.defaultIndexSpacing();
+                        System.out.println(seq);
                     }
                     break;
             }

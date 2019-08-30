@@ -101,11 +101,22 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * instance ( and with then same JVM ), they can be informed that the last cycle has
      * changed, this will yield better results, but atomicity can still not be guaranteed.
      *
-     * @return this Excerpt
+     * @return this ExcerptTailer
      */
     @NotNull
     ExcerptTailer toEnd();
 
+    /**
+     * When striding is enabled AND direction is BACKWARD, skip to the entries easiest to find, doesn't need to be every entry.
+     * @param striding skip to the indexStride if that is easy, doesn't always happen.
+     * @return this ExcerptTailer
+     */
+    ExcerptTailer striding(boolean striding);
+
+    /**
+     * @return whether striding is enabled.
+     */
+    boolean striding();
     /**
      * @return the direction of movement after reading an entry.
      */

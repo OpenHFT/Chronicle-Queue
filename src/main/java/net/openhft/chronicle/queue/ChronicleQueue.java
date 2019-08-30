@@ -188,6 +188,9 @@ public interface ChronicleQueue extends Closeable {
 
     int sourceId();
 
+    /**
+     * NOTE the writer generated is not thread safe, you need to keep a ThreadLocal of these if needed.
+     */
     @SuppressWarnings("unchecked")
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
