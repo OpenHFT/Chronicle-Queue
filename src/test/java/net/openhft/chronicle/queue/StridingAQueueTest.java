@@ -376,7 +376,8 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                     "hi[2, 5]\n" +
                     "hi[2, 1]\n" +
                     "hi[1, 4]\n" +
-                    "hi[1, 0]\n", sw.toString());
+                            "hi[1, 0]\n",
+                    sw.toString().replace("\r", ""));
         }
     }
 }
