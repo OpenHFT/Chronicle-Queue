@@ -21,6 +21,7 @@ import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
@@ -98,6 +99,11 @@ public class ChronicleQueueTestBase {
         return DirectoryUtils.tempDir(methodName != null ?
                 methodName.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_') : "NULL-" + UUID
                 .randomUUID());
+    }
+
+    @BeforeClass
+    public static void synchronousFileTruncating() {
+        System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
     }
 
     @After

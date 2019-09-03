@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.threads.Threads;
 import org.slf4j.Logger;
@@ -30,27 +31,30 @@ import java.util.concurrent.ExecutorService;
 public enum QueueFileShrinkManager {
     ;
     public static final String THREAD_NAME = "queue-file-shrink-daemon";
-    static boolean RUN_SYNCHRONOUSLY = false;
+    public static boolean RUN_SYNCHRONOUSLY = Boolean.getBoolean("chronicle.queue.synchronousFileShrinking");
+    public static boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
+
     private static final Logger LOG = LoggerFactory.getLogger(QueueFileShrinkManager.class);
-    private static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
     private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
+
 
     public static void scheduleShrinking(File queueFile, long writePos) {
         if (DISABLE_QUEUE_FILE_SHRINKING)
             return;
         Runnable task = () -> {
+            if (LOG.isDebugEnabled())
+                LOG.debug("Shrinking {} to {}", queueFile, writePos);
             while (true) {
-                try {
-                    if (LOG.isDebugEnabled())
-                        LOG.debug("Shrinking {} to {}", queueFile, writePos);
-                    RandomAccessFile raf = new RandomAccessFile(queueFile, "rw");
-
+                try (RandomAccessFile raf = new RandomAccessFile(queueFile, "rw")) {
                     raf.setLength(writePos);
-                    raf.close();
+
                 } catch (IOException ex) {
                     // on microsoft windows, keep retrying until the file is unmapped
-                    if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open"))
+                    if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open")) {
+                        LOG.debug("Failed to shrinking {} to {}, retrying", queueFile, writePos);
+                        Jvm.pause(50);
                         continue;
+                    }
                     LOG.warn("Failed to shrink file " + queueFile, ex);
                 }
                 break;

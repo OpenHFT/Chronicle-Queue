@@ -32,7 +32,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Random;
@@ -43,9 +43,9 @@ import static org.junit.Assert.assertTrue;
 
 public class RollingCycleTest {
 
-    @Before
+    @BeforeClass
     public void sync() {
-        QueueFileShrinkManager.RUN_SYNCHRONOUSLY = true;
+        System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
     }
 
     @Test

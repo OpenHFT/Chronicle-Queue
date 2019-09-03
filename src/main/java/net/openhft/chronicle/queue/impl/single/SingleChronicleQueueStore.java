@@ -344,28 +344,29 @@ public class SingleChronicleQueueStore implements WireStore {
         // just in case we are about to release this
         if (wire.bytes().tryReserve()) {
             try {
-                wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
-                if (wire.bytes().writePosition() > 4 && Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4))) {
-                    // only if we just written EOF
-                    QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
-                    return true;
-                }
+                return writeEOFAndShrink(wire, timeoutMS);
+
             } finally {
                 wire.bytes().release();
             }
-        } else {
+        }
 
-            try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
-                Wire wire0 = WireType.valueOf(wire).apply(bytes);
-                wire0.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+        try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
+            Wire wire0 = WireType.valueOf(wire).apply(bytes);
+            return writeEOFAndShrink(wire0, timeoutMS);
 
-                if (wire.bytes().writePosition() > 4 && Wires.isEndOfFile(wire.bytes().readVolatileInt(wire.bytes().writePosition() - 4))) {
-                    QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
-                    return true;
-                }
-            } catch (Exception e) {
-                Jvm.warn().on(getClass(), "unable to write the EOF file=" + fileName, e);
-            }
+        } catch (Exception e) {
+            Jvm.warn().on(getClass(), "unable to write the EOF file=" + fileName, e);
+            return false;
+        }
+    }
+
+    boolean writeEOFAndShrink(@NotNull Wire wire, long timeoutMS) {
+        if (wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition())) {
+            // only if we just written EOF
+            QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
+            System.out.println("Shrunk file " + mappedFile.file());
+            return true;
         }
         return false;
     }
