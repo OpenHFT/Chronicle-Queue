@@ -44,7 +44,7 @@ import static org.junit.Assert.assertTrue;
 public class RollingCycleTest {
 
     @BeforeClass
-    public void sync() {
+    public static void sync() {
         System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
     }
 
