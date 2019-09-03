@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 public enum RollCycles implements RollCycle {
     TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss", 1000, 1 << 15, 4), // only good for testing
+    TEST4_SECONDLY(/*---*/"yyyyMMdd-HHmmss", 1000, 32, 4), // only good for testing
     MINUTELY(/*--------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16), // 64 million entries per minute
     TEST_HOURLY(/*-----*/"yyyyMMdd-HH", 60 * 60 * 1000, 16, 4), // 512 entries per hour.
     HOURLY(/*----------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16), // 256 million entries per hour.

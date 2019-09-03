@@ -1723,7 +1723,6 @@ public class SingleChronicleQueueExcerpts {
                         return;
                     } else if (seq > 0 && striding) {
                         seq -= seq % rollCycle.defaultIndexSpacing();
-                        System.out.println(seq);
                     }
                     break;
             }
