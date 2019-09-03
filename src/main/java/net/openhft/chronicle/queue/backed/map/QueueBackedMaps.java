@@ -5,6 +5,8 @@
 package net.openhft.chronicle.queue.backed.map;
 
 
+import net.openhft.chronicle.wire.DocumentContext;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,6 +18,11 @@ public class QueueBackedMaps implements QueueEvents {
 
     public void addMap(String name, QueueEvents listener) {
         maps.put(name, listener);
+    }
+
+    @Override
+    public DocumentContext writingDocument() {
+        throw new UnsupportedOperationException();
     }
 
     @Override

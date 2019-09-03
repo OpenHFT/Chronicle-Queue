@@ -4,7 +4,6 @@
 
 package net.openhft.chronicle.queue.backed.map;
 
-import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MethodWriterWithContext;
 
 // TODO add queue names and only read the ones for it.
@@ -33,9 +32,4 @@ public interface QueueEvents<K, V> extends MethodWriterWithContext {
      * @param hostId which caused the checkpoint
      */
     void $checkPoint(String name, int hostId);
-
-    default DocumentContext writingDocument() {
-        throw new UnsupportedOperationException();
-    }
-
 }
