@@ -119,4 +119,9 @@ public class ReadonlyTableStore<T extends Metadata> implements TableStore<T> {
         read_only.printStackTrace();
         throw read_only;
     }
+
+    @Override
+    public boolean readOnly() {
+        return true;
+    }
 }

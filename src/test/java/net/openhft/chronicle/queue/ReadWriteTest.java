@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.file.AccessDeniedException;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -42,7 +43,7 @@ public class ReadWriteTest {
 
     @Before
     public void setup() {
-        chroniclePath = new File(OS.TARGET, "read_only");
+        chroniclePath = new File(OS.TARGET, "read_only_" + System.currentTimeMillis());
         try (ChronicleQueue readWrite = ChronicleQueue.singleBuilder(chroniclePath)
                 .readOnly(false)
                 .testBlockSize()
@@ -119,4 +120,20 @@ public class ReadWriteTest {
         }
     }
 
+    @Test
+    public void testNonWriteableFilesSetToReadOnly() {
+        Arrays.stream(chroniclePath.list()).forEach(s ->
+                assertTrue(new File(chroniclePath, s).setWritable(false)));
+
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(chroniclePath)
+                .testBlockSize()
+                .readOnly(false)
+                .build()) {
+            ExcerptTailer tailer = out.createTailer();
+            tailer.toEnd();
+            long index = tailer.index();
+            assertTrue(index != 0);
+        }
+    }
 }

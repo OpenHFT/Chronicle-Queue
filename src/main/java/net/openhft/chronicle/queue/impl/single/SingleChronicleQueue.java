@@ -124,7 +124,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private int deltaCheckpointInterval;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
-        readOnly = builder.readOnly();
         rollCycle = builder.rollCycle();
         cycleCalculator = cycleCalculator(builder.rollTimeZone());
         epoch = builder.epoch();
@@ -135,7 +134,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
         path = builder.path();
-        if (!readOnly)
+        if (!builder.readOnly())
             //noinspection ResultOfMethodCallIgnored
             path.mkdirs();
         fileAbsolutePath = path.getAbsolutePath();
@@ -155,6 +154,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         strongAppenders = builder.strongAppenders();
         checkInterrupts = builder.checkInterrupts();
         metaStore = builder.metaStore();
+        if (metaStore.readOnly() && ! builder.readOnly()) {
+            LOG.warn("Forcing queue to be readOnly");
+            // need to set this on builder as it is used elsewhere
+            builder.readOnly(metaStore.readOnly());
+        }
+        readOnly = builder.readOnly();
 
         if (readOnly) {
             this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());

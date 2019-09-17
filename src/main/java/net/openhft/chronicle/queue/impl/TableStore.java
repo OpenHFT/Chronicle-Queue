@@ -44,4 +44,8 @@ public interface TableStore<T extends Metadata> extends CommonStore {
     <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code);
 
     T metadata();
+
+    default boolean readOnly() {
+        return false;
+    }
 }
