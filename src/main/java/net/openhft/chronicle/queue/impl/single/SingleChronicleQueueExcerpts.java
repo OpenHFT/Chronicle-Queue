@@ -101,6 +101,7 @@ public class SingleChronicleQueueExcerpts {
             this.checkInterrupts = checkInterrupts;
 
             this.writeLock = queue.writeLock();
+            assert writeLock != null;
             this.context = new StoreAppenderContext();
             this.closableResources = new ClosableResources<>(storePool);
 
