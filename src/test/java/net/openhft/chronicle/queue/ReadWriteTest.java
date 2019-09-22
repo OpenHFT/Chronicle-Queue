@@ -31,10 +31,8 @@ import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 
-/*
- * Created by Jerry Shea on 14/08/16.
- */
 @RequiredForClient
 public class ReadWriteTest {
 
@@ -122,6 +120,8 @@ public class ReadWriteTest {
 
     @Test
     public void testNonWriteableFilesSetToReadOnly() {
+        assumeFalse(OS.isWindows());
+
         Arrays.stream(chroniclePath.list()).forEach(s ->
                 assertTrue(new File(chroniclePath, s).setWritable(false)));
 
