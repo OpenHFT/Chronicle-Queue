@@ -484,8 +484,9 @@ will only give you the last index appended by this appender; not the last index 
 If you wish to find the index of the last record written, then you have to call:
 
 ```
-long index = queue.createTailer().toEnd().index();
+long index = queue.createTailer().toEnd().index() - 1;
 ```
+(note that `tailer.toEnd()` puts the tailer just past the last index written)
 
 === How to determine how many messages are between two indexes
 
