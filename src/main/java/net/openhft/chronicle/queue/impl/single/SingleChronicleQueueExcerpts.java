@@ -66,8 +66,6 @@ public class SingleChronicleQueueExcerpts {
     }
 
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
-
-
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -84,7 +82,7 @@ public class SingleChronicleQueueExcerpts {
         private Wire wire;
         @Nullable
         private Wire wireForIndex;
-        private long position = 0;
+        private long positionOfHeader = 0;
         private long lastIndex = Long.MIN_VALUE;
         private long lastPosition;
         private int lastCycle;
@@ -323,19 +321,37 @@ public class SingleChronicleQueueExcerpts {
             try {
                 if (store == null || wire == null)
                     return;
-                position(store.writePosition());
+                long position = store.writePosition();
+                position(position, position);
 
-                assert position == 0 || Wires.isReadyData(wire.bytes().readVolatileInt(position));
+                Bytes<?> bytes = wire.bytes();
+                assert checkPositionOfHeader(bytes);
 
                 final long headerNumber = store.lastSequenceNumber(this);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
 
-                assert !CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
+                assert !CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
+
+                bytes.writeLimit(bytes.capacity());
 
             } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
             assert checkWritePositionHeaderNumber();
+        }
+
+        private boolean checkPositionOfHeader(Bytes<?> bytes) {
+            if (positionOfHeader == 0) {
+                return true;
+            }
+            int header = bytes.readVolatileInt(positionOfHeader);
+            if (Wires.isReadyData(header)) {
+                return true;
+            } else if (header == NOT_COMPLETE) { // overwriting an incomplete message header.
+                return true;
+            } else {
+                return false;
+            }
         }
 
         @NotNull
@@ -350,7 +366,6 @@ public class SingleChronicleQueueExcerpts {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
             writeLock.lock();
-            assert checkWritePositionHeaderNumber();
             int cycle = queue.cycle();
 
             if (wire == null)
@@ -360,6 +375,8 @@ public class SingleChronicleQueueExcerpts {
                 rollCycleTo(cycle);
 
             int safeLength = (int) queue.overlapSize();
+            resetPosition();
+            assert checkWritePositionHeaderNumber();
 
             openContext(metaData, safeLength);
             return context;
@@ -388,7 +405,7 @@ public class SingleChronicleQueueExcerpts {
         private long writeHeader(@NotNull Wire wire, int safeLength) {
             Bytes<?> bytes = wire.bytes();
             // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
-            long pos = position;
+            long pos = positionOfHeader;
             long lastPos = store.writePosition();
             if (pos < lastPos) {
                 // queue moved since we last touched it - recalculate header number
@@ -409,7 +426,7 @@ public class SingleChronicleQueueExcerpts {
 
         private void openContext(boolean metaData, int safeLength) {
             assert wire != null;
-            position(writeHeader(wire, safeLength));
+            this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
             context.isClosed = false;
             context.rollbackOnClose = false;
             context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
@@ -421,22 +438,21 @@ public class SingleChronicleQueueExcerpts {
         boolean checkWritePositionHeaderNumber() {
             if (wire == null || wire.headerNumber() == Long.MIN_VALUE) return true;
             try {
-                long pos = position;
+                long pos = positionOfHeader;
 
                 long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
                 long seq2 = store.sequenceForPosition(this, pos, true);
 
                 if (seq1 != seq2) {
-//                    System.out.println(queue.dump());
                     String message = "~~~~~~~~~~~~~~ " +
                             "thread: " + Thread.currentThread().getName() +
                             " pos: " + pos +
                             " header: " + wire.headerNumber() +
                             " seq1: " + seq1 +
                             " seq2: " + seq2;
-                    //System.err.println(message);
-                    new AssertionError(message).printStackTrace();
-                    throw new AssertionError(message);
+                    AssertionError ae = new AssertionError(message);
+                    ae.printStackTrace();
+                    throw ae;
                 }
             } catch (Exception e) {
                 Jvm.fatal().on(getClass(), e);
@@ -461,19 +477,20 @@ public class SingleChronicleQueueExcerpts {
                 if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
-                position(writeHeader(wire, (int) queue.overlapSize()));
+                this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
+
                 assert ((AbstractWire) wire).isInsideHeader();
                 beforeAppend(wire, wire.headerNumber() + 1);
                 Bytes<?> wireBytes = wire.bytes();
                 wireBytes.write(bytes);
                 if (padToCacheLines == Padding.WORD)
                     wireBytes.writeSkip((-wireBytes.writePosition()) & 0x3);
-                wire.updateHeader(position, false, 0);
+                wire.updateHeader(positionOfHeader, false, 0);
                 lastIndex(wire.headerNumber());
-                lastPosition = position;
+                lastPosition = positionOfHeader;
                 lastCycle = cycle;
-                store.writePosition(position);
-                writeIndexForPosition(lastIndex, position);
+                store.writePosition(positionOfHeader);
+                writeIndexForPosition(lastIndex, positionOfHeader);
             } catch (StreamCorruptedException e) {
                 throw new AssertionError(e);
             } finally {
@@ -538,13 +555,13 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        private void position(long position) {
+        private void position(long position, long startOfMessage) {
             // did the position jump too far forward.
             if (position > store.writePosition() + queue.blockSize())
                 throw new IllegalArgumentException("pos: " + position + ", store.writePosition()=" +
                         store.writePosition() + " queue.blockSize()=" + queue.blockSize());
             // System.err.println("----- "+Thread.currentThread().getName()+" pos: "+position);
-            this.position = position;
+            position0(position, startOfMessage);
         }
 
         @Override
@@ -663,11 +680,16 @@ public class SingleChronicleQueueExcerpts {
             return "StoreAppender{" +
                     "queue=" + queue +
                     ", cycle=" + cycle +
-                    ", position=" + position +
+                    ", position=" + positionOfHeader +
                     ", lastIndex=" + lastIndex +
                     ", lastPosition=" + lastPosition +
                     ", lastCycle=" + lastCycle +
                     '}';
+        }
+
+        void position0(long position, long startOfMessage) {
+            this.positionOfHeader = position;
+            wire.bytes().writePosition(startOfMessage);
         }
 
         class StoreAppenderContext implements DocumentContext {
@@ -744,23 +766,23 @@ public class SingleChronicleQueueExcerpts {
                             wire.padToCacheAlign();
 
                         try {
-                            wire.updateHeader(position, metaData, 0);
+                            wire.updateHeader(positionOfHeader, metaData, 0);
                         } catch (IllegalStateException e) {
                             if (queue.isClosed())
                                 return;
                             throw e;
                         }
 
-                        lastPosition = position;
+                        lastPosition = positionOfHeader;
                         lastCycle = cycle;
 
                         if (!metaData) {
                             lastIndex(wire.headerNumber());
-                            store.writePosition(position);
+                            store.writePosition(positionOfHeader);
                             if (lastIndex != Long.MIN_VALUE)
-                                writeIndexForPosition(lastIndex, position);
+                                writeIndexForPosition(lastIndex, positionOfHeader);
                             else
-                                assert !CHECK_INDEX || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
+                                assert !CHECK_INDEX || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, positionOfHeader);
                         }
                         assert checkWritePositionHeaderNumber();
                     } else if (wire != null) {
@@ -784,10 +806,10 @@ public class SingleChronicleQueueExcerpts {
                 if (interrupted)
                     LOG.warn("Thread is interrupted. Can't guarantee complete message, so not committing");
                 // zero out all contents...
-                for (long i = position; i <= wire.bytes().writePosition(); i++)
+                for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
                     wire.bytes().writeByte(i, (byte) 0);
-                position = lastPosition;
-                wire.bytes().writePosition(position);
+                long lastPosition = StoreAppender.this.lastPosition;
+                position0(lastPosition, lastPosition);
                 ((AbstractWire) wire).forceNotInsideHeader();
             }
 

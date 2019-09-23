@@ -31,6 +31,7 @@ public enum RollCycles implements RollCycle {
     TEST_DAILY(/*------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8, 1), // Only good for testing - 63 entries per day
     TEST2_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 16, 2), // Only good for testing
     TEST4_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 32, 4), // Only good for testing
+    TEST8_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 128, 8), // Only good for testing
     SMALL_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 8), // 512 million entries per day
     DAILY(/*-----------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64), // 4 billion entries per day
     LARGE_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 32 << 10, 128), // 128 billion entries per day

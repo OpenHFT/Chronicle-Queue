@@ -32,6 +32,7 @@ public class ChronicleAppenderCycleTest {
         int n = 20;
         for (int i = 0; i < n; ++i)
             runTest(id + '-' + i, msg);
+        msg.release();
     }
 
     private void runTest(String id, Bytes msg) throws IOException {
