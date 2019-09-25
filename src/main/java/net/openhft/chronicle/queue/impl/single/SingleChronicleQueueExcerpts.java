@@ -378,6 +378,7 @@ public class SingleChronicleQueueExcerpts {
             resetPosition();
             assert checkWritePositionHeaderNumber();
 
+            // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);
             return context;
         }
