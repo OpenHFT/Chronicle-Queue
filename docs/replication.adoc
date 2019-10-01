@@ -12,7 +12,7 @@ image::images/queue-replication.png[]
 
 === Replication protocol overview
 
-link:queue-replication-message-protocol-overview.adoc[See here]
+See link:queue-replication-message-protocol-overview.adoc[Replication Protocol Overview]
 
 === The mechanics of Chronicle Queue Replication
 
