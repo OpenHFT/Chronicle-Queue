@@ -1755,13 +1755,11 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void windBackCycle(int cycle) {
-            if (tryWindBack(cycle - 1))
-                return;
-            cycle--;
-            for (long first = queue.firstCycle(); cycle >= first; cycle--) {
+            long first = queue.firstCycle();
+            while (--cycle >= first)
                 if (tryWindBack(cycle))
                     return;
-            }
+
             this.index(queue.rollCycle().toIndex(cycle, -1));
             this.state = BEYOND_START_OF_CYCLE;
         }
