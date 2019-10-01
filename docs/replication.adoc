@@ -61,7 +61,8 @@ The set of hosts onto which the queue is replicated, is defined as a `cluster`. 
 }
 ```
 
-In the configuration shown above, the queue, `queue1`, is set to be replicated from `host1` (as indicated by `masterId`) to all other hosts defined for the cluster.
+In the configuration shown above, the queue, `queue1`, is set to be replicated from `host1`
+(as indicated by `masterId`) to all other hosts defined for the cluster, without acknowledgemnt.
 
 Queues will use storage paths defined by `baseSourcePath` and `baseSinkPath` for `source` and `sink`, respectively, followed by the queue name. For this example, the `source` queue will be at `replica/source/queue1`, while the `sink` will be written to `replica/sink/queue1`.
 
@@ -128,7 +129,44 @@ public void shouldReplicate() throws Exception {
 }
 ```
 
-== Q/A's
+=== Replication acknowledgement modes
+
+Replication can be configured to send replication messages with or without acknowledgement. This is
+controlled with the `software.chronicle.enterprise.queue.config.ReplicatedQueueCfg.acknowledge` property.
+
+If the `acknowledge` property is set to false, then replication will proceed as quickly as possible,
+with no acknowledgement from the sink(s). Chronicle Queue Enterprise replication will take advantage
+of the underlying protocol to ensure correct ordering. Chronicle Queue Enterprise replication can use
+either TCP or an optimised custom protocol over UDP.
+
+The source queue itself keeps track of
+
+* `net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.lastIndexReplicated()` - this is the maximum index that
+has been sent to any and all remote hosts.
+* `net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.lastAcknowledgedIndexReplicated()` - this is the maximum
+index that has been acknowledge received by any and all remote hosts. If `ReplicatedQueueCfg.acknowledge` is false
+then this will always be -1.
+
+A source queue can be set up with a possible three modes of operation:
+
+==== Replicate as soon as possible
+This is the default configuration for replication and is configured by setting
+`software.chronicle.enterprise.queue.config.ReplicatedQueueCfg.acknowledge` false, and no
+custom config on tailers or appenders.
+
+==== Local tailer will only see messages which have been replicated,
+This is enabled with `net.openhft.chronicle.queue.ExcerptTailer.readAfterReplicaAcknowledged(boolean)`
+and setting this to true on a source queue ensures that the tailer will not read until at least one of
+the sinks has acknowledged receipt of the excerpt. This will block forever if no sinks acknowledge receipt.
+
+==== Appender doesn't return until a replica has acknowledged it has been received.
+This can be acheived after committing a write (e.g. closing `DocumentContext`) by this loop
+```
+while (appender.lastIndexAppended() < appender.queue().lastAcknowledgedIndexReplicated())
+    ;
+```
+
+== Q/As
 
 === Question
 

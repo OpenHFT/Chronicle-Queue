@@ -218,8 +218,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * when using replication to another host, this is the last index that has been confirmed to *
-     * have been read by the remote host.
+     * when using replication to another host, this is the highest last index that has been confirmed to
+     * have been read by all of the remote host(s).
      */
     @Override
     public long lastAcknowledgedIndexReplicated() {
@@ -240,7 +240,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * when using replication to another host, this is the last index that has been sent to the remote host.
+     * when using replication to another host, this is the maxiumum last index that has been sent to any of the remote host(s).
      */
     @Override
     public long lastIndexReplicated() {
