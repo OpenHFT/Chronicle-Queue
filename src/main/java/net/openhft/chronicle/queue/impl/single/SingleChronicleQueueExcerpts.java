@@ -151,8 +151,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         void close() {
-            // todo remove
-            Jvm.warn().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
             Wire w0 = wireForIndex;
             wireForIndex = null;
             if (w0 != null)
