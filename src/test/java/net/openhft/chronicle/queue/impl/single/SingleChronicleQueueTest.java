@@ -330,7 +330,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // match the first RollCycles with the same format string, which may not
         // be the RollCycles it was written with
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-            assertEquals(TEST_DAILY, ignored.rollCycle());
+            assertEquals(DAILY, ignored.rollCycle());
         }
     }
 
@@ -2898,16 +2898,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testExistingRollCycleIsMaintained() {
 
-        final File tmpDir = getTmpDir();
+        RollCycles[] values = values();
+        for (int i = 0; i < values.length - 1; i++) {
+            final File tmpDir = getTmpDir();
 
-        try (final ChronicleQueue queue = binary(tmpDir)
-                .rollCycle(HOURLY).build()) {
-            queue.acquireAppender().writeText("hello world");
-        }
+            try (final ChronicleQueue queue = binary(tmpDir)
+                    .rollCycle(values[i]).build()) {
+                queue.acquireAppender().writeText("hello world");
+            }
 
-        try (final ChronicleQueue queue = binary(tmpDir)
-                .rollCycle(DAILY).build()) {
-            assertEquals(HOURLY, queue.rollCycle());
+            try (final ChronicleQueue queue = binary(tmpDir)
+                    .rollCycle(values[i + 1]).build()) {
+                assertEquals(values[i], queue.rollCycle());
+            }
         }
     }
 

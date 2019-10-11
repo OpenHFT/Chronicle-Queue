@@ -56,6 +56,7 @@ import java.lang.reflect.Constructor;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -432,9 +433,10 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
             if (sourceId() == 0)
                 sourceId(newMeta.sourceId());
 
-            if (!newMeta.roll().format().equals(rollCycle().format())) {
+            String format = newMeta.roll().format();
+            if (!format.equals(rollCycle().format())) {
                 // roll cycle changed
-                overrideRollCycleForFileNameLength(newMeta.roll().format().length());
+                overrideRollCycleForFileName(format);
             }
 
             // if it was overridden - reset
@@ -459,23 +461,31 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
             String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
             if (list != null && list.length > 0) {
                 String filename = list[0];
-                if (rollCycle().format().length() + 4 != filename.length()) {
-                    // probably different roll cycle used
-                    overrideRollCycleForFileNameLength(filename.length() - 4);
+                for (RollCycles cycle : RollCycles.VALUES) {
+                    try {
+                        DateTimeFormatter.ofPattern(cycle.format())
+                                .parse(filename.substring(0, filename.length() - 4));
+                        overrideRollCycle(cycle);
+                    } catch (Exception expected) {
+                    }
                 }
             }
         }
     }
 
-    private void overrideRollCycleForFileNameLength(int patternLength) {
+    private void overrideRollCycleForFileName(String pattern) {
         for (RollCycles cycle : RollCycles.VALUES) {
-            if (cycle.format().length() == patternLength) {
-                LOGGER.warn("Overriding roll cycle from {} to {}", rollCycle, cycle);
-                rollCycle = cycle;
+            if (cycle.format().equals(pattern)) {
+                overrideRollCycle(cycle);
                 return;
             }
         }
-        throw new IllegalStateException("Can't find an appropriate RollCycles to override to of length " + patternLength);
+        throw new IllegalStateException("Can't find an appropriate RollCycles to override to of length " + pattern);
+    }
+
+    private void overrideRollCycle(RollCycles cycle) {
+        LOGGER.warn("Overriding roll cycle from {} to {}", rollCycle, cycle);
+        rollCycle = cycle;
     }
 
     private File metapath() {

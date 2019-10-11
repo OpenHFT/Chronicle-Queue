@@ -20,24 +20,24 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import org.jetbrains.annotations.NotNull;
 
 public enum RollCycles implements RollCycle {
-    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss", 1000, 1 << 15, 4), // only good for testing
-    TEST4_SECONDLY(/*---*/"yyyyMMdd-HHmmss", 1000, 32, 4), // only good for testing
+    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, 1 << 15, 4), // only good for testing
+    TEST4_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T4'", 1000, 32, 4), // only good for testing
     MINUTELY(/*--------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16), // 64 million entries per minute
-    TEST_HOURLY(/*-----*/"yyyyMMdd-HH", 60 * 60 * 1000, 16, 4), // 512 entries per hour.
+    TEST_HOURLY(/*-----*/"yyyyMMdd-HH'T'", 60 * 60 * 1000, 16, 4), // 512 entries per hour.
     HOURLY(/*----------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16), // 256 million entries per hour.
-    LARGE_HOURLY(/*----*/"yyyyMMdd-HH", 60 * 60 * 1000, 8 << 10, 64), // 2 billion entries per hour.
-    LARGE_HOURLY_SPARSE("yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 1024), // 16 billion entries per hour with sparse indexing
-    LARGE_HOURLY_XSPARSE("yyyyMMdd-HH", 60 * 60 * 1000, 2 << 10, 1 << 20), // 16 billion entries per hour with super-sparse indexing
-    TEST_DAILY(/*------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8, 1), // Only good for testing - 63 entries per day
-    TEST2_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 16, 2), // Only good for testing
-    TEST4_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 32, 4), // Only good for testing
-    TEST8_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 128, 8), // Only good for testing
-    SMALL_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 8), // 512 million entries per day
+    LARGE_HOURLY(/*----*/"yyyyMMdd-HH'L'", 60 * 60 * 1000, 8 << 10, 64), // 2 billion entries per hour.
+    LARGE_HOURLY_SPARSE("yyyyMMdd-HH'LS'", 60 * 60 * 1000, 4 << 10, 1024), // 16 billion entries per hour with sparse indexing
+    LARGE_HOURLY_XSPARSE("yyyyMMdd-HH'LX'", 60 * 60 * 1000, 2 << 10, 1 << 20), // 16 billion entries per hour with super-sparse indexing
+    TEST_DAILY(/*------*/"yyyyMMdd'T1'", 24 * 60 * 60 * 1000, 8, 1), // Only good for testing - 63 entries per day
+    TEST2_DAILY(/*-----*/"yyyyMMdd'T2'", 24 * 60 * 60 * 1000, 16, 2), // Only good for testing
+    TEST4_DAILY(/*-----*/"yyyyMMdd'T4'", 24 * 60 * 60 * 1000, 32, 4), // Only good for testing
+    TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8), // Only good for testing
+    SMALL_DAILY(/*-----*/"yyyyMMdd'S'", 24 * 60 * 60 * 1000, 8 << 10, 8), // 512 million entries per day
     DAILY(/*-----------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64), // 4 billion entries per day
-    LARGE_DAILY(/*-----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 32 << 10, 128), // 128 billion entries per day
-    XLARGE_DAILY(/*----*/"yyyyMMdd", 24 * 60 * 60 * 1000, 128 << 10, 256), // 4 trillion entries per day
-    HUGE_DAILY(/*------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 512 << 10, 1024), // 256 trillion entries per day
-    HUGE_DAILY_XSPARSE("yyyyMMdd", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20), // 256 trillion entries per day with super-sparse indexing
+    LARGE_DAILY(/*-----*/"yyyyMMdd'L'", 24 * 60 * 60 * 1000, 32 << 10, 128), // 128 billion entries per day
+    XLARGE_DAILY(/*----*/"yyyyMMdd'X'", 24 * 60 * 60 * 1000, 128 << 10, 256), // 4 trillion entries per day
+    HUGE_DAILY(/*------*/"yyyyMMdd'H'", 24 * 60 * 60 * 1000, 512 << 10, 1024), // 256 trillion entries per day
+    HUGE_DAILY_XSPARSE("yyyyMMdd'HX'", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20), // 256 trillion entries per day with super-sparse indexing
     ;
 
     // don't alter this or you will confuse yourself.

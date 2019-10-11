@@ -44,15 +44,17 @@ public enum QueueFileShrinkManager {
         Runnable task = () -> {
             if (LOG.isDebugEnabled())
                 LOG.debug("Shrinking {} to {}", queueFile, writePos);
-            while (true) {
+            int timeout = 50;
+            for (int i = OS.isWindows() ? 1 : 3; i >= 0; i--) {
                 try (RandomAccessFile raf = new RandomAccessFile(queueFile, "rw")) {
                     raf.setLength(writePos);
 
                 } catch (IOException ex) {
                     // on microsoft windows, keep retrying until the file is unmapped
                     if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open")) {
-                        LOG.debug("Failed to shrinking {} to {}, retrying", queueFile, writePos);
-                        Jvm.pause(50);
+                        LOG.debug("Failed to shrinking {} to {}, {}", queueFile, writePos, i == 0 ? "giving up" : "retrying");
+                        Jvm.pause(timeout);
+                        timeout *= 2;
                         continue;
                     }
                     LOG.warn("Failed to shrink file " + queueFile, ex);

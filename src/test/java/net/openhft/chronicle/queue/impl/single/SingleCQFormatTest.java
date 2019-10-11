@@ -180,7 +180,7 @@ public class SingleCQFormatTest {
                 "  writePosition: 0,\n" +
                 "  roll: !SCQSRoll {\n" +
                 "    length: !int 86400000,\n" +
-                "    format: yyyyMMdd,\n" +
+                "    format: yyyyMMdd'T4',\n" +
                 "    epoch: 0\n" +
                 "  },\n" +
                 "  indexing: !SCQSIndexing {\n" +
