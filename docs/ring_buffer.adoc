@@ -3,9 +3,9 @@
 :toc-title: Contents
 :toclevels: 1
 
-== Chronicle Queue Enterprise Ring Buffer
+== Chronicle Ring Buffer
 
-Chronicle Queue Enterprise Ring Buffer provides a high performance, multi-writer, multi-reader, ring buffer implementation
+Chronicle Ring Buffer provides a high performance, multi-writer, multi-reader, ring buffer implementation
 which can be used in your application code.
 
 Additionally, it allows the ring buffer to be accessed
@@ -189,4 +189,4 @@ software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue in preference
 
 === Licence
 
-The Ring Buffer is a licenced product and is licenced separately to chronicle queue enterprise.
+The Ring Buffer is a licenced product and is licenced separately to chronicle queue enterprise. If you would like further details on Chronicle Ring, please contact sales@chronicle.software
