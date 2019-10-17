@@ -1,5 +1,6 @@
 = Frequently Asked Questions about Chronicle
 Neil Clifford
+:toc: manual
 :toclevels: 1
 :css-signature: demo
 :toc-placement: preamble
