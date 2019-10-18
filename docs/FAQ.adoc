@@ -298,7 +298,7 @@ They are almost the same, except `files directory-listing.cq4t` was in earlier v
 
 == Performance between Disk and RAM. Should we specify faster RAM or a faster disk to Chronicle improve read/write performance?
 
-Chronicle recommends lots of high-speed RAM. This is because Chronicle uses the page cash and RAM is in effect a cache to the disk. 
+Chronicle recommends lots of high-speed RAM. This is because Chronicle uses the page cache and RAM is in effect a cache to the disk. 
 
 There are two cases where having a high-speed disk will give you a real benefit:
 
@@ -308,9 +308,9 @@ If the rate of data that you are writing exceeds the disk write speed. In most a
 ==== 2. Page cache miss
 For Chronicle queues which write and read messages lineally across memory, we mitigate this situation with the use of the Chronicle pre-toucher. The pre-toucher ensures that the page is loaded into the page cache before being written into the queue. 
 
-For Chronicle Map, it is somewhat more complicated because Chronicle Map reads and writes your entries with random access across both the memory and disk. In this situation, if the entire map can be held within the page cash, then a read, or write, to the map will not have to access the disk. The operating system will work in the background ensuring that entries written to the page cache are propagated to the disk, but this is done via the operating system and is not on the critical path. 
+For Chronicle Map, it is somewhat more complicated because Chronicle Map reads and writes your entries with random access across both the memory and disk. In this situation, if the entire map can be held within the page cache, then a read, or write, to the map will not have to access the disk. The operating system will work in the background ensuring that entries written to the page cache are propagated to the disk, but this is done via the operating system and is not on the critical path. 
 
-It follows that if you have quite a few maps, especially large maps, and your page cash is not large enough to hold all of these maps, then a read, or write, to a random entry may cause a cache miss. This in turn would cause a disk read or write. If you were going to install high-speed SSDs, Chronicle recommends that you use them to store the Chronicle maps and leave the slower cheap disks for the Chronicle queues. In addition, you should avoid using network attached storage, as this usually offers worst performance than local disks.
+It follows that if you have quite a few maps, especially large maps, and your page cache is not large enough to hold all of these maps, then a read, or write, to a random entry may cause a cache miss. This in turn would cause a disk read or write. If you were going to install high-speed SSDs, Chronicle recommends that you use them to store the Chronicle maps and leave the slower cheap disks for the Chronicle queues. In addition, you should avoid using network attached storage, as this usually offers worst performance than local disks.
 
 '''
 <<../README.adoc#,Back to ReadMe>>
