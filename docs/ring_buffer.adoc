@@ -3,21 +3,22 @@
 :toc-title: Contents
 :toclevels: 1
 
-== Chronicle Queue Enterprise Ring Buffer
+== Chronicle Ring Buffer
 
-Chronicle Queue Enterprise Ring Buffer provides a high performance, multi-writer, multi-reader, ring buffer implementation
+Chronicle Ring Buffer provides a high performance, multi-writer, multi-reader, ring buffer implementation
 which can be used in your application code.
 
 Additionally, it allows the ring buffer to be accessed
-through two different implementations of the `ChronicleQueue` interface.
+through two different implementations of the `ChronicleQueue` interface, which allows it to be used to
+mitigate pauses which the OS can introduce when using `ChronicleQueue` under load. Using Enterprise Chronicle
+Queue together with Chronicle Ring Buffer allows a `ChronicleQueue` to be created that behaves in the same way
+as the open source `ChronicleQueue` but with a ring buffer behind the scenes covering up any pauses from the
+underlying OS and hardware. This can be enabled by setting `readBufferMode` and `writeBufferMode` as specified below.
+Tests on real production client workloads have shown that configuring these parameters on a loaded system can
+immediately reduce latency outlier events by 98%.
+
 https://jerryshea.github.io/2018/07/27/RingBuffer.html[This article] gives some examples of how high-percentile
 latencies can be reduced.
-
-[NOTE]
-====
-Ring buffer functionality is still under development; you will still see UnsupportedOperationExceptions
-thrown when some functionality is used - see link:#unsupported-operations[Unsupported operations].
-====
 
 .Chronicle Ring Buffer
 image::images/Ring_buffer.svg[]
@@ -25,15 +26,8 @@ image::images/Ring_buffer.svg[]
 === The mechanics of Chronicle Ring Buffer
 
 The Chronicle Queue Enterprise Ring Buffer is a multi-writer, multi-reader, zero-garbage collection, monitored ring buffer
-implementation which takes `Bytes`.
-
-As the Chronicle stack is built on `Bytes`, you can use the ring buffer for byte arrays, packed objects, or you can serialise
+implementation which takes `Bytes`. As the Chronicle stack is built on `Bytes`, you can use the ring buffer for byte arrays, packed objects, or you can serialise
 (or de-serialise objects out of, or into, it using https://github.com/OpenHFT/Chronicle-Wire[Chronicle Wire].
-
-When you create a ring buffer then any reader can block all writers. If a reader stops reading
-then this will eventually block writers. The number of readers is fixed, and they are all created when the ring buffer is
-created; when the underlying BytesStore is first written to. The readers will live for as long as the ring buffer (actually
-as until long as the underlying BytesStore - you can re-create a new ring buffer over the same BytesStore).
 
 Backing the ring buffer with a persistent BytesStore (that is, one backed with a memory-mapped file) means it will be
 visible to multiple processes. All processes can write to, and read from, the ring buffer.
@@ -189,4 +183,4 @@ software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue in preference
 
 === Licence
 
-The Ring Buffer is a licenced product and is licenced separately to chronicle queue enterprise.
+The Ring Buffer is a licenced product and is licenced separately to chronicle queue enterprise. If you would like further details on Chronicle Ring, please contact sales@chronicle.software

@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import org.junit.Test;
 
 import java.io.File;
@@ -121,6 +122,7 @@ public class RollingResourcesCacheTest {
         doTestCycleAndResourceNames(AM_EPOCH, RollCycles.HOURLY, AM_HOURLY_CYCLE_NUMBER + 15, AM_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(AM_EPOCH, RollCycles.MINUTELY, AM_MINUTELY_CYCLE_NUMBER, AM_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(AM_EPOCH, RollCycles.MINUTELY, AM_MINUTELY_CYCLE_NUMBER + 10, AM_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(AM_EPOCH, WeeklyRollCycle.INSTANCE, AM_DAILY_CYCLE_NUMBER, "2018109");
 
         // PM_EPOCH is 2010-09-17 16:00:00.000 UTC
         // cycle 2484 should be formatted as:
@@ -133,6 +135,7 @@ public class RollingResourcesCacheTest {
         doTestCycleAndResourceNames(PM_EPOCH, RollCycles.HOURLY, PM_HOURLY_CYCLE_NUMBER + 15, PM_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(PM_EPOCH, RollCycles.MINUTELY, PM_MINUTELY_CYCLE_NUMBER, PM_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(PM_EPOCH, RollCycles.MINUTELY, PM_MINUTELY_CYCLE_NUMBER + 10, PM_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(PM_EPOCH, WeeklyRollCycle.INSTANCE, 42, "2011189");
 
         // POSITIVE_RELATIVE_EPOCH is 5 hours (18000000 millis)
         // cycle 2484 should be formatted as:
@@ -145,6 +148,7 @@ public class RollingResourcesCacheTest {
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, POSITIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976288");
 
         // BIG_POSITIVE_RELATIVE_EPOCH is 15 hours (54000000 millis)
         // cycle 2484 should be formatted as:
@@ -157,6 +161,7 @@ public class RollingResourcesCacheTest {
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, BIG_POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, BIG_POSITIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, BIG_POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976288");
 
         // NEGATIVE_RELATIVE_EPOCH is -3 hours (-10800000 millis)
         // cycle 2484 should be formatted as:
@@ -169,6 +174,7 @@ public class RollingResourcesCacheTest {
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976288");
 
         // NEGATIVE_RELATIVE_EPOCH is -13 hours (-46800000 millis)
         // cycle 2484 should be formatted as:
@@ -181,6 +187,7 @@ public class RollingResourcesCacheTest {
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.HOURLY, BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, BIG_NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, RollCycles.MINUTELY, BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
+        doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976287");
     }
 
     @Test(expected = RuntimeException.class)
@@ -251,24 +258,32 @@ public class RollingResourcesCacheTest {
         doTestToLong(RollCycles.DAILY, AM_EPOCH, 100, Long.valueOf("17733"));
         doTestToLong(RollCycles.HOURLY, AM_EPOCH, 100, Long.valueOf("423292"));
         doTestToLong(RollCycles.MINUTELY, AM_EPOCH, 100, Long.valueOf("25391620"));
+        doTestToLong(WeeklyRollCycle.INSTANCE, AM_EPOCH, 0, Long.valueOf("2519"));
+
         doTestToLong(RollCycles.DAILY, PM_EPOCH, 0, Long.valueOf("14869"));
         doTestToLong(RollCycles.HOURLY, PM_EPOCH, 0, Long.valueOf("356856"));
         doTestToLong(RollCycles.MINUTELY, PM_EPOCH, 0, Long.valueOf("21411360"));
         doTestToLong(RollCycles.DAILY, PM_EPOCH, 100, Long.valueOf("14969"));
         doTestToLong(RollCycles.HOURLY, PM_EPOCH, 100, Long.valueOf("356956"));
         doTestToLong(RollCycles.MINUTELY, PM_EPOCH, 100, Long.valueOf("21411460"));
+        doTestToLong(WeeklyRollCycle.INSTANCE, PM_EPOCH, 0, Long.valueOf("2124"));
+
         doTestToLong(RollCycles.DAILY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
         doTestToLong(RollCycles.HOURLY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
         doTestToLong(RollCycles.MINUTELY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
         doTestToLong(RollCycles.DAILY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
         doTestToLong(RollCycles.HOURLY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
         doTestToLong(RollCycles.MINUTELY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
+        doTestToLong(WeeklyRollCycle.INSTANCE, POSITIVE_RELATIVE_EPOCH, 7, Long.valueOf("7"));
+
         doTestToLong(RollCycles.DAILY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1"));
         doTestToLong(RollCycles.HOURLY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-24"));
         doTestToLong(RollCycles.MINUTELY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1440"));
         doTestToLong(RollCycles.DAILY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("99"));
         doTestToLong(RollCycles.HOURLY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("76"));
         doTestToLong(RollCycles.MINUTELY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("-1340"));
+        doTestToLong(WeeklyRollCycle.INSTANCE, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1"));
+
     }
 
     public void doTestToLong(RollCycle rollCycle, long epoch, long cycle, Long expectedLong) {
@@ -278,4 +293,6 @@ public class RollingResourcesCacheTest {
         RollingResourcesCache.Resource resource = cache.resourceFor(cycle);
         assertEquals(expectedLong, cache.toLong(resource.path));
     }
+
+
 }

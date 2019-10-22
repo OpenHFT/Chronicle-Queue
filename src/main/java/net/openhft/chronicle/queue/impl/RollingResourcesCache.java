@@ -128,9 +128,14 @@ public class RollingResourcesCache {
         final long value;
         if (length == ONE_DAY_IN_MILLIS) {
             value = parse.getLong(ChronoField.EPOCH_DAY);
-        } else {
+        } else if (length < ONE_DAY_IN_MILLIS) {
             value = Instant.from(parse).toEpochMilli() / length;
+        } else {
+            long daysSinceEpoch = parse.getLong(ChronoField.EPOCH_DAY);
+            long adjShift = daysSinceEpoch < 0 ? -1 : 0;
+            value = adjShift + ((daysSinceEpoch * 86400) / (length / 1000));
         }
+
         if (filenameToTimestampCache.size() >= MAX_TIMESTAMP_CACHE_SIZE) {
             filenameToTimestampCache.clear();
         }

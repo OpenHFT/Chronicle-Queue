@@ -29,6 +29,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low
@@ -194,15 +195,14 @@ public interface ChronicleQueue extends Closeable {
     @SuppressWarnings("unchecked")
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
-        for (Class clazz : additional)
-            builder.addInterface(clazz);
+        Stream.of(additional).forEach(builder::addInterface);
         return builder.build();
     }
 
     @NotNull
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
-        return new VanillaMethodWriterBuilder<>(tClass,
-                new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
+        return new VanillaMethodWriterBuilder<T>(tClass,
+                () -> new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
     }
 
     RollCycle rollCycle();

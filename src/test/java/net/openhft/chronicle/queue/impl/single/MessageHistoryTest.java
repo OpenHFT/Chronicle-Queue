@@ -17,19 +17,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 public final class MessageHistoryTest {
     @Rule
     public final TestName testName = new TestName();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private File inputQueueDir;
+    private File middleQueueDir;
     private File outputQueueDir;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         inputQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
+        middleQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
         outputQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
         final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
         messageHistory.addSourceDetails(true);
@@ -37,7 +38,7 @@ public final class MessageHistoryTest {
     }
 
     @Test
-    public void shouldAccessMessageHistory() throws Exception {
+    public void shouldAccessMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
             generateTestData(inputQueue, outputQueue);
@@ -53,7 +54,7 @@ public final class MessageHistoryTest {
     }
 
     @Test
-    public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() throws Exception {
+    public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
             generateTestData(inputQueue, outputQueue);
@@ -69,9 +70,33 @@ public final class MessageHistoryTest {
         }
     }
 
+    @Test
+    public void chainedMessageHistory() {
+        try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
+             final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);
+             final ChronicleQueue outputQueue = createQueue(middleQueueDir, 3)) {
+            generateTestData(inputQueue, middleQueue);
+
+            MethodReader reader = middleQueue.createTailer().methodReader(outputQueue.methodWriter(First.class));
+            for (int i = 0; i < 3; i++)
+                assertTrue(reader.readOne());
+            MethodReader reader2 = outputQueue.createTailer().methodReader((First) this::say3);
+            for (int i = 0; i < 3; i++)
+                assertTrue(reader2.readOne());
+        }
+    }
+
+    private void say3(String text) {
+        final MessageHistory messageHistory = MessageHistory.get();
+        assertNotNull(messageHistory);
+        assertThat(messageHistory.sources(), is(2));
+    }
+
     private void generateTestData(final ChronicleQueue inputQueue, final ChronicleQueue outputQueue) {
-        final First first = inputQueue.acquireAppender().
-                methodWriterBuilder(First.class).recordHistory(true).get();
+        final First first = inputQueue.acquireAppender()
+                .methodWriterBuilder(First.class)
+                .recordHistory(true)
+                .get();
         first.say("one");
         first.say("two");
         first.say("three");
@@ -129,7 +154,7 @@ public final class MessageHistoryTest {
         public void count(final int value) {
             final MessageHistory messageHistory = MessageHistory.get();
             assertNotNull(messageHistory);
-            assertThat(messageHistory.sources(), is(2));
+            assertThat(messageHistory.sources(), is(1));
             messageHistoryPresent = true;
         }
 
