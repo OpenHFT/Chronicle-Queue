@@ -8,7 +8,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -16,10 +15,10 @@ import org.junit.rules.TestName;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 
+import static junit.framework.TestCase.fail;
 import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
 
@@ -34,7 +33,6 @@ public class TestMethodWriterWithThreads {
     public final TestName testName = new TestName();
     private ThreadLocal<Amend> amendTL = ThreadLocal.withInitial(Amend::new);
     private ThreadLocal<Create> createTL = ThreadLocal.withInitial(Create::new);
-    private ExecutorService executor = Executors.newFixedThreadPool(2);
     private I methodWriter;
     private AtomicBoolean fail = new AtomicBoolean();
 
@@ -46,28 +44,27 @@ public class TestMethodWriterWithThreads {
 
             methodWriter = q.methodWriter(I.class);
 
-            for (int j = 0; j < 1000; j++) {
-                executor.execute(this::creates);
-                executor.execute(this::amends);
-            }
-
             ExcerptTailer tailer = q.createTailer();
-
             MethodReader methodReader = tailer.methodReader(newReader());
-            try {
-                for (int j = 0; j < 2000; ) {
-                    if (methodReader.readOne())
-                        j++;
-                }
-            } catch (AssertionError e) {
-                e.printStackTrace();
-                Assert.fail();
-            } finally {
-                executor.shutdownNow();
-            }
-            if (fail.get())
+
+            IntStream.range(0, 1000)
+                    .parallel()
+                    .forEach(i -> {
+                        creates();
+                        amends();
+                        synchronized (methodReader) {
+                            for (int j = 0; j < 2 && !fail.get(); )
+                                if (methodReader.readOne())
+                                    j++;
+                        }
+                        if (fail.get())
+                            fail();
+                    });
+
+        } finally {
+            if (fail.get()) {
                 DumpQueueMain.dump(tmpDir.getAbsolutePath());
-            Assert.fail();
+            }
         }
     }
 
@@ -79,7 +76,7 @@ public class TestMethodWriterWithThreads {
             public void amend(final Amend amend) {
                 if (amend.type != AMEND) {
                     fail.set(true);
-                    throw new AssertionError("amend type=" + amend.type);
+                    fail("amend type=" + amend.type);
                 }
             }
 
@@ -87,7 +84,7 @@ public class TestMethodWriterWithThreads {
             public void create(final Create create) {
                 if (create.type != CREATE) {
                     fail.set(true);
-                    throw new AssertionError("create type=" + create.type);
+                    fail("create type=" + create.type);
                 }
             }
         };
