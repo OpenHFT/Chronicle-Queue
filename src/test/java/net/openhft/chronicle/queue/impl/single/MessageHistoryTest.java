@@ -74,7 +74,7 @@ public final class MessageHistoryTest {
     public void chainedMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);
-             final ChronicleQueue outputQueue = createQueue(middleQueueDir, 2)) {
+             final ChronicleQueue outputQueue = createQueue(middleQueueDir, 3)) {
             generateTestData(inputQueue, middleQueue);
 
             MethodReader reader = middleQueue.createTailer().methodReader(outputQueue.methodWriter(First.class));
