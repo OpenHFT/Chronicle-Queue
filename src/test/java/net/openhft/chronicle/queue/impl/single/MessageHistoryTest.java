@@ -83,7 +83,6 @@ public final class MessageHistoryTest {
             MethodReader reader2 = outputQueue.createTailer().methodReader((First) this::say3);
             for (int i = 0; i < 3; i++)
                 assertTrue(reader2.readOne());
-
         }
     }
 
