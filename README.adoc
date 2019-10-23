@@ -608,6 +608,70 @@ header: !SCQStore {
 
 NOTE: The example above does not show any user data, because no user data was written to this example file.
 
+Another tool for logging the contents of the chronicle queue is the ChronicleReaderMain.java ( this is in the Chronicle Queue project )
+
+This offers options such as tailing the queue ( rather like $tail -f ) using the '-f' option.
+
+```
+usage: ChronicleReaderMain
+ -d <directory>       Directory containing chronicle queue files
+ -e <exclude-regex>   Do not display records containing this regular
+                      expression
+ -f                   Tail behaviour - wait for new records to arrive
+ -h                   Print this help and exit
+ -i <include-regex>   Display records containing this regular expression
+ -l                   Squash each output message into a single line
+ -m <max-history>     Show this many records from the end of the data set
+ -n <from-index>      Start reading from this index (e.g. 0x123ABE)
+ -r                   Use when reading from a queue generated using a
+                      MethodWriter
+ -s                   Display index
+ -w <wire-type>       Control output i.e. JSON
+ ```
+ 
+ If you specify the classes in the example above on the class path, or create an Uber Jar using a shade plugin
+ 
+ you can then run the ChronicleReaderMain from the command line via
+
+```
+ java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "$@“
+ ```
+ 
+ to create a uber jar, with the shade plugin from maven:
+ 
+ ```
+ <build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.1.1</version>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                    <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <includes>
+                                    <include>net/openhft/**</include>
+                                    <include>software/chronicle/**</include>
+                         
+                                </includes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+ ```
+
+
 === Reading from a Queue using a Tailer
 
 Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
