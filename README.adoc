@@ -570,7 +570,7 @@ total 9920
 -rw-r--r--  1 robaustin  staff  4198400 28 Jul 15:05 19700101-02.cq4
 ```
 
-you can run
+you can run, from the command line
 
 ```
 $ java -cp chronicle-queue-4.5.5.jar net.openhft.chronicle.queue.DumpQueueMain 19700101-02.cq4
@@ -635,7 +635,7 @@ usage: ChronicleReaderMain
  
  you can then run the ChronicleReaderMain from the command line via
 
-```
+ ```
  java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "$@“
  ```
  
