@@ -614,7 +614,8 @@ Another tool for logging the contents of the chronicle queue is the ChronicleRea
 
 This offers options such as tailing the queue ( rather like $tail -f ) using the '-f' option.
 
-```
+[source]
+----
 usage: ChronicleReaderMain
  -d <directory>       Directory containing chronicle queue files
  -e <exclude-regex>   Do not display records containing this regular
@@ -629,19 +630,21 @@ usage: ChronicleReaderMain
                       MethodWriter
  -s                   Display index
  -w <wire-type>       Control output i.e. JSON
- ```
+----
  
  If you specify the classes in the example above on the class path, or create an Uber Jar using a shade plugin
  
  you can then run the ChronicleReaderMain from the command line via
 
- ```
+[source]
+----
  java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "$@“
- ```
- 
+----
+
  to create a uber jar, with the shade plugin from maven:
  
- ```
+ [source,xml]
+----
  <build>
     <plugins>
         <plugin>
@@ -670,7 +673,7 @@ usage: ChronicleReaderMain
         </plugin>
     </plugins>
 </build>
- ```
+----
 
 
 === Reading from a Queue using a Tailer
