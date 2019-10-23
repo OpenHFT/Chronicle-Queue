@@ -630,18 +630,20 @@ usage: ChronicleReaderMain
                       MethodWriter
  -s                   Display index
  -w <wire-type>       Control output i.e. JSON
+
 ----
- 
- If you specify the classes in the example above on the class path, or create an Uber Jar using a shade plugin
- 
- you can then run the ChronicleReaderMain from the command line via
+
+If you specify the classes in the example above on the class path, or create an Uber Jar using a shade plugin
+
+you can then run the ChronicleReaderMain from the command line via
 
 [source]
 ----
- java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "$@“
+java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "$@“
+
 ----
 
- to create a uber jar, with the shade plugin from maven:
+to create a uber jar, with the shade plugin from maven:
  
 [source,xml]
 ----
@@ -673,7 +675,9 @@ usage: ChronicleReaderMain
         </plugin>
     </plugins>
 </build>
+
 ----
+
 
 
 === Reading from a Queue using a Tailer
