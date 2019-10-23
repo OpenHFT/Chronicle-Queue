@@ -635,7 +635,7 @@ usage: ChronicleReaderMain
 
 If you specify the classes in the example above on the class path, or create an Uber Jar using a shade plugin
 
-you can then run the ChronicleReaderMain from the command line via
+you can then run the *ChronicleReaderMain* from the command line via
 
 [source]
 ----
