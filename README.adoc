@@ -580,7 +580,7 @@ this will dump the `19700101-02.cq4` file out as text, as shown below:
 
 [source, Yaml]
 ----
---- !!meta-data #binary
+!!meta-data #binary
 header: !SCQStore {
   wireType: !WireType BINARY,
   writePosition: 0,
@@ -643,7 +643,7 @@ usage: ChronicleReaderMain
 
  to create a uber jar, with the shade plugin from maven:
  
- [source,xml]
+[source,xml]
 ----
  <build>
     <plugins>
