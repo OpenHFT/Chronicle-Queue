@@ -608,6 +608,8 @@ header: !SCQStore {
 
 NOTE: The example above does not show any user data, because no user data was written to this example file.
 
+==== ChronicleReaderMain
+
 Another tool for logging the contents of the chronicle queue is the ChronicleReaderMain.java ( this is in the Chronicle Queue project )
 
 This offers options such as tailing the queue ( rather like $tail -f ) using the '-f' option.
@@ -658,8 +660,7 @@ usage: ChronicleReaderMain
                                 <artifact>*:*</artifact>
                                 <includes>
                                     <include>net/openhft/**</include>
-                                    <include>software/chronicle/**</include>
-                         
+                                    <include>software/chronicle/**</include>                         
                                 </includes>
                             </filter>
                         </filters>
