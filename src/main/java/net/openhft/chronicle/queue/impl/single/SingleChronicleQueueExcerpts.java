@@ -624,7 +624,7 @@ public class SingleChronicleQueueExcerpts {
 
             store.writeEOF(wire, timeoutMS());
 
-            int lastCycle = queue.lastCycle;
+            int lastCycle = queue.lastCycle();
 
             if (lastCycle != cycle && lastCycle > this.cycle) {
                 setCycle2(lastCycle, false);
