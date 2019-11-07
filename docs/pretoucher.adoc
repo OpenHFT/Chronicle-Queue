@@ -5,7 +5,7 @@ Neil Clifford
 
 Chronicle Queue uses a pre-toucher mechanism to greatly improve write performance.
 
-During the write process there is also significant write-speed variation, as the process has to find new memory to write to. This can be mitigated by using the Chronicle `pretouch()` call to pre-allocate writeable memory. 
+During the write process there is significant write-speed variation, as the process has to find new memory to write to. This can be mitigated by using the Chronicle `pretouch()` call to pre-allocate writeable memory. 
 
 The pre-toucher can be enabled with the Chronicle Queue Builder using:
 
@@ -14,7 +14,7 @@ The pre-toucher can be enabled with the Chronicle Queue Builder using:
 <SingleChronicleQueueBuilder>.enablePreloader(<pretouchIntervalMillis>) ;
 ```
 
-The graph below shows the comparative speeds between using and not using the pre-toucher.
+The graph below shows the comparative speeds between using, and not using, the pre-toucher.
 
 image::images/pretoucher_test.png[]
 
