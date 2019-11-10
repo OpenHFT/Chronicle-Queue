@@ -123,6 +123,9 @@ public class RollCycleMultiThreadStressTest {
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
 
+        if (READERS_READ_ONLY)
+            createQueue(path);
+
         if (SHARED_WRITE_QUEUE)
             sharedWriterQueue = createQueue(path);
 
