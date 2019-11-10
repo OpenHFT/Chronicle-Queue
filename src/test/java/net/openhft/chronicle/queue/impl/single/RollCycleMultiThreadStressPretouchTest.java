@@ -15,7 +15,10 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
 
     @Test
     public void stress() throws InterruptedException {
-        System.setProperty("pretouch", "true");
         super.stress();
+    }
+
+    static {
+        System.setProperty("pretouch", "true");
     }
 }

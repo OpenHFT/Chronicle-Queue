@@ -33,20 +33,21 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest {
-    static final long SLEEP_PER_WRITE_NANOS;
-    static final int TEST_TIME;
-    static final int ROLL_EVERY_MS;
-    static final int DELAY_READER_RANDOM_MS;
-    static final int DELAY_WRITER_RANDOM_MS;
-    static final int WRITE_ONE_THEN_WAIT_MS;
-    static final int CORES;
-    static final Random random;
-    static final int NUMBER_OF_INTS;
-    static final boolean PRETOUCH;
-    static final boolean READERS_READ_ONLY;
-    static final boolean DUMP_QUEUE;
+    final long SLEEP_PER_WRITE_NANOS;
+    final int TEST_TIME;
+    final int ROLL_EVERY_MS;
+    final int DELAY_READER_RANDOM_MS;
+    final int DELAY_WRITER_RANDOM_MS;
+    final int WRITE_ONE_THEN_WAIT_MS;
+    final int CORES;
+    final Random random;
+    final int NUMBER_OF_INTS;
+    final boolean PRETOUCH;
+    final boolean READERS_READ_ONLY;
+    final boolean DUMP_QUEUE;
+    final boolean SHARED_WRITE_QUEUE;
 
-    static {
+    public RollCycleMultiThreadStressTest() {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 40_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
@@ -59,6 +60,7 @@ public class RollCycleMultiThreadStressTest {
         PRETOUCH = Boolean.getBoolean("pretouch");
         READERS_READ_ONLY = Boolean.getBoolean("read_only");
         DUMP_QUEUE = Boolean.getBoolean("dump_queue");
+        SHARED_WRITE_QUEUE = Boolean.getBoolean("sharedWriteQ");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
 
         System.setProperty("disableFastForwardHeaderNumber", "true");
@@ -68,6 +70,7 @@ public class RollCycleMultiThreadStressTest {
 
     final Logger LOG = LoggerFactory.getLogger(getClass());
     final SetTimeProvider timeProvider = new SetTimeProvider();
+    private ChronicleQueue sharedWriterQueue;
 
     @Rule
     public RepeatRule repeatRule = new RepeatRule();
@@ -120,6 +123,9 @@ public class RollCycleMultiThreadStressTest {
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
 
+        if (SHARED_WRITE_QUEUE)
+            sharedWriterQueue = createQueue(path);
+
         PretoucherThread pretoucherThread = null;
         if (PRETOUCH) {
             pretoucherThread = new PretoucherThread(path);
@@ -128,7 +134,7 @@ public class RollCycleMultiThreadStressTest {
 
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
             final Writer tempWriter = new Writer(path, wrote, expectedNumberOfMessages);
-            try (ChronicleQueue queue = tempWriter.queue()) {
+            try (ChronicleQueue queue = writerQueue(path)) {
                 tempWriter.write(queue.acquireAppender());
             }
         }
@@ -255,6 +261,16 @@ public class RollCycleMultiThreadStressTest {
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(RollCycles.TEST_SECONDLY);
+    }
+
+    @NotNull
+    private ChronicleQueue createQueue(File path) {
+        return queueBuilder(path).build();
+    }
+
+    @NotNull
+    private ChronicleQueue writerQueue(File path) {
+        return sharedWriterQueue != null ? sharedWriterQueue : createQueue(path);
     }
 
     public static class RepeatRule implements TestRule {
@@ -393,7 +409,7 @@ public class RollCycleMultiThreadStressTest {
 
         @Override
         public Throwable call() {
-            try (final ChronicleQueue queue = queue()) {
+            try (final ChronicleQueue queue = writerQueue(path)) {
                 final ExcerptAppender appender = queue.acquireAppender();
                 Jvm.pause(random.nextInt(DELAY_WRITER_RANDOM_MS));
                 final long startTime = System.nanoTime();
@@ -414,10 +430,6 @@ public class RollCycleMultiThreadStressTest {
                 exception = e;
                 return e;
             }
-        }
-
-        private ChronicleQueue queue() {
-            return queueBuilder(path).build();
         }
 
         private int write(ExcerptAppender appender) {

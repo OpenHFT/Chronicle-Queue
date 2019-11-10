@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import org.junit.Test;
 
-public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThreadStressTest {
+public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMultiThreadStressTest {
 
     /*@Ignore("run manually")
     @Test
@@ -19,6 +19,6 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
     }
 
     static {
-        System.setProperty("read_only", "true");
+        System.setProperty("sharedWriteQ", "true");
     }
 }
