@@ -65,7 +65,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     private static final boolean SHOULD_CHECK_CYCLE = Boolean.getBoolean("chronicle.queue.checkrollcycle");
     private static final boolean SHOULD_RELEASE_RESOURCES = Boolean.valueOf(
-            System.getProperty("chronicle.queue.release.weakRef.resources", Boolean.TRUE.toString()));
+            System.getProperty("chronicle.queue.release.weakRef.resources", "" + true));
 
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();

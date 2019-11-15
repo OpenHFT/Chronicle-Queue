@@ -32,6 +32,9 @@ import java.io.File;
 import java.util.UUID;
 
 public class ChronicleQueueTestBase {
+    static {
+        System.setProperty("queue.check.index", "true");
+    }
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
     private static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("queue.traceTestExecution");
 

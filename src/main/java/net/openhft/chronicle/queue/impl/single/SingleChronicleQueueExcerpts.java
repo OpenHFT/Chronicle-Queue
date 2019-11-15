@@ -325,7 +325,7 @@ public class SingleChronicleQueueExcerpts {
                 position(position, position);
 
                 Bytes<?> bytes = wire.bytes();
-                assert checkPositionOfHeader(bytes);
+                assert !CHECK_INDEX || checkPositionOfHeader(bytes);
 
                 final long headerNumber = store.lastSequenceNumber(this);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
@@ -337,7 +337,7 @@ public class SingleChronicleQueueExcerpts {
             } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
-            assert checkWritePositionHeaderNumber();
+            assert !CHECK_INDEX || checkWritePositionHeaderNumber();
         }
 
         private boolean checkPositionOfHeader(Bytes<?> bytes) {
@@ -376,7 +376,7 @@ public class SingleChronicleQueueExcerpts {
 
             int safeLength = (int) queue.overlapSize();
             resetPosition();
-            assert checkWritePositionHeaderNumber();
+            assert !CHECK_INDEX || checkWritePositionHeaderNumber();
 
             // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);
@@ -782,10 +782,8 @@ public class SingleChronicleQueueExcerpts {
                             store.writePosition(positionOfHeader);
                             if (lastIndex != Long.MIN_VALUE)
                                 writeIndexForPosition(lastIndex, positionOfHeader);
-                            else
-                                assert !CHECK_INDEX || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, positionOfHeader);
                         }
-                        assert checkWritePositionHeaderNumber();
+                        assert !CHECK_INDEX || checkWritePositionHeaderNumber();
                     } else if (wire != null) {
                         isClosed = true;
                         writeBytesInternal(wire.headerNumber(), wire.bytes());
@@ -1539,7 +1537,7 @@ public class SingleChronicleQueueExcerpts {
             WireType wireType = queue.wireType();
 
             final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
-            assert headerNumberCheck(wire);
+            assert !CHECK_INDEX || headerNumberCheck(wire);
             this.context.wire(wire);
             wire.parent(this);
 
@@ -1547,7 +1545,7 @@ public class SingleChronicleQueueExcerpts {
             wireForIndex = readAnywhere(wireType.apply(store().bytes()));
             closableResources.wireForIndexReference = wireForIndex.bytes();
             closableResources.wireReference = wire.bytes();
-            assert headerNumberCheck((AbstractWire) wireForIndex);
+            assert !CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
             assert wire != wireForIndexOld;
 
             if (wireForIndexOld != null) {
