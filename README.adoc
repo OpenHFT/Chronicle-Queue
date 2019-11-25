@@ -250,7 +250,7 @@ This makes it a powerful tool, providing a big buffer between your system, and a
 === Market Data
 
 Market data publishers don't give you the option to push back on the producer for long; if at all.
-A few of our users consume data from CME OPRA. This produces peaks of 10 million events per second, sent as UDP packets without any retry. If you miss, or drop a packet, then it is lost.  You have to consume and record those packets as fast as they come to you, with very little buffering in the network adapter.
+A few of our users consume data from CME OPRA. This produces peaks of 10 million events per minute, sent as UDP packets without any retry. If you miss, or drop a packet, then it is lost.  You have to consume and record those packets as fast as they come to you, with very little buffering in the network adapter.
 
 For market data in particular, real time means in a *few microseconds*; it doesn't mean intra-day (during the day).
 
