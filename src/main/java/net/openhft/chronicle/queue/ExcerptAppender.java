@@ -18,7 +18,10 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.queue.batch.BatchAppender;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.MarshallableOut;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
+import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -55,7 +58,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * business thread ], it must be called from the same thread that created it, as the call to
      * pretouch() is not thread safe. For example :
      * <p>
-     * newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> queue.acquireAppender().pretouch(), 0, 1, TimeUnit.SECONDS);
+     * <code>newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -&gt; queue.acquireAppender().pretouch(), 0, 1, TimeUnit.SECONDS);</code>
      */
     default void pretouch() {
     }

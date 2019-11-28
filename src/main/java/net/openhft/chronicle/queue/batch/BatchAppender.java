@@ -32,7 +32,7 @@ public interface BatchAppender {
      * @param rawAddress     the address of where to start to write a batch of messages to the off heap memory.
      * @param rawMaxBytes    the maximum number of bytes that can be written directly to the off heap memory
      * @param rawMaxMessages the maximum number of messages that can be written directly to the off heap memory
-     * @return the count and the length as ( count << 32) | length
+     * @return the count and the length as <code>( count &lt;&lt; 32) | length</code>
      */
     long writeMessages(long rawAddress, long rawMaxBytes, int rawMaxMessages);
 

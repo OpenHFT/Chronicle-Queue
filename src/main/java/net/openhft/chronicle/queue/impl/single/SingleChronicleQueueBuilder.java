@@ -673,6 +673,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     @NotNull
     public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
+        assert rollCycle != null;
         this.rollCycle = rollCycle;
         return this;
     }
@@ -761,7 +762,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
      * Chronicle Queue using a background thread.
      * See also {@link #bufferCapacity()}
      * See also {@link #bufferBytesStoreCreator()}
-     * See also {@link software.chronicle.enterprise.ring.EnterpriseRingBuffer}
+     * See also software.chronicle.enterprise.ring.EnterpriseRingBuffer
      *
      * @param writeBufferMode bufferMode for writing
      * @return this
@@ -783,7 +784,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
      * that {@link #writeBufferMode()} is also set to {@code Asynchronous}.
      * See also {@link #bufferCapacity()}
      * See also {@link #bufferBytesStoreCreator()}
-     * See also {@link software.chronicle.enterprise.ring.EnterpriseRingBuffer}
+     * See also software.chronicle.enterprise.ring.EnterpriseRingBuffer
      *
      * @param readBufferMode BufferMode for read
      * @return this
@@ -1034,7 +1035,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     /**
-     * updates all the fields in {@code this} that are null, from the {@param parentBuilder}
+     * updates all the fields in <code>this</code> that are null, from the parentBuilder
      *
      * @param parentBuilder the parentBuilder Chronicle Queue Builder
      * @return that
@@ -1067,5 +1068,11 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         @Override
         public void accept(BytesRingBufferStats bytesRingBufferStats) {
         }
+    }
+
+    @Override
+    public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
+        Marshallable.super.readMarshallable(wire);
+        assert rollCycle != null;
     }
 }

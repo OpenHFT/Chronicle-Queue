@@ -90,7 +90,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     /**
      * Wind to the last entry in the last cycle
      * <p> If the direction() == FORWARD, this will be 1 more than the last entry.
-     * <br/>Otherwise the index will be the last entry. </p>
+     * <p>Otherwise the index will be the last entry.
      * <p>
      * This is not atomic with the appenders, in other words if a cycle has been added in the
      * current millisecond, toEnd() may not see it, This is because for performance reasons, the
