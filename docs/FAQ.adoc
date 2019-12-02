@@ -95,10 +95,12 @@ Having one node which can handle the load of a data centre can also save money, 
 
 Chronicle Queue supports Linux container technology such as docker.
 
-Our performance tests have shown that you can get excellent performance on the same physical host so long as
+You need to ensure that:
 
 * containers share IPC namespace (run with `--ipc="host"`)
 * queues are mounted on bind-mounted folders from the host (i.e. `-v /host/dir/1/:/container/dir`)
+
+Our performance tests have shown minimal performance degredation when compared to running directly on the host.
 
 If your containers are running on separate hosts then you will need to use
 link:replication.adoc[queue replication].
