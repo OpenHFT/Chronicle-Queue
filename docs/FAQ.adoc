@@ -91,6 +91,18 @@ Vertical scalability is essential for low latency, as having more nodes usually 
 
 Having one node which can handle the load of a data centre can also save money, and power consumption.
 
+== Does Chronicle Queue work in Linux containers?
+
+Chronicle Queue supports Linux container technology such as docker.
+
+Our performance tests have shown that you can get excellent performance on the same physical host so long as
+
+* containers share IPC namespace (run with `--ipc="host"`)
+* queues are mounted on bind-mounted folders from the host (i.e. `-v /host/dir/1/:/container/dir`)
+
+If your containers are running on separate hosts then you will need to use
+link:replication.adoc[queue replication].
+
 == What if I have a slow consumer?
 
 Chronicle has an advantage over other queuing systems, in that the consumer can be any amount behind the producer; up to the free space on your disk.
