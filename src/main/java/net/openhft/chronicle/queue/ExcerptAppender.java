@@ -33,27 +33,49 @@ import org.jetbrains.annotations.NotNull;
 public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
 
     /**
+     * Writes (i.e. appends) the provided {@code bytes} to the queue.
+     *
      * @param bytes to write to excerpt.
      */
     void writeBytes(@NotNull BytesStore bytes) throws UnrecoverableTimeoutException;
+
+    /**
+     * Writes (i.e. appends) the provided {@code bytes} to the queue.
+     *
+     * @param bytes to write to excerpt.
+     */
 
     default void writeBytes(@NotNull Bytes bytes) throws UnrecoverableTimeoutException {
         writeBytes((BytesStore) bytes);
     }
 
     /**
-     * @return the index last written, this index includes the cycle and the sequence number
+     * Returns the index last written.
+     * <p>
+     * The index includes the cycle and the sequence number.
+     *
+     * @return the index last written
      * @throws IllegalStateException if no index is available
      */
     long lastIndexAppended();
 
     /**
-     * @return the cycle this appender is on, usually with chronicle-queue each cycle will have its
-     * own unique data file to store the excerpt
+     * Returns the cycle this appender is on.
+     * <p>
+     * Usually with chronicle-queue each cycle will have its
+     * own unique data file to store the excerpts
+     *
+     * @return the cycle this appender is on
      */
     int cycle();
 
     /**
+     * Pre-touches storage resources for the current queue so that appenders
+     * may exhibit more predictable latencies.
+     * <p>
+     * Pre-touching involves accessing pages of files/memory that are likely accessed in a
+     * near future and may also involve accessing/acquiring future cycle files.
+     * <p>
      * We suggest this code is called from a background thread [ not you main
      * business thread ], it must be called from the same thread that created it, as the call to
      * pretouch() is not thread safe. For example :
@@ -64,11 +86,20 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
+     * Sets the {@link Padding} to be used for this ExcerptAppender.
+     * <p>
      * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will
      * not split a cache line.
+     *
+     * @see MarshallableOut.Padding
      */
     void padToCacheAlign(Padding padToCacheAlign);
 
+    /**
+     * Returns the current {@link Padding} used by this ExcerptAppender.
+     *
+     * @return the current {@link Padding} used by this ExcerptAppender
+     */
     @Override
     @NotNull
     Padding padToCacheAlignMode();
@@ -94,18 +125,25 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * Obtain the raw wire for low level direct access.
+     * Returns a raw wire for low level direct access.
      *
-     * @return the raw wire.
+     * @return a raw wire for low level direct access
      */
     Wire wire();
 
     /**
-     * @param timeoutMS
-     * @param batchAppender
+     * Appends a number of excerpts in a single batch operation.
+     *
+     * @deprecated This method is not recommended unless you really
+     * know what you are doing. Misuse of this API could corrupt your data or even
+     * worst cause the JVM or your application to crash.
+     *
+     * @param timeoutMS time out in miliseconds
+     * @param batchAppender to apply for the batch append
      * @return the number of messages written in call the batches
+     * @see BatchAppender
      */
     @Deprecated
-    long batchAppend(final int timeoutMS, BatchAppender batchAppender);
+    long batchAppend(int timeoutMS, BatchAppender batchAppender);
 
 }
