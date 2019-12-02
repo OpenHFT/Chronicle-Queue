@@ -93,7 +93,7 @@ Having one node which can handle the load of a data centre can also save money, 
 
 == Does Chronicle Queue work in Linux containers?
 
-Chronicle Queue supports Linux container technology such as docker.
+Chronicle Queue supports Linux container technology. The below is in regards to our testing on docker.
 
 You need to ensure that:
 
