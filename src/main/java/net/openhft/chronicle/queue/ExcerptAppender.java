@@ -44,7 +44,6 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      *
      * @param bytes to write to excerpt.
      */
-
     default void writeBytes(@NotNull Bytes bytes) throws UnrecoverableTimeoutException {
         writeBytes((BytesStore) bytes);
     }
@@ -114,11 +113,43 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
         };
     }
 
+    /**
+     * Creates and returns a new writer proxy for the given interface {@code tclass} and the given {@code additional }
+     * interfaces.
+     * <p>
+     * When methods are invoked on the returned T object, messages will be put in the queue.
+     * <p>
+     * <b>
+     * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
+     * </b>
+     *
+     * @param tClass of the main interface to be implemented
+     * @param additional interfaces to be implemented
+     * @param <T> type parameter of the main interface
+     * @return a new proxy for the given interface {@code tclass} and the given {@code additional }
+     *         interfaces
+     * @throws NullPointerException if any of the provided parameters are {@code null}.
+     */
     @NotNull
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
         return queue().methodWriter(tClass, additional);
     }
 
+    /**
+     * Creates and returns a new writer proxy for the given interface {@code tclass}.
+     * <p>
+     * When methods are invoked on the returned T object, messages will be put in the queue.
+     * <p>
+     * <b>
+     * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
+     * </b>
+     *
+     * @param tClass of the main interface to be implemented
+     * @param <T> type parameter of the main interface
+     * @return a new proxy for the given interface {@code tclass}
+     *
+     * @throws NullPointerException if the provided parameter is {@code null}.
+     */
     @NotNull
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
         return queue().methodWriterBuilder(tClass);

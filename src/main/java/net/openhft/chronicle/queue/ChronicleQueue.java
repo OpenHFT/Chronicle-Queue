@@ -62,43 +62,103 @@ import java.util.stream.Stream;
 public interface ChronicleQueue extends Closeable {
     int TEST_BLOCK_SIZE = 64 * 1024; // smallest safe block size for Windows 8+
 
-    static ChronicleQueue single(String path) {
-        return SingleChronicleQueueBuilder.single(path).build();
+    /**
+     * Creates and returns a new {@link ChronicleQueue} that will be backed by
+     * files located in the directory named by the provided {@code pathName}.
+     *
+     * @param pathName of the directory to use for storing the queue
+     * @return a new {@link ChronicleQueue} that will be stored
+     *         in the directory given by the provided {@code pathName}
+     * @throws NullPointerException if the provided {@code pathName} is {@code null}.
+     */
+    static ChronicleQueue single(@NotNull String pathName) {
+        return SingleChronicleQueueBuilder.single(pathName).build();
     }
 
+    /**
+     * Creates and returns a new {@link SingleChronicleQueueBuilder}.
+     * <p>
+     * The builder can be used to build a ChronicleQueue.
+     *
+     * @return a new {@link SingleChronicleQueueBuilder}
+     *
+     */
     static SingleChronicleQueueBuilder singleBuilder() {
         return SingleChronicleQueueBuilder.single();
     }
 
-    static SingleChronicleQueueBuilder singleBuilder(String path) {
-        return SingleChronicleQueueBuilder.binary(path);
+    /**
+     * Creates and returns a new {@link SingleChronicleQueueBuilder} that will
+     * be pre-configured to use files located in the directory named by the
+     * provided {@code pathName}.
+     *
+     * @param pathName of the directory to pre-configure for storing the queue
+     * @return a new {@link SingleChronicleQueueBuilder} that will
+     *         be pre-configured to use files located in the directory named by the
+     *         provided {@code pathName}
+     * @throws NullPointerException if the provided {@code pathName} is {@code null}.
+     */
+    static SingleChronicleQueueBuilder singleBuilder(@NotNull String pathName) {
+        return SingleChronicleQueueBuilder.binary(pathName);
     }
 
-    static SingleChronicleQueueBuilder singleBuilder(File path) {
-        return SingleChronicleQueueBuilder.binary(path);
-    }
-
-    static SingleChronicleQueueBuilder singleBuilder(Path path) {
+    /**
+     * Creates and returns a new {@link SingleChronicleQueueBuilder} that will
+     * be pre-configured to use files located in the directory of the
+     * provided {@code path}.
+     *
+     * @param path of the directory to pre-configure for storing the queue
+     * @return a new {@link SingleChronicleQueueBuilder} that will
+     *         be pre-configured to use files located in the directory named by the
+     *         provided {@code pathName}
+     * @throws NullPointerException if the provided {@code path} is {@code null}.
+     */
+    static SingleChronicleQueueBuilder singleBuilder(@NotNull File path) {
         return SingleChronicleQueueBuilder.binary(path);
     }
 
     /**
+     * Creates and returns a new {@link SingleChronicleQueueBuilder} that will
+     * be pre-configured to use files located in the directory of the
+     * provided {@code path}.
+     *
+     * @param path of the directory to pre-configure for storing the queue
+     * @return a new {@link SingleChronicleQueueBuilder} that will
+     *         be pre-configured to use files located in the directory named by the
+     *         provided {@code pathName}
+     * @throws NullPointerException if the provided {@code path} is {@code null}.
+     */
+    static SingleChronicleQueueBuilder singleBuilder(@NotNull Path path) {
+        return SingleChronicleQueueBuilder.binary(path);
+    }
+
+    /**
+     * Creates and returns a new ExcerptTailer for this ChronicleQueue.
      * <b>
-     * Tailers are NOT thread-safe, sharing the Tailer between threads will lead to errors and unpredictable behaviour.
+     * Tailers are NOT thread-safe. Sharing a Tailer across threads will lead to errors and unpredictable behaviour.
      * </b>
      *
      * @return a new ExcerptTailer to read sequentially.
+     * @see #createTailer(String)
      */
     @NotNull
     ExcerptTailer createTailer();
 
     /**
+     * Creates and returns a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}.
+     * <p>
+     * The id is used to persistently store the latest index for the trailer. Any new Trailer with
+     * a previously used id will continue where the old one left off.
      * <b>
-     * Tailers are NOT thread-safe, sharing the Tailer between threads will lead to errors and unpredictable behaviour.
+     * Tailers are NOT thread-safe. Sharing a Tailer across threads will lead to errors and unpredictable behaviour.
      * </b>
-     *
+     * <p>
+     * If the provided {@code id} is {@code null}, the Trailer will be unnamed and this is 
+     * equivalent to invoking {@link #createTailer()}.
+     * 
      * @param id unique id for a tailer which uses to track where it was up to
-     * @return a new ExcerptTailer to read sequentially.
+     * @return a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}
+     * @see #createTailer() 
      */
     @NotNull
     default ExcerptTailer createTailer(String id) {
@@ -106,16 +166,18 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
+     * Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread.
      * <p>
-     * An Appender can be used to writeBytes new excerpts sequentially to the upper.
-     * </p>
+     * An Appender can be used to store new excerpts sequentially to the queue.
      * <p>
-     * Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.
-     * This method returns {@link ThreadLocal} appender, so does not produce any garbage, hence it's safe to simply call
+     * <b>
+     * Appenders are NOT thread-safe. Sharing an Appender across threads will lead to errors and unpredictable behaviour.
+     * </b>
+     * <p>
+     * This method returns a {@link ThreadLocal} appender, so does not produce any garbage, hence it's safe to simply call
      * this method every time an appender is needed.
-     * </p>
      *
-     * @return A thread local Appender for writing new entries to the end.
+     * @return Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread
      */
     @NotNull
     ExcerptAppender acquireAppender();
@@ -130,31 +192,44 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * @return the lowest valid index available, or Long.MAX_VALUE if none are found
+     * Returns the lowest valid index available for this ChronicleQueue, or {@link Long#MAX_VALUE}
+     * if no such index exists.
+     *
+     * @return the lowest valid index available for this ChronicleQueue, or {@link Long#MAX_VALUE}
+     *         if no such index exists
      */
     long firstIndex();
 
     /**
-     * @return the type of wire used, for example WireTypes.TEXT or WireTypes.BINARY
+     * Returns the {@link WireType} used for this ChronicleQueue.
+     * <p>
+     * For example, the WireType could be WireTypes.TEXT or WireTypes.BINARY.
+     *
+     * @return Returns the wire type used for this ChronicleQueue
+     * @see WireType
      */
     @NotNull
     WireType wireType();
 
     /**
-     * Remove all the entries in the queue.
+     * Removes all the excerpts in the current ChronicleQueue.
      */
     void clear();
 
     /**
-     * @return the base file where ChronicleQueue stores its data.
+     * Returns the base directory where ChronicleQueue stores its data.
+     *
+     * @return the base directory where ChronicleQueue stores its data
      */
     @NotNull
     File file();
 
     /**
-     * Cache this value as getAbsolutePath is expensive
+     * Returns the absolute path of the base directory where ChronicleQueue stores its data.
+     * <p>
+     * This value might be cached, as getAbsolutePath is expensive
      *
-     * @return the absolute path of the file where ChronicleQueue stores its data.
+     * @return the absolute path of the base directory where ChronicleQueue stores its data
      */
     @NotNull
     default String fileAbsolutePath() {
@@ -162,30 +237,64 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Dump a Queue in YAML format.
+     * Creates and returns a new String representation of this ChronicleQueue in YAML-format.
      *
-     * @return the contents of the Queue as YAML.
+     * @return a new String representation of this ChronicleQueue in YAML-format
      */
     @NotNull
     String dump();
 
     /**
-     * Dump a range of entries to a Writer
+     * Dumps a representation of this ChronicleQueue to the provided {@code writer} in YAML-format.
+     * Dumping will be made from the provided (@code fromIndex) (inclusive) to the provided
+     * {@code toIndex} (inclusive).
      *
      * @param writer    to write to
-     * @param fromIndex first index to include
-     * @param toIndex   last index to include.
+     * @param fromIndex first index (inclusive)
+     * @param toIndex   last index  (inclusive)
+     * @throws NullPointerException if the provided {@code writer} is {@code null}
      */
     void dump(Writer writer, long fromIndex, long toIndex);
 
+    /**
+     * Dumps a representation of this ChronicleQueue to the provided {@code stream} in YAML-format.
+     * Dumping will be made from the provided (@code fromIndex) (inclusive) to the provided
+     * {@code toIndex} (inclusive).
+     *
+     * @param stream    to write to
+     * @param fromIndex first index (inclusive)
+     * @param toIndex   last index  (inclusive)
+     * @throws NullPointerException if the provided {@code writer} is {@code null}
+     */
     default void dump(@NotNull OutputStream stream, long fromIndex, long toIndex) {
         dump(new OutputStreamWriter(stream, StandardCharsets.UTF_8), fromIndex, toIndex);
     }
 
+    /**
+     * Returns the source id.
+     * <p>
+     * The source id is non-negative.
+     *
+     * @return the source id
+     */
     int sourceId();
 
+
     /**
-     * NOTE the writer generated is not thread safe, you need to keep a ThreadLocal of these if needed.
+     * Creates and returns a new writer proxy for the given interface {@code tclass} and the given {@code additional }
+     * interfaces.
+     * <p>
+     * When methods are invoked on the returned T object, messages will be put in the queue.
+     * <b>
+     * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
+     * </b>
+     *
+     * @param tClass of the main interface to be implemented
+     * @param additional interfaces to be implemented
+     * @param <T> type parameter of the main interface
+     * @return a new proxy for the given interface {@code tclass} and the given {@code additional }
+     *         interfaces
+     * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
     @SuppressWarnings("unchecked")
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
@@ -193,41 +302,102 @@ public interface ChronicleQueue extends Closeable {
         Stream.of(additional).forEach(builder::addInterface);
         return builder.build();
     }
-
+    /**
+     * Creates and returns a new writer proxy for the given interface {@code tclass}.
+     * <p>
+     * When methods are invoked on the returned T object, messages will be put in the queue.
+     * <p>
+     * <b>
+     * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
+     * </b>
+     *
+     * @param tClass of the main interface to be implemented
+     * @param <T> type parameter of the main interface
+     * @return a new proxy for the given interface {@code tclass}
+     *
+     * @throws NullPointerException if the provided parameter is {@code null}.
+     */
     @NotNull
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
         return new VanillaMethodWriterBuilder<T>(tClass,
                 () -> new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
     }
 
+    /**
+     * Returns the {@link RollCycle} for this ChronicleQueue.
+     *
+     * @return the {@link RollCycle} for this ChronicleQueue
+     * @see RollCycle
+     */
     RollCycle rollCycle();
 
+    /**
+     * Returns the {@link TimeProvider} for this ChronicleQueue.
+     *
+     * @return the {@link TimeProvider} for this ChronicleQueue
+     * @see TimeProvider
+     */
     TimeProvider time();
 
+    /**
+     * Returns the Delta Checkpoint Interval for this ChronicleQueue.
+     * <p>
+     * The value returned is always a power of two.
+     *
+     * @return the Delta Checkpoint Interval for this ChronicleQueue
+     */
     int deltaCheckpointInterval();
 
     /**
-     * when using replication to another host, this is the last index that has been sent to the remote host.
+     * Returns the last index that was replicated to a remote host. If no
+     * such index exists, returns -1.
+     * <p>
+     * This method is only applicable for replicating queues.
+     * @return the last index that was replicated to a remote host
      */
     long lastIndexReplicated();
 
+    /**
+     * Returns the last index that was replicated and acknowledged by all remote hosts. If no
+     * such index exists, returns -1.
+     * <p>
+     * This method is only applicable for replicating queues.
+     * @return the last index that was replicated and acknowledged by all remote hosts
+     */
     long lastAcknowledgedIndexReplicated();
 
     /**
+     * Sets the last index that has been sent to a remote host.
+     *
      * @param lastIndex last index that has been sent to the remote host.
+     * @see #lastIndexReplicated()
      */
     void lastIndexReplicated(long lastIndex);
 
+    /**
+     * Sets the last index that has been sent to a remote host.
+     *
+     * @param lastAcknowledgedIndexReplicated last acknowledged index that has been sent to the remote host(s).
+     * @see #lastAcknowledgedIndexReplicated()
+     */
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
     /**
-     * call this method if you delete file from a chronicle-queue directory
+     * Refreshed this ChronicleQueue's view of the directory used for storing files.
      * <p>
-     * The problem that we have, is that we cache the structure of your directory, this is because
-     * hitting the file system adds latency. Call this method, if you delete .cq4 files, then it
-     * will update our caches accordingly,
+     * Invoke this method if you delete file from a chronicle-queue directory
+     * <p>
+     * The problem solved by this is that we cache the structure of the queue directory in order to reduce
+     * file system adds latency. Calling this method, after deleting .cq4 files, will update the internal
+     * caches accordingly,
      */
     void refreshDirectlyListing();
 
+    /**
+     * Creates and returns a new String representation of this ChronicleQueue's last header in YAML-format.
+     *
+     * @return a new String representation of this ChronicleQueue's last header in YAML-format
+     */
+    @NotNull
     String dumpLastHeader();
 }
