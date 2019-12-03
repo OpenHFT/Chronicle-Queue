@@ -23,15 +23,18 @@ import net.openhft.chronicle.wire.SourceContext;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * <p>The component that facilitates sequentially reading data from a {@link ChronicleQueue}.</p>
- * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing the Tailer between threads will lead to errors and unpredictable behaviour.</p>
+ * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
+ *
+ * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing a Tailer between threads will lead to errors and unpredictable behaviour.</p>
  *
  * @author peter.lawrey
  */
 public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
-     * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a
+     * Returns the {@link DocumentContext } for this ExcerptTailer.
+     * <p>
+     * This is equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but without the use of a
      * lambda expression.
      * <p>
      * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
@@ -44,53 +47,84 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
         return readingDocument(false);
     }
 
+
+    /**
+     * Returns the {@link DocumentContext } for this ExcerptTailer.
+     * <p>
+     * This is equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but without the use of a
+     * lambda expression.
+     * <p>
+     * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
+     *
+     * @param includeMetaData if the DocumentContext shall be meta data aware.
+     *
+     * @return the document context
+     */
     @NotNull
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
+     * Returns if it is likely that {@link #readingDocument()} would return a DocumentContext
+     * that provides excerpts to read.
+     *
      * peekDocument() can be used after a message has been found by toStart() or readingDocument().
      * Until then only readingDocument() will find the first cycle.
      *
-     * @return true if readingDocument() should be called, false if most likely it's not needed.
+     * @return if it is likely that {@link #readingDocument()} would return a DocumentContext
+     *         that provides excerpts to read.
      */
     default boolean peekDocument() {
         return true;
     }
 
     /**
-     * @return if called while within the <code>try (tailer.readingDocument){ }</code> block, returns index of current reading document.
-     * Otherwise, the next index to read.
-     * Index includes the cycle and the sequence number in that cycle
+     * Returns the current index of this Trailer.
+     * <p>
+     * If this method is invoked within a {@code try (tailer.readingDocument){ }} block, returns the index of
+     * the current reading document. Otherwise, returns the next index to read.
+     * <p>
+     * The index includes the cycle and the sequence number within that cycle.
+     *
+     * @return the current index of this Trailer
+     *
      */
     @Override
     long index();
 
     /**
-     * @return the cycle this tailer is on, usually with chronicle-queue each cycle will have its
-     * own unique data file to store the excerpt
+     * Returns the current cycle for this Trailer.
+     * <p>
+     * Usually, each cycle will have its own unique data file to store excerpts.
+     *
+     * @return Returns the current cycle for this Trailer
      */
     int cycle();
 
     /**
-     * Randomly select an Excerpt.
+     * Moves the index for this Trailer to the provided {@code index}.
+     * <p>
+     * The index contains both the cycle number and sequence number within the cycle.
+     * <p>
+     * If the index is not a valid index, the operation is undefined.
      *
-     * @param index index to look up, the index includes the cycle number and a sequence number from with this cycle
-     * @return true if this is a valid entries.
+     * @param index index to move to.
+     * @return if this is a valid index.
      */
     boolean moveToIndex(long index);
 
     /**
-     * Replay from the first entry in the first cycle.
+     * Moves the index for this Trailer to the first existing excerpt in the queue.
      *
-     * @return this Excerpt
+     * @return this ExcerptTrailer
      */
     @NotNull
     ExcerptTailer toStart();
 
     /**
-     * Wind to the last entry in the last cycle
-     * <p> If the direction() == FORWARD, this will be 1 more than the last entry.
-     * <p>Otherwise the index will be the last entry.
+     * Moves the index for this Trailer to the end of the queue.
+     * <p>
+     * If the direction() == FORWARD, this will be the index position corresponding to one more
+     * than the last entry. Otherwise, the index will be the last excerpt.
      * <p>
      * This is not atomic with the appenders, in other words if a cycle has been added in the
      * current millisecond, toEnd() may not see it, This is because for performance reasons, the
@@ -107,60 +141,99 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer toEnd();
 
     /**
+     * Sets the {@code striding} property of this Trailer.
+     * <p>
      * When striding is enabled AND direction is BACKWARD, skip to the entries easiest to find, doesn't need to be every entry.
+     *
      * @param striding skip to the indexStride if that is easy, doesn't always happen.
+     *
      * @return this ExcerptTailer
      */
     ExcerptTailer striding(boolean striding);
 
     /**
-     * @return whether striding is enabled.
+     * Returns the striding property of this Trailer.
+     * 
+     * @return the striding property of this Trailer
+     * @see #striding(boolean)
      */
     boolean striding();
+
     /**
-     * @return the direction of movement after reading an entry.
+     * Returns the direction of this Tailer.
+     * <p>
+     * The direction determines the direction of movement upon reading an excerpt.
+     *
+     * @param direction which is either of NONE, FORWARD, BACKWARD
+
+     * @return this ExcerptTrailer
+     * @throws NullPointerException if the provide {@code direction} is {@code null}
+     */
+    @NotNull
+    ExcerptTailer direction(@NotNull TailerDirection direction);
+
+    /**
+     * Returns the direction of this Tailer.
+     * <p>
+     * The direction determines the direction of movement upon reading an excerpt.
+     *
+     * @return the direction of this Tailer
      */
     TailerDirection direction();
 
     /**
-     * Set the direction of movement.
-     *
-     * @param direction NONE, FORWARD, BACKWARD
-     * @return this
-     */
-    @NotNull
-    ExcerptTailer direction(TailerDirection direction);
-
-    /**
-     * Wind this tailer to after the last entry which wrote an entry to the queue
+     * Winds this Tailer to after the last entry which wrote an entry to the queue.
      *
      * @param queue which was written to.
      * @return this ExcerptTailer
-     * @throws IORuntimeException if the queue couldn't be wound to the last index.
+     *
+     * @throws IORuntimeException if the provided {@code queue} couldn't be wound to the last index.
+     * @throws NullPointerException if the provided {@code queue} is {@code null}
      */
     @NotNull
     ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
 
     /**
+     * Sets the Read After Replica Acknowledged property of this Trailer to the
+     * provided {@code readAfterReplicaAcknowledged}.
+     * <p>
      * Enterprise Queue only: if replication enabled, setting this to true on a source queue ensures that
      * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
      * This will block forever if no sinks acknowledge receipt.
+     *
      * @param readAfterReplicaAcknowledged enable
      */
     default void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
     }
 
+    /**
+     * Returns the Read After Replica Acknowledged property of this Trailer.
+     * <p>
+     * Enterprise Queue only: if replication enabled, setting this to true on a source queue ensures that
+     * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
+     * This will block forever if no sinks acknowledge receipt.
+     *
+     * @return
+     */
     default boolean readAfterReplicaAcknowledged() {
         return false;
     }
 
+    /**
+     * Returns the {@link TailerState} of this Trailer.
+     *
+     * @return the {@link TailerState} of this Trailer
+     * @see TailerState
+     */
     @NotNull
     TailerState state();
 
     /**
-     * A task that will be run if a WeakReference referring this appender is registered with a clean-up task.
+     * Returns the task that will be run if a WeakReference referring this appender is registered with a clean-up task.
+     * <p>
+     * The task shall de-allocate any internal resources held.
      *
-     * @return Task to release any associated resources
+     * @return the task that will be run if a WeakReference referring this appender is registered with a clean-up task
      */
     default Runnable getCloserJob() {
         return () -> {
