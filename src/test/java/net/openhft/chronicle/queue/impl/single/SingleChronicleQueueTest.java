@@ -3364,7 +3364,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         StringBuilder builder = new StringBuilder();
         boolean passed = doMappedSegmentUnmappedRollTest(clock, builder);
         passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight), builder);
-        for (int i = 1; i < 24; i += 2)
+        for (int i = 1; i < 3; i += 1)
             passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * ONE_HOUR_IN_MILLIS)), builder);
 
         if (!passed) {
@@ -3431,11 +3431,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         void msg(String s);
     }
 
-    private static class MapWrapper extends AbstractMarshallable {
+    private static class MapWrapper extends SelfDescribingMarshallable {
         final Map<CharSequence, Double> map = new HashMap<>();
     }
 
-    static class MyMarshable extends AbstractMarshallable implements Demarshallable {
+    static class MyMarshable extends SelfDescribingMarshallable implements Demarshallable {
         @UsedViaReflection
         String name;
 

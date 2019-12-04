@@ -5,7 +5,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Rule;
@@ -117,7 +117,7 @@ public class TestMethodWriterWithThreads {
         void create(Create q);
     }
 
-    public static class Amend extends AbstractMarshallable {
+    public static class Amend extends SelfDescribingMarshallable {
         int type;
 
         public Amend type(final int type) {
@@ -126,7 +126,7 @@ public class TestMethodWriterWithThreads {
         }
     }
 
-    public static class Create extends AbstractMarshallable {
+    public static class Create extends SelfDescribingMarshallable {
         int type;
 
         public Create type(final int type) {

@@ -16,15 +16,15 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
-import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -101,7 +101,7 @@ public class MessageReaderWriterTest {
         void method2(Message2 message);
     }
 
-    static class Message1 extends AbstractMarshallable {
+    static class Message1 extends SelfDescribingMarshallable {
         String text;
 
         public Message1(String text) {
@@ -109,7 +109,7 @@ public class MessageReaderWriterTest {
         }
     }
 
-    static class Message2 extends AbstractMarshallable {
+    static class Message2 extends SelfDescribingMarshallable {
         long number;
 
         public Message2(long number) {

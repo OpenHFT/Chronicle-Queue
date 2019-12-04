@@ -6,7 +6,7 @@ import net.openhft.chronicle.wire.AbstractMarshallable;
 import java.nio.ByteBuffer;
 
 public final class Sizer {
-    public static int size(final AbstractMarshallable message) {
+    public static int size(final BytesMarshallable message) {
         final Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
         try {
             message.writeMarshallable(buffer);

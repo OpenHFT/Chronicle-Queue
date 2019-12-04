@@ -19,6 +19,8 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.time.TimeProvider;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
+
 public enum RollCycles implements RollCycle {
     TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, 1 << 15, 4), // only good for testing
     TEST4_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T4'", 1000, 32, 4), // only good for testing
@@ -41,7 +43,7 @@ public enum RollCycles implements RollCycle {
     ;
 
     // don't alter this or you will confuse yourself.
-    public static final RollCycles[] VALUES = values();
+    private static final Iterable<RollCycles> VALUES = Arrays.asList(values());
 
     private final String format;
     private final int length;
@@ -50,7 +52,11 @@ public enum RollCycles implements RollCycle {
     private final int indexSpacing;
     private final long sequenceMask;
 
-    RollCycles(@NotNull String format, int length, int indexCount, int indexSpacing) {
+    public static Iterable<RollCycles> all() {
+        return VALUES;
+    }
+
+    RollCycles(String format, int length, int indexCount, int indexSpacing) {
         this.format = format;
         this.length = length;
         this.indexCount = Maths.nextPower2(indexCount, 8);

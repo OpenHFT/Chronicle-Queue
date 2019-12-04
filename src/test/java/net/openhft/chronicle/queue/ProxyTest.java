@@ -4,7 +4,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -119,7 +119,7 @@ public class ProxyTest {
         void onMessage(ProxyTest.Message message);
     }
 
-    public static class Message extends AbstractMarshallable {
+    public static class Message extends SelfDescribingMarshallable {
 
         private final StringBuilder message = new StringBuilder();
 

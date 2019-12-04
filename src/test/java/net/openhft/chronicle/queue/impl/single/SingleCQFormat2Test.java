@@ -1016,7 +1016,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
     }
 
     @SuppressWarnings("unused")
-    private static class MyData extends AbstractMarshallable {
+    private static class MyData extends SelfDescribingMarshallable {
         final String name;
         final long num;
         final double d;
