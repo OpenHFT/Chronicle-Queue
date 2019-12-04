@@ -47,8 +47,23 @@ public interface RollCycle {
      */
     int length();
 
+
     int defaultIndexCount();
 
+    /**
+     * Returns the space between excerpts that are explicitly indexed.
+     * <p>
+     * A higher number means higher sequential write performance but
+     * slower random access read. The sequential read performance is not
+     * affected by this property.
+     * <p>
+     * For example, the following default index spacing can be returned:
+     * <ul>
+     *     <li>16 (MINUTELY)</li>
+     *     <li>64 (DAILY)</li>
+     * </ul>
+     * @return the space between excerpts that are explicitly indexed
+     */
     int defaultIndexSpacing();
 
     /**
