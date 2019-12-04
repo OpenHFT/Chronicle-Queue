@@ -4,8 +4,8 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -121,7 +121,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         MappedFile.checkMappedFiles();
     }
 
-    public static class MyData extends AbstractMarshallable {
+    public static class MyData extends SelfDescribingMarshallable {
         private int key;
         private String value;
 

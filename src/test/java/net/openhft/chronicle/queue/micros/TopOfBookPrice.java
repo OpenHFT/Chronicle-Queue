@@ -17,7 +17,7 @@
 
 package net.openhft.chronicle.queue.micros;
 
-import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 /*
  * Created by Peter Lawrey on 22/03/16.
  */
-public class TopOfBookPrice extends AbstractMarshallable {
+public class TopOfBookPrice extends SelfDescribingMarshallable {
     public static final long TIMESTAMP_LIMIT = TimeUnit.SECONDS.toMillis(1000);
     final String symbol;
     long timestamp;
