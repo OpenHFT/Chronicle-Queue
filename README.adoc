@@ -866,15 +866,16 @@ Chronicle v4.4+ supports the use of proxies to send and consume messages.  You s
 - no return value or exceptions expected.
 
 .A simple asynchronous interface
-[source, Java]
+[source,Java]
 ----
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 interface MessageListener {
     void method1(Message1 message);
 
     void method2(Message2 message);
 }
 
-static class Message1 extends AbstractMarshallable {
+static class Message1 extends SelfDescribingMarshallable {
     String text;
 
     public Message1(String text) {
@@ -882,7 +883,7 @@ static class Message1 extends AbstractMarshallable {
     }
 }
 
-static class Message2 extends AbstractMarshallable {
+static class Message2 extends SelfDescribingMarshallable {
     long number;
 
     public Message2(long number) {
@@ -1481,63 +1482,43 @@ OpenJ9 version 0.12.1 and earlier requires the file descriptor limit to be manua
 $ for i in 0 1 2 3 4 5 6 7 8 9; do dd bs=65536 count=163840 if=/dev/zero of=deleteme$i ; done
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 5.60293 s, 1.9 GB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 6.08841 s, 1.8 GB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 5.64981 s, 1.9 GB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 5.77591 s, 1.9 GB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 5.59537 s, 1.9 GB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 5.74398 s, 1.9 GB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 8.24996 s, 1.3 GB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 11.1431 s, 964 MB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 12.2505 s, 876 MB/s
 
 163840+0 records in
-
 163840+0 records out
-
 10737418240 bytes (11 GB) copied, 12.7551 s, 842 MB/s
 ----
 

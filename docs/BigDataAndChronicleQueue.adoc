@@ -97,10 +97,12 @@ We use `YAML` as this is a format which is designed to be readable.
 `JSON` and `XML`, we see, as a subset of `Javascript` and `SGML`, and not as readable. We support `JSON` for messaging with browsers.
 For performance reasons we use a binary form of `YAML`, which can be automatically translated to `YAML` for viewing.
 
-.Order class extends AbstractMarshallable for helper methods
-[source, java]
+.Order class extends SelfDescribingMarshallable for helper methods
+[source,java]
 ----
-public class Order extends AbstractMarshallable {
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
+
+public class Order extends SelfDescribingMarshallable {
     String symbol;
     Side side;
     double limitPrice, quantity;
@@ -114,7 +116,8 @@ public class Order extends AbstractMarshallable {
 }
 ----
 
-`AbstractMarshallable` provides efficient, generic `toString`, `equals`, and `hashCode`, as well as  `readMarshallable` and `writeMarshallable` for serialisation.  If you cannot extend this class, you can implement the `Marshallable` interface.
+`SelfDescribingMarshallable` provides efficient, generic `toString`, `equals`, and `hashCode`, as well as  `readMarshallable` and `writeMarshallable` for serialisation.
+If you cannot extend this class, you can implement the `Marshallable` interface.
 
 .Dump of a queue in a unit test
 [source, java]

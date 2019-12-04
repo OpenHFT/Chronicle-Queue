@@ -17,10 +17,13 @@ package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -41,7 +44,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static net.openhft.chronicle.core.Jvm.*;
 import static net.openhft.chronicle.core.util.Time.sleep;
 import static net.openhft.chronicle.core.util.Time.tickTime;
 
@@ -108,54 +110,46 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     }
 
     public static <T, R> R doWithSharedLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
-        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
-        boolean warnedOnFailure = false;
-        try (final FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            while (System.currentTimeMillis() < timeoutAt) {
-                try {
-                    FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, true);
-                    if (fileLock != null) {
-                        return code.apply(target.get());
-                    }
-                } catch (IOException | OverlappingFileLockException e) {
-                    // failed to acquire the lock, wait until other operation completes
-                    if (!warnedOnFailure) {
-                        debug().on(SingleTableStore.class, "Failed to acquire a lock on the table store file. Retrying");
-                        warnedOnFailure = true;
-                    }
-                }
-                pause(50L);
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Couldn't perform operation with file lock", e);
-        }
-        throw new IllegalStateException("Unable to claim shared lock on file " + file);
+        return doWithLock(file, code, target, true);
     }
 
     public static <T, R> R doWithExclusiveLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
+        return doWithLock(file, code, target, false);
+    }
+
+    // shared vs exclusive - see https://docs.oracle.com/javase/7/docs/api/java/nio/channels/FileChannel.html
+    private static <T, R> R doWithLock(File file, Function<T, ? extends R> code, Supplier<T> target, boolean shared) {
+        final String type = shared ? "shared" : "exclusive";
+        final ExceptionHandler exceptionHandler = shared ? Jvm.debug() : Jvm.warn();
+        final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
+
         final long timeoutAt = tickTime() + timeoutMS;
         boolean warnedOnFailure = false;
-        try (final FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE)) {
+        try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
 
             while (tickTime() < timeoutAt) {
                 try {
-                    FileLock fileLock = channel.tryLock();
+                    FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, shared);
                     if (fileLock != null) {
                         return code.apply(target.get());
                     }
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
                     if (!warnedOnFailure) {
-                        warn().on(SingleTableStore.class, "Failed to acquire a lock on the table store file. Retrying");
+                        String message = "Failed to acquire " + type + " lock on the table store file. Retrying";
+                        if (Jvm.isDebugEnabled(SingleTableStore.class))
+                            exceptionHandler.on(SingleTableStore.class, message, new StackTrace());
+                        else
+                            exceptionHandler.on(SingleTableStore.class, message);
                         warnedOnFailure = true;
                     }
                 }
                 sleep(50, MILLISECONDS);
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Couldn't perform operation with file lock", e);
+            throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
         }
-        throw new IllegalStateException("Unable to claim exclusive lock on file " + file);
+        throw new IllegalStateException("Unable to claim exclusive " + type + " lock on file " + file);
     }
 
     @Override

@@ -1,12 +1,12 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -59,7 +59,7 @@ public class MethodReaderObjectReuseTest {
         void ping(PingDTO pingDTO);
     }
 
-    static class PingDTO extends AbstractMarshallable {
+    static class PingDTO extends SelfDescribingMarshallable {
         static int constructionCounter, constructionExpected;
         final Bytes bytes = Bytes.allocateElasticDirect();
 

@@ -4,8 +4,8 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
 import java.util.UUID;
 
@@ -48,7 +48,7 @@ public class PretoucherSoakTest {
 
     }
 
-    public static class Heartbeat extends AbstractMarshallable implements Validatable {
+    public static class Heartbeat extends SelfDescribingMarshallable implements Validatable {
         final String source;
         long time;
 

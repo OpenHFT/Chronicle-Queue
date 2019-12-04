@@ -2,10 +2,10 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesIn;
 import net.openhft.chronicle.bytes.BytesOut;
-import net.openhft.chronicle.wire.AbstractBytesMarshallable;
-import net.openhft.chronicle.wire.AbstractMarshallable;
-import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -74,7 +74,7 @@ public class DtoBytesMarshallableTest {
 
     }
 
-    public static class DtoBytesMarshallable extends AbstractBytesMarshallable {
+    public static class DtoBytesMarshallable extends BytesInBinaryMarshallable {
 
         StringBuilder name = new StringBuilder();
         int age;
@@ -92,7 +92,7 @@ public class DtoBytesMarshallableTest {
         }
     }
 
-    public static class DtoAbstractMarshallable extends AbstractMarshallable {
+    public static class DtoAbstractMarshallable extends SelfDescribingMarshallable {
         StringBuilder name = new StringBuilder();
         int age;
 
