@@ -461,7 +461,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
             String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
             if (list != null && list.length > 0) {
                 String filename = list[0];
-                for (RollCycles cycle : RollCycles.VALUES) {
+                for (RollCycles cycle : RollCycles.all()) {
                     try {
                         DateTimeFormatter.ofPattern(cycle.format())
                                 .parse(filename.substring(0, filename.length() - 4));
@@ -474,7 +474,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     private void overrideRollCycleForFileName(String pattern) {
-        for (RollCycles cycle : RollCycles.VALUES) {
+        for (RollCycles cycle : RollCycles.all()) {
             if (cycle.format().equals(pattern)) {
                 overrideRollCycle(cycle);
                 return;
