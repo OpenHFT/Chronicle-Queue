@@ -18,15 +18,29 @@ package net.openhft.chronicle.queue;
 import org.jetbrains.annotations.NotNull;
 
 /**
+ * The ExcerptCommon is common to both ExcerptAppender
+ * and ExcerptTailer.
+ *
  * @author peter.lawrey
  */
 public interface ExcerptCommon<E extends ExcerptCommon<E>> {
 
     /**
-     * @return the sourceId for the queue which created this.
+     * Returns the source id of the backing ChronicleQueue
+     * to which this ExcerptCommon is attached to.
+     *
+     * @return the source id of the backing ChronicleQueue
+     * @see ChronicleQueue#sourceId()
      */
     int sourceId();
 
+    /**
+     * Returns the backing ChronicleQueue to which this
+     * ExcerptCommon is attached to.
+     *
+     * @return the backing ChronicleQueue to which this
+     *         ExcerptCommon is attached to
+     */
     @NotNull
     ChronicleQueue queue();
 }
