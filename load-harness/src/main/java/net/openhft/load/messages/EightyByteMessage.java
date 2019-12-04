@@ -2,7 +2,7 @@ package net.openhft.load.messages;
 
 import net.openhft.chronicle.wire.AbstractMarshallable;
 
-public final class EightyByteMessage extends AbstractMarshallable {
+public final class EightyByteMessage extends SelfDescribingMarshallable {
     private static final long UNSET_VALUE = Long.MAX_VALUE;
     public long batchStartNanos = 0L;
     public long publishNanos = 0L;

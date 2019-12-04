@@ -866,15 +866,16 @@ Chronicle v4.4+ supports the use of proxies to send and consume messages.  You s
 - no return value or exceptions expected.
 
 .A simple asynchronous interface
-[source, Java]
+[source,Java]
 ----
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 interface MessageListener {
     void method1(Message1 message);
 
     void method2(Message2 message);
 }
 
-static class Message1 extends AbstractMarshallable {
+static class Message1 extends SelfDescribingMarshallable {
     String text;
 
     public Message1(String text) {
@@ -882,7 +883,7 @@ static class Message1 extends AbstractMarshallable {
     }
 }
 
-static class Message2 extends AbstractMarshallable {
+static class Message2 extends SelfDescribingMarshallable {
     long number;
 
     public Message2(long number) {

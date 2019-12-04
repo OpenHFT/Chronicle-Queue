@@ -15,10 +15,10 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import org.jetbrains.annotations.Nullable;
 
-public class RollDetails extends AbstractMarshallable {
+public class RollDetails extends BytesInBinaryMarshallable {
     final int cycle;
     final long epoch;
 
