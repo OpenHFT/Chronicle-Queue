@@ -43,26 +43,20 @@ public enum RollCycles implements RollCycle {
     // don't alter this or you will confuse yourself.
     public static final RollCycles[] VALUES = values();
 
-    final String format;
-    final int length;
-    final int cycleShift;
-    final int indexCount;
-    final int indexSpacing;
-    final long sequenceMask;
+    private final String format;
+    private final int length;
+    private final int cycleShift;
+    private final int indexCount;
+    private final int indexSpacing;
+    private final long sequenceMask;
 
-    RollCycles(String format, int length, int indexCount, int indexSpacing) {
+    RollCycles(@NotNull String format, int length, int indexCount, int indexSpacing) {
         this.format = format;
         this.length = length;
         this.indexCount = Maths.nextPower2(indexCount, 8);
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
         cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
         sequenceMask = (1L << cycleShift) - 1;
-    }
-
-    public static void main(String[] args) {
-        for (RollCycles r : RollCycles.values()) {
-            System.out.println(r + ": cycleShift=" + r.cycleShift + " sequenceMask=" + Long.toHexString(r.sequenceMask) + " format=" + r.format + " indexSpacing=" + r.indexSpacing);
-        }
     }
 
     @Override
