@@ -19,12 +19,51 @@ import net.openhft.chronicle.core.time.TimeProvider;
 
 public interface RollCycle {
 
+    /**
+     * Returns the format that is to be applied when file names
+     * are calculated for a new roll cycle.
+     * <p>
+     * For example, the following formats can be returned:
+     * <ul>
+     *     <li>"yyyyMMdd-HHmm" (MINUTELY)</li>
+     *     <li>"yyyyMMdd" (DAILY)</li>
+     * </ul>
+     *
+     * @return the format that is to be applied when file names
+     *         are calculated for a new roll cycle
+     */
     String format();
 
+    /**
+     * Returns the length in milliseconds (i.e. the maximum duration) for a roll cycle.
+     * <p>
+     * For example, the following lengths can be returned:
+     * <ul>
+     *     <li>60 * 1,000 = 60,000 (MINUTELY)</li>
+     *     <li>24 * 60 * 60 * 1,000 = 86,400,000 (DAILY)</li>
+     * </ul>
+     *
+     * @return the length in milliseconds (i.e. the maximum duration) for a roll cycle
+     */
     int length();
+
 
     int defaultIndexCount();
 
+    /**
+     * Returns the space between excerpts that are explicitly indexed.
+     * <p>
+     * A higher number means higher sequential write performance but
+     * slower random access read. The sequential read performance is not
+     * affected by this property.
+     * <p>
+     * For example, the following default index spacing can be returned:
+     * <ul>
+     *     <li>16 (MINUTELY)</li>
+     *     <li>64 (DAILY)</li>
+     * </ul>
+     * @return the space between excerpts that are explicitly indexed
+     */
     int defaultIndexSpacing();
 
     /**
@@ -33,9 +72,41 @@ public interface RollCycle {
      */
     int current(TimeProvider time, long epoch);
 
+    /**
+     * Returns the index for the given {@code cycle} and {@code sequenceNumber}.
+     * <p>
+     * An index is comprised of both a cycle and a sequence number but
+     * the way the index is composed of said properties may vary.
+     *
+     * @param cycle to be composed into an index
+     * @param sequenceNumber to be composed into an index
+     * @return the index for the given {@code cycle} and {@code sequenceNumber}
+     */
     long toIndex(int cycle, long sequenceNumber);
 
+    /**
+     * Returns the sequence number for the given {@code index}.
+     * <p>
+     * An index is comprised of both a cycle and a sequence number but
+     * the way the index is composed of said properties may vary.
+     * This method decomposes the provided {@code index} and extracts
+     * the sequence number.
+     *
+     * @param index to use when extracting the sequence number
+     * @return the sequence number for the given {@code index}
+     */
     long toSequenceNumber(long index);
 
+    /**
+     * Returns the cycle for the given {@code index}.
+     * <p>
+     * An index is comprised of both a cycle and a sequence number but
+     * the way the index is composed of said properties may vary.
+     * This method decomposes the provided {@code index} and extracts
+     * the cycle.
+     *
+     * @param index to use when extracting the cycle
+     * @return the sequence number for the given {@code index}
+     */
     int toCycle(long index);
 }
