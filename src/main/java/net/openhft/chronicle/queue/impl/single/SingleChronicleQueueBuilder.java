@@ -57,6 +57,7 @@ import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -800,7 +801,9 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
      */
     @NotNull
     public EventLoop eventLoop() {
-        return eventLoop == null ? new EventGroup(true) : eventLoop;
+        if (eventLoop == null)
+            eventLoop = new EventGroup(true, Pauser.balanced(), "none", "none", path.getName(), 4, EnumSet.of(HandlerPriority.MEDIUM));
+        return eventLoop;
     }
 
     @NotNull
