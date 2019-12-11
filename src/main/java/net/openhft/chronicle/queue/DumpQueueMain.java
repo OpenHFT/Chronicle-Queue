@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 higherfrequencytrading.com
+ * Copyright 2016-2020 http://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,7 @@ import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireDumper;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
@@ -35,6 +32,7 @@ import static java.lang.System.err;
 
 public class DumpQueueMain {
     private static final String FILE = System.getProperty("file");
+    private static final Boolean SKIP_TABLE_STORE = Boolean.getBoolean("skipTableStoreDump");
     private static final int LENGTH = ", 0".length();
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -50,7 +48,11 @@ public class DumpQueueMain {
 
     public static void dump(@NotNull File path, @NotNull PrintStream out, long upperLimit) {
         if (path.isDirectory()) {
-            File[] files = path.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX));
+            final FilenameFilter filter =
+                    SKIP_TABLE_STORE
+                            ? (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)
+                            : (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX);
+            File[] files = path.listFiles(filter);
             if (files == null) {
                 err.println("Directory not found " + path);
                 System.exit(1);
