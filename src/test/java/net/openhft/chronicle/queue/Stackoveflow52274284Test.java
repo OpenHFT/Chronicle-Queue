@@ -11,13 +11,13 @@ import java.nio.file.Paths;
 public class Stackoveflow52274284Test {
     @Test
     public void fails() throws Exception {
-        String basePath = OS.TMP;
+        String basePath = OS.TARGET;
         String path = Files.createTempDirectory(Paths.get(basePath), "chronicle-")
                 .toAbsolutePath()
                 .toString();
         System.out.printf("Using temp path '%s'%n", path);
 
-        try (ChronicleQueue chronicleQueue = ChronicleQueue.single(path)) {
+        try (ChronicleQueue chronicleQueue = ChronicleQueue.singleBuilder(path).testBlockSize().build()) {
 
             // Create Appender
             ExcerptAppender appender = chronicleQueue.acquireAppender();

@@ -787,13 +787,13 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
     }
 
+    static long lastTimeMapped = 0;
+
     private class StoreSupplier implements WireStoreSupplier {
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
         private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache =
                 new ReferenceCountedCache<>(MappedBytes::mappedBytes, SingleChronicleQueue.this::mappedFile);
         private boolean queuePathExists;
-
-        long lastTimeMapped = 0;
 
         @SuppressWarnings("resource")
         @Override
