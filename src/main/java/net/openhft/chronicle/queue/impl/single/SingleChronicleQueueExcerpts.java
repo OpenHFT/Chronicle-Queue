@@ -274,11 +274,12 @@ public class SingleChronicleQueueExcerpts {
             SingleChronicleQueue queue = this.queue;
 
             WireStore store = this.store;
+
+            this.store = storePool.acquire(cycle, queue.epoch(), createIfAbsent);
+
             if (store != null) {
                 storePool.release(store);
             }
-
-            this.store = storePool.acquire(cycle, queue.epoch(), createIfAbsent);
             closableResources.storeReference = this.store;
             resetWires(queue);
 
