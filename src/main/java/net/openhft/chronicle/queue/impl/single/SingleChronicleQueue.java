@@ -793,6 +793,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 new ReferenceCountedCache<>(MappedBytes::mappedBytes, SingleChronicleQueue.this::mappedFile);
         private boolean queuePathExists;
 
+        long lastTimeMapped = 0;
+
         @SuppressWarnings("resource")
         @Override
         public WireStore acquire(int cycle, boolean createIfAbsent) {
@@ -819,7 +821,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 dateValue.pathExists = true;
 
                 final MappedBytes mappedBytes = mappedFileCache.get(path);
-                assert pauseWhenTesting();
+                pauseUnderload();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
                     LOG.warn("", new Exception("Creating cycle which is not the current cycle"));
@@ -874,10 +876,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
-        private boolean pauseWhenTesting() {
+        private void pauseUnderload() {
             // when mapping and unmapping sections really fast it appears the OS/CPU gets confused as to whether memory is valid.
-            Jvm.pause(1);
-            return true;
+            long now = System.currentTimeMillis();
+            if (now - lastTimeMapped < 10)
+                Jvm.pause(1);
+            lastTimeMapped = now;
         }
 
         private void checkDiskSpace(@NotNull final File filePath) {
