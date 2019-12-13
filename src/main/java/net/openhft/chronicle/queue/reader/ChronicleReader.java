@@ -100,10 +100,11 @@ public final class ChronicleReader {
                                 }
                                 pauser.reset();
 
+                                Consumer<String> messageConsumer = text -> applyFiltersAndLog(text, tailer.index());
                                 if (customPlugin == null) {
-                                    messageConverter.accept(dc.wire(), text -> applyFiltersAndLog(text, tailer.index()));
+                                    messageConverter.accept(dc.wire(), messageConsumer);
                                 } else {
-                                    customPlugin.onReadDocument(dc);
+                                    customPlugin.onReadDocument(dc, messageConsumer);
                                 }
                             }
                         }
