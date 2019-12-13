@@ -879,8 +879,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         private void pauseUnderload() {
             // when mapping and unmapping sections really fast it appears the OS/CPU gets confused as to whether memory is valid.
             long now = System.currentTimeMillis();
-            if (now - lastTimeMapped < 2)
-                Jvm.pause(1);
+            if (now - lastTimeMapped < 5)
+                Jvm.pause(2);
             lastTimeMapped = now;
         }
 
