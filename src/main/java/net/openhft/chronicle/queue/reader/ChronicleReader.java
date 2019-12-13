@@ -240,7 +240,7 @@ public final class ChronicleReader {
                 .build();
     }
 
-    private void applyFiltersAndLog(final String text, final long index) {
+    protected void applyFiltersAndLog(final String text, final long index) {
         if (inclusionRegex.isEmpty() || checkForMatches(inclusionRegex, text, true)) {
             if (exclusionRegex.isEmpty() || checkForMatches(exclusionRegex, text, false)) {
                 if (displayIndex)
