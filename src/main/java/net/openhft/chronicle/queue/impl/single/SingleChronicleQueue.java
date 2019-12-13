@@ -154,7 +154,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         strongAppenders = builder.strongAppenders();
         checkInterrupts = builder.checkInterrupts();
         metaStore = builder.metaStore();
-        if (metaStore.readOnly() && ! builder.readOnly()) {
+        if (metaStore.readOnly() && !builder.readOnly()) {
             LOG.warn("Forcing queue to be readOnly");
             // need to set this on builder as it is used elsewhere
             builder.readOnly(metaStore.readOnly());
@@ -819,6 +819,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 dateValue.pathExists = true;
 
                 final MappedBytes mappedBytes = mappedFileCache.get(path);
+                assert pauseWhenTesting();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
                     LOG.warn("", new Exception("Creating cycle which is not the current cycle"));
@@ -840,7 +841,21 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     // allow directoryListing to pick up the file immediately
                     firstAndLastCycleTime = 0;
                 } else {
-                    wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+                    try {
+                        wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+                    } catch (InternalError e) {
+                        long pos = wire.bytes().bytesStore().addressForRead(0);
+                        String s = Long.toHexString(pos);
+                        System.err.println("pos=" + s);
+                        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
+                            for (String line; (line = br.readLine()) != null; )
+                                if (line.contains(".cq4"))
+                                    System.err.println(line);
+                        }
+//                        System.err.println("wire.bytes.refCount="+wire.bytes().refCount());
+//                        System.err.println("wire.bytes.byteStore.refCount="+wire.bytes().bytesStore().refCount());
+                        throw e;
+                    }
 
                     StringBuilder name = Wires.acquireStringBuilder();
                     ValueIn valueIn = wire.readEventName(name);
@@ -857,6 +872,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             } catch (@NotNull TimeoutException | IOException e) {
                 throw Jvm.rethrow(e);
             }
+        }
+
+        private boolean pauseWhenTesting() {
+            // when mapping and unmapping sections really fast it appears the OS/CPU gets confused as to whether memory is valid.
+            Jvm.pause(1);
+            return true;
         }
 
         private void checkDiskSpace(@NotNull final File filePath) {
