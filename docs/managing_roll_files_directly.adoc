@@ -17,7 +17,7 @@ link:../src/main/java/net/openhft/chronicle/queue/util/FileUtil.java[located her
 
 === Determining if a file has a roll file suffix
 
-The method `FileUtil::hasQueueSuffix` can be used to determine if a file has a roll file suffix (i.e. `.cq4`):
+The method `FileUtil::hasQueueSuffix` can be used to determine if a file has a roll file suffix (i.e. ".cq4"):
 
 [source,java]
 ----
@@ -28,7 +28,7 @@ if (FileUtil.hasQueueSuffix(file)) {
 
 === Determining the state of a file
 
-The method `FileUtil.state` can be used to determine the current state of a file:
+The method `FileUtil::state` can be used to determine the current state of a file:
 
 [source,java]
 ----
@@ -52,13 +52,13 @@ switch (FileUtil.state(file)) {
 }
 ----
 
-NOTE: The method above is only supported for Linux/BSD systems and not Windows.
+NOTE: The method above is only supported on Linux/BSD systems and not Windows.
 
 === Removable roll files
 
 After some time, there might be lingering queue files that are no longer used. Identifying these files is non-trivial as there might be tailers that are still on older roll files.
 
-For example, appenders may be on roll file 10 and tailer A on file 3 and tailer B on file 5. In this case, it is only safe to remove the rolls 0, 1 and 2. In particular, roll 4 must not be removed.
+For example, appenders may be on roll file 10, tailer A on file 3 and tailer B on file 5. In this case, it is only safe to remove the rolls 0, 1 and 2. In particular, roll 4 must not be removed or else tailer A will eventually fail.
 
 The removal candidates can be identified by invoking the `FileUtil::removableRollFileCandidates` method as described hereunder:
 
@@ -67,11 +67,11 @@ The removal candidates can be identified by invoking the `FileUtil::removableRol
 List<File> candidates = FileUtil.removableRollFileCandidates(dir).collect(toList());
 ----
 
-This will return a new List with all candidates in the provided `dir`.
+This will provide a new List with all candidates in the provided `dir`.
 
 NOTE: It always the ultimate decision of the user code to actually decide if a candidate should be deleted or not.
 
-NOTE: The method above is only supported for Linux/BSD systems and not Windows.
+NOTE: The method above is only supported on Linux/BSD systems and not Windows.
 
 If the used code intends to remove all candidates unconditionally, the following snippet can be used:
 
