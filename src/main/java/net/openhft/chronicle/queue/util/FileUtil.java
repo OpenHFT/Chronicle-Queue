@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.util;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
 
@@ -62,6 +63,7 @@ public final class FileUtil {
      */
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
+        assertOsSupported();
         final File[] files = baseDir.listFiles(FileUtil::hasQueueSuffix);
         if (files == null)
             return Stream.empty();
@@ -105,6 +107,7 @@ public final class FileUtil {
      *           supported for the current platform (e.g. Windows).
      */
     public static FileState state(@NotNull File file) {
+        assertOsSupported();
         if (!file.exists()) return FileState.NON_EXISTENT;
         final String absolutePath = file.getAbsolutePath();
         try {
@@ -146,6 +149,12 @@ public final class FileUtil {
             // Do nothing
         }
         return FileState.UNDETERMINED;
+    }
+
+    private static void assertOsSupported() {
+        if (OS.isWindows()) {
+            throw new UnsupportedOperationException("This operation is not supported under Windows.");
+        }
     }
 
 }
