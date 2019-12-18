@@ -63,7 +63,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test(expected = UnsupportedOperationException.class)
     public void stateWindows(){
         assumeTrue(OS.isWindows());
         FileUtil.state(new File("foo"));
@@ -143,7 +143,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test(expected = UnsupportedOperationException.class)
     public void removableQueueFileCandidatesWindows(){
         assumeTrue(OS.isWindows());
         FileUtil.removableRollFileCandidates(new File("foo"));
