@@ -84,4 +84,15 @@ for (File file : removableFileCandidates(baseDir).collect(Collectors.toList())) 
 }
 ----
 
+=== Removable roll files via the command line
+
+It is possible to obtain removable roll file candidates directly from the command line:
+
+[source, sh]
+----
+mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.util.FileUtil" -Dexec.classScope=compile -Dexec.args="my_queue_dir"
+----
+
+This will produce a list of removable roll file candidates listed per line.
+
 <<../README.adoc#,Back to Chronicle Queue>>

@@ -27,6 +27,24 @@ public final class FileUtil {
     private FileUtil() {}
 
     /**
+     * Produces a list of removable roll file candidates and prints
+     * their absolute path to standard out row-by-row.
+     *
+     * @param args the directory. If no directory is given, "." is assumed
+     */
+    public static void main(String[] args) {
+        final File dir;
+        if (args.length == 0) {
+            dir = new File(".");
+        } else {
+            dir = new File(args[0]);
+        }
+        removableRollFileCandidates(dir)
+            .map(File::getAbsolutePath)
+            .forEach(System.out::println);
+    }
+
+    /**
      * Returns a Stream of roll Queue files that are likely removable
      * from the given {@code baseDir} without affecting any Queue
      * process that is currently active in the given {@code baseDir} reading
