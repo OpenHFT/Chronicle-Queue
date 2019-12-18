@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -27,17 +28,20 @@ import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 public class FileUtilTest extends ChronicleQueueTestBase {
 
     @Test
-    public void openByAnyProcessNonExisting() {
+    public void stateNonExisting() {
+        assumeFalse(OS.isWindows());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
 
     @Test
-    public void openByAnyProcess() throws IOException {
-
+    public void state() throws IOException {
+        assumeFalse(OS.isWindows());
         final Path dir = Files.createTempDirectory("openByAnyProcess");
         try {
             final File testFile =  dir.resolve("tmpFile").toFile();
@@ -73,6 +77,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
 
     @Test
     public void removableQueueFileCandidates(){
+        assumeFalse(OS.isWindows());
         final int rolls = 4;
         final int intermediateRolls = rolls / 2;
         final Comparator<File> earliestFirst = comparing(File::getName);
