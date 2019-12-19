@@ -68,7 +68,7 @@ public class ChronicleReaderMain {
             commandLine = parser.parse(options, args);
 
             if (commandLine.hasOption('h')) {
-                new HelpFormatter().printHelp(ChronicleReaderMain.class.getSimpleName(), options);
+                new HelpFormatter().printHelp(this.getClass().getSimpleName(), options);
                 System.exit(0);
             }
 
@@ -85,8 +85,7 @@ public class ChronicleReaderMain {
 
     protected void printUsageAndExit(final Options options) {
         final PrintWriter writer = new PrintWriter(System.out);
-        new HelpFormatter().printUsage(writer, 180,
-                ChronicleReaderMain.class.getSimpleName(), options);
+        new HelpFormatter().printUsage(writer, 180, this.getClass().getSimpleName(), options);
         writer.flush();
         System.exit(1);
     }
