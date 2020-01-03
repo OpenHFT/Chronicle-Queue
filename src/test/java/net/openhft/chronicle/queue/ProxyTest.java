@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
@@ -9,8 +8,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 
 /**
  * To avoid the arg[] array created via the methodWriter java.lang.reflect.Proxy, this test shows how you can create a custom proxy
@@ -18,38 +15,6 @@ import java.lang.reflect.Method;
  * Created by Rob Austin
  */
 public class ProxyTest {
-
-    public static class MyProxy implements TestMessageListener {
-        static Object[] a1 = null;
-        static Method m1 = null;
-
-        static {
-            try {
-                m1 = MyProxy.class.getMethod("onMessage", Message.class);
-                a1 = new Object[m1.getParameterTypes().length];
-            } catch (NoSuchMethodException e) {
-                Jvm.rethrow(e);
-            }
-        }
-
-        private final Object proxy;
-        private final InvocationHandler handler;
-
-        public MyProxy(Object proxy, InvocationHandler handler) {
-            this.proxy = proxy;
-            this.handler = handler;
-        }
-
-        @Override
-        public void onMessage(final Message message) {
-            a1[0] = message;
-            try {
-                handler.invoke(proxy, m1, a1);
-            } catch (Throwable throwable) {
-                Jvm.rethrow(throwable);
-            }
-        }
-    }
 
     @Test
     public void testReadWrite() {
