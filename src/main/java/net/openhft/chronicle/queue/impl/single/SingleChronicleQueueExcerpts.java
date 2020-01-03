@@ -61,6 +61,9 @@ public class SingleChronicleQueueExcerpts {
     //
     // *************************************************************************
 
+    /**
+     * please don't use this interface as its an internal implementation.
+     */
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
     }
