@@ -1,8 +1,6 @@
-
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import org.junit.Assert;
@@ -10,20 +8,15 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class ChronicleQueueIndexTest {
 
     @Test
     public void indexQueueTest() {
 
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        timeProvider.currentTimeMillis(System.currentTimeMillis());
-
         ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path("test-chronicle")
                 .rollCycle(RollCycles.DAILY)
-                .timeProvider(timeProvider)
                 .build();
         InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
@@ -32,7 +25,14 @@ public class ChronicleQueueIndexTest {
         hello_world = Bytes.fromString("Hello World 2");
         appender.writeBytes(RollCycles.DAILY.toIndex(18264, 1L), hello_world);
 
-        timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
+        // Simulate the end of the day i.e the queue closes the day rolls
+        // (note the change of index from 18264 to 18265)
+        queue.close();
+        queue = SingleChronicleQueueBuilder.builder()
+                .path("test-chronicle")
+                .rollCycle(RollCycles.DAILY)
+                .build();
+        appender = (InternalAppender) queue.acquireAppender();
 
         // add a message for the new day
         hello_world = Bytes.fromString("Hello World 3");
