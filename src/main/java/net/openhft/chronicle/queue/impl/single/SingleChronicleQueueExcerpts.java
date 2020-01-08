@@ -101,6 +101,8 @@ public class SingleChronicleQueueExcerpts {
             this.storePool = storePool;
             this.checkInterrupts = checkInterrupts;
 
+
+
             this.writeLock = queue.writeLock();
             assert writeLock != null;
             this.context = new StoreAppenderContext();
@@ -108,6 +110,16 @@ public class SingleChronicleQueueExcerpts {
 
             // always put references to "this" last.
             queue.addCloseListener(this, StoreAppender::close);
+
+
+            int cycle = queue.cycle();
+            int lastCycle = queue.lastCycle();
+            if (lastCycle != cycle && lastCycle >= 0) {
+                // ensure that the EOF is written
+                setCycle(lastCycle);
+                rollCycleTo(cycle);
+            }
+
         }
 
         @Deprecated // Should not be providing accessors to reference-counted objects
