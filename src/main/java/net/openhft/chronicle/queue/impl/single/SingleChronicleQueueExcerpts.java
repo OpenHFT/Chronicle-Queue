@@ -115,7 +115,7 @@ public class SingleChronicleQueueExcerpts {
             int cycle = queue.cycle();
             int lastCycle = queue.lastCycle();
             if (lastCycle != cycle && lastCycle >= 0)
-                // ensure that the EOF is written
+                // ensure that the EOF is written on the last cycle
                 setCycle(lastCycle);
 
         }
