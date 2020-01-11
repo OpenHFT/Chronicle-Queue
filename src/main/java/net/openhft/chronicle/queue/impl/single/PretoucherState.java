@@ -10,6 +10,7 @@ import java.util.function.LongSupplier;
 
 class PretoucherState {
     private static final int HEAD_ROOM = Integer.getInteger("PretoucherState.headRoom", 1 << 20);
+    public static final int FACTOR = 32;
     @NotNull
     private final LongSupplier posSupplier;
     private int minHeadRoom;
@@ -58,8 +59,8 @@ class PretoucherState {
             }
         } else {
             long moved = pos - lastPos;
-            averageMove = moved / 4 + averageMove * 3 / 4;
-            long neededHeadRoom = Math.max(minHeadRoom, averageMove * 4); // for the next 4 ticks.
+            averageMove = moved / FACTOR + averageMove * (FACTOR - 1) / FACTOR;
+            long neededHeadRoom = Math.max(minHeadRoom, averageMove * FACTOR); // for the next 4 ticks.
             final long neededEnd = pos + neededHeadRoom;
             if (lastTouchedPage < neededEnd) {
                 Thread thread = Thread.currentThread();
