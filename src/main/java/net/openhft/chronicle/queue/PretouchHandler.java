@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 public final class PretouchHandler implements EventHandler {
     private final Pretoucher pretoucher;
+    private long lastRun = 0;
 
     public PretouchHandler(final SingleChronicleQueue queue) {
         this.pretoucher = new Pretoucher(queue);
@@ -16,7 +17,12 @@ public final class PretouchHandler implements EventHandler {
 
     @Override
     public boolean action() throws InvalidEventHandlerException {
-        pretoucher.execute();
+        long now = System.currentTimeMillis();
+        // don't check too often.
+        if (now > lastRun + 100) {
+            pretoucher.execute();
+            lastRun = now;
+        }
         return false;
     }
 
