@@ -34,8 +34,8 @@ public class PretoucherStateTest {
         ps.pretouch(null);
         ps.pretouch(null);
         assertEquals("debug none - Reset pretoucher to pos 4096 as the underlying MappedBytes changed.\n" +
-                "touchPage 1 til 33 count 33\n" +
-                "debug pretouch for only 0 of 33 min: 0 MB.\n" +
+                "touchPage 1 til 17 count 17\n" +
+                "debug pretouch for only 0 of 17 min: 0 MB.\n" +
                 "debug none: Advanced 4 KB, avg 4 KB between pretouch() and 4 KB while mapping of 0 KB \n", record.toString());
     }
 
@@ -51,24 +51,24 @@ public class PretoucherStateTest {
         }
         ps.pretouch(null);
         assertEquals("debug none - Reset pretoucher to pos 1052672 as the underlying MappedBytes changed.\n" +
-                "touchPage 257 til 289 count 33\n" +
-                "debug none: Advanced 4 KB, avg 4 KB between pretouch() and 4 KB while mapping of 132 KB \n" +
-                "touchPage 290 til 320 count 31\n" +
-                "debug none: Advanced 64 KB, avg 5 KB between pretouch() and 4 KB while mapping of 124 KB \n" +
-                "touchPage 321 til 351 count 31\n" +
+                "touchPage 257 til 273 count 17\n" +
+                "debug none: Advanced 4 KB, avg 4 KB between pretouch() and 4 KB while mapping of 68 KB \n" +
+                "touchPage 274 til 304 count 31\n" +
                 "debug none: Advanced 64 KB, avg 7 KB between pretouch() and 4 KB while mapping of 124 KB \n" +
-                "touchPage 352 til 381 count 30\n" +
-                "debug none: Advanced 64 KB, avg 9 KB between pretouch() and 4 KB while mapping of 120 KB \n" +
-                "touchPage 382 til 411 count 30\n" +
-                "debug none: Advanced 64 KB, avg 11 KB between pretouch() and 4 KB while mapping of 120 KB \n" +
-                "touchPage 412 til 440 count 29\n" +
-                "debug none: Advanced 64 KB, avg 12 KB between pretouch() and 4 KB while mapping of 116 KB \n" +
-                "touchPage 441 til 469 count 29\n" +
+                "touchPage 305 til 335 count 31\n" +
+                "debug none: Advanced 64 KB, avg 11 KB between pretouch() and 4 KB while mapping of 124 KB \n" +
+                "touchPage 336 til 364 count 29\n" +
                 "debug none: Advanced 64 KB, avg 14 KB between pretouch() and 4 KB while mapping of 116 KB \n" +
-                "touchPage 470 til 497 count 28\n" +
-                "debug none: Advanced 64 KB, avg 15 KB between pretouch() and 4 KB while mapping of 112 KB \n" +
-                "touchPage 498 til 525 count 28\n" +
-                "debug none: Advanced 64 KB, avg 17 KB between pretouch() and 4 KB while mapping of 112 KB \n", record.toString());
+                "touchPage 365 til 392 count 28\n" +
+                "debug none: Advanced 64 KB, avg 17 KB between pretouch() and 4 KB while mapping of 112 KB \n" +
+                "touchPage 393 til 420 count 28\n" +
+                "debug none: Advanced 64 KB, avg 20 KB between pretouch() and 4 KB while mapping of 112 KB \n" +
+                "touchPage 421 til 447 count 27\n" +
+                "debug none: Advanced 64 KB, avg 23 KB between pretouch() and 4 KB while mapping of 108 KB \n" +
+                "touchPage 448 til 473 count 26\n" +
+                "debug none: Advanced 64 KB, avg 25 KB between pretouch() and 4 KB while mapping of 104 KB \n" +
+                "touchPage 474 til 498 count 25\n" +
+                "debug none: Advanced 64 KB, avg 28 KB between pretouch() and 4 KB while mapping of 100 KB \n", record.toString());
     }
 
     @Test
@@ -83,34 +83,34 @@ public class PretoucherStateTest {
         assertEquals("pos: 0, i:0\n" +
                 "debug none - Reset pretoucher to pos 2048 as the underlying MappedBytes changed.\n" +
                 "pos: 2048, i:1\n" +
-                "touchPage 0 til 32 count 33\n" +
-                "debug none: Advanced 2 KB, avg 3 KB between pretouch() and 2 KB while mapping of 132 KB \n" +
+                "touchPage 0 til 16 count 17\n" +
+                "debug none: Advanced 2 KB, avg 3 KB between pretouch() and 2 KB while mapping of 68 KB \n" +
                 "pos: 6144, i:2\n" +
-                "touchPage 33 til 33 count 1\n" +
+                "touchPage 17 til 17 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 10240, i:3\n" +
-                "touchPage 34 til 34 count 1\n" +
+                "touchPage 18 til 18 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 14336, i:4\n" +
-                "touchPage 35 til 35 count 1\n" +
+                "touchPage 19 til 19 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 18432, i:5\n" +
-                "touchPage 36 til 36 count 1\n" +
+                "touchPage 20 til 20 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 22528, i:6\n" +
-                "touchPage 37 til 37 count 1\n" +
+                "touchPage 21 til 21 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 26624, i:7\n" +
-                "touchPage 38 til 38 count 1\n" +
+                "touchPage 22 til 22 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 30720, i:8\n" +
-                "touchPage 39 til 39 count 1\n" +
+                "touchPage 23 til 23 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 34816, i:9\n" +
-                "touchPage 40 til 40 count 1\n" +
+                "touchPage 24 til 24 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n" +
                 "pos: 38912, i:10\n" +
-                "touchPage 41 til 41 count 1\n" +
+                "touchPage 25 til 25 count 1\n" +
                 "debug none: Advanced 4 KB, avg 3 KB between pretouch() and 2 KB while mapping of 4 KB \n", record.toString());
     }
 

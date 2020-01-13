@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import net.openhft.chronicle.wire.Wires;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -141,5 +142,11 @@ public class ChronicleQueueIndexTest {
         // so when the reader started reading through the queues it got stuck on
         // that file and never progressed to the latest queue file.
         Assert.assertTrue(results.contains("Hello World 3"));
+        forRead.release();
+    }
+
+    @After
+    public void checkRegisteredBytes() {
+        BytesUtil.checkRegisteredBytes();
     }
 }
