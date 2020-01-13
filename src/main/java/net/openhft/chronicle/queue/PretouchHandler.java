@@ -19,7 +19,7 @@ public final class PretouchHandler implements EventHandler {
     public boolean action() throws InvalidEventHandlerException {
         long now = System.currentTimeMillis();
         // don't check too often.
-        if (now > lastRun + 100) {
+        if (now > lastRun + 250) {
             pretoucher.execute();
             lastRun = now;
         }

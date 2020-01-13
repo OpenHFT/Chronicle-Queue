@@ -10,7 +10,7 @@ import java.util.function.LongSupplier;
 
 class PretoucherState {
     private static final int HEAD_ROOM = Integer.getInteger("PretoucherState.headRoom", 1 << 20);
-    public static final int FACTOR = 32;
+    public static final int FACTOR = 16;
     @NotNull
     private final LongSupplier posSupplier;
     private int minHeadRoom;
