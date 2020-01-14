@@ -37,35 +37,39 @@ public class ChronicleAppenderCycleTest {
 
     private void runTest(String id, Bytes msg) throws IOException {
         Path path = Files.createTempDirectory(id);
-        CountDownLatch steady = new CountDownLatch(2);
-        CountDownLatch go = new CountDownLatch(1);
-        CountDownLatch done = new CountDownLatch(1);
-        int n = 468;
+        try {
+            CountDownLatch steady = new CountDownLatch(2);
+            CountDownLatch go = new CountDownLatch(1);
+            CountDownLatch done = new CountDownLatch(1);
+            int n = 468;
 
-        AtomicReference<Throwable> thr1 = useAppender(path, appender -> {
-            appender.cycle();
-            for (int i = 0; i < n; ++i)
-                appender.writeBytes(msg);
-            steady.countDown();
-            await(go, "go");
-            for (int i = 0; i < n; ++i)
-                appender.writeBytes(msg);
-        }, done);
-
-        AtomicReference<Throwable> thr2 = useAppender(path, appender -> {
-            steady.countDown();
-            await(go, "go");
-            int m = 2 * n;
-            for (int i = 0; i < m; ++i)
+            AtomicReference<Throwable> thr1 = useAppender(path, appender -> {
                 appender.cycle();
-        }, done);
+                for (int i = 0; i < n; ++i)
+                    appender.writeBytes(msg);
+                steady.countDown();
+                await(go, "go");
+                for (int i = 0; i < n; ++i)
+                    appender.writeBytes(msg);
+            }, done);
 
-        await(steady, "steady");
-        go.countDown();
-        await(done, "done");
+            AtomicReference<Throwable> thr2 = useAppender(path, appender -> {
+                steady.countDown();
+                await(go, "go");
+                int m = 2 * n;
+                for (int i = 0; i < m; ++i)
+                    appender.cycle();
+            }, done);
 
-        assertNull(thr1.get());
-        assertNull(thr2.get());
+            await(steady, "steady");
+            go.countDown();
+            await(done, "done");
+
+            assertNull(thr1.get());
+            assertNull(thr2.get());
+        } finally {
+            DirectoryUtils.deleteDir(path.toFile());
+        }
     }
 
     private void await(CountDownLatch latch, String name) {
@@ -78,8 +82,7 @@ public class ChronicleAppenderCycleTest {
     }
 
     private AtomicReference<Throwable> useAppender(Path path,
-                                                   Consumer<ExcerptAppender> tester, CountDownLatch done)
-    {
+                                                   Consumer<ExcerptAppender> tester, CountDownLatch done) {
         AtomicReference<Throwable> refThr = new AtomicReference<>();
         Thread thread = new Thread(() -> {
             try {

@@ -57,6 +57,7 @@ public class MoveToWrongIndexThenToEndTest {
     @After
     public void after() {
         outbound.release();
+        DirectoryUtils.deleteDir(basePath.toFile());
     }
 
     @Test
