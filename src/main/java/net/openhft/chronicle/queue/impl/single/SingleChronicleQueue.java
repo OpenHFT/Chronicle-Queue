@@ -64,7 +64,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Boolean.getBoolean("chronicle.queue.checkrollcycle");
-    private static final boolean SHOULD_RELEASE_RESOURCES = Boolean.valueOf(
+    private static final boolean SHOULD_RELEASE_RESOURCES = Boolean.parseBoolean(
             System.getProperty("chronicle.queue.release.weakRef.resources", "" + true));
 
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
@@ -833,40 +833,39 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
 
                 WireStore wireStore;
-                if ((!readOnly) && wire.writeFirstHeader()) {
-                    wireStore = storeFactory.apply(that, wire);
-                    wire.updateFirstHeader();
+                try {
+                    if ((!readOnly) && wire.writeFirstHeader()) {
+                        wireStore = storeFactory.apply(that, wire);
+                        wire.updateFirstHeader();
 
-                    wireStore.initIndex(wire);
-                    // do not allow tailer to see the file until it's header is written
-                    directoryListing.onFileCreated(path, cycle);
-                    // allow directoryListing to pick up the file immediately
-                    firstAndLastCycleTime = 0;
-                } else {
-                    try {
+                        wireStore.initIndex(wire);
+                        // do not allow tailer to see the file until it's header is written
+                        directoryListing.onFileCreated(path, cycle);
+                        // allow directoryListing to pick up the file immediately
+                        firstAndLastCycleTime = 0;
+                    } else {
                         wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
-                    } catch (InternalError e) {
-                        long pos = wire.bytes().bytesStore().addressForRead(0);
-                        String s = Long.toHexString(pos);
-                        System.err.println("pos=" + s);
-                        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
-                            for (String line; (line = br.readLine()) != null; )
-                                if (line.contains(".cq4"))
-                                    System.err.println(line);
+
+                        StringBuilder name = Wires.acquireStringBuilder();
+                        ValueIn valueIn = wire.readEventName(name);
+                        if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+                            wireStore = valueIn.typedMarshallable();
+                        } else {
+                            throw new StreamCorruptedException("The first message should be the header, was " + name);
                         }
+                    }
+                } catch (InternalError e) {
+                    long pos = Objects.requireNonNull(wire.bytes().bytesStore()).addressForRead(0);
+                    String s = Long.toHexString(pos);
+                    System.err.println("pos=" + s);
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
+                        for (String line; (line = br.readLine()) != null; )
+                            if (line.contains(".cq4"))
+                                System.err.println(line);
+                    }
 //                        System.err.println("wire.bytes.refCount="+wire.bytes().refCount());
 //                        System.err.println("wire.bytes.byteStore.refCount="+wire.bytes().bytesStore().refCount());
-                        throw e;
-                    }
-
-                    StringBuilder name = Wires.acquireStringBuilder();
-                    ValueIn valueIn = wire.readEventName(name);
-                    if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                        wireStore = valueIn.typedMarshallable();
-                    } else {
-                        //noinspection unchecked
-                        throw new StreamCorruptedException("The first message should be the header, was " + name);
-                    }
+                    throw e;
                 }
 
                 return wireStore;
