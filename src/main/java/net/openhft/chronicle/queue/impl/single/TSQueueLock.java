@@ -34,8 +34,7 @@ import static net.openhft.chronicle.core.Jvm.warn;
 public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
     private static final String LOCK_KEY = "chronicle.queue.lock";
-    private static final long PID = Jvm.getProcessId();
-    private final ThreadLocal<Long> lockHolderTidTL = new ThreadLocal<>();
+    private static final int PID = Jvm.getProcessId();
     private final long timeout;
 
     public TSQueueLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
@@ -53,15 +52,15 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     public void acquireLock() {
         closeCheck();
         long tid = Thread.currentThread().getId();
+        if (isLockHeldByCurrentThread(tid)) {
+            return;
+        }
         try {
-            while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
+            while (!lock.compareAndSwapValue(UNLOCKED, getLockValueFromTid(tid))) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
-
-            // success
-            lockHolderTidTL.set(tid);
         } catch (TimeoutException e) {
             warn().on(getClass(), "Couldn't acquire lock after " + timeout + "ms for the lock file:"
                     + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
@@ -73,6 +72,10 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         }
     }
 
+    private long getLockValueFromTid(long tid) {
+        return tid << 32 | PID;
+    }
+
     /**
      * checks if current thread holds lock. If not, it will wait for <code>chronicle.queue.lock.timeoutMS</code> millis
      * for the lock to be released, and if it is not after timeout, throws {@link IllegalStateException}.
@@ -80,7 +83,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public void waitForLock() {
         closeCheck();
-        if (isLockHeldByCurrentThread())
+        long tid = Thread.currentThread().getId();
+        if (isLockHeldByCurrentThread(tid))
             return;
 
         try {
@@ -109,20 +113,17 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public void unlock() {
         closeCheck();
-        if (!isLockHeldByCurrentThread())
+        long tid = Thread.currentThread().getId();
+        if (!isLockHeldByCurrentThread(tid))
             throw new IllegalStateException("Can't unlock when lock is not held by this thread");
 
-        if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
+        if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
             warn().on(getClass(), "Queue lock was unlocked by someone else!");
         }
-
-        lockHolderTidTL.remove();
     }
 
-    private boolean isLockHeldByCurrentThread() {
-        long tid = Thread.currentThread().getId();
-        Long lockHolderTid = lockHolderTidTL.get();
-        return lockHolderTid != null && lockHolderTid == tid;
+    private boolean isLockHeldByCurrentThread(long tid) {
+        return lock.getVolatileValue()  == getLockValueFromTid(tid);
     }
 
 }
