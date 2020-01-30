@@ -178,6 +178,11 @@ drain to an underlying queue, for example. It is created as in the example below
 It can be used in the same way as any other Chronicle Queue implementation, but it is recommended to use
 software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue in preference.
 
+=== Gotchas
+
+The maximum size of a message that can be written to a ring buffer is 1/4 of its capacity. An exception will
+be thrown if this is exceeded.
+
 === Licence
 
 The Ring Buffer is a licenced product and is licenced separately to chronicle queue enterprise. If you would like further details on Chronicle Ring, please contact sales@chronicle.software
