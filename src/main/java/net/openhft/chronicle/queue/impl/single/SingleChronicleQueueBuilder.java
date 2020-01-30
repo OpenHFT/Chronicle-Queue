@@ -685,13 +685,10 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     /**
-     * @return ringBufferCapacity in bytes
+     * @return ring buffer capacity in bytes
      */
     public long bufferCapacity() {
-        long bufferCapacity = this.bufferCapacity == null ? 0 : this.bufferCapacity;
-        Long blockSize = blockSize();
-        return Math.min(blockSize / 4, bufferCapacity == -1 ? 2 << 20 : Math.max(4 << 10,
-                bufferCapacity));
+        return Math.min(blockSize() / 4, bufferCapacity == null ? 2 << 20 : Math.max(4 << 10, bufferCapacity));
     }
 
     /**
