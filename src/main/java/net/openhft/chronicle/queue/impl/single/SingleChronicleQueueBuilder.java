@@ -799,7 +799,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     @NotNull
     public EventLoop eventLoop() {
         if (eventLoop == null)
-            eventLoop = new EventGroup(true, Pauser.balanced(), "none", "none", path.getName(), 4, EnumSet.of(HandlerPriority.MEDIUM));
+            eventLoop = new EventGroup(true, Pauser.balanced(), "none", "none", path.getName(), 4, EnumSet.of(HandlerPriority.MEDIUM, HandlerPriority.REPLICATION));
         return eventLoop;
     }
 
