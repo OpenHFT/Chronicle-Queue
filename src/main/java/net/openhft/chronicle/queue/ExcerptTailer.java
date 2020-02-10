@@ -68,7 +68,8 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * that provides excerpts to read.
      *
      * peekDocument() can be used after a message has been found by toStart() or readingDocument().
-     * Until then only readingDocument() will find the first cycle.
+     * Until then only readingDocument() will find the first cycle. peekDocument() will return
+     * false negatives if the underlying queue has rolled.
      *
      * @return if it is likely that {@link #readingDocument()} would return a DocumentContext
      *         that provides excerpts to read.
