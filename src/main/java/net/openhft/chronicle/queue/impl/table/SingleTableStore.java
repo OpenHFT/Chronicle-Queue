@@ -120,7 +120,6 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     // shared vs exclusive - see https://docs.oracle.com/javase/7/docs/api/java/nio/channels/FileChannel.html
     private static <T, R> R doWithLock(File file, Function<T, ? extends R> code, Supplier<T> target, boolean shared) {
         final String type = shared ? "shared" : "exclusive";
-        final ExceptionHandler exceptionHandler = shared ? Jvm.debug() : Jvm.warn();
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
         final long timeoutAt = tickTime() + timeoutMS;
@@ -138,9 +137,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
                     if (!warnedOnFailure) {
                         String message = "Failed to acquire " + type + " lock on the table store file. Retrying";
                         if (Jvm.isDebugEnabled(SingleTableStore.class))
-                            exceptionHandler.on(SingleTableStore.class, message, new StackTrace());
-                        else
-                            exceptionHandler.on(SingleTableStore.class, message);
+                            Jvm.debug().on(SingleTableStore.class, message, new StackTrace());
                         warnedOnFailure = true;
                     }
                 }
