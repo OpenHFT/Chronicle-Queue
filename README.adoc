@@ -953,8 +953,6 @@ method2 [!Message2 {
 
 === Building Blocks
 
-Chronicle Queue is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using the Chronicle interface.
-
 Chronicle has three main concepts:
 
 - *Tailer*. Sequential and random reads, forwards and backwards
