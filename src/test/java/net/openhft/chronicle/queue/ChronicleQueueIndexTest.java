@@ -76,6 +76,80 @@ public class ChronicleQueueIndexTest {
 
     }
 
+    @Test
+    public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
+
+        SetTimeProvider tp = new SetTimeProvider(System.nanoTime());
+        File firstCQFile = null;
+
+        File file1 = DirectoryUtils.tempDir("indexQueueTest2");
+        try {
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                    .path(file1)
+                    .rollCycle(RollCycles.DAILY)
+                    .timeProvider(tp)
+                    .build()) {
+                InternalAppender appender = (InternalAppender) queue.acquireAppender();
+
+                appender.writeBytes(RollCycles.DAILY.toIndex(1, 0L), fromString("Hello World 1"));
+
+                // Simulate the end of the day i.e the queue closes the day rolls
+                // (note the change of index from 18264 to 18265)
+                firstCQFile = queue.file();
+                firstCQFile = requireNonNull(firstCQFile.listFiles((dir, name) -> name.endsWith(".cq4")))[0];
+                Assert.assertFalse(hasEOFAtEndOfFile(firstCQFile));
+            } catch (Exception e) {
+                e.printStackTrace();
+                Assert.fail();
+            }
+
+            tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
+
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                    .path(file1)
+                    .rollCycle(RollCycles.DAILY)
+                    .timeProvider(tp)
+                    .build();) {
+
+                queue.acquireAppender().pretouch();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Assert.fail();
+            }
+
+            tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
+
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                    .path(file1)
+                    .rollCycle(RollCycles.DAILY)
+                    .timeProvider(tp)
+                    .build();) {
+
+                queue.acquireAppender().pretouch();
+
+                InternalAppender appender = (InternalAppender) queue.acquireAppender();
+
+                appender.writeBytes(RollCycles.DAILY.toIndex(3, 0L), fromString("Hello World 2"));
+
+                // Simulate the end of the day i.e the queue closes the day rolls
+                // (note the change of index from 18264 to 18265)
+
+                Assert.assertTrue(hasEOFAtEndOfFile(firstCQFile));
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Assert.fail();
+            }
+        } finally {
+            System.out.println(file1.getAbsolutePath());
+            file1.deleteOnExit();
+        }
+
+    }
+
+
+
     private boolean hasEOFAtEndOfFile(final File file) throws IOException {
 
         Bytes bytes = BytesUtil.readFile(file.getAbsolutePath());
