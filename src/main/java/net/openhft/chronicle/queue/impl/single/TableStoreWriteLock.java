@@ -52,8 +52,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
             // success
         } catch (TimeoutException e) {
+            final long lockedByPID = lock.getVolatileValue();
+            final String lockedBy = lockedByPID == PID ? "me" : Long.toString(lockedByPID);
             warn().on(getClass(), "Couldn't acquire write lock after " + timeout
-                    + "ms for the lock file:" + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
+                    + "ms for the lock file:" + path + ", overriding the lock. Lock was held by " + lockedBy);
             forceUnlock();
             lock();
         } finally {
