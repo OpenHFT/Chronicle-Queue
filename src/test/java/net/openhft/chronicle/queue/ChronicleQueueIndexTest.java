@@ -126,8 +126,6 @@ public class ChronicleQueueIndexTest {
                     .timeProvider(tp)
                     .build();) {
 
-                queue.acquireAppender().pretouch();
-
                 InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
                 appender.writeBytes(RollCycles.DAILY.toIndex(3, 0L), fromString("Hello World 2"));
