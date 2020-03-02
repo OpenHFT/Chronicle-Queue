@@ -532,8 +532,9 @@ public class SingleChronicleQueueExcerpts {
 
                 if (wire == null) {
                     setCycle2(cycle, true);
-                } else if (this.cycle < cycle)
+                } else if (this.cycle < cycle) {
                     rollCycleTo(cycle);
+                }
 
                 boolean rollbackDontClose = index != wire.headerNumber() + 1;
                 if (rollbackDontClose) {
@@ -614,6 +615,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         public SingleChronicleQueue queue() {
             return queue;
+
         }
 
         @Override
@@ -640,7 +642,7 @@ public class SingleChronicleQueueExcerpts {
 
             int lastCycle = queue.lastCycle();
 
-            if (lastCycle != cycle && lastCycle > this.cycle) {
+            if (lastCycle < cycle && lastCycle != this.cycle) {
                 setCycle2(lastCycle, false);
                 rollCycleTo(cycle);
             } else {
