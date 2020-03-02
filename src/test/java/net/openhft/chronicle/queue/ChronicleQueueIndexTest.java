@@ -79,7 +79,7 @@ public class ChronicleQueueIndexTest {
     @Test
     public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
 
-        SetTimeProvider tp = new SetTimeProvider(System.nanoTime());
+        SetTimeProvider tp = new SetTimeProvider(1);
         File firstCQFile = null;
 
         File file1 = DirectoryUtils.tempDir("indexQueueTest2");
@@ -89,9 +89,9 @@ public class ChronicleQueueIndexTest {
                     .rollCycle(RollCycles.DAILY)
                     .timeProvider(tp)
                     .build()) {
-                InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                ExcerptAppender appender = queue.acquireAppender();
 
-                appender.writeBytes(RollCycles.DAILY.toIndex(1, 0L), fromString("Hello World 1"));
+                appender.writeText("Hello World 1");
 
                 // Simulate the end of the day i.e the queue closes the day rolls
                 // (note the change of index from 18264 to 18265)
