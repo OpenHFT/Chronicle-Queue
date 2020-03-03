@@ -22,8 +22,8 @@ import java.util.function.IntConsumer;
  * Invocation of the {@code execute()} method after {@code shutdown()} has been called with cause an {@code IllegalStateException} to be thrown.
  */
 public final class Pretoucher implements Closeable {
-    private final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", 2_000L);
-    private final boolean EARLY_ACQUIRE_NEXT_CYCLE = Boolean.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
+    private static final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", 2_000L);
+    private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Boolean.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
     private final SingleChronicleQueue queue;
     private final NewChunkListener chunkListener;
     private final IntConsumer cycleChangedListener;
@@ -76,6 +76,12 @@ public final class Pretoucher implements Closeable {
 
             queue.writeLock().lock();
             try {
+                if (!EARLY_ACQUIRE_NEXT_CYCLE && currentCycleWireStore != null)
+                    try {
+                        currentCycleWireStore.writeEOF(queue.wireType().apply(currentCycleMappedBytes), queue.timeoutMS);
+                    } catch (Exception ex) {
+                        Jvm.warn().on(getClass(), "unable to write the EOF file=" + currentCycleMappedBytes.mappedFile().file(), ex);
+                    }
                 currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), true);
             } finally {
                 queue.writeLock().unlock();

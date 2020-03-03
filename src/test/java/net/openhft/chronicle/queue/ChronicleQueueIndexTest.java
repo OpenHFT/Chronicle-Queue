@@ -5,21 +5,20 @@ import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
-import net.openhft.chronicle.wire.Wires;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
-import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.bytes.Bytes.fromString;
+import static org.junit.Assert.assertEquals;
 
 public class ChronicleQueueIndexTest {
 
@@ -77,7 +76,7 @@ public class ChronicleQueueIndexTest {
     }
 
     @Test
-    public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
+    public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() throws FileNotFoundException {
 
         SetTimeProvider tp = new SetTimeProvider(1);
         File firstCQFile = null;
@@ -126,14 +125,23 @@ public class ChronicleQueueIndexTest {
                     .timeProvider(tp)
                     .build();) {
 
-                InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                ExcerptAppender appender = queue.acquireAppender();
 
-                appender.writeBytes(RollCycles.DAILY.toIndex(3, 0L), fromString("Hello World 2"));
+                appender.writeText("Hello World 2");
 
                 // Simulate the end of the day i.e the queue closes the day rolls
                 // (note the change of index from 18264 to 18265)
 
                 Assert.assertTrue(hasEOFAtEndOfFile(firstCQFile));
+                try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
+                        .path(file1)
+                        .rollCycle(RollCycles.DAILY)
+                        .timeProvider(tp)
+                        .build();) {
+                    final ExcerptTailer tailer = queue123.createTailer();
+                    assertEquals("Hello World 1", tailer.readText());
+                    assertEquals("Hello World 2", tailer.readText());
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -145,8 +153,6 @@ public class ChronicleQueueIndexTest {
         }
 
     }
-
-
 
     private boolean hasEOFAtEndOfFile(final File file) throws IOException {
 
@@ -163,37 +169,30 @@ public class ChronicleQueueIndexTest {
         return lastFewBytes.contains("00 00 00 c0");
     }
 
-    private void eofAsHex() {
-        Bytes<ByteBuffer> eof = elasticByteBuffer(4);
-        eof.writeInt(Wires.END_OF_DATA);
-        System.out.println(eof.toHexString());
-        System.out.println(eof);
-    }
-
-
     @Test
     public void testIndexQueue() {
 
+        File file1 = DirectoryUtils.tempDir("indexQueueTest2");
+        file1.deleteOnExit();
         ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path("test-chronicle")
+                .path(file1)
                 .rollCycle(RollCycles.DAILY)
                 .build();
-        InternalAppender appender = (InternalAppender)queue.acquireAppender();
+        InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
         Bytes<byte[]> hello_world = Bytes.fromString("Hello World 1");
         appender.writeBytes(RollCycles.DAILY.toIndex(18264, 0L), hello_world);
         hello_world = Bytes.fromString("Hello World 2");
         appender.writeBytes(RollCycles.DAILY.toIndex(18264, 1L), hello_world);
 
-
         // Simulate the end of the day i.e the queue closes the day rolls
         // (note the change of index from 18264 to 18265)
         queue.close();
         queue = SingleChronicleQueueBuilder.builder()
-                .path("test-chronicle")
+                .path(file1)
                 .rollCycle(RollCycles.DAILY)
                 .build();
-        appender = (InternalAppender)queue.acquireAppender();
+        appender = (InternalAppender) queue.acquireAppender();
 
         // add a message for the new day
         hello_world = Bytes.fromString("Hello World 3");
@@ -203,7 +202,7 @@ public class ChronicleQueueIndexTest {
 
         final Bytes forRead = Bytes.elasticByteBuffer();
         final List<String> results = new ArrayList<>();
-        while(tailer.readBytes(forRead)) {
+        while (tailer.readBytes(forRead)) {
             results.add(forRead.toString());
             forRead.clear();
         }

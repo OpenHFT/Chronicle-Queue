@@ -107,6 +107,7 @@ public class SingleChronicleQueueExcerpts {
             // always put references to "this" last.
             queue.addCloseListener(this, StoreAppender::close);
 
+            queue.cleanupStoreFilesWithNoData();
             int cycle = queue.cycle();
             int lastCycle = queue.lastCycle();
             if (lastCycle != cycle && lastCycle >= 0)

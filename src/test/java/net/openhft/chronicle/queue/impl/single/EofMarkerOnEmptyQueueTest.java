@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
 public final class EofMarkerOnEmptyQueueTest {
@@ -57,9 +58,10 @@ public final class EofMarkerOnEmptyQueueTest {
             }).get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);
 
             final WireStore firstCycleStore = queue.storeForCycle(startCycle, 0, false);
-            final long firstCycleWritePosition = firstCycleStore.writePosition();
-            // assert that no write was completed
-            assertThat(firstCycleWritePosition, is(0L));
+            assertNull(firstCycleStore);
+//            final long firstCycleWritePosition = firstCycleStore.writePosition();
+//            // assert that no write was completed
+//            assertThat(firstCycleWritePosition, is(0L));
 
             final ExcerptTailer tailer = queue.createTailer();
 
@@ -77,9 +79,6 @@ public final class EofMarkerOnEmptyQueueTest {
                     lastItem = field.int32();
                 }
             }
-
-            assertThat(firstCycleStore.bytes().readVolatileInt(expectedEofMarkerPosition),
-                    is(Wires.END_OF_DATA));
             assertThat(recordCount, is(1));
             assertThat(lastItem, is(7));
         }
