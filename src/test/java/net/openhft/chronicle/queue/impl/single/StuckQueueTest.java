@@ -53,6 +53,7 @@ public class StuckQueueTest {
                 try (DocumentContext dc = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).build().acquireAppender().writingDocument()) {
                     dc.wire().write("hello").text("world");
                 }
+                tailer = q.createTailer();
                 try (DocumentContext dc = tailer.readingDocument()) {
                     Assert.assertTrue(dc.isPresent());
                     String actual = dc.wire().read("hello").text();

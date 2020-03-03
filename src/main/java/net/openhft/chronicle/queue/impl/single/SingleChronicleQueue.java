@@ -782,18 +782,21 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         try {
             int cycle = cycle();
             int lastCycle = lastCycle();
-            if (lastCycle < cycle && lastCycle >= 0) {
-                while (true) {
-                    final WireStore store = storeSupplier.acquire(lastCycle, false);
-                    if (store == null)
-                        return;
+            while (lastCycle < cycle && lastCycle >= 0) {
+                final WireStore store = storeSupplier.acquire(lastCycle, false);
+                if (store == null)
+                    return;
+                try {
                     if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
                         // couldn't delete? Let's try writing EOF
                         // if this blows up we should blow up too so don't catch anything
                         ((SingleChronicleQueueStore) store).writeEOFAndShrink(wireType.apply(store.bytes()), timeoutMS);
+                        lastCycle--;
                         continue;
                     }
                     break;
+                } finally {
+                    store.release();
                 }
             }
             directoryListing.refresh();
