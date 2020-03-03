@@ -100,17 +100,12 @@ public class SingleChronicleQueueExcerpts {
             this.queue = queue;
             this.storePool = storePool;
             this.checkInterrupts = checkInterrupts;
-
-
-
             this.writeLock = queue.writeLock();
-            assert writeLock != null;
             this.context = new StoreAppenderContext();
             this.closableResources = new ClosableResources<>(storePool);
 
             // always put references to "this" last.
             queue.addCloseListener(this, StoreAppender::close);
-
 
             int cycle = queue.cycle();
             int lastCycle = queue.lastCycle();

@@ -56,7 +56,22 @@ final class TableDirectoryListing implements DirectoryListing {
         if (readOnly) {
             return;
         }
-        forceRefresh();
+        while (true) {
+            long currentMax = maxCycleValue.getVolatileValue();
+            final File[] queueFiles = queuePath.toFile().
+                    listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
+            int min = UNSET_MIN_CYCLE;
+            int max = UNSET_MAX_CYCLE;
+            if (queueFiles != null) {
+                for (File queueFile : queueFiles) {
+                    min = Math.min(fileToCycleFunction.applyAsInt(queueFile), min);
+                    max = Math.max(fileToCycleFunction.applyAsInt(queueFile), max);
+                }
+            }
+            minCycleValue.setOrderedValue(min);
+            if (maxCycleValue.compareAndSwapValue(currentMax, max))
+                break;
+        }
     }
 
     @Override
@@ -114,26 +129,5 @@ final class TableDirectoryListing implements DirectoryListing {
 
     private int getMinCycleValue() {
         return (int) minCycleValue.getVolatileValue();
-    }
-
-    public void forceRefresh() {
-        if (tableStore.isClosed())
-            return;
-        while (true) {
-            long currentMax = maxCycleValue.getVolatileValue();
-            final File[] queueFiles = queuePath.toFile().
-                    listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
-            int min = UNSET_MIN_CYCLE;
-            int max = UNSET_MAX_CYCLE;
-            if (queueFiles != null) {
-                for (File queueFile : queueFiles) {
-                    min = Math.min(fileToCycleFunction.applyAsInt(queueFile), min);
-                    max = Math.max(fileToCycleFunction.applyAsInt(queueFile), max);
-                }
-            }
-            minCycleValue.setOrderedValue(min);
-            if (maxCycleValue.compareAndSwapValue(currentMax, max))
-                break;
-        }
     }
 }

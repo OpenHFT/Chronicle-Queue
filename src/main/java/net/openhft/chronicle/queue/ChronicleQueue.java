@@ -153,12 +153,12 @@ public interface ChronicleQueue extends Closeable {
      * Tailers are NOT thread-safe. Sharing a Tailer across threads will lead to errors and unpredictable behaviour.
      * </b>
      * <p>
-     * If the provided {@code id} is {@code null}, the Trailer will be unnamed and this is 
+     * If the provided {@code id} is {@code null}, the Trailer will be unnamed and this is
      * equivalent to invoking {@link #createTailer()}.
-     * 
+     *
      * @param id unique id for a tailer which uses to track where it was up to
      * @return a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}
-     * @see #createTailer() 
+     * @see #createTailer()
      */
     @NotNull
     default ExcerptTailer createTailer(String id) {
@@ -391,7 +391,7 @@ public interface ChronicleQueue extends Closeable {
      * file system adds latency. Calling this method, after deleting .cq4 files, will update the internal
      * caches accordingly,
      */
-    void refreshDirectlyListing();
+    void refreshDirectoryListing();
 
     /**
      * Creates and returns a new String representation of this ChronicleQueue's last header in YAML-format.

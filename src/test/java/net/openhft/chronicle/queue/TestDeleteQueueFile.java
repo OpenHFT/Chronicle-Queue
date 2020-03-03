@@ -116,7 +116,7 @@ public class TestDeleteQueueFile {
 
             Files.delete(Paths.get(firstFile));
 
-            queue.refreshDirectlyListing();
+            queue.refreshDirectoryListing();
 
             Assert.assertEquals(queue.firstIndex(), firstIndexOfSecondCycle);
 

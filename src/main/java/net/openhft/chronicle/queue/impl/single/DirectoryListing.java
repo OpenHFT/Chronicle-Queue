@@ -5,12 +5,10 @@ import net.openhft.chronicle.core.io.Closeable;
 import java.io.File;
 
 public interface DirectoryListing extends Closeable {
-    void init();
+    default void init() {
+    }
 
-    void refresh();
-
-    default void forceRefresh() {
-        // no-op
+    default void refresh() {
     }
 
     void onFileCreated(File file, int cycle);

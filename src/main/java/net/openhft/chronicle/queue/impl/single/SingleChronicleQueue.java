@@ -233,8 +233,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public void refreshDirectlyListing() {
-        directoryListing.forceRefresh();
+    public void refreshDirectoryListing() {
+        directoryListing.refresh();
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
     }
@@ -932,7 +932,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         @Override
-        public int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException {
+        public int nextCycle(int currentCycle, @NotNull TailerDirection direction) {
 
             if (direction == NONE)
                 throw new AssertionError("direction is NONE");

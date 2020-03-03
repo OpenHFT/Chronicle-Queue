@@ -14,16 +14,6 @@ final class FileSystemDirectoryListing implements DirectoryListing {
     }
 
     @Override
-    public void init() {
-        // no-op
-    }
-
-    @Override
-    public void refresh() {
-        // no-op
-    }
-
-    @Override
     public void onFileCreated(final File file, final int cycle) {
     }
 
