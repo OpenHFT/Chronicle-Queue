@@ -108,8 +108,6 @@ Chronicle Queue uses `RandomAccessFiles` while managing memory and this choice b
 
 This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no garbage collection as everything is done off-heap.
 
-image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png[]
-
 == Chronicle Queue (Enterprise Edition)
 
 Chronicle Queue (Enterprise Edition) is a commercially supported version of our successful open source Chronicle Queue.
