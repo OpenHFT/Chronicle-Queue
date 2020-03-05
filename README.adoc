@@ -118,7 +118,7 @@ The open source documentation is extended by this document to describe the addit
 - TCP/IP Replication between hosts to ensure real-time backup of all your queue data. For more information see <<docs/replication.adoc#, Replication>>, the <<docs/queue-replication-message-protocol-overview.adoc#, protocol is covered here.>>
 - Timezone support for daily queue rollover scheduling. For more information see <<docs/timezone_rollover.adoc#, Timezone support>>.
 - Ring Buffer support to give improved performance at high throughput on slower filesystems.
-For more information see <<docs/ring_buffer.adoc#, Ring Buffer>>.
+For more information see <<docs/ring_buffer.adoc#,Ring Buffer>> and also <<docs/performance.adoc#,performance>>.
 
 In addition, you will be fully supported by our technical experts.
 
