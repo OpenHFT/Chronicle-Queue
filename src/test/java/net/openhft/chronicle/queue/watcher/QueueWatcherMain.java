@@ -8,7 +8,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.watcher.FileSystemWatcher;
 
 import java.io.File;
-import java.io.IOException;
 import io.hawt.embedded.Main;
 
 public class QueueWatcherMain {

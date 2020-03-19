@@ -5,8 +5,6 @@
 package net.openhft.chronicle.queue.watcher;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.watcher.FileClassifier;
-import net.openhft.chronicle.core.watcher.FileManager;
 import net.openhft.chronicle.core.watcher.WatcherListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
@@ -14,9 +12,7 @@ import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 public class QueueWatcherListener implements WatcherListener {
     final Map<Path, QueueFileManager> queueFileManagerMap = new TreeMap<>();

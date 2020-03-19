@@ -8,7 +8,6 @@ import net.openhft.chronicle.core.watcher.JMXFileManager;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
