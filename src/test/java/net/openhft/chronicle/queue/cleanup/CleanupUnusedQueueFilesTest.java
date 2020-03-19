@@ -1,11 +1,9 @@
 package net.openhft.chronicle.queue.cleanup;
 
 import net.openhft.chronicle.bytes.BytesUtil;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -15,22 +13,13 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.logging.FileHandler;
 import java.util.stream.Stream;
 
-import static java.util.Collections.emptyList;
-import static net.openhft.chronicle.queue.RollCycles.TEST2_DAILY;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
