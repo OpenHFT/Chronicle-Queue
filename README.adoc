@@ -1250,7 +1250,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-==== Padding add to the end of Excerpts
+==== Padding added to the end of Excerpts
 
 By default, If you are writing bytes to a Chronicle-Queue you will find that it occasionally adds padding to the end of each message it writes, The padding is
 added to the end of each Excerpt so for example, if you were to write 58 bytes when you come to read it, the number of bytes available to read will
