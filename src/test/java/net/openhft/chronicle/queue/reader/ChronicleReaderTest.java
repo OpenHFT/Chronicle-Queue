@@ -116,7 +116,6 @@ public class ChronicleReaderTest {
     }
 
     @Test(timeout = 10_000L)
-    @Ignore("Not sure if this is a valid usecase")
     public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws InterruptedException {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader").toPath();
         path.toFile().mkdirs();
@@ -234,7 +233,6 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    @Ignore("TODO FIX")
     public void readOnlyQueueTailerInFollowModeShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();

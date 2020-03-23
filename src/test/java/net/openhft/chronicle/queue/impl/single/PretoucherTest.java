@@ -23,7 +23,7 @@ import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-@Ignore("flakey test see http://teamcity.higherfrequencytrading.com/repository/download/OpenHFT_ReleaseJob_ReleaseByArtifact/320311:id/ReleaseAutomation/projects/chronicle-queue-runTests-1548952667748.log")
+
 public class PretoucherTest {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final List<Integer> capturedCycles = new ArrayList<>();

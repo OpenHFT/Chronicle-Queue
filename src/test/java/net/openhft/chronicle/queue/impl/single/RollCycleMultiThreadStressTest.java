@@ -89,12 +89,6 @@ public class RollCycleMultiThreadStressTest {
         return allReadersComplete;
     }
 
-//    @Test
-//    @RepeatRule.Repeat(times = 10000)
-//    @Ignore("run manually")
-//    public void repeatStress() throws InterruptedException {
-//        stress();
-//    }
 
     @Test
     public void stress() throws InterruptedException {

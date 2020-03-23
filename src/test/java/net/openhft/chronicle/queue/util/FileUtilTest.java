@@ -83,7 +83,6 @@ public class FileUtilTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("please fix")
     public void removableQueueFileCandidates(){
         assumeFalse(OS.isWindows());
         final int rolls = 4;
