@@ -1446,6 +1446,57 @@ The 99.9 percentile  and 99.93 percentile are a function of how quickly the syst
 
 image:https://vanilla-java.github.io/images/Latency-from-993.png[]
 
+
+
+=== Jitter
+
+
+If you wish to tune your code for ultra-low latency, you could take a similar approach to our `QueueReadJitterMain`
+
+[source,java]
+----
+net.openhft.chronicle.queue.jitter.QueueReadJitterMain
+----
+
+This code can be considered as a  basic stack sampler profiler. This is assuming you base your code on the `net.openhft.chronicle.core.threads.EventLoop`, you can periodically sample the stacks to find a stall. It is recommended to not reduce the sample rate below 50 microseconds as this will produce too much noise
+
+It is likely to give you finer granularity than a typical profiler. As it is based on a statistical approach of where the stalls are, it takes many samples, to see which code has the highest grouping ( in other words the highest stalls ) and will output a trace that looks like the following :
+[console,java]
+----
+28	at java.util.concurrent.ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)
+	at java.util.concurrent.ConcurrentHashMap.put(ConcurrentHashMap.java:1006)
+	at net.openhft.chronicle.core.util.WeakReferenceCleaner.newCleaner(WeakReferenceCleaner.java:43)
+	at net.openhft.chronicle.bytes.NativeBytesStore.<init>(NativeBytesStore.java:90)
+	at net.openhft.chronicle.bytes.MappedBytesStore.<init>(MappedBytesStore.java:31)
+	at net.openhft.chronicle.bytes.MappedFile$$Lambda$4/1732398722.create(Unknown Source)
+	at net.openhft.chronicle.bytes.MappedFile.acquireByteStore(MappedFile.java:297)
+	at net.openhft.chronicle.bytes.MappedFile.acquireByteStore(MappedFile.java:246)
+
+25	at net.openhft.chronicle.queue.jitter.QueueWriteJitterMain.lambda$main$1(QueueWriteJitterMain.java:58)
+	at net.openhft.chronicle.queue.jitter.QueueWriteJitterMain$$Lambda$11/967627249.run(Unknown Source)
+	at java.lang.Thread.run(Thread.java:748)
+
+21	at java.util.concurrent.ConcurrentHashMap.putVal(ConcurrentHashMap.java:1027)
+	at java.util.concurrent.ConcurrentHashMap.put(ConcurrentHashMap.java:1006)
+	at net.openhft.chronicle.core.util.WeakReferenceCleaner.newCleaner(WeakReferenceCleaner.java:43)
+	at net.openhft.chronicle.bytes.NativeBytesStore.<init>(NativeBytesStore.java:90)
+	at net.openhft.chronicle.bytes.MappedBytesStore.<init>(MappedBytesStore.java:31)
+	at net.openhft.chronicle.bytes.MappedFile$$Lambda$4/1732398722.create(Unknown Source)
+	at net.openhft.chronicle.bytes.MappedFile.acquireByteStore(MappedFile.java:297)
+	at net.openhft.chronicle.bytes.MappedFile.acquireByteStore(MappedFile.java:246)
+
+14	at net.openhft.chronicle.queue.jitter.QueueWriteJitterMain.lambda$main$1(QueueWriteJitterMain.java:54)
+	at net.openhft.chronicle.queue.jitter.QueueWriteJitterMain$$Lambda$11/967627249.run(Unknown Source)
+	at java.lang.Thread.run(Thread.java:748)
+
+----
+
+
+from this, we can see that most of the samples (on this occasion 28 of them ) were captured in `ConcurrentHashMap.putVal()` if we wish to get finer grain granularity,
+
+we will often add a `net.openhft.chronicle.core.Jvm.safepoint` into the code because thread dumps are only reported at safe-points.
+
+
 ===== Summary
 
 In the test described above, the typical latency varied between 14 and 40 microseconds. The 99 percentile varied between 17 and 56 microseconds depending on the throughput being tested. Notably, the 99.93% latency varied between 21 microseconds and 41 milliseconds, a factor of 2000.
