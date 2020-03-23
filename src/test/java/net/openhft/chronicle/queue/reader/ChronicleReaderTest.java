@@ -232,40 +232,6 @@ public class ChronicleReaderTest {
         }
     }
 
-@Test
-    public void readOnlyQueueTailerInFollowModeShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
-        DirectoryUtils.deleteDir(dataDir.toFile());
-        dataDir.toFile().mkdirs();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
-
-            final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
-            events.say("hello");
-
-            final long readerCapacity = getCurrentQueueFileLength(dataDir);
-
-            final AtomicReference<String> messageReceiver = new AtomicReference<>();
-            final ChronicleReader chronicleReader = basicReader().tail().
-                    withMessageSink(messageReceiver::set);
-
-            final ExecutorService executorService = Executors.newSingleThreadExecutor();
-            Future<?> submit = executorService.submit(chronicleReader::execute);
-
-            final long expectedReadingDocumentCount = (readerCapacity / ONE_KILOBYTE.length) + 1;
-            int i;
-            for (i = 0; i < expectedReadingDocumentCount; i++) {
-                events.say(new String(ONE_KILOBYTE));
-            }
-            events.say(LAST_MESSAGE);
-
-            while (!(messageReceiver.get() != null && messageReceiver.get().contains(LAST_MESSAGE))) {
-                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000L));
-            }
-            executorService.shutdownNow();
-            executorService.awaitTermination(5L, TimeUnit.SECONDS);
-            submit.get();
-        }
-    }
-
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws Exception {
         if (OS.isWindows()) {
