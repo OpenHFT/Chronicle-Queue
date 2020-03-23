@@ -2,11 +2,13 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -19,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.bytes.Bytes.fromString;
 import static org.junit.Assert.assertEquals;
-
 public class ChronicleQueueIndexTest {
 
     @Test
@@ -77,7 +78,7 @@ public class ChronicleQueueIndexTest {
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() throws FileNotFoundException {
-
+        Assume.assumeTrue(!OS.isWindows());
         SetTimeProvider tp = new SetTimeProvider(1);
         File firstCQFile = null;
 
