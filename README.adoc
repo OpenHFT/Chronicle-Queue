@@ -1265,7 +1265,7 @@ NOTE: Cache line alignment can also on some occasions give you better performanc
 If you are writing your own serialisation ( and not using chronicle wire ) you should ensure that you
 don't read more bytes than you intended to, you can do this by either adding a termination character at the end of the data you write or a length
 at the start. On the flip side, If you are using Chronicle-Wire for serialisation, Chronicle Wire is able to determine when it has read the end of
-the data structure it is reading, so for most use cases, the padding is something that is internal and has no impact on your messages.
+the data structure it is reading, so for most use cases ( unless you are writing bytes ), padding is something that is internal and has no impact on your messages.
 
 `padToCacheAlign` can be changed:
 
