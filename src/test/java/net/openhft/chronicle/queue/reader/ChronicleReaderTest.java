@@ -232,7 +232,7 @@ public class ChronicleReaderTest {
         }
     }
 
-    @Test
+@Test
     public void readOnlyQueueTailerInFollowModeShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();
@@ -395,7 +395,7 @@ public class ChronicleReaderTest {
     }
 
     @FunctionalInterface
-    private interface StringEvents {
+    public  interface StringEvents {
         void say(final String msg);
     }
 
