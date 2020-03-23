@@ -1252,7 +1252,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 
 ==== Padding ensured data is cache line aligned
 
-If you are writing bytes to a Chronicle-Queue you will find that it occasionally adds padding to the end of each message it writes, The padding is
+By default, If you are writing bytes to a Chronicle-Queue you will find that it occasionally adds padding to the end of each message it writes, The padding is
 added to the end of each Excerpt so for example, if you were to write 58 bytes when you come to read it, the number of bytes available to read will
 be the 58 bytes you wrote plus on some occasions a few extra bytes of padding ( the padding is a few zero bytes ). For backwards compatibility reasons,
 this length includes the padding. The reason it does this is that chronicle-queue writes a 4-byte length that chronicle queue uses at the start of each
@@ -1263,6 +1263,34 @@ don't read more bytes than you intended to, you can do this by either adding a t
 at the start. On the flip side, If you are using Chronicle-Wire for serialisation, Chronicle Wire is able to determine when it has read the end of
 the data structure it is reading, so for most use cases, the padding is something that is internal and has no impact on your messages.
 
+This feature can be change see
+
+.Reading from native memory
+[source, Java]
+----
+    public static enum Padding {
+        WORD("align to every word"),
+        CACHE_LINE("always pads to cache lines"),
+        NEVER("never adds padding"),
+        SMART("adds padding to ensure new wire headers dont straggle cache lines, where possible to do so without breaking theexisting message format specification");
+
+        /** @deprecated */
+        @Deprecated
+        public static final MarshallableOut.Padding ALWAYS = CACHE_LINE;
+
+        private Padding(String comment) {
+        }
+    }
+----
+
+this can be changed for example:
+
+
+.Reading from native memory
+[source, Java]
+----
+appender.padToCacheAlign(Padding.SMART);
+----
 
 ==== Ensure long Running tasks are not performed with a writingDocument()
 
