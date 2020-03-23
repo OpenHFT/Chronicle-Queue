@@ -1250,7 +1250,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-==== Padding ensured data is cache line aligned
+==== Padding add to the end of Excerpts
 
 By default, If you are writing bytes to a Chronicle-Queue you will find that it occasionally adds padding to the end of each message it writes, The padding is
 added to the end of each Excerpt so for example, if you were to write 58 bytes when you come to read it, the number of bytes available to read will
@@ -1267,7 +1267,7 @@ don't read more bytes than you intended to, you can do this by either adding a t
 at the start. On the flip side, If you are using Chronicle-Wire for serialisation, Chronicle Wire is able to determine when it has read the end of
 the data structure it is reading, so for most use cases, the padding is something that is internal and has no impact on your messages.
 
-`padToCacheAlign` can be changed change:
+`padToCacheAlign` can be changed:
 
 [source, Java]
 ----
