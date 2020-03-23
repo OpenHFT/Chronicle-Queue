@@ -1267,7 +1267,7 @@ don't read more bytes than you intended to, you can do this by either adding a t
 at the start. On the flip side, If you are using Chronicle-Wire for serialisation, Chronicle Wire is able to determine when it has read the end of
 the data structure it is reading, so for most use cases, the padding is something that is internal and has no impact on your messages.
 
-This feature can be change see
+Padding to cacheLine can be changed change, by using, Padding:
 
 .Reading from native memory
 [source, Java]
@@ -1287,7 +1287,7 @@ This feature can be change see
     }
 ----
 
-this can be changed for example:
+and setting it on the appender, see below :
 
 
 .Reading from native memory
