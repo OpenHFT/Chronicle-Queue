@@ -15,6 +15,7 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
         }
     }
 
+    @Ignore("run manually because its a stress test")
     @Test
     public void stress() throws InterruptedException {
         super.stress();
