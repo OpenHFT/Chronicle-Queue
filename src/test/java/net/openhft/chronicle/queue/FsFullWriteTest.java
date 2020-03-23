@@ -23,7 +23,6 @@ import java.util.Random;
  * Fails on Linux with a JVM SIGBUS unfortunately. Would be great if it's a "normal" runtime
  * exception.
  */
-@Ignore
 @RequiredForClient
 public class FsFullWriteTest {
 
