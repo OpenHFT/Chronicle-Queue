@@ -1255,7 +1255,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 If you are writing bytes to a Chronicle-Queue you will find that it occasionally adds padding to the end of each message it writes, The padding is
 added to the end of each Excerpt so for example, if you were to write 58 bytes when you come to read it, the number of bytes available to read will
 be the 58 bytes you wrote plus on some occasions a few extra bytes of padding ( the padding is a few zero bytes ). For backwards compatibility reasons,
-this length include the padding. The reason it does this is that chronicle-queue writes a 4-byte length that chronicle queue uses at the start of each
+this length includes the padding. The reason it does this is that chronicle-queue writes a 4-byte length that chronicle queue uses at the start of each
 message, and this 4-byte length can not straggle a cache line so it will add padding to the end of a message to ensure that the next message will be
 at the start of a cache line, the reason it can not straggle a cache line is that the length has to be read atomically between, not just different
 threads, but different processes. Hence, if you are writing your own serialisation ( and not using chronicle wire ) you should ensure that you
