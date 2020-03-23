@@ -41,7 +41,6 @@ public class FileUtilTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("please fix")
     public void state() throws IOException {
         assumeFalse(OS.isWindows());
         final Path dir = Files.createTempDirectory("openByAnyProcess");
