@@ -1267,17 +1267,18 @@ don't read more bytes than you intended to, you can do this by either adding a t
 at the start. On the flip side, If you are using Chronicle-Wire for serialisation, Chronicle Wire is able to determine when it has read the end of
 the data structure it is reading, so for most use cases, the padding is something that is internal and has no impact on your messages.
 
-Padding to cacheLine can be changed change, by using `Padding` and setting it on the appender, see below :
+`padToCacheAlign` can be changed change:
 
 [source, Java]
 ----
 appender.padToCacheAlign(Padding.SMART);
 ----
 
-if you are reading and writing from the same thread then you can set this to NEVER
+if you are reading and writing from the same thread then you can set this to NEVER:
+
 [source, Java]
 ----
-appender.padToCacheAlign(Padding.SMART);
+appender.padToCacheAlign(Padding.NEVER);
 ----
 
 
