@@ -36,14 +36,13 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class JDBCServiceTest {
 
-    @Ignore("todo fix")
     @Test
     public void testCreateTable() {
         doCreateTable(4, 5000);
     }
 
-    //@Test
-    //@Ignore("Long running")
+    @Test
+    @Ignore("Long running")
     public void perfCreateTable() {
         doCreateTable(5, 200000);
     }
