@@ -1292,6 +1292,14 @@ this can be changed for example:
 appender.padToCacheAlign(Padding.SMART);
 ----
 
+if you are reading and writing from the same thread then you can set this to NEVER
+
+.Reading from native memory
+[source, Java]
+----
+appender.padToCacheAlign(Padding.SMART);
+----
+
 ==== Ensure long Running tasks are not performed with a writingDocument()
 
 The `writingDocument()` should be performed as quickly as possible because a write lock is held until the `DocumentContext` is closed by the try-with-resources. This blocks other appenders and tailers. More dangerously,
