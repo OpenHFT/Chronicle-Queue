@@ -1416,7 +1416,12 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean setAddress(boolean found) {
-            Bytes<?> bytes = wire().bytes();
+            Wire wire = wire();
+            if (wire == null) {
+                address = NO_PAGE;
+                return false;
+            }
+            Bytes<?> bytes = wire.bytes();
             address = found ? bytes.addressForRead(bytes.readPosition(), 4) : NO_PAGE;
             return found;
         }
