@@ -356,7 +356,7 @@ public class SingleChronicleQueueExcerpts {
                 return true;
             }
             int header = bytes.readVolatileInt(positionOfHeader);
-            if (Wires.isReadyData(header)) {
+            if (isReadyData(header)) {
                 return true;
             } else if (header == NOT_COMPLETE) { // overwriting an incomplete message header.
                 return true;
@@ -1106,7 +1106,7 @@ public class SingleChronicleQueueExcerpts {
         public boolean peekDocument() {
 
             int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
-            return header > 0x0 | header == Wires.END_OF_DATA;
+            return header > 0x0 | header == END_OF_DATA;
         }
 
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
@@ -1412,7 +1412,7 @@ public class SingleChronicleQueueExcerpts {
                 return setAddress(found);
             }
 
-            return setAddress(moveToIndexInternal(index));
+            return moveToIndexInternal(index);
         }
 
         private boolean setAddress(boolean found) {
@@ -1421,7 +1421,8 @@ public class SingleChronicleQueueExcerpts {
             return found;
         }
 
-        ScanResult moveToIndexResult(long index) {
+       private ScanResult moveToIndexResult0(long index) {
+
             final int cycle = queue.rollCycle().toCycle(index);
             final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
             if (LOG.isTraceEnabled()) {
@@ -1449,6 +1450,13 @@ public class SingleChronicleQueueExcerpts {
                 return END_OF_FILE;
             }
 
+            return scanResult;
+
+        }
+
+        ScanResult moveToIndexResult(long index) {
+            ScanResult scanResult = moveToIndexResult0(index);
+            setAddress(scanResult == FOUND);
             return scanResult;
         }
 
@@ -1583,7 +1591,6 @@ public class SingleChronicleQueueExcerpts {
         public ExcerptTailer toEnd() {
             if (direction.equals(TailerDirection.BACKWARD))
                 return originalToEnd();
-
             return optimizedToEnd();
         }
 
@@ -1606,6 +1613,7 @@ public class SingleChronicleQueueExcerpts {
                 if (lastCycle == Integer.MIN_VALUE) {
                     if (state() == TailerState.CYCLE_NOT_FOUND)
                         state = UNINITIALISED;
+                    setAddress(state == FOUND_CYCLE);
                     return this;
                 }
 
@@ -1633,13 +1641,12 @@ public class SingleChronicleQueueExcerpts {
                     return originalToEnd();
                 }
 
-                if (Wires.isEndOfFile(wire().bytes().readVolatileInt(wire().bytes().readPosition()))) {
-                    state = END_OF_CYCLE;
-                } else
-                    state = FOUND_CYCLE;
+                final Bytes<?> bytes = wire().bytes();
+                state = isEndOfFile(bytes.readVolatileInt(bytes.readPosition())) ? END_OF_CYCLE : FOUND_CYCLE;
 
                 index(rollCycle.toIndex(lastCycle, sequenceNumber));
 
+                setAddress(state == FOUND_CYCLE);
             } catch (@NotNull UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             }
@@ -1693,7 +1700,6 @@ public class SingleChronicleQueueExcerpts {
                     break;
                 default:
                     throw new IllegalStateException("Unknown ScanResult: " + scanResult);
-
             }
 
             return this;
