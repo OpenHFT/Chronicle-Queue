@@ -39,6 +39,7 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
+import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
@@ -906,7 +907,7 @@ public class SingleChronicleQueueExcerpts {
         private TailerState state = UNINITIALISED;
         private long indexAtCreation = Long.MIN_VALUE;
         private boolean readingDocumentFound = false;
-        private long address = NoBytesStore.NO_PAGE;
+        private long address = NO_PAGE;
         private boolean striding = false;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
@@ -1080,12 +1081,9 @@ public class SingleChronicleQueueExcerpts {
                     // since we can't find an entry at current index, indicate that we're at the end of a cycle
                     state = TailerState.END_OF_CYCLE;
                 }
-                if (context.wire() == null) {
-                    address = NoBytesStore.NO_PAGE;
-                } else {
-                    Bytes<?> bytes = context.wire().bytes();
-                    address = bytes.addressForRead(bytes.readPosition(), 4);
-                }
+
+                setAddress(context.wire() != null);
+
             } catch (StreamCorruptedException e) {
                 throw new IllegalStateException(e);
             } catch (UnrecoverableTimeoutException notComplete) {
@@ -1106,6 +1104,7 @@ public class SingleChronicleQueueExcerpts {
         @SuppressWarnings("restriction")
         @Override
         public boolean peekDocument() {
+
             int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
             return header > 0x0 | header == Wires.END_OF_DATA;
         }
@@ -1398,8 +1397,9 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
+
             if (moveToState.canReuseLastIndexMove(index, state, direction, queue, wire())) {
-                return true;
+                return setAddress(true);
             } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
                 final long knownIndex = moveToState.lastMovedToIndex;
                 final boolean found =
@@ -1409,10 +1409,16 @@ public class SingleChronicleQueueExcerpts {
                     index(index);
                     moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
                 }
-                return found;
+                return setAddress(found);
             }
 
-            return moveToIndexInternal(index);
+            return setAddress(moveToIndexInternal(index));
+        }
+
+        private boolean setAddress(boolean found) {
+            Bytes<?> bytes = wire().bytes();
+            address = found ? bytes.addressForRead(bytes.readPosition(), 4) : NO_PAGE;
+            return found;
         }
 
         ScanResult moveToIndexResult(long index) {
