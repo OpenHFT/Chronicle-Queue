@@ -75,6 +75,10 @@ public enum RollCycles implements RollCycle {
         return this.length;
     }
 
+    /**
+     *
+     * @return this is the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
+     */
     @Override
     public int defaultIndexCount() {
         return indexCount;

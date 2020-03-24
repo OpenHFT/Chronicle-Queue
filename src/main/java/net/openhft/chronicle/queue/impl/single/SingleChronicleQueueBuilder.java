@@ -627,6 +627,9 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         return blockSize((long) blockSize);
     }
 
+    /**
+     * @return  - this is the size of a memory mapping chunk, a queue is read/written by using a number of blocks, you should avoid changing this unnecessarily.
+     */
     public long blockSize() {
 
         long bs = blockSize == null ? OS.is64Bit() ? 64L << 20 : TEST_BLOCK_SIZE : blockSize;
@@ -685,7 +688,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     /**
-     * @return ring buffer capacity in bytes
+     * @return ring buffer capacity in bytes [ Chronicle-Ring is an enterprise product ]
      */
     public long bufferCapacity() {
         return Math.min(blockSize() / 4, bufferCapacity == null ? 2 << 20 : Math.max(4 << 10, bufferCapacity));
@@ -996,11 +999,19 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
         initializeMetadata();
     }
 
+    /**
+     * @param strongAppenders by default, we create the appenders as a weak reference, these can get garbage collected. To avoid them becoming unnecessarily garbage collected, set this to {@code true}
+     * @return that
+     */
     public SingleChronicleQueueBuilder strongAppenders(boolean strongAppenders) {
         this.strongAppenders = strongAppenders;
         return this;
     }
 
+    /**
+     * @return {@code true} if we are using strong appender, by default, we create the appenders in a thread-local, weak reference, these can get
+     * garbage collected. * Setting them to strong will ensure they are created using a strong reference.
+     */
     public boolean strongAppenders() {
         return Boolean.TRUE.equals(strongAppenders);
     }
