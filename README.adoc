@@ -1768,6 +1768,30 @@ In particular, the following wire types are not supported:
 - RAW
 - READ_ANY
 
+==== Other Configuration
+
+[qanda]
+Block Size::
+    When the queue is read/written, it maps part of the file currently being read/written to a memory segment (block).
+    This parameter controls the size of a memory mapping chunk.
+Index Spacing::
+    The space between excerpts that are explicitly indexed. A higher number means higher sequential write performance but
+    slower random access read. The sequential read performance is not affected by this property. For example, the
+    following default index spacing can be returned:
+        - 16 (MINUTELY)
+        - 64 (DAILY)
+Index Count::
+    the size of each index array, as well as the total number of index arrays per queue file.
++
+[NOTE]
+    indexCount^2^ is the maximum number of indexed queue entries.
+Buffer Mode::
+    - `None` - The default (and the only one available for open source users), no buffering;
+    - `Copy` - used in conjunction with encryption;
+    - `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product
+Buffer Capacity::
+    Ring buffer capacity when using `bufferMode: Asynchronous`
+
 === More information
 
 More in-depth information can be found in the following topics:
