@@ -841,25 +841,19 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
 
-                if (createIfAbsent && !path.exists()) {
-                    if (!dateValue.pathExists)
-                        PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
-                    else {
-                        try {
-                            File dir = path.getParentFile();
-                            if (!dir.exists())
-                                dir.mkdirs();
-
-                            path.createNewFile();
-                        } catch (IOException ex) {
-                            Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
-                        }
-                    }
-                }
+                if (createIfAbsent && !path.exists() && !dateValue.pathExists)
+                    PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
 
                 dateValue.pathExists = true;
 
-                final MappedBytes mappedBytes = mappedFileCache.get(path);
+                MappedBytes mappedBytes;
+                try {
+                    mappedBytes = mappedFileCache.get(path);
+                } catch (FileNotFoundException e) {
+                    createFile(path);
+                    mappedBytes = mappedFileCache.get(path);
+                }
+
                 pauseUnderload();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
@@ -911,6 +905,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             } catch (@NotNull TimeoutException | IOException e) {
                 throw Jvm.rethrow(e);
+            }
+        }
+
+        private void createFile(final File path) {
+            try {
+                File dir = path.getParentFile();
+                if (!dir.exists())
+                    dir.mkdirs();
+
+                path.createNewFile();
+            } catch (IOException ex) {
+                Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
         }
 
