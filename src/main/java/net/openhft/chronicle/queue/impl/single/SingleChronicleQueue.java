@@ -855,7 +855,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
                             path.createNewFile();
                         } catch (IOException ex) {
-                            Jvm.warn().on(getClass(), ex);
+                            Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
                         }
                     }
                 }
