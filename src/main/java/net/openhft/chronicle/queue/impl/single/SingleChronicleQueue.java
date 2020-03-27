@@ -841,13 +841,22 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
 
-                if (!dateValue.pathExists && createIfAbsent && !path.exists()) {
-                    PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
-                } else if (createIfAbsent && !path.exists()) {
-                    try {
-                        path.createNewFile();
-                    } catch (IOException ex) {
-                        Jvm.warn().on(getClass(), ex);
+                if (createIfAbsent && !path.exists()) {
+                    if (!dateValue.pathExists)
+                        PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
+                    else {
+                        try {
+                            File dir = path.getParentFile();
+                            if (!dir.exists()) {
+                                File parentFile = dir.getParentFile();
+                                if (parentFile != null)
+                                    parentFile.mkdirs();
+                            }
+
+                            path.createNewFile();
+                        } catch (IOException ex) {
+                            Jvm.warn().on(getClass(), ex);
+                        }
                     }
                 }
 
