@@ -47,7 +47,9 @@ public interface RollCycle {
      */
     int length();
 
-
+    /**
+     * @return the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
+     */
     int defaultIndexCount();
 
     /**

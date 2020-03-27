@@ -92,7 +92,7 @@ public interface RollingChronicleQueue extends ChronicleQueue, StoreReleasable {
     int cycle();
 
     /**
-     * @return the number of entries in an index meta data entry
+     * @return the max size of each index and also the number number of index arrays. indexCount^2 is the maximum number of index queue entries.
      */
     int indexCount();
 

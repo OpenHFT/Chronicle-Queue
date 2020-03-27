@@ -218,8 +218,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * when using replication to another host, this is the highest last index that has been confirmed to
-     * have been read by all of the remote host(s).
+     * when using replication to another host, this is the highest last index that has been confirmed to have been read by all of the remote host(s).
      */
     @Override
     public long lastAcknowledgedIndexReplicated() {
@@ -378,8 +377,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the
-     * Chronicle Queue using a background thread
+     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the Chronicle Queue using a background thread
      */
     public boolean buffered() {
         return this.isBuffered;
@@ -501,13 +499,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * Will give you the number of excerpts between 2 index?s ( as exists on the current file
-     * system ). If intermediate chronicle files are removed this will effect the result.
+     * Will give you the number of excerpts between 2 index?s ( as exists on the current file system ). If intermediate chronicle files are removed
+     * this will effect the result.
      *
      * @param fromIndex the lower index
      * @param toIndex   the higher index
-     * @return will give you the number of excerpts between 2 index?s. It?s not as simple as just
-     * subtracting one number from the other.
+     * @return will give you the number of excerpts between 2 index?s. It?s not as simple as just subtracting one number from the other.
      * @throws IllegalStateException if we are not able to read the chronicle files
      */
     @Override
@@ -844,12 +841,19 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
 
-                if (!dateValue.pathExists && createIfAbsent && !path.exists()) {
+                if (createIfAbsent && !path.exists() && !dateValue.pathExists)
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
-                }
+
                 dateValue.pathExists = true;
 
-                final MappedBytes mappedBytes = mappedFileCache.get(path);
+                MappedBytes mappedBytes;
+                try {
+                    mappedBytes = mappedFileCache.get(path);
+                } catch (FileNotFoundException e) {
+                    createFile(path);
+                    mappedBytes = mappedFileCache.get(path);
+                }
+
                 pauseUnderload();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
@@ -901,6 +905,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             } catch (@NotNull TimeoutException | IOException e) {
                 throw Jvm.rethrow(e);
+            }
+        }
+
+        private void createFile(final File path) {
+            try {
+                File dir = path.getParentFile();
+                if (!dir.exists())
+                    dir.mkdirs();
+
+                path.createNewFile();
+            } catch (IOException ex) {
+                Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
         }
 
