@@ -847,11 +847,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     else {
                         try {
                             File dir = path.getParentFile();
-                            if (!dir.exists()) {
-                                File parentFile = dir.getParentFile();
-                                if (parentFile != null)
-                                    parentFile.mkdirs();
-                            }
+                            if (!dir.exists())
+                                dir.mkdirs();
 
                             path.createNewFile();
                         } catch (IOException ex) {
