@@ -44,6 +44,7 @@ import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
+import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueueExcerpts {
@@ -986,7 +987,7 @@ public class SingleChronicleQueueExcerpts {
             // trying to create an initial document without a direction should not consume a message
             long index = index();
             if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
-                return net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
+                return INSTANCE;
             }
             return readingDocument(false);
         }
@@ -1098,12 +1099,15 @@ public class SingleChronicleQueueExcerpts {
                     throw e;
                 }
             }
-            return net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
+            return INSTANCE;
         }
 
         @SuppressWarnings("restriction")
         @Override
-        public boolean peekDocument() {
+        public boolean peekDocument()  {
+
+            if (direction == BACKWARD)
+                throw new UnsupportedOperationException("peekDocument() is not supported when reading backwards.");
 
             int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
             return header > 0x0 | header == END_OF_DATA;
@@ -2043,8 +2047,11 @@ public class SingleChronicleQueueExcerpts {
                         incrementIndex();
 
                     super.close();
-                    // assert wire == null || wire.endUse();
-
+                    if (direction == FORWARD)
+                        setAddress(context.wire() != null);
+                    else if (direction == BACKWARD)
+                        setAddress(false);
+                 
                 } finally {
                     rollbackOnClose = false;
                 }
