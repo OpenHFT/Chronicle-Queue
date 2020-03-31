@@ -1,14 +1,11 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.NewChunkListener;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -20,9 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.stream.IntStream.range;
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class PretoucherTest {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -47,7 +43,7 @@ public class PretoucherTest {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
-                    assertThat(capturedCycles.size(), is(i));
+                    assertEquals(i, capturedCycles.size());
                     ctx.wire().write().int32(i);
                     ctx.wire().write().bytes(new byte[1024]);
                 }
@@ -56,35 +52,34 @@ public class PretoucherTest {
                 } catch (InvalidEventHandlerException e) {
                     e.printStackTrace();
                 }
-                assertThat(capturedCycles.size(), is(i + 1));
+                assertEquals(i + 1, capturedCycles.size());
                 try {
                     pretoucher.execute();
                 } catch (InvalidEventHandlerException e) {
                     e.printStackTrace();
                 }
-                assertThat(capturedCycles.size(), is(i + 1));
+                assertEquals(i + 1, capturedCycles.size());
                 clock.addAndGet(TimeUnit.SECONDS.toMillis(5L));
             });
 
-            assertThat(capturedCycles.size(), is(10));
-            //assertThat(chunkListener.chunkMap.isEmpty(), is(false));
+            assertEquals(10, capturedCycles.size());
         }
     }
 
     @Test
     public void shouldHandleEarlyCycleRoll() {
-        Assume.assumeNotNull(OS.isWindows());
         assert System.getProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle") == null;
         assert System.getProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs") == null;
         System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
         System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100");
         File dir = tempDir("shouldHandleEarlyCycleRoll");
+        clock.set(100);
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
              final Pretoucher pretoucher = new Pretoucher(createQueue(dir, clock::get), chunkListener, capturedCycles::add)) {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
-                    assertThat(capturedCycles.size(), is(i == 0 ? 0 : i + 1));
+                    assertEquals(i == 0 ? 0 : i + 1, capturedCycles.size());
                     ctx.wire().write().int32(i);
 
                     ctx.wire().write().bytes(new byte[1024]);
@@ -94,7 +89,7 @@ public class PretoucherTest {
                 } catch (InvalidEventHandlerException e) {
                     e.printStackTrace();
                 }
-                assertThat(capturedCycles.size(), is(i + 1));
+                assertEquals(i + 1, capturedCycles.size());
                 clock.addAndGet(950);
                 try {
                     pretoucher.execute();
@@ -102,11 +97,11 @@ public class PretoucherTest {
                     e.printStackTrace();
                 }
                 clock.addAndGet(50);
-                assertThat(capturedCycles.size(), is(i + 2));
+                assertEquals(i + 2, capturedCycles.size());
             });
 
-            assertThat(capturedCycles.size(), is(11));
-            assertThat(chunkListener.chunkMap.isEmpty(), is(false));
+            assertEquals(11, capturedCycles.size());
+            assertFalse(chunkListener.chunkMap.isEmpty());
         } finally {
             System.clearProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
             System.clearProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs");
