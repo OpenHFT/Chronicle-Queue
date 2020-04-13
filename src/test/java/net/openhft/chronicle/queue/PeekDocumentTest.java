@@ -7,12 +7,12 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.bytes.Bytes.fromString;
+import static org.junit.Assert.*;
 
 public class PeekDocumentTest {
 
@@ -38,15 +38,15 @@ public class PeekDocumentTest {
                 ExcerptTailer tailer = queue.createTailer();
 
                 for (int i = 0; i < 1024; i++) {
-                    Assert.assertTrue(tailer.peekDocument());
+                    assertTrue(tailer.peekDocument());
                     try (DocumentContext documentContext = tailer.readingDocument()) {
-                        Assert.assertTrue(documentContext.isPresent());
-                        Assert.assertTrue(tailer.peekDocument());
+                        assertTrue(documentContext.isPresent());
+                        assertTrue(tailer.peekDocument());
 
                         Wire wire = documentContext.wire();
                         long l = wire.bytes().readPosition();
                         try {
-                            Assert.assertEquals("hello" + i, wire.read("value").text());
+                            assertEquals("hello" + i, wire.read("value").text());
                         } finally {
                             // simulate if the message was read
                             if (l % 2 == 0)
@@ -56,13 +56,13 @@ public class PeekDocumentTest {
 
                 }
 
-                Assert.assertFalse(tailer.peekDocument());
+                assertFalse(tailer.peekDocument());
 
                 try (DocumentContext documentContext = appender.writingDocument()) {
                     documentContext.wire().write("value").text("hello" + 10);
                 }
 
-                Assert.assertTrue(tailer.peekDocument());
+                assertTrue(tailer.peekDocument());
 
             }
         } finally {
@@ -71,7 +71,7 @@ public class PeekDocumentTest {
 
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testReadWrite10Backwards() {
 
         File tempDir = DirectoryUtils.tempDir("to-be-deleted");
@@ -86,25 +86,29 @@ public class PeekDocumentTest {
 
             ExcerptTailer tailer = queue.createTailer();
 
-            Assert.assertTrue(tailer.peekDocument());
+            assertTrue(tailer.peekDocument());
             try (DocumentContext documentContext = tailer.readingDocument()) {
-                Assert.assertTrue(documentContext.isPresent());
-                Assert.assertTrue(tailer.peekDocument());
+                assertTrue(documentContext.isPresent());
+                assertTrue(tailer.peekDocument());
 
                 Wire wire = documentContext.wire();
 
                 String result = wire.read("value").text();
-                Assert.assertEquals("hello", result);
+                assertEquals("hello", result);
                 System.out.println(result);
 
             }
 
-            Assert.assertFalse(tailer.peekDocument());
+            assertFalse(tailer.peekDocument());
 
             tailer.direction(TailerDirection.BACKWARD);
 
-            // throws UnsupportedOperationException
-            Assert.assertFalse(tailer.peekDocument());
+            assertTrue(tailer.peekDocument());
+
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+
+            }
+            assertFalse(tailer.peekDocument());
 
         } finally {
             tempDir.deleteOnExit();
@@ -128,7 +132,7 @@ public class PeekDocumentTest {
 
                 ExcerptTailer tailer = queue.createTailer();
 
-                Assert.assertTrue(tailer.peekDocument());
+                assertTrue(tailer.peekDocument());
 
             }
         } finally {
@@ -153,22 +157,53 @@ public class PeekDocumentTest {
                 ExcerptTailer tailer = queue.createTailer();
                 long address1a = Jvm.getValue(tailer, "address");
 
-                Assert.assertTrue(tailer.moveToIndex(tailer.index() + 1));
+                assertTrue(tailer.moveToIndex(tailer.index() + 1));
 
                 long address1b = Jvm.getValue(tailer, "address");
 
-                Assert.assertNotEquals(address1a, address1b);
+                assertNotEquals(address1a, address1b);
 
-                Assert.assertFalse(tailer.moveToIndex(tailer.index() + 1));
+                assertFalse(tailer.moveToIndex(tailer.index() + 1));
                 long address1c = Jvm.getValue(tailer, "address");
 
-                Assert.assertEquals(address1c, NoBytesStore.NO_PAGE);
+                assertEquals(address1c, NoBytesStore.NO_PAGE);
 
             }
         } finally {
             tempDir.deleteOnExit();
         }
 
+    }
+
+    @Test
+    public void testWhenNoDocument() {
+        File tempDir = DirectoryUtils.tempDir("to-be-deleted");
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(tempDir).build()) {
+
+            ExcerptTailer tailer = queue.createTailer();
+            ExcerptAppender appender = queue.acquireAppender();
+
+            boolean peekDocumentBeforeWrite = tailer.peekDocument();   //  peekDocumentBeforeWrite   should be false.but returns true
+            assertFalse(peekDocumentBeforeWrite);
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().writeText("testString");
+            }
+
+            boolean peekDocumentAfterWrite = tailer.peekDocument();
+            assertTrue(peekDocumentAfterWrite);
+
+            String text = null;
+            try (DocumentContext dc = tailer.readingDocument()) {
+                text = dc.wire().readText();
+            }
+
+            assertEquals("testString", text);
+
+            boolean peekDocumentAfterRead = tailer.peekDocument();
+            assertFalse(peekDocumentAfterRead);
+        }
     }
 
 }

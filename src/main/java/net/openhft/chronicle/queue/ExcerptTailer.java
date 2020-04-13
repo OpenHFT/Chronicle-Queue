@@ -64,14 +64,12 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
-     * Returns if it is likely that {@link #readingDocument()} would return a DocumentContext
-     * that provides excerpts to read.
+     * Returns {@code true} if {@link #readingDocument()} would return a document which is present, in other words would return a DocumentContext where {@link net.openhft.chronicle.wire.DocumentContext#isPresent()} == {@code true}
      *
-     * peekDocument() can be used after a message has been found by toStart() or readingDocument().
-     * Until then only readingDocument() will find the first cycle. peekDocument() will return
-     * false negatives if the underlying queue has rolled. This method offers good performance when reading FORWARDS, but is not support when reading backwards.
+     * For the best performance you should only use this method once a message has been found by toStart() or readingDocument(). Otherwise {@link #readingDocument()} is called and then rolled back, which is not optimal.
+     * For the same reason, this method should also be avoided when reading documents backwards.
      *
-     * @return if it is likely that {@link #readingDocument()} would return a DocumentContext
+     * @return if {@link #readingDocument()} would return a DocumentContext
      *         that provides excerpts to read.
      */
     default boolean peekDocument() {

@@ -1104,10 +1104,14 @@ public class SingleChronicleQueueExcerpts {
 
         @SuppressWarnings("restriction")
         @Override
-        public boolean peekDocument()  {
+        public boolean peekDocument() {
 
-            if (direction == BACKWARD)
-                throw new UnsupportedOperationException("peekDocument() is not supported when reading backwards.");
+            if (address == NO_PAGE || state != FOUND_CYCLE || direction == BACKWARD) {
+                try (DocumentContext dc = readingDocument()) {
+                    dc.rollbackOnClose();
+                    return dc.isPresent();
+                }
+            }
 
             int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
             return header > 0x0 | header == END_OF_DATA;
@@ -1476,6 +1480,7 @@ public class SingleChronicleQueueExcerpts {
             final int firstCycle = queue.firstCycle();
             if (firstCycle == Integer.MAX_VALUE) {
                 state = UNINITIALISED;
+                address = NO_PAGE;
                 return this;
             }
             if (firstCycle != this.cycle) {
