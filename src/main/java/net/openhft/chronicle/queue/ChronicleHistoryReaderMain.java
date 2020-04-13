@@ -79,22 +79,30 @@ public class ChronicleHistoryReaderMain {
             commandLine = parser.parse(options, args);
 
             if (commandLine.hasOption('h')) {
-                new HelpFormatter().printHelp(ChronicleHistoryReaderMain.class.getSimpleName(), options);
-                System.exit(0);
+                printHelpAndExit(options, 0);
             }
         } catch (ParseException e) {
-            printUsageAndExit(options);
+            printHelpAndExit(options, 1);
         }
 
         return commandLine;
     }
 
-    protected void printUsageAndExit(final Options options) {
+    protected void printHelpAndExit(final Options options, int status) {
         final PrintWriter writer = new PrintWriter(System.out);
-        new HelpFormatter().printUsage(writer, 180,
-                ChronicleHistoryReaderMain.class.getSimpleName(), options);
+        new HelpFormatter().printHelp(
+                writer,
+                180,
+                this.getClass().getSimpleName(),
+                null,
+                options,
+                HelpFormatter.DEFAULT_LEFT_PAD,
+                HelpFormatter.DEFAULT_DESC_PAD,
+                null,
+                true
+        );
         writer.flush();
-        System.exit(1);
+        System.exit(status);
     }
 
     @NotNull
