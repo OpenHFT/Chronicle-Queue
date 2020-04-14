@@ -68,26 +68,35 @@ public class ChronicleReaderMain {
             commandLine = parser.parse(options, args);
 
             if (commandLine.hasOption('h')) {
-                new HelpFormatter().printHelp(this.getClass().getSimpleName(), options);
-                System.exit(0);
+                printHelpAndExit(options, 0);
             }
 
             if (!commandLine.hasOption('d')) {
                 System.out.println("Please specify the directory with -d\n");
-                printUsageAndExit(options);
+                printHelpAndExit(options, 1);
             }
         } catch (ParseException e) {
-            printUsageAndExit(options);
+            printHelpAndExit(options, 1);
         }
 
         return commandLine;
     }
 
-    protected void printUsageAndExit(final Options options) {
+    protected void printHelpAndExit(final Options options, int status) {
         final PrintWriter writer = new PrintWriter(System.out);
-        new HelpFormatter().printUsage(writer, 180, this.getClass().getSimpleName(), options);
+        new HelpFormatter().printHelp(
+                writer,
+                180,
+                this.getClass().getSimpleName(),
+                null,
+                options,
+                HelpFormatter.DEFAULT_LEFT_PAD,
+                HelpFormatter.DEFAULT_DESC_PAD,
+                null,
+                true
+        );
         writer.flush();
-        System.exit(1);
+        System.exit(status);
     }
 
     protected void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
