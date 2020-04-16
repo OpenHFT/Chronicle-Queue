@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.UnsafeMemory;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
@@ -40,6 +39,7 @@ import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
 import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
+import static net.openhft.chronicle.core.UnsafeMemory.UNSAFE;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
@@ -1106,15 +1106,22 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean peekDocument() {
 
-            if (address == NO_PAGE || state != FOUND_CYCLE || direction == BACKWARD) {
-                try (DocumentContext dc = readingDocument()) {
-                    dc.rollbackOnClose();
-                    return dc.isPresent();
-                }
-            }
+            if (address == NO_PAGE || state != FOUND_CYCLE || direction == BACKWARD)
+                return peekDocument0();
 
-            int header = UnsafeMemory.UNSAFE.getIntVolatile(null, address);
-            return header > 0x0 | header == END_OF_DATA;
+            final int header = UNSAFE.getIntVolatile(null, address);
+
+            if (header == END_OF_DATA)
+                return peekDocument0();
+
+            return header > 0x0;
+        }
+
+        private boolean peekDocument0() {
+            try (DocumentContext dc = readingDocument()) {
+                dc.rollbackOnClose();
+                return dc.isPresent();
+            }
         }
 
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
