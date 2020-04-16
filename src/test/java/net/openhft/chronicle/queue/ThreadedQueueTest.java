@@ -54,6 +54,7 @@ public class ThreadedQueueTest {
     @After
     public void checkThreadDump() {
         threadDump.assertNoNewThreads();
+
     }
 
     @Test(timeout = 10000)

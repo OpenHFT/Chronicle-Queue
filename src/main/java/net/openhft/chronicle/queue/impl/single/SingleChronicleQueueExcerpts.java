@@ -1106,7 +1106,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean peekDocument() {
 
-            if (address == NO_PAGE || state != FOUND_CYCLE || direction == BACKWARD)
+            if (address == NO_PAGE || state != FOUND_CYCLE || direction != FORWARD)
                 return peekDocument0();
 
             final int header = UNSAFE.getIntVolatile(null, address);
