@@ -93,6 +93,7 @@ public class ChronicleAppenderCycleTest {
                 }
             } catch (Throwable e) {
                 refThr.set(e);
+                e.printStackTrace();
             } finally {
                 done.countDown();
             }

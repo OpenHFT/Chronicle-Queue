@@ -434,6 +434,10 @@ public class SingleChronicleQueueExcerpts {
             lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
             bytes.writePosition(lastPos);
 
+            Bytes<?> wireBytes = wire.bytes();
+            if (padToCacheLines == Padding.WORD)
+                wireBytes.writeSkip((-wireBytes.writePosition()) & 0x3);
+
             return wire.enterHeader(safeLength);
         }
 
@@ -2063,7 +2067,7 @@ public class SingleChronicleQueueExcerpts {
                         setAddress(context.wire() != null);
                     else if (direction == BACKWARD)
                         setAddress(false);
-                 
+
                 } finally {
                     rollbackOnClose = false;
                 }
