@@ -97,41 +97,6 @@ public class RollCycleTest {
         observer.queue.close();
     }
 
-    @Test
-    public void testWriteToCorruptedFile() {
-
-        File dir = DirectoryUtils.tempDir("testWriteToCorruptedFile");
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder
-                .binary(dir)
-                .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
-                .build()) {
-
-            ExcerptAppender appender = queue.acquireAppender();
-
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.wire().write().text("hello world");
-            }
-            Bytes bytes;
-            long pos;
-            try (DocumentContext dc = appender.writingDocument()) {
-                bytes = dc.wire().bytes();
-                pos = bytes.writePosition() - 4;
-            }
-
-            // write as not complete.
-            bytes.writeInt(pos, Wires.NOT_COMPLETE_UNKNOWN_LENGTH);
-
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.wire().write().text("hello world 2");
-            }
-
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.wire().write().text("hello world 3");
-            }
-        }
-    }
-
     @After
     public void checkMappedFiles() {
         MappedFile.checkMappedFiles();
