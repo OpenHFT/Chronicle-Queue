@@ -22,8 +22,10 @@ import java.util.function.IntConsumer;
  * Invocation of the {@code execute()} method after {@code shutdown()} has been called with cause an {@code IllegalStateException} to be thrown.
  */
 public final class Pretoucher implements Closeable {
-    private static final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", 2_000L);
+    static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
+    private static final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
     private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Boolean.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
+    private static final boolean CAN_WRITE = !Boolean.getBoolean("SingleChronicleQueueExcerpts.dontWrite");
     private final SingleChronicleQueue queue;
     private final NewChunkListener chunkListener;
     private final IntConsumer cycleChangedListener;
@@ -52,7 +54,8 @@ public final class Pretoucher implements Closeable {
     public void execute() throws InvalidEventHandlerException {
         assignCurrentCycle();
         try {
-            pretoucherState.pretouch(currentCycleMappedBytes);
+            if (currentCycleMappedBytes != null)
+                pretoucherState.pretouch(currentCycleMappedBytes);
         } catch (IllegalStateException e) {
             if (queue.isClosed())
                 throw new InvalidEventHandlerException(e);
@@ -74,29 +77,33 @@ public final class Pretoucher implements Closeable {
         if (qCycle != currentCycle) {
             releaseResources();
 
-            queue.writeLock().lock();
+            if (CAN_WRITE)
+                queue.writeLock().lock();
             try {
-                if (!EARLY_ACQUIRE_NEXT_CYCLE && currentCycleWireStore != null)
+                if (!EARLY_ACQUIRE_NEXT_CYCLE && currentCycleWireStore != null && CAN_WRITE)
                     try {
                         currentCycleWireStore.writeEOF(queue.wireType().apply(currentCycleMappedBytes), queue.timeoutMS);
                     } catch (Exception ex) {
                         Jvm.warn().on(getClass(), "unable to write the EOF file=" + currentCycleMappedBytes.mappedFile().file(), ex);
                     }
-                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), true);
+                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), CAN_WRITE);
             } finally {
-                queue.writeLock().unlock();
+                if (CAN_WRITE)
+                    queue.writeLock().unlock();
             }
 
-            currentCycleMappedBytes = currentCycleWireStore.bytes();
-            currentCycle = qCycle;
-            if (chunkListener != null)
-                currentCycleMappedBytes.setNewChunkListener(chunkListener);
+            if (currentCycleWireStore != null) {
+                currentCycleMappedBytes = currentCycleWireStore.bytes();
+                currentCycle = qCycle;
+                if (chunkListener != null)
+                    currentCycleMappedBytes.setNewChunkListener(chunkListener);
 
-            cycleChangedListener.accept(qCycle);
+                cycleChangedListener.accept(qCycle);
 
-            if (EARLY_ACQUIRE_NEXT_CYCLE)
-                if (Jvm.isDebugEnabled(getClass()))
-                    Jvm.debug().on(getClass(), "Pretoucher ROLLING early to next file=" + currentCycleWireStore.file());
+                if (EARLY_ACQUIRE_NEXT_CYCLE)
+                    if (Jvm.isDebugEnabled(getClass()))
+                        Jvm.debug().on(getClass(), "Pretoucher ROLLING early to next file=" + currentCycleWireStore.file());
+            }
         }
     }
 
