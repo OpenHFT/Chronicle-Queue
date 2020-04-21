@@ -55,8 +55,10 @@ public class SingleChronicleQueueStore implements WireStore {
     private final MappedFile mappedFile;
     @NotNull
     private final ReferenceCounter refCount;
+    private final int dataVersion;
+
     @NotNull
-    private transient Sequence sequence;
+    private final transient Sequence sequence;
 
     private volatile Thread lastAccessedThread;
 
@@ -77,6 +79,11 @@ public class SingleChronicleQueueStore implements WireStore {
             this.indexing.writePosition = writePosition;
             this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
             this.indexing.sequence = sequence;
+            if (wire.bytes().readRemaining() > 0) {
+                final int version = wire.read(MetaDataField.dataFormat).int32();
+                this.dataVersion = version > 1 ? 0 : version;
+            } else
+                this.dataVersion = 0;
 
         } finally {
             assert wire.endUse();
@@ -107,6 +114,7 @@ public class SingleChronicleQueueStore implements WireStore {
         this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(writePosition,
                 rollCycle.defaultIndexCount(),
                 rollCycle.defaultIndexSpacing());
+        this.dataVersion = 1;
     }
 
     @NotNull
@@ -170,7 +178,10 @@ public class SingleChronicleQueueStore implements WireStore {
         MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
         try {
             bytes.readLimit(bytes.realCapacity());
-            return Wires.fromSizePrefixedBlobs(bytes, abbrev);
+            final Wire w = WireType.BINARY.apply(bytes);
+            if (dataVersion > 0)
+                w.usePadding(true);
+            return Wires.fromSizePrefixedBlobs(w, abbrev);
         } finally {
             bytes.release();
         }
@@ -299,8 +310,9 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         ValueOut wireOut = wire.write(MetaDataField.writePosition);
-        intForBinding(wireOut, writePosition).write(MetaDataField.indexing).typedMarshallable(this.indexing);
-        wire.padToCacheAlign();
+        intForBinding(wireOut, writePosition)
+                .write(MetaDataField.indexing).typedMarshallable(this.indexing)
+                .write(MetaDataField.dataFormat).int32(dataVersion);
     }
 
     @Override
@@ -370,6 +382,11 @@ public class SingleChronicleQueueStore implements WireStore {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public int dataVersion() {
+        return dataVersion;
     }
 
     int rollIndexCount() {

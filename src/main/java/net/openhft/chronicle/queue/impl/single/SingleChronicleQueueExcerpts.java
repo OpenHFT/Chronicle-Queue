@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 higherfrequencytrading.com
+ * Copyright 2016-2020 chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ public class SingleChronicleQueueExcerpts {
     private static final boolean CHECK_INDEX = Boolean.getBoolean("queue.check.index");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
     private static final int MESSAGE_HISTORY_METHOD_ID = -1;
-    private static StringBuilderPool SBP = new StringBuilderPool();
+    private static final StringBuilderPool SBP = new StringBuilderPool();
 
     private static void releaseWireResources(final Wire wire) {
         StoreComponentReferenceHandler.queueForRelease(wire);
@@ -93,7 +93,6 @@ public class SingleChronicleQueueExcerpts {
         private int lastCycle;
         @Nullable
         private Pretoucher pretoucher = null;
-        private Padding padToCacheLines = Jvm.isArm() ? Padding.WORD : Padding.SMART;
         private NativeBytesStore<Void> batchTmp;
 
         StoreAppender(@NotNull SingleChronicleQueue queue,
@@ -126,23 +125,6 @@ public class SingleChronicleQueueExcerpts {
             return store;
         }
 
-        @Override
-        @NotNull
-        public Padding padToCacheAlignMode() {
-            return padToCacheLines;
-        }
-
-        /**
-         * @param padToCacheLines the default for chronicle queue is Padding.SMART, which automatically pads all method calls other than {@link
-         *                        StoreAppender#writeBytes(net.openhft.chronicle.bytes.WriteBytesMarshallable)} and   {@link
-         *                        StoreAppender#writeText(java.lang.CharSequence)}. Which can not be padded with out changing the message format, The
-         *                        reason we pad is to ensure that a message header does not straggle a cache line.
-         */
-        @Override
-        public void padToCacheAlign(Padding padToCacheLines) {
-            this.padToCacheLines = padToCacheLines;
-        }
-
         /**
          * @param marshallable to write to excerpt.
          */
@@ -154,10 +136,6 @@ public class SingleChronicleQueueExcerpts {
                 marshallable.writeMarshallable(bytes);
                 if (wp == bytes.writePosition())
                     dc.rollbackOnClose();
-                else if (padToCacheAlignMode() == Padding.WORD)
-                    ((StoreAppenderContext) dc).padToWordAlign = true;
-                else if (padToCacheAlignMode() != Padding.CACHE_LINE)
-                    ((StoreAppenderContext) dc).padToCacheAlign = false;
             }
         }
 
@@ -311,7 +289,7 @@ public class SingleChronicleQueueExcerpts {
             WireType wireType = queue.wireType();
             {
                 Wire oldw = this.wire;
-                this.wire = store == null ? null : wireType.apply(store.bytes());
+                this.wire = store == null ? null : createWire(wireType);
                 closableResources.wireReference = this.wire == null ? null : this.wire.bytes();
                 assert wire != oldw || wire == null;
                 if (oldw != null) {
@@ -320,13 +298,20 @@ public class SingleChronicleQueueExcerpts {
             }
             {
                 Wire old = this.wireForIndex;
-                this.wireForIndex = store == null ? null : wireType.apply(store.bytes());
+                this.wireForIndex = store == null ? null : createWire(wireType);
                 closableResources.wireForIndexReference = this.wireForIndex == null ? null : wireForIndex.bytes();
                 assert wire != old || wire == null;
                 if (old != null) {
                     releaseWireResources(old);
                 }
             }
+        }
+
+        private Wire createWire(WireType wireType) {
+            final Wire w = wireType.apply(store.bytes());
+            if (store.dataVersion() > 0)
+                w.usePadding(true);
+            return w;
         }
 
         private void resetPosition() throws UnrecoverableTimeoutException {
@@ -433,11 +418,6 @@ public class SingleChronicleQueueExcerpts {
             assert header != NOT_INITIALIZED;
             lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
             bytes.writePosition(lastPos);
-
-            Bytes<?> wireBytes = wire.bytes();
-            if (padToCacheLines == Padding.WORD)
-                wireBytes.writeSkip((-wireBytes.writePosition()) & 0x3);
-
             return wire.enterHeader(safeLength);
         }
 
@@ -447,8 +427,6 @@ public class SingleChronicleQueueExcerpts {
             context.isClosed = false;
             context.rollbackOnClose = false;
             context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
-            context.padToWordAlign = padToCacheAlignMode() == Padding.WORD;
-            context.padToCacheAlign = padToCacheAlignMode() != Padding.NEVER;
             context.metaData(metaData);
         }
 
@@ -500,8 +478,6 @@ public class SingleChronicleQueueExcerpts {
                 beforeAppend(wire, wire.headerNumber() + 1);
                 Bytes<?> wireBytes = wire.bytes();
                 wireBytes.write(bytes);
-                if (padToCacheLines == Padding.WORD)
-                    wireBytes.writeSkip((-wireBytes.writePosition()) & 0x3);
                 wire.updateHeader(positionOfHeader, false, 0);
                 lastIndex(wire.headerNumber());
                 lastPosition = positionOfHeader;
@@ -714,8 +690,6 @@ public class SingleChronicleQueueExcerpts {
         class StoreAppenderContext implements DocumentContext {
 
             boolean isClosed;
-            boolean padToWordAlign = false;
-            boolean padToCacheAlign = true;
             private boolean metaData = false;
             private boolean rollbackOnClose = false;
             @Nullable
@@ -779,10 +753,6 @@ public class SingleChronicleQueueExcerpts {
                     }
 
                     if (wire == StoreAppender.this.wire) {
-                        if (padToWordAlign)
-                            wire.writeAlignTo(Integer.BYTES, 0);
-                        else if (padToCacheAlign)
-                            wire.padToCacheAlign();
 
                         try {
                             wire.updateHeader(positionOfHeader, metaData, 0);
@@ -1445,7 +1415,7 @@ public class SingleChronicleQueueExcerpts {
             return found;
         }
 
-       private ScanResult moveToIndexResult0(long index) {
+        private ScanResult moveToIndexResult0(long index) {
 
             final int cycle = queue.rollCycle().toCycle(index);
             final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
@@ -1608,6 +1578,8 @@ public class SingleChronicleQueueExcerpts {
         private Wire readAnywhere(@NotNull Wire wire) {
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
+            if (store.dataVersion() > 0)
+                wire.usePadding(true);
             return wire;
         }
 

@@ -33,6 +33,7 @@ import static java.lang.System.err;
 public class DumpQueueMain {
     private static final String FILE = System.getProperty("file");
     private static final Boolean SKIP_TABLE_STORE = Boolean.getBoolean("skipTableStoreDump");
+    private static final Boolean UNALIGNED = Boolean.getBoolean("dumpUnaligned");
     private static final int LENGTH = ", 0".length();
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -73,7 +74,7 @@ public class DumpQueueMain {
             MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows());
             bytes.readLimit(bytes.realCapacity());
             StringBuilder sb = new StringBuilder();
-            WireDumper dumper = WireDumper.of(bytes);
+            WireDumper dumper = WireDumper.of(bytes, !UNALIGNED);
             while (bytes.readRemaining() >= 4) {
                 sb.setLength(0);
                 boolean last = dumper.dumpOne(sb, buffer);

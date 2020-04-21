@@ -1,6 +1,5 @@
-
 /*
- * Copyright 2016 higherfrequencytrading.com
+ * Copyright 2016-2020 https://chronicle.software
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,11 +42,7 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     private static final boolean IGNORE_INDEXING_FAILURE = Boolean.getBoolean("queue.ignoreIndexingFailure");
-    private static Boolean REPORT_LINEAR_SCAN;
-
-    static {
-        REPORT_LINEAR_SCAN = Boolean.getBoolean("chronicle.queue.report.linear.scan.latency");
-    }
+    private static final boolean REPORT_LINEAR_SCAN = Boolean.getBoolean("chronicle.queue.report.linear.scan.latency");
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount, indexCountBits;
@@ -686,6 +681,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 bytes.readPosition(endAddress);
 
                 for (; ; ) {
+                    if (wire.usePadding())
+                        endAddress += -endAddress & 0x3;
                     int header = bytes.readVolatileInt(endAddress);
                     if (header == 0 || Wires.isNotComplete(header))
                         return sequence;

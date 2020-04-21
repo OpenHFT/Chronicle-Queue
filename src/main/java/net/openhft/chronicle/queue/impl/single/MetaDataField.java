@@ -15,6 +15,7 @@ public enum MetaDataField implements WireKey {
     encodedSequence,
     lastIndexReplicated,
     sourceId,
+    dataFormat,
     metadata;
 
     @Nullable

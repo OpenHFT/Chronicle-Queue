@@ -53,8 +53,6 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
-import static net.openhft.chronicle.wire.MarshallableOut.Padding.CACHE_LINE;
-import static net.openhft.chronicle.wire.MarshallableOut.Padding.WORD;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -789,7 +787,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                              .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
-            assumeFalse(appender.padToCacheAlignMode() == WORD);
             appender.writeDocument(w -> w.write(TestKey.test).int32(0));
             appender.writeDocument(w -> w.write(TestKey.test2).int32(1000));
             int cycle = appender.cycle();
@@ -1080,7 +1077,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testSimpleByteTest() {
-        assumeFalse(Jvm.isArm());
         try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
                 .build()) {
@@ -1806,41 +1802,42 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    536,\n" +
-                    "    2302102470656\n" +
+                    "    544,\n" +
+                    "    2336462209024\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 184,\n" +
+                    "    index2Index: 196,\n" +
                     "    lastIndex: 2\n" +
-                    "  }\n" +
+                    "  },\n" +
+                    "  dataFormat: 1\n" +
                     "}\n" +
-                    "# position: 184, header: -1\n" +
+                    "# position: 196, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  352,\n" +
+                    "  360,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 352, header: -1\n" +
+                    "# position: 360, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  536,\n" +
+                    "  544,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 512, header: -1\n" +
+                    "# position: 520, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Quartilla\n" +
-                    "# position: 536, header: 0\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "FirstName: Helen\n" +
-                    "# position: 556, header: 0\n" +
+                    "# position: 564, header: 0\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Steve\n" +
                     "...\n" +
-                    "# 130492 bytes remaining\n";
+                    "# 130484 bytes remaining\n";
 
         throw new IllegalStateException("unknown type " + wireType);
     }
@@ -2195,23 +2192,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .rollCycle(MINUTELY)
                     .build()) {
 
-                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> {
-                    final ExcerptAppender appender = q.acquireAppender();
-                    appender.padToCacheAlign(CACHE_LINE);
-                    return appender;
-                });
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
                 int size = 20_000_000;
 
-                for (int j = 0; j < size; j++) {
+                for (int j = 0; j < size; j++)
                     executor.execute(() -> doSomething(tl, tlt, text));
-                }
 
                 executor.shutdown();
-                if (!executor.awaitTermination(10_000, TimeUnit.SECONDS)) {
+                if (!executor.awaitTermination(10_000, TimeUnit.SECONDS))
                     executor.shutdownNow();
-                }
 
                 System.out.println(". " + i);
                 Jvm.pause(1000);
@@ -2390,7 +2381,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
 
             ExcerptAppender syncA = syncQ.acquireAppender();
-            assumeFalse(syncA.padToCacheAlignMode() == WORD);
             ExcerptAppender syncB = syncQ.acquireAppender();
             ExcerptAppender syncC = syncQ.acquireAppender();
             int count = 0;
@@ -2414,64 +2404,65 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             return "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    481,\n" +
-                    "    2065879269381\n" +
+                    "    504,\n" +
+                    "    2164663517189\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 184,\n" +
+                    "    index2Index: 196,\n" +
                     "    lastIndex: 6\n" +
-                    "  }\n" +
+                    "  },\n" +
+                    "  dataFormat: 1\n" +
                     "}\n" +
-                    "# position: 184, header: -1\n" +
+                    "# position: 196, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  288,\n" +
+                    "  296,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 288, header: -1\n" +
+                    "# position: 296, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
-                    "  384,\n" +
-                    "  397,\n" +
-                    "  426,\n" +
-                    "  439,\n" +
-                    "  468,\n" +
-                    "  481,\n" +
+                    "  392,\n" +
+                    "  408,\n" +
+                    "  440,\n" +
+                    "  456,\n" +
+                    "  488,\n" +
+                    "  504,\n" +
                     "  0, 0\n" +
                     "]\n" +
-                    "# position: 384, header: 0\n" +
+                    "# position: 392, header: 0\n" +
                     "--- !!data #binary\n" +
                     "hello A0\n" +
-                    "# position: 397, header: 1\n" +
+                    "# position: 408, header: 1\n" +
                     "--- !!data #binary\n" +
                     "hello B0\n" +
-                    "# position: 410, header: 1\n" +
+                    "# position: 424, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 426, header: 2\n" +
+                    "# position: 440, header: 2\n" +
                     "--- !!data #binary\n" +
                     "hello A1\n" +
-                    "# position: 439, header: 3\n" +
+                    "# position: 456, header: 3\n" +
                     "--- !!data #binary\n" +
                     "hello B1\n" +
-                    "# position: 452, header: 3\n" +
+                    "# position: 472, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 468, header: 4\n" +
+                    "# position: 488, header: 4\n" +
                     "--- !!data #binary\n" +
                     "hello A2\n" +
-                    "# position: 481, header: 5\n" +
+                    "# position: 504, header: 5\n" +
                     "--- !!data #binary\n" +
                     "hello B2\n" +
-                    "# position: 494, header: 5\n" +
+                    "# position: 520, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 130556 bytes remaining\n";
+                    "# 130532 bytes remaining\n";
 
         throw new IllegalStateException("unknown wiretype=" + wireType);
     }
@@ -2914,7 +2905,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     private long action(@NotNull final ExcerptTailer tailer1, @NotNull final RollCycle rollCycle) {
         try (final DocumentContext dc = tailer1.readingDocument()) {
             return dc.wire().read("value").int64();
@@ -3129,7 +3119,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void writeBytesAndIndexFiveTimesWithOverwriteTest() {
-        assumeFalse(Jvm.isArm());
         try (final ChronicleQueue sourceQueue =
                      builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
                              testBlockSize().build()) {
@@ -3180,22 +3169,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
 
                 assertTrue(queue.dump(), queue.dump().contains(
-                        "# position: 768, header: 0\n" +
+                        "# position: 776, header: 0\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world0\n" +
-                                "# position: 785, header: 1\n" +
+                                "# position: 796, header: 1\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world1\n" +
-                                "# position: 802, header: 2\n" +
+                                "# position: 816, header: 2\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world2\n" +
-                                "# position: 819, header: 3\n" +
+                                "# position: 836, header: 3\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world3\n" +
-                                "# position: 836, header: 4\n" +
+                                "# position: 856, header: 4\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world4\n" +
-                                "# position: 853, header: 5\n" +
+                                "# position: 876, header: 5\n" +
                                 "--- !!data #binary\n" +
                                 "hello\n"));
 
@@ -3205,7 +3194,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void writeBytesAndIndexFiveTimesTest() {
-        assumeFalse(Jvm.isArm());
         try (final ChronicleQueue sourceQueue =
                      builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
                              testBlockSize().build()) {
@@ -3236,19 +3224,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 String dump = queue.dump();
                 assertEquals(before, dump);
-                assertTrue(dump, dump.contains("# position: 768, header: 0\n" +
+                assertTrue(dump, dump.contains("# position: 776, header: 0\n" +
                         "--- !!data #binary\n" +
                         "hello: world0\n" +
-                        "# position: 785, header: 1\n" +
+                        "# position: 796, header: 1\n" +
                         "--- !!data #binary\n" +
                         "hello: world1\n" +
-                        "# position: 802, header: 2\n" +
+                        "# position: 816, header: 2\n" +
                         "--- !!data #binary\n" +
                         "hello: world2\n" +
-                        "# position: 819, header: 3\n" +
+                        "# position: 836, header: 3\n" +
                         "--- !!data #binary\n" +
                         "hello: world3\n" +
-                        "# position: 836, header: 4\n" +
+                        "# position: 856, header: 4\n" +
                         "--- !!data #binary\n" +
                         "hello: world4"));
             }

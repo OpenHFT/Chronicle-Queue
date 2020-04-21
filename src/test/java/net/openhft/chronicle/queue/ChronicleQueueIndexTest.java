@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.bytes.Bytes.fromString;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
+
 public class ChronicleQueueIndexTest {
 
     @Test
@@ -47,7 +48,7 @@ public class ChronicleQueueIndexTest {
                 Assert.assertFalse(hasEOFAtEndOfFile(firstCQFile));
             } catch (Exception e) {
                 e.printStackTrace();
-                Assert.fail();
+                fail();
             }
 
             tp.advanceMillis(TimeUnit.DAYS.toMillis(2));
@@ -64,11 +65,11 @@ public class ChronicleQueueIndexTest {
                 // Simulate the end of the day i.e the queue closes the day rolls
                 // (note the change of index from 18264 to 18265)
 
-                Assert.assertTrue(hasEOFAtEndOfFile(firstCQFile));
+                assertTrue(hasEOFAtEndOfFile(firstCQFile));
 
             } catch (Exception e) {
                 e.printStackTrace();
-                Assert.fail();
+                fail();
             }
         } finally {
             file1.deleteOnExit();
@@ -100,7 +101,7 @@ public class ChronicleQueueIndexTest {
                 Assert.assertFalse(hasEOFAtEndOfFile(firstCQFile));
             } catch (Exception e) {
                 e.printStackTrace();
-                Assert.fail();
+                fail();
             }
 
             tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
@@ -115,7 +116,7 @@ public class ChronicleQueueIndexTest {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                Assert.fail();
+                fail();
             }
 
             tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
@@ -133,7 +134,7 @@ public class ChronicleQueueIndexTest {
                 // Simulate the end of the day i.e the queue closes the day rolls
                 // (note the change of index from 18264 to 18265)
 
-                Assert.assertTrue(hasEOFAtEndOfFile(firstCQFile));
+                assertTrue(hasEOFAtEndOfFile(firstCQFile));
                 try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                         .path(file1)
                         .rollCycle(RollCycles.DAILY)
@@ -146,7 +147,7 @@ public class ChronicleQueueIndexTest {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                Assert.fail();
+                fail();
             }
         } finally {
             System.out.println(file1.getAbsolutePath());
@@ -183,8 +184,10 @@ public class ChronicleQueueIndexTest {
 
         Bytes<byte[]> hello_world = Bytes.fromString("Hello World 1");
         appender.writeBytes(RollCycles.DAILY.toIndex(18264, 0L), hello_world);
+        hello_world.release();
         hello_world = Bytes.fromString("Hello World 2");
         appender.writeBytes(RollCycles.DAILY.toIndex(18264, 1L), hello_world);
+        hello_world.release();
 
         // Simulate the end of the day i.e the queue closes the day rolls
         // (note the change of index from 18264 to 18265)
@@ -198,23 +201,27 @@ public class ChronicleQueueIndexTest {
         // add a message for the new day
         hello_world = Bytes.fromString("Hello World 3");
         appender.writeBytes(RollCycles.DAILY.toIndex(18265, 0L), hello_world);
+        hello_world.release();
 
         final ExcerptTailer tailer = queue.createTailer();
 
-        final Bytes forRead = Bytes.elasticByteBuffer();
-        final List<String> results = new ArrayList<>();
-        while (tailer.readBytes(forRead)) {
-            results.add(forRead.toString());
-            forRead.clear();
+        final Bytes<?> forRead = Bytes.elasticByteBuffer();
+        try {
+            final List<String> results = new ArrayList<>();
+            while (tailer.readBytes(forRead)) {
+                results.add(forRead.to8bitString());
+                forRead.clear();
+            }
+            assertTrue(results.toString(), results.contains("Hello World 1"));
+            assertTrue(results.contains("Hello World 2"));
+            // The reader fails to read the third message. The reason for this is
+            // that there was no EOF marker placed at end of the 18264 indexed file
+            // so when the reader started reading through the queues it got stuck on
+            // that file and never progressed to the latest queue file.
+            assertTrue(results.contains("Hello World 3"));
+        } finally {
+            forRead.release();
         }
-        Assert.assertTrue(results.contains("Hello World 1"));
-        Assert.assertTrue(results.contains("Hello World 2"));
-        // The reader fails to read the third message. The reason for this is
-        // that there was no EOF marker placed at end of the 18264 indexed file
-        // so when the reader started reading through the queues it got stuck on
-        // that file and never progressed to the latest queue file.
-        Assert.assertTrue(results.contains("Hello World 3"));
-        forRead.release();
     }
 
     @After

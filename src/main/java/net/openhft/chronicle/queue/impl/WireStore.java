@@ -68,4 +68,6 @@ public interface WireStore extends CommonStore {
     void initIndex(Wire wire);
 
     String dumpHeader();
+
+    int dataVersion();
 }

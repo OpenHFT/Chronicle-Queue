@@ -870,6 +870,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     if ((!readOnly) && wire.writeFirstHeader()) {
                         wireStore = storeFactory.apply(that, wire);
                         wire.updateFirstHeader();
+                        if (wireStore.dataVersion() > 0)
+                            wire.usePadding(true);
 
                         wireStore.initIndex(wire);
                         // do not allow tailer to see the file until it's header is written

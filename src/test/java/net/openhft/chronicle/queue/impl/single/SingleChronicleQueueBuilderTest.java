@@ -13,8 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 public class SingleChronicleQueueBuilderTest {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
@@ -26,7 +25,7 @@ public class SingleChronicleQueueBuilderTest {
                      ChronicleQueue.singleBuilder(path)
                              .testBlockSize()
                              .build()) {
-            assertThat(queue.createTailer().readingDocument().isPresent(), is(false));
+            assertFalse(queue.createTailer().readingDocument().isPresent());
         } finally {
             IOTools.deleteDirWithFiles(path.toFile(), 20);
         }

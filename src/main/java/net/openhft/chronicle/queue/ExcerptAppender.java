@@ -85,25 +85,6 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * Sets the {@link Padding} to be used for this ExcerptAppender.
-     * <p>
-     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will
-     * not split a cache line.
-     *
-     * @see MarshallableOut.Padding
-     */
-    void padToCacheAlign(Padding padToCacheAlign);
-
-    /**
-     * Returns the current {@link Padding} used by this ExcerptAppender.
-     *
-     * @return the current {@link Padding} used by this ExcerptAppender
-     */
-    @Override
-    @NotNull
-    Padding padToCacheAlignMode();
-
-    /**
      * A task that will be run if a WeakReference referring this appender is registered with a clean-up task.
      *
      * @return Task to release any associated resources

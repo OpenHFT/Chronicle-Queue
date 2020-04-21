@@ -36,9 +36,6 @@ import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-/**
- * @author Rob Austin.
- */
 public class ThreadedQueueTest {
 
     public static final int REQUIRED_COUNT = 10;
@@ -58,7 +55,7 @@ public class ThreadedQueueTest {
     }
 
     @Test(timeout = 10000)
-    public void testMultipleThreads() throws java.io.IOException, InterruptedException, ExecutionException, TimeoutException {
+    public void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
         final File path = DirectoryUtils.tempDir("testMultipleThreads");
 
@@ -117,9 +114,8 @@ public class ThreadedQueueTest {
         assertEquals(REQUIRED_COUNT, counter.get());
     }
 
-    @Test//(timeout = 5000)
+    @Test
     public void testTailerReadingEmptyQueue() {
-        assumeFalse(Jvm.isArm());
         final File path = DirectoryUtils.tempDir("testTailerReadingEmptyQueue");
 
         final ChronicleQueue rqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)

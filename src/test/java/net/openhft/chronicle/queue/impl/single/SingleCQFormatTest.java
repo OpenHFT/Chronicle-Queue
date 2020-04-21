@@ -43,9 +43,6 @@ import java.util.concurrent.TimeoutException;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
 
-/*
- * Created by Peter Lawrey on 05/03/2016.
- */
 public class SingleCQFormatTest {
     static {
         SingleChronicleQueueBuilder.addAliases();
@@ -230,7 +227,8 @@ public class SingleCQFormatTest {
                 "    indexSpacing: 4,\n" +
                 "    index2Index: 0,\n" +
                 "    lastIndex: 0\n" +
-                "  }\n" +
+                "  },\n" +
+                "  dataFormat: 1\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
