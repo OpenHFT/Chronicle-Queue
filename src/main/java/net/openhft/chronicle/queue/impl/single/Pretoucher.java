@@ -77,7 +77,8 @@ public final class Pretoucher implements Closeable {
         if (qCycle != currentCycle) {
             releaseResources();
 
-            queue.writeLock().lock();
+            if (CAN_WRITE)
+                queue.writeLock().lock();
             try {
                 if (!EARLY_ACQUIRE_NEXT_CYCLE && currentCycleWireStore != null && CAN_WRITE)
                     try {
@@ -87,7 +88,8 @@ public final class Pretoucher implements Closeable {
                     }
                 currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), CAN_WRITE);
             } finally {
-                queue.writeLock().unlock();
+                if (CAN_WRITE)
+                    queue.writeLock().unlock();
             }
 
             if (currentCycleWireStore != null) {
