@@ -160,7 +160,7 @@ public class PretoucherTest {
     private void hackStaticFinal(Class<Pretoucher> pretoucherClass, String name, Object newValue) throws IllegalAccessException {
         // As junit has already initialised the class, and all tests are run in same classloader we need to hack the static variables.
         // Setting system properties wont't do it.
-        // A better solution would be to
+        // A better solution would be to run in separate classloaders but this was too much effort
         Field f = Jvm.getField(pretoucherClass, name);
         removeFinalModifier(f);
         f.set(null, newValue);
