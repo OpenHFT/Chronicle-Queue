@@ -158,34 +158,4 @@ public class FileUtilTest extends ChronicleQueueTestBase {
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
     }
-
-    private void documentExamples() {
-        final File file = new File("foo");
-
-        if (FileUtil.hasQueueSuffix(file)) {
-            //     doStuffWithTheRollFile(file);
-        }
-
-        switch (FileUtil.state(file)) {
-            case CLOSED: {
-                // processClosed(file);
-                break;
-            }
-            case OPEN: {
-                // processOpen(file);
-                break;
-            }
-            case NON_EXISTENT: {
-                // processNonExistent(file);
-                break;
-            }
-            case UNDETERMINED: {
-                // processUndetermined(file);
-                break;
-            }
-        }
-
-    }
-
-
 }
