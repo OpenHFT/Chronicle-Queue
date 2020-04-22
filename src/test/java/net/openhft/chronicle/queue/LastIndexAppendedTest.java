@@ -30,9 +30,6 @@ import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.*;
 
-/**
- * @author Rob Austin.
- */
 @RequiredForClient
 public class LastIndexAppendedTest {
 

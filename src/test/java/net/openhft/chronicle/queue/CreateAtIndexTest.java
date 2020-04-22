@@ -35,9 +35,6 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-/**
- * @author Rob Austin.
- */
 @RequiredForClient
 public class CreateAtIndexTest extends ChronicleQueueTestBase {
 

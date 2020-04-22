@@ -17,9 +17,6 @@ import java.io.File;
 import java.text.ParseException;
 import java.util.Comparator;
 
-/**
- * @author Rob Austin.
- */
 public class TestBinarySearch extends ChronicleQueueTestBase {
 
     private static final int MAX_NUMBER_OF_TESTED_MESSAGES = 50;

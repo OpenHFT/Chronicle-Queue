@@ -40,9 +40,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-/**
- * @author Rob Austin.
- */
 @RunWith(Parameterized.class)
 public class IndexTest extends ChronicleQueueTestBase {
 

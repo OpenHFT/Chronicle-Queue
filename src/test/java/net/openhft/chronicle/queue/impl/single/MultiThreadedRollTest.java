@@ -37,9 +37,6 @@ import java.util.concurrent.Future;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
-/**
- * @author Rob Austin.
- */
 public class MultiThreadedRollTest {
 
     final ExecutorService reader = Executors.newSingleThreadExecutor(new NamedThreadFactory("reader", true));

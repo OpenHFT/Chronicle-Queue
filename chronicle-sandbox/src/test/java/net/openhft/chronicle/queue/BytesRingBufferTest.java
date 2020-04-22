@@ -32,9 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-/**
- * @author Rob Austin.
- */
 @Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
 public class BytesRingBufferTest {
 
