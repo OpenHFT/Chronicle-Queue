@@ -506,36 +506,38 @@ public class SingleChronicleQueueExcerpts {
 
             writeLock.lock();
             try {
-                int cycle = queue.rollCycle().toCycle(index);
-
-                if (wire == null) {
-                    setCycle2(cycle, true);
-                } else if (this.cycle < cycle) {
-                    rollCycleTo(cycle);
-                }
-
-                boolean rollbackDontClose = index != wire.headerNumber() + 1;
-                if (rollbackDontClose) {
-                    if (index > wire.headerNumber() + 1)
-                        throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                    // TODO: assert bytes.equalBytes(wire.bytes() ...);
-                    Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
-                    return;
-                }
-
                 writeBytesInternal(index, bytes);
             } finally {
                 writeLock.unlock();
             }
         }
 
-        private void writeBytesInternal(long index, @NotNull BytesStore bytes) {
+        /**
+         * Appends bytes withut write lock. Should only be used if write lock is acquired externally. Never use wihtout
+         * write locking as it WILL corrupt the queue file and cause data loss
+         */
+        protected void writeBytesInternal(long index, @NotNull BytesStore bytes) {
+            int cycle = queue.rollCycle().toCycle(index);
+
+            if (wire == null)
+                setCycle2(cycle, true);
+            else if (this.cycle < cycle)
+                rollCycleTo(cycle);
+
+            boolean rollbackDontClose = index != wire.headerNumber() + 1;
+            if (rollbackDontClose) {
+                if (index > wire.headerNumber() + 1)
+                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
+                // TODO: assert bytes.equalBytes(wire.bytes() ...);
+                Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+                return;
+            }
+            writeBytesInternal(bytes);
+        }
+
+        private void writeBytesInternal(@NotNull BytesStore bytes) {
             assert writeLock.locked();
             try {
-                if (wire == null) {
-                    int cycle = queue.rollCycle().toCycle(index);
-                    setCycle2(cycle, true);
-                }
                 int safeLength = (int) queue.overlapSize();
                 openContext(false, safeLength);
 
@@ -774,7 +776,7 @@ public class SingleChronicleQueueExcerpts {
                         assert !CHECK_INDEX || checkWritePositionHeaderNumber();
                     } else if (wire != null) {
                         isClosed = true;
-                        writeBytesInternal(wire.headerNumber(), wire.bytes());
+                        writeBytesInternal(wire.bytes());
                         wire = StoreAppender.this.wire;
                     }
                 } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
