@@ -378,6 +378,7 @@ public class SingleChronicleQueueExcerpts {
             if (writeLock.locked() && !metaData) {
                 context.isClosed = false;
                 context.rollbackOnClose = false;
+                context.buffered = true;
                 context.wire = bufferWire.get();
                 context.metaData(false);
             } else {
@@ -446,6 +447,7 @@ public class SingleChronicleQueueExcerpts {
             this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
             context.isClosed = false;
             context.rollbackOnClose = false;
+            context.buffered = false;
             context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
             context.metaData(metaData);
         }
@@ -714,6 +716,7 @@ public class SingleChronicleQueueExcerpts {
             boolean isClosed;
             private boolean metaData = false;
             private boolean rollbackOnClose = false;
+            private boolean buffered = false;
             @Nullable
             private Wire wire;
 
@@ -795,7 +798,7 @@ public class SingleChronicleQueueExcerpts {
                         }
                         assert !CHECK_INDEX || checkWritePositionHeaderNumber();
                     } else if (wire != null) {
-                        if (wire == bufferWire.get()) {
+                        if (buffered) {
                             writeLock.lock();
                             unlock = true;
                         }
