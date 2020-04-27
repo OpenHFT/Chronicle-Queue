@@ -613,7 +613,6 @@ Another tool for logging the contents of the chronicle queue is the ChronicleRea
 
 This offers options such as tailing the queue ( rather like $tail -f ) using the '-f' option.
 
-[source]
 ----
 usage: ChronicleReaderMain
  -d <directory>       Directory containing chronicle queue files
@@ -625,18 +624,15 @@ usage: ChronicleReaderMain
  -l                   Squash each output message into a single line
  -m <max-history>     Show this many records from the end of the data set
  -n <from-index>      Start reading from this index (e.g. 0x123ABE)
- -r                   Use when reading from a queue generated using a
-                      MethodWriter
+ -r <interface>       Use when reading from a queue generated using a MethodWriter
  -s                   Display index
  -w <wire-type>       Control output i.e. JSON
-
 ----
 
 If you specify the classes in the example above on the class path, or create an Uber Jar using a shade plugin
 
 you can then run the *ChronicleReaderMain* from the command line via
 
-[source]
 ----
 java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "$@“
 
