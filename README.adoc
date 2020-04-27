@@ -23,10 +23,6 @@ You can use Chronicle 5 to read messages written with Chronicle 4, however you s
 
 https://player.vimeo.com/video/201989439
 
-=== World Wide Adoption
-
-http://jrvis.com/red-dwarf/?user=openhft&repo=chronicle-queue[Chronicle Queue usage Heatmap]
-
 == What is Chronicle Queue
 
 What is Chronicle Queue
@@ -982,6 +978,102 @@ If we create a queue file every second, we would refer to this as SECONDLY rolli
 
 Consideration has to be given to low latency applications with high throughput especially where the business critical thread is bound by thread affinity. You should ensure that the background thread which is responsible for closing the file handles and bus flashing the data disk is not saturated, this thread is called the “chronicle-weak-reference-cleaner”. If you are seeing a large number of file handles open, please ensure that your throughput of data does not exceed your disk write speeds and the the  “chronicle-weak-reference-cleaner” is not being saturated by other processes.
 
+=== Double-buffering for contended writes
+
+Normally, all writes to the queue will be serialized based on the write lock acquisition. Each time `ExcerptAppender#writingDocument()`
+is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write
+lock is unlocked, and in turn locks the queue for itself.
+
+When double-buffering is enabled, if appender sees that the write lock is acquired upon call to `ExcerptAppender#writingDocument()` call,
+it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition
+until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block),
+allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
+
+This is only useful if (majority of) the objects being written to the queue are big enough, and if there's a
+heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
+Below are the benchmark results for various message sizes at the frequency of 100 KHz (see `net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark`):
+
+* 128 bytes
+** Double-buffer disabled:
++
+----
+Percentile   run1         run2         run3      % Variation
+50:             0.73         0.72         0.73         1.01
+90:             0.77         0.77         0.78         0.94
+99:             3.81         3.78         3.82         0.70
+99.7:           4.09         4.08         4.08         0.00
+99.9:           4.47         4.47         4.43         0.60
+99.97:          5.63         5.34         4.91         5.54
+99.99:          7.73         7.21         6.72         4.65
+worst:     147783.68     49364.99    158007.30        59.47
+----
+** Double-buffer enabled:
++
+----
+Percentile   run1         run2         run3      % Variation
+50:             0.81         0.82         0.83         0.81
+90:             0.86         0.87         0.88         0.68
+99:             2.41         2.43         2.43         0.00
+99.7:           3.15         3.10         3.12         0.43
+99.9:           3.79         3.76         3.78         0.32
+99.97:          4.49         4.23         4.24         0.13
+99.99:          6.79         5.77         5.70         0.79
+worst:     176357.38      4921.34     78610.43        90.89
+----
+* 1 KB
+** Double-buffer disabled:
++
+----
+Percentile   run1         run2         run3      % Variation
+50:             1.05         1.05         1.06         0.63
+90:             2.46         2.47         2.48         0.27
+99:             3.26         3.01         3.27         5.49
+99.7:           4.46         4.35         4.34         0.18
+99.9:           5.39         5.06         4.88         2.40
+99.97:         12.30        12.37         8.71        21.91
+99.99:        880.90       847.10       831.23         1.26
+worst:     219217.92    257753.09    340656.13        17.66
+----
+** Double-buffer enabled:
++
+----
+Percentile   run1         run2         run3      % Variation
+50:             0.93         0.93         0.93         0.07
+90:             2.34         2.32         2.31         0.29
+99:             3.16         3.20         3.30         2.04
+99.7:           3.75         3.78         3.72         1.06
+99.9:           4.12         4.45         4.12         5.10
+99.97:          7.93         8.03         7.43         5.11
+99.99:        910.59       882.43       866.05         1.25
+worst:     626786.30    642514.94    112623.62        75.83
+----
+* 4 KB
+** Double-buffer disabled:
++
+----
+50:             4.07         4.10         4.09         0.15
+90:             4.46         4.70         4.73         0.45
+99:             6.30         6.68         6.69         0.12
+99.7:           7.95         8.44         8.40         0.38
+99.9:          95.26        30.78        29.86         2.00
+99.97:        861.95       873.73       883.46         0.74
+99.99:        900.86      1406.46      1551.87         6.45
+worst:     346947.58    547618.82    561774.59         1.69
+----
+** Double-buffer enabled:
++
+----
+Percentile   run1         run2         run3      % Variation
+50:             2.52         2.51         2.52         0.27
+90:             2.88         3.24         3.49         4.90
+99:             4.17         4.02         4.70        10.12
+99.7:           5.77         4.87         5.81        11.40
+99.9:          32.01        18.47        18.20         0.99
+99.97:        892.67       888.58       886.02         0.19
+99.99:        920.83       939.26       913.15         1.87
+worst:     529661.95    268828.67    268828.67         0.00
+----
+
 == Changes from Chronicle Queue v3
 
 Chronicle Queue v4 solves a number of issues that existed in Chronicle Queue v3.
@@ -995,13 +1087,14 @@ With Q4 you don't have to do this, but you can if you wish to.
 - You needed to specify the size of data to reserve before you started to write your message.
 - You needed to do your own locking for the appender when using Indexed Chronicle.
 
-=== Can I use Chronicle Queue v3 and v4.
+=== Can I use Chronicle Queue v3 and v4 in the same project.
 
 Yes. They use different packages. Chronicle Queue v4 is a complete re-write so there is no problem using it at the same time as Chronicle Queue v3. The format of how the data is stored is slightly different, so they are are not interoperable on the same queue data file.
 
 === Migrating from Chronicle Queue v2 and v3.
 
-In Chronicle Queue v3, everything was in terms of bytes, not wire.  There is two ways to use byte in Chronicle Queue v4.  You can use the `writeBytes` and `readBytes` methods, or you can get the `bytes()` from the wire. For example:
+In Chronicle Queue v3, everything was in terms of bytes, not wire.  There are two ways to use byte in Chronicle Queue v4.
+You can use the `writeBytes` and `readBytes` methods, or you can get the `bytes()` from the wire. For example:
 
 .Writing and reading bytes using a lambda
 [source, Java]

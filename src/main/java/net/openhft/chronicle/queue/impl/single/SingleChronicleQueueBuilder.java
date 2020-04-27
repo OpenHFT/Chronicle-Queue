@@ -30,10 +30,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
-import net.openhft.chronicle.queue.BufferMode;
-import net.openhft.chronicle.queue.QueueOffsetSpec;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -145,6 +142,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private LocalTime rollTime;
     private ZoneId rollTimeZone;
     private QueueOffsetSpec queueOffsetSpec;
+    private boolean doubleBuffer;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -965,11 +963,39 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     public SingleChronicleQueueBuilder readOnly(boolean readOnly) {
         if (OS.isWindows() && readOnly)
             Jvm.warn().on(SingleChronicleQueueBuilder.class,
-                    "Read-only mode is not supported on Windows® platforms, defaulting to " +
-                            "read/write.");
+                    "Read-only mode is not supported on Windows® platforms, defaulting to read/write.");
         else
             this.readOnly = readOnly;
 
+        return this;
+    }
+
+    public boolean doubleBuffer() {
+        return doubleBuffer;
+    }
+
+    /**
+     * <p>Enables double-buffered writes on contention.
+     * </p>
+     * <p>
+     *     Normally, all writes to the queue will be serialized based on the write lock acquisition. Each time {@link ExcerptAppender#writingDocument()}
+     *     is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write
+     *     lock is unlocked, and in turn locks the queue for itself.
+     * </p><p>
+     *     When double-buffering is enabled, if appender sees that the write lock is acquired upon {@link ExcerptAppender#writingDocument()} call,
+     *     it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition
+     *     until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block),
+     *     allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
+     * </p><p>
+     *     This is only useful if (majority of) the objects being written to the queue are big enough, and if there's a
+     *     heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
+     *     In our tests, for small messages (~100 bytes) enabling this will actually be slightly slower, for messages of ~1KB
+     *     will make no difference at average with marginal (5-10%) improvement on outliers, and for ~4KB messages will give
+     *     50-100% speedup (note: in those tests we emulated worst possible contention and a frequency of 100KHz, YMMV).
+     * </p>
+     */
+    public SingleChronicleQueueBuilder doubleBuffer(boolean doubleBuffer) {
+        this.doubleBuffer = doubleBuffer;
         return this;
     }
 

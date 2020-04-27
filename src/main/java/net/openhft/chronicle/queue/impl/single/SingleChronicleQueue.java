@@ -118,6 +118,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     protected int sourceId;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
+    protected final boolean doubleBuffer;
     private StoreFileListener storeFileListener;
     @NotNull
     private RollCycle rollCycle;
@@ -154,6 +155,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         strongAppenders = builder.strongAppenders();
         checkInterrupts = builder.checkInterrupts();
         metaStore = builder.metaStore();
+        doubleBuffer = builder.doubleBuffer();
         if (metaStore.readOnly() && !builder.readOnly()) {
             LOG.warn("Forcing queue to be readOnly");
             // need to set this on builder as it is used elsewhere

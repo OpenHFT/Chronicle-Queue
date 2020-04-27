@@ -344,11 +344,9 @@ public class SingleChronicleQueueExcerpts {
             int header = bytes.readVolatileInt(positionOfHeader);
             if (isReadyData(header)) {
                 return true;
-            } else if (header == NOT_COMPLETE) { // overwriting an incomplete message header.
-                return true;
-            } else {
-                return false;
-            }
+            } else
+                // overwriting an incomplete message header?
+                return header == NOT_COMPLETE;
         }
 
         @NotNull
@@ -357,26 +355,48 @@ public class SingleChronicleQueueExcerpts {
             return writingDocument(false); // avoid overhead of a default method.
         }
 
+        private ThreadLocal<Bytes<?>> bufferBytes = ThreadLocal.withInitial(Bytes::allocateElasticDirect);
+        private ThreadLocal<Wire> bufferWire = new ThreadLocal<Wire>() {
+            @Override
+            protected Wire initialValue() {
+                return queue().wireType().apply(bufferBytes.get());
+            }
+
+            @Override
+            public Wire get() {
+                final Wire wire = super.get();
+                bufferBytes.get().clear();
+                return wire;
+            }
+        } ;
+
         @NotNull
         @Override
         public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
-            writeLock.lock();
-            int cycle = queue.cycle();
+            if (writeLock.locked() && !metaData) {
+                context.isClosed = false;
+                context.rollbackOnClose = false;
+                context.wire = bufferWire.get();
+                context.metaData(false);
+            } else {
+                writeLock.lock();
+                int cycle = queue.cycle();
 
-            if (wire == null)
-                setWireIfNull(cycle);
+                if (wire == null)
+                    setWireIfNull(cycle);
 
-            if (this.cycle != cycle)
-                rollCycleTo(cycle);
+                if (this.cycle != cycle)
+                    rollCycleTo(cycle);
 
-            int safeLength = (int) queue.overlapSize();
-            resetPosition();
-            assert !CHECK_INDEX || checkWritePositionHeaderNumber();
+                int safeLength = (int) queue.overlapSize();
+                resetPosition();
+                assert !CHECK_INDEX || checkWritePositionHeaderNumber();
 
-            // sets the writeLimit based on the safeLength
-            openContext(metaData, safeLength);
+                // sets the writeLimit based on the safeLength
+                openContext(metaData, safeLength);
+            }
             return context;
         }
 
@@ -775,6 +795,10 @@ public class SingleChronicleQueueExcerpts {
                         }
                         assert !CHECK_INDEX || checkWritePositionHeaderNumber();
                     } else if (wire != null) {
+                        if (wire == bufferWire.get()) {
+                            writeLock.lock();
+                            unlock = true;
+                        }
                         isClosed = true;
                         writeBytesInternal(wire.bytes());
                         wire = StoreAppender.this.wire;
