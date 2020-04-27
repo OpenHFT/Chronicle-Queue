@@ -120,6 +120,7 @@ public class ChronicleMethodReaderTest {
         basicReader().execute();
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldConvertEntriesToText() {
         basicReader().execute();
@@ -154,6 +155,7 @@ public class ChronicleMethodReaderTest {
         basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
@@ -170,6 +172,7 @@ public class ChronicleMethodReaderTest {
         assertThat(capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count(), is(0L));
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReader().historyRecords(5).execute();
@@ -183,6 +186,7 @@ public class ChronicleMethodReaderTest {
         basicReader().withStartIndex(1L).execute();
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
