@@ -375,7 +375,7 @@ public class SingleChronicleQueueExcerpts {
         public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             if (queue.isClosed.get())
                 throw new IllegalStateException("Queue is closed");
-            if (writeLock.locked() && !metaData) {
+            if (queue.doubleBuffer && writeLock.locked() && !metaData) {
                 context.isClosed = false;
                 context.rollbackOnClose = false;
                 context.buffered = true;
