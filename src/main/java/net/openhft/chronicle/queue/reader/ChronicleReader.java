@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -28,11 +29,13 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -55,6 +58,7 @@ public final class ChronicleReader {
     private WireType wireType = WireType.TEXT;
     private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
     private boolean displayIndex = true;
+    private Class<?> methodReaderInterface;
 
     private static boolean checkForMatches(final List<Pattern> patterns, final String text,
                                            final boolean shouldBePresent) {
@@ -89,23 +93,33 @@ public final class ChronicleReader {
                     try {
                         moveToSpecifiedPosition(queue, tailer, isFirstIteration);
                         lastObservedTailIndex = tailer.index();
+                        Consumer<String> messageConsumer = text -> applyFiltersAndLog(text, tailer.index());
+                        BooleanSupplier readOne;
+                        if (methodReaderInterface == null) {
+                            readOne = () -> readOne(messageConverter, tailer, messageConsumer);
+                        } else {
+                            Bytes<ByteBuffer> bytes = Bytes.elasticHeapByteBuffer(256);
+                            Object writer = WireType.TEXT.apply(bytes).methodWriter(methodReaderInterface);
+                            MethodReader methodReader = tailer.methodReader(writer);
+                            readOne = () -> {
+                                boolean found = methodReader.readOne();
+                                if (found)
+                                    messageConsumer.accept(bytes.toString());
+                                bytes.clear();
+                                return found;
+                            };
+                        }
 
                         while (!Thread.currentThread().isInterrupted()) {
-                            try (DocumentContext dc = pollMethod.apply(tailer)) {
-                                if (!dc.isPresent()) {
-                                    if (tailInputSource) {
-                                        pauser.pause();
-                                    }
-                                    break;
-                                }
-                                pauser.reset();
+                            boolean found = readOne.getAsBoolean();
 
-                                if (customPlugin == null) {
-                                    messageConverter.accept(dc.wire(), text -> applyFiltersAndLog(text, tailer.index()));
-                                } else {
-                                    customPlugin.onReadDocument(dc);
+                            if (!found) {
+                                if (tailInputSource) {
+                                    pauser.pause();
                                 }
+                                break;
                             }
+                            pauser.reset();
                         }
                     } finally {
                         textConversionTarget.release();
@@ -127,6 +141,21 @@ public final class ChronicleReader {
             }
         } while (retryLastOperation);
 
+    }
+
+    public boolean readOne(QueueEntryHandler messageConverter, ExcerptTailer tailer, Consumer<String> messageConsumer) {
+        try (DocumentContext dc = pollMethod.apply(tailer)) {
+            if (!dc.isPresent()) {
+                return false;
+            }
+
+            if (customPlugin == null) {
+                messageConverter.accept(dc.wire(), messageConsumer);
+            } else {
+                customPlugin.onReadDocument(dc, messageConsumer);
+            }
+        }
+        return true;
     }
 
     ChronicleReader withReadOnly(boolean readOnly) {
