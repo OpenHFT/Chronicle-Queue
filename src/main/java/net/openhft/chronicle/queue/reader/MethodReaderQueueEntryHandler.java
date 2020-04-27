@@ -1,36 +1,35 @@
 package net.openhft.chronicle.queue.reader;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Mocker;
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireType;
 
 import java.util.function.Consumer;
 
 public final class MethodReaderQueueEntryHandler implements QueueEntryHandler {
-    private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
-    private final WireType wireType;
+    private final Class<?> mrInterface;
 
-    public MethodReaderQueueEntryHandler(WireType wireType) {
-        this.wireType = wireType;
+    public MethodReaderQueueEntryHandler(String methodReaderInterface) {
+        try {
+            mrInterface = Class.forName(methodReaderInterface);
+        } catch (ClassNotFoundException e) {
+            throw Jvm.rethrow(e);
+        }
     }
 
     @Override
     public void accept(final WireIn wireIn, final Consumer<String> messageHandler) {
-        long elementCount = 0;
-        while (wireIn.hasMore()) {
-            new BinaryWire(wireIn.bytes()).copyOne(wireType.apply(textConversionTarget));
-
-            elementCount++;
-            if ((elementCount & 1) == 0) {
-                messageHandler.accept(textConversionTarget.toString());
-                textConversionTarget.clear();
-            }
+        MethodReader methodReader = wireIn.methodReader(Mocker.intercepting(mrInterface, "", s -> {
+            long hn = wireIn.headerNumber();
+            messageHandler.accept("header: " + hn + "\n" + s);
+        }));
+        while (methodReader.readOne()) {
+            // read all
         }
     }
 
     @Override
     public void close() {
-        textConversionTarget.release();
     }
 }

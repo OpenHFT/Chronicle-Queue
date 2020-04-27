@@ -123,7 +123,7 @@ public class ChronicleReaderMain {
             chronicleReader.withStartIndex(Long.decode(commandLine.getOptionValue('n')));
         }
         if (commandLine.hasOption('r')) {
-            chronicleReader.asMethodReader();
+            chronicleReader.asMethodReader(commandLine.getOptionValue('r'));
         }
         if (commandLine.hasOption('w')) {
             chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w')));

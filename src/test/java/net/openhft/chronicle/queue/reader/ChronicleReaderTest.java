@@ -10,7 +10,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -193,7 +192,7 @@ public class ChronicleReaderTest {
         basicReader().
                 // matches goodbye, but not hello or history
                         withInclusionRegex("goodbye").
-                asMethodReader().
+                asMethodReader(null).
                 execute();
         assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(false));
     }
@@ -343,16 +342,19 @@ public class ChronicleReaderTest {
 
     private String findAnExistingIndex() {
         basicReader().execute();
-        final List<String> indicies = capturedOutput.stream().
-                filter(s -> s.startsWith("0x")).
-                collect(Collectors.toList());
+        final List<String> indicies = capturedOutput.stream()
+                .filter(s -> s.startsWith("0x"))
+                .collect(Collectors.toList());
         capturedOutput.clear();
-        return indicies.get(indicies.size() / 2).trim().replaceAll(":", "");
+        return indicies.get(indicies.size() / 2)
+                .trim()
+                .replaceAll(":", "");
     }
 
     private ChronicleReader basicReader() {
-        return new ChronicleReader().
-                withBasePath(dataDir).withMessageSink(capturedOutput::add);
+        return new ChronicleReader()
+                .withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add);
     }
 
     @After
@@ -361,7 +363,7 @@ public class ChronicleReaderTest {
     }
 
     @FunctionalInterface
-    public  interface StringEvents {
+    public interface StringEvents {
         void say(final String msg);
     }
 
