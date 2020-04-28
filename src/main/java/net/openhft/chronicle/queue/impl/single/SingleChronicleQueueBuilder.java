@@ -975,9 +975,9 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     /**
-     * <p>Enables double-buffered writes on contention.
-     * </p>
      * <p>
+     *     Enables double-buffered writes on contention.
+     * </p><p>
      *     Normally, all writes to the queue will be serialized based on the write lock acquisition. Each time {@link ExcerptAppender#writingDocument()}
      *     is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write
      *     lock is unlocked, and in turn locks the queue for itself.
@@ -987,11 +987,9 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
      *     until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block),
      *     allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
      * </p><p>
-     *     This is only useful if (majority of) the objects being written to the queue are big enough, and if there's a
+     *     This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward
+     *     (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a
      *     heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
-     *     In our tests, for small messages (~100 bytes) enabling this will actually be slightly slower, for messages of ~1KB
-     *     will make no difference at average with marginal (5-10%) improvement on outliers, and for ~4KB messages will give
-     *     50-100% speedup (note: in those tests we emulated worst possible contention and a frequency of 100KHz, YMMV).
      * </p>
      */
     public SingleChronicleQueueBuilder doubleBuffer(boolean doubleBuffer) {

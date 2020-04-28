@@ -47,6 +47,7 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 import static net.openhft.chronicle.wire.Wires.*;
 
+@SuppressWarnings({"ConstantConditions", "rawtypes"})
 public class SingleChronicleQueueExcerpts {
     private static final boolean CHECK_INDEX = Boolean.getBoolean("queue.check.index");
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -355,8 +356,8 @@ public class SingleChronicleQueueExcerpts {
             return writingDocument(false); // avoid overhead of a default method.
         }
 
-        private ThreadLocal<Bytes<?>> bufferBytes = ThreadLocal.withInitial(Bytes::allocateElasticDirect);
-        private ThreadLocal<Wire> bufferWire = new ThreadLocal<Wire>() {
+        private final ThreadLocal<Bytes<?>> bufferBytes = ThreadLocal.withInitial(Bytes::allocateElasticDirect);
+        private final ThreadLocal<Wire> bufferWire = new ThreadLocal<Wire>() {
             @Override
             protected Wire initialValue() {
                 return queue().wireType().apply(bufferBytes.get());
@@ -368,7 +369,7 @@ public class SingleChronicleQueueExcerpts {
                 bufferBytes.get().clear();
                 return wire;
             }
-        } ;
+        };
 
         @NotNull
         @Override
@@ -550,7 +551,6 @@ public class SingleChronicleQueueExcerpts {
             if (rollbackDontClose) {
                 if (index > wire.headerNumber() + 1)
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                // TODO: assert bytes.equalBytes(wire.bytes() ...);
                 Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
                 return;
             }
@@ -799,12 +799,13 @@ public class SingleChronicleQueueExcerpts {
                         assert !CHECK_INDEX || checkWritePositionHeaderNumber();
                     } else if (wire != null) {
                         if (buffered) {
-                            writeLock.lock();
-                            unlock = true;
+                            writeBytes(wire.bytes());
+                            unlock = false;
+                        } else {
+                            isClosed = true;
+                            writeBytesInternal(wire.bytes());
+                            wire = StoreAppender.this.wire;
                         }
-                        isClosed = true;
-                        writeBytesInternal(wire.bytes());
-                        wire = StoreAppender.this.wire;
                     }
                 } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
@@ -862,7 +863,6 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final T storeReleasable;
         private volatile Bytes wireReference = null;
-        private volatile Bytes bufferWireReference = null;
         private volatile Bytes wireForIndexReference = null;
         volatile CommonStore storeReference = null;
 
@@ -880,7 +880,6 @@ public class SingleChronicleQueueExcerpts {
         private void releaseResources() {
             releaseIfNotNull(wireForIndexReference);
             releaseIfNotNull(wireReference);
-            releaseIfNotNull(bufferWireReference);
 
             // Object is no longer reachable, check that it has not already been released
             if (storeReference != null && storeReference.refCount() > 0) {
@@ -1202,7 +1201,6 @@ public class SingleChronicleQueueExcerpts {
                 return true;
             if (cycle < queue.lastCycle()) {
                 // we have encountered an empty file without an EOF marker
-                // TODO: more work needed - I thought that the appender and/or tailer would write an EOF into this file
                 state = END_OF_CYCLE;
                 return true;
             }
@@ -1701,12 +1699,10 @@ public class SingleChronicleQueueExcerpts {
                     if (direction == FORWARD) {
                         final ScanResult result = moveToIndexResult(++index);
                         switch (result) {
-                            case FOUND:
-                                // the end moved!!
-                                state = FOUND_CYCLE;
-                                break;
                             case NOT_REACHED:
                                 throw new IllegalStateException("NOT_REACHED after FOUND");
+                            case FOUND:
+                                // the end moved!!
                             case NOT_FOUND:
                                 state = FOUND_CYCLE;
                                 break;
@@ -1739,7 +1735,7 @@ public class SingleChronicleQueueExcerpts {
 
         @NotNull
         @Override
-        public ExcerptTailer direction(TailerDirection direction) {
+        public ExcerptTailer direction(@NotNull TailerDirection direction) {
             final TailerDirection oldDirection = this.direction();
             this.direction = direction;
             if (oldDirection == TailerDirection.BACKWARD &&

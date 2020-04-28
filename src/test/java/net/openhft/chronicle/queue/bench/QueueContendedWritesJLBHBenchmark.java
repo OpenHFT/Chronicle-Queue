@@ -17,10 +17,7 @@
  */
 package net.openhft.chronicle.queue.bench;
 
-import net.openhft.chronicle.bytes.BytesIn;
-import net.openhft.chronicle.bytes.BytesMarshallable;
-import net.openhft.chronicle.bytes.BytesOut;
-import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.jlbh.JLBH;
 import net.openhft.chronicle.core.jlbh.JLBHOptions;
@@ -31,27 +28,28 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
-    private SingleChronicleQueue sourceQueue;
-    private SingleChronicleQueue sinkQueue;
-    private ExcerptAppender appender;
+    private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
     private NanoSampler concurrent;
     private NanoSampler concurrent2;
     private volatile boolean stopped = false;
-    private volatile boolean write = false;
+    private AtomicInteger write = new AtomicInteger(0);
     private final Datum datum = new Datum();
     private final Datum datum2 = new Datum();
 
     public static void main(String[] args) {
         JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(100_000)
-                .iterations(3_000_000)
-                .throughput(100_000)
+                .warmUpIterations(50_000)
+                .iterations(100_000)
+                .throughput(10_000)
                 .recordOSJitter(false)
                 // disable as otherwise single GC event skews results heavily
                 .accountForCoordinatedOmmission(false)
@@ -68,84 +66,119 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         this.jlbh = jlbh;
         concurrent = jlbh.addProbe("Concurrent");
         concurrent2 = jlbh.addProbe("Concurrent2");
-        sourceQueue = single("replica").rollCycle(RollCycles.LARGE_DAILY).build();
-        sinkQueue = single("replica").rollCycle(RollCycles.LARGE_DAILY).doubleBuffer(true).build();
-        appender = sourceQueue.acquireAppender();
-        tailer = sourceQueue.createTailer();
+        queue = single("replica").rollCycle(RollCycles.LARGE_DAILY).doubleBuffer(false).build();
+        tailer = queue.createTailer();
         tailer.toStart();
         new Thread(() -> {
-            final ExcerptAppender app = sourceQueue.acquireAppender();
+            AffinityLock.acquireCore();
+            final ExcerptAppender app = queue.acquireAppender();
 
             while (!stopped) {
-                if (!write)
+                if (write.get() <= 0)
                     continue;
-                write = false;
+                write.decrementAndGet();
                 final long start = System.nanoTime();
                 datum2.ts = start;
+                datum2.username = "" + start;
                 try (DocumentContext dc = app.writingDocument()) {
-                    datum2.writeMarshallable(dc.wire().bytes());
+                    dc.wire().write("datum").marshallable(datum2);
                 }
-                this.concurrent.sampleNanos(System.nanoTime() - start);
+                this.concurrent2.sampleNanos(System.nanoTime() - start);
             }
-
-            //System.err.println("Total writes: " + i);
+            queue.close();
         }).start();
-    }
 
-    @Override
-    public void warmedUp() {
+        new Thread(() -> {
+            AffinityLock.acquireCore();
+            final ExcerptAppender app = queue.acquireAppender();
 
+            while (!stopped) {
+                if (write.get() <= 0)
+                    continue;
+                write.decrementAndGet();
+                final long start = System.nanoTime();
+                datum.ts = start;
+                datum.username = "" + start;
+                try (DocumentContext dc = app.writingDocument()) {
+                    dc.wire().write("datum").marshallable(datum);
+                }
+                concurrent.sampleNanos(System.nanoTime() - start);
+            }
+            queue.close();
+        }).start();
     }
 
     long written = 0;
     @Override
     public void run(long startTimeNS) {
-        final long start = System.nanoTime();
-        write = true;
-        datum.ts = startTimeNS;
-        try (DocumentContext dc = appender.writingDocument()) {
-            datum.writeMarshallable(dc.wire().bytes());
-        }
-        final long now = System.nanoTime();
-        concurrent2.sampleNanos(now - start);
-
+        write.set(2);
         int read = 0;
         while (read < 2) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (dc.wire() == null)
                     continue;
-                datum.readMarshallable(dc.wire().bytes());
-                read++;
+                if (dc.wire().read("datum").marshallable(datum))
+                    read++;
             }
         }
 
-        jlbh.sampleNanos(now - startTimeNS);
+        jlbh.sampleNanos(System.nanoTime() - startTimeNS);
         written++;
+        if (written % 10_000 == 0)
+            System.err.println("Written: " + written);
     }
 
     @Override
     public void complete() {
         stopped = true;
-        write = true;
-        sinkQueue.close();
-        sourceQueue.close();
-        System.err.println("Total writes (main): " + written);
+        queue.close();
     }
 
-    private static class Datum implements BytesMarshallable {
+    private static class Datum extends SelfDescribingMarshallable {
         public long ts = 0;
-        public byte[] filler = new byte[4088];
+        public String username;
+        public byte[] filler0 = new byte[128];
+        public byte[] filler1 = new byte[128];
+        public byte[] filler2 = new byte[128];
+        public byte[] filler3 = new byte[128];
+        public byte[] filler4 = new byte[128];
+        public byte[] filler5 = new byte[128];
+        public byte[] filler6 = new byte[128];
+        public byte[] filler7 = new byte[128];
+        public byte[] filler8 = new byte[128];
+        public byte[] filler9 = new byte[128];
 
-        @Override
-        public void readMarshallable(BytesIn bytes) throws IORuntimeException {
-            ts = bytes.readLong();
-            bytes.read(filler);
-        }
+        public byte[] filler10 = new byte[128];
+        public byte[] filler11 = new byte[128];
+        public byte[] filler12 = new byte[128];
+        public byte[] filler13 = new byte[128];
+        public byte[] filler14 = new byte[128];
+        public byte[] filler15 = new byte[128];
+        public byte[] filler16 = new byte[128];
+        public byte[] filler17 = new byte[128];
+        public byte[] filler18 = new byte[128];
+        public byte[] filler19 = new byte[128];
 
-        @Override
-        public void writeMarshallable(BytesOut bytes) {
-            bytes.writeLong(ts);
-            bytes.write(filler);
-        }
+        public byte[] filler20 = new byte[128];
+        public byte[] filler21 = new byte[128];
+        public byte[] filler22 = new byte[128];
+        public byte[] filler23 = new byte[128];
+        public byte[] filler24 = new byte[128];
+        public byte[] filler25 = new byte[128];
+        public byte[] filler26 = new byte[128];
+        public byte[] filler27 = new byte[128];
+        public byte[] filler28 = new byte[128];
+        public byte[] filler29 = new byte[128];
+
+        public byte[] filler30 = new byte[128];
+        public byte[] filler31 = new byte[128];
+        public byte[] filler32 = new byte[128];
+        public byte[] filler33 = new byte[128];
+        public byte[] filler34 = new byte[128];
+        public byte[] filler35 = new byte[128];
+        public byte[] filler36 = new byte[128];
+        public byte[] filler37 = new byte[128];
+        public byte[] filler38 = new byte[128];
+        public byte[] filler39 = new byte[128];
     }
 }

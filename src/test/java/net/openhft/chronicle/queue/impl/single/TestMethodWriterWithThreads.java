@@ -11,9 +11,13 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
@@ -25,6 +29,7 @@ import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
 /**
  * check that method writes are thread safe when used with queue.methodWriter
  */
+@RunWith(Parameterized.class)
 public class TestMethodWriterWithThreads {
 
     private static final int AMEND = 1;
@@ -35,12 +40,22 @@ public class TestMethodWriterWithThreads {
     private ThreadLocal<Create> createTL = ThreadLocal.withInitial(Create::new);
     private I methodWriter;
     private AtomicBoolean fail = new AtomicBoolean();
+    private boolean doubleBuffer;
+
+    public TestMethodWriterWithThreads(boolean doubleBuffer) {
+        this.doubleBuffer = doubleBuffer;
+    }
+
+    @Parameterized.Parameters(name = "doubleBuffer={0}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[]{true}, new Object[]{false});
+    }
 
     @Test
     public void test() throws FileNotFoundException {
 
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue q = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).build()) {
+        try (final ChronicleQueue q = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).doubleBuffer(doubleBuffer).build()) {
 
             methodWriter = q.methodWriter(I.class);
 
