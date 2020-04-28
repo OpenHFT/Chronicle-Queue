@@ -17,19 +17,17 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-/*
- * Created by Peter Lawrey on 02/08/16.
- */
+
 @RequiredForClient
 public class WriteReadTextTest {
 

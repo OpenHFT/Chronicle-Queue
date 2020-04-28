@@ -22,9 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.TreeMap;
 
-/*
- * Created by Peter Lawrey on 22/03/16.
- */
+
 public class SidedMarketDataCombiner implements SidedMarketDataListener {
     final MarketDataListener mdListener;
     final Map<String, TopOfBookPrice> priceMap = new TreeMap<>();

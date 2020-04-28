@@ -18,9 +18,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.MessageHistory;
 
-/*
- * Created by Peter Lawrey on 27/03/16.
- */
+
 public enum NoMessageHistory implements MessageHistory {
     INSTANCE;
 

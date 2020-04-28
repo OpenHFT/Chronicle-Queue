@@ -28,9 +28,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-/*
- * Created by Peter Lawrey on 15/03/16.
- */
+
 public class ReadmeTest {
     private ThreadDump threadDump;
 

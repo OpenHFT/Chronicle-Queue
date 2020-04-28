@@ -20,9 +20,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.Nullable;
 
-/*
- * Created by Peter Lawrey on 07/07/16.
- */
+
 public interface ExcerptContext {
     @Nullable
     Wire wire();

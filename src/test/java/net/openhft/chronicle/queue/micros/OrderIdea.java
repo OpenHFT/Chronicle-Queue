@@ -19,9 +19,7 @@ package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
-/*
- * Created by Peter Lawrey on 24/03/16.
- */
+
 public class OrderIdea extends SelfDescribingMarshallable {
     final String symbol;
     final Side side;

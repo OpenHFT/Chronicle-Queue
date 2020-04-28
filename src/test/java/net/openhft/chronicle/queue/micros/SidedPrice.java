@@ -20,9 +20,7 @@ package net.openhft.chronicle.queue.micros;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
 
-/*
- * Created by Peter Lawrey on 22/03/16.
- */
+
 public class SidedPrice extends SelfDescribingMarshallable {
     String symbol;
     long timestamp;

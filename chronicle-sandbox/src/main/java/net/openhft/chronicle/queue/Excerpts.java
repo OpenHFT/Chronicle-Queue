@@ -20,9 +20,7 @@ package net.openhft.chronicle.queue;
 
 import org.jetbrains.annotations.NotNull;
 
-/*
- * Created by peter.lawrey on 29/01/15.
- */
+
 public enum Excerpts {
     ; // Utility class
 

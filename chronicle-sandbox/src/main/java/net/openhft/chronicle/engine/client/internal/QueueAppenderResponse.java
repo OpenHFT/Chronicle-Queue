@@ -4,9 +4,7 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 
-/*
- * Created by daniel on 14/04/15.
- */
+
 public class QueueAppenderResponse implements Marshallable {
     private long cid;
     private StringBuilder csp = new StringBuilder();

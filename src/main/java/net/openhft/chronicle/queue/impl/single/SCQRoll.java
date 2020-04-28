@@ -26,9 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
-/*
- * Created by Peter Lawrey on 22/05/16.
- */
+
 class SCQRoll implements Demarshallable, WriteMarshallable {
     private int length;
     @Nullable

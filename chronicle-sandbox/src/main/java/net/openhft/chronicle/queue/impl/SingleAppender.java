@@ -26,9 +26,7 @@ import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/*
- * Created by peter.lawrey on 30/01/15.
- */
+
 public class SingleAppender implements ExcerptAppender {
 
     @NotNull

@@ -11,9 +11,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-/*
- * Created by Peter Lawrey on 08/05/2017.
- */
+
 @RequiredForClient
 public class MethodReaderObjectReuseTest {
     @Test

@@ -31,9 +31,7 @@ import java.io.File;
 import java.sql.DriverManager;
 import java.util.concurrent.atomic.AtomicLong;
 
-/*
- * Created by Peter Lawrey on 08/04/16.
- */
+
 public class JDBCServiceTest {
 
     @Test

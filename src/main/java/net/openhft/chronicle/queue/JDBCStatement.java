@@ -17,9 +17,7 @@
 
 package net.openhft.chronicle.queue;
 
-/*
- * Created by Peter Lawrey on 06/04/16.
- */
+
 public interface JDBCStatement {
     void executeQuery(String query, Object... args);
 

@@ -18,9 +18,7 @@
 
 package simple;
 
-/*
- * Created by peter.lawrey on 02/02/15.
- */
+
 public class WriterMain {
     static final int CHUNK_BITS = 26;
 /*

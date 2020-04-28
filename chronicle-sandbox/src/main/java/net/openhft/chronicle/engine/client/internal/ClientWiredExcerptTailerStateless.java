@@ -13,9 +13,7 @@ import java.util.function.Function;
 
 import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
 
-/*
- * Created by daniel on 14/04/15.
- */
+
 public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient implements ExcerptTailer {
 
     private final Bytes source = Bytes.elasticByteBuffer();

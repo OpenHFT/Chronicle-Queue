@@ -20,9 +20,7 @@ package net.openhft.chronicle.sandbox.replay;
 
 import net.openhft.lang.io.serialization.BytesMarshallable;
 
-/*
- * Created by peter.lawrey on 20/01/15.
- */
+
 public interface TestData extends BytesMarshallable {
     String getName();
 

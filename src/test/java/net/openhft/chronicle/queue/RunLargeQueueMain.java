@@ -21,9 +21,7 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 
-/*
- * Created by Peter Lawrey on 25/01/17.
- */
+
 public enum RunLargeQueueMain {
     ;
 

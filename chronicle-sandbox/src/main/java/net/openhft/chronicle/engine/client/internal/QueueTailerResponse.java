@@ -3,9 +3,7 @@ package net.openhft.chronicle.engine.client.internal;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 
-/*
- * Created by daniel on 20/04/15.
- */
+
 public class QueueTailerResponse extends QueueAppenderResponse {
     long start;
 
