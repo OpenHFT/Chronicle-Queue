@@ -57,6 +57,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             warn().on(getClass(), "Couldn't acquire write lock after " + timeout
                     + "ms for the lock file:" + path + ", overriding the lock. Lock was held by " + lockedBy);
             forceUnlock();
+            // we should reset the pauser after a timeout exception
+            pauser.reset();
             lock();
         } finally {
             pauser.reset();
