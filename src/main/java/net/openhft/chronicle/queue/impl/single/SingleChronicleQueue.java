@@ -428,8 +428,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private ExcerptAppender createExcerptAppender() {
         ExcerptAppender appender;
         if (strongAppenders) {
-            appender = newAppender();
-            strongExcerptAppenderThreadLocal.set(appender);
+            strongExcerptAppenderThreadLocal.set(appender = newAppender());
         } else if (SHOULD_RELEASE_RESOURCES) {
             return ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
                     StoreComponentReferenceHandler.appenderQueue(),
