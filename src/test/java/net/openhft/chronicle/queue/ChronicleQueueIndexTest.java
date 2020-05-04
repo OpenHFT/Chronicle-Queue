@@ -12,7 +12,6 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +56,7 @@ public class ChronicleQueueIndexTest {
                     .path(file1)
                     .rollCycle(RollCycles.DAILY)
                     .timeProvider(tp)
-                    .build();) {
+                    .build()) {
                 InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
                 appender.writeBytes(RollCycles.DAILY.toIndex(3, 0L), fromString("Hello World 2"));
@@ -78,7 +77,7 @@ public class ChronicleQueueIndexTest {
     }
 
     @Test
-    public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() throws FileNotFoundException {
+    public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
         Assume.assumeTrue(!OS.isWindows());
         SetTimeProvider tp = new SetTimeProvider(1);
         File firstCQFile = null;
@@ -110,7 +109,7 @@ public class ChronicleQueueIndexTest {
                     .path(file1)
                     .rollCycle(RollCycles.DAILY)
                     .timeProvider(tp)
-                    .build();) {
+                    .build()) {
 
                 queue.acquireAppender().pretouch();
 
@@ -125,7 +124,7 @@ public class ChronicleQueueIndexTest {
                     .path(file1)
                     .rollCycle(RollCycles.DAILY)
                     .timeProvider(tp)
-                    .build();) {
+                    .build()) {
 
                 ExcerptAppender appender = queue.acquireAppender();
 
@@ -139,7 +138,7 @@ public class ChronicleQueueIndexTest {
                         .path(file1)
                         .rollCycle(RollCycles.DAILY)
                         .timeProvider(tp)
-                        .build();) {
+                        .build()) {
                     final ExcerptTailer tailer = queue123.createTailer();
                     assertEquals("Hello World 1", tailer.readText());
                     assertEquals("Hello World 2", tailer.readText());

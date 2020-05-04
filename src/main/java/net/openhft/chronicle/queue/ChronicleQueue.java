@@ -300,7 +300,6 @@ public interface ChronicleQueue extends Closeable {
      *         interfaces
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
-    @SuppressWarnings("unchecked")
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
         Stream.of(additional).forEach(builder::addInterface);

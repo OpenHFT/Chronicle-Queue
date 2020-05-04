@@ -54,7 +54,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
             try (BufferedReader br = new BufferedReader(new FileReader(testFile))) {
                 // The file is now held open
                 assertEquals(FileState.OPEN, FileUtil.state(testFile));
-            };
+            }
 
             // The file is now released again
             assertEquals(FileState.CLOSED, FileUtil.state(testFile));

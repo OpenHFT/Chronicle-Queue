@@ -22,7 +22,6 @@ import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
@@ -38,11 +37,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class ChronicleHistoryReaderMain {
 
-    public static void main(@NotNull String[] args) throws IOException {
+    public static void main(@NotNull String[] args) {
         new ChronicleHistoryReaderMain().run(args);
     }
 
-    protected void run(String[] args) throws IOException {
+    protected void run(String[] args) {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
@@ -51,7 +50,7 @@ public class ChronicleHistoryReaderMain {
         chronicleHistoryReader.execute();
     }
 
-    protected void setup(CommandLine commandLine, ChronicleHistoryReader chronicleHistoryReader) throws IOException {
+    protected void setup(CommandLine commandLine, ChronicleHistoryReader chronicleHistoryReader) {
         chronicleHistoryReader.
                 withMessageSink(System.out::println).
                 withProgress(commandLine.hasOption('p')).

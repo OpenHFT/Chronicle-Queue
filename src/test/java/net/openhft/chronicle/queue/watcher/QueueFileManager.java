@@ -18,6 +18,7 @@ public class QueueFileManager extends JMXFileManager implements QueueFileManager
     private final Set<String> files = new ConcurrentSkipListSet<>();
     private static final long TIME_OUT = 5_000;
     private String tableStore;
+    private long lastUpdate = 0;
 
     public QueueFileManager(String basePath, String relativePath) {
         super(basePath, relativePath);
@@ -43,8 +44,6 @@ public class QueueFileManager extends JMXFileManager implements QueueFileManager
         return files;
     }
 
-    private long lastUpdate = 0;
-
     public void onExists(String filename) {
         files.add(filename);
     }
@@ -64,6 +63,7 @@ public class QueueFileManager extends JMXFileManager implements QueueFileManager
         if (lastUpdate + TIME_OUT > now)
             return;
 
+        lastUpdate = now;
         Path path = Paths.get(basePath, relativePath);
         try (SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.single(path.toFile())

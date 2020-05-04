@@ -135,7 +135,6 @@ public class SingleTableBuilder<T extends Metadata> {
             metadata.overrideFrom(existing.metadata());
             return existing;
         } else {
-            //noinspection unchecked
             throw new StreamCorruptedException("The first message should be the header, was " + name);
         }
     }
@@ -149,7 +148,6 @@ public class SingleTableBuilder<T extends Metadata> {
     }
 
     @NotNull
-    @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     @Override
     public SingleTableBuilder<T> clone() {
         try {

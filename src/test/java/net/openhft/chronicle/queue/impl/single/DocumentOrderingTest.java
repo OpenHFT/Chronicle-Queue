@@ -103,7 +103,7 @@ public final class DocumentOrderingTest {
              final ChronicleQueue queue3 =
                      builder(dir, 5_000L).build();
              final ChronicleQueue queue4 =
-                     builder(dir, 5_000L).build();
+                     builder(dir, 5_000L).build()
         ) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();

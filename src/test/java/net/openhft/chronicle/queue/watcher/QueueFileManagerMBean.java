@@ -8,9 +8,9 @@ import java.util.Set;
 
 @SuppressWarnings("unused")
 public interface QueueFileManagerMBean {
-    public Set<String> getFiles();
+    Set<String> getFiles();
 
-    public String getTableStore();
+    String getTableStore();
 
-    public String getLastHeader();
+    String getLastHeader();
 }
