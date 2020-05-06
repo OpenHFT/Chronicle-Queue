@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts;
 import org.junit.Test;
 
 public class CloserJobRefCountOnCloseTest {
@@ -15,7 +16,11 @@ public class CloserJobRefCountOnCloseTest {
             temp.acquireAppender().writeText("hello");
             ExcerptTailer tailer = temp.createTailer();
             String s = tailer.readText();
-            tailer.getCloserJob().run();
+            if (tailer instanceof SingleChronicleQueueExcerpts.StoreTailer) {
+                final SingleChronicleQueueExcerpts.StoreTailer storeTailer = (SingleChronicleQueueExcerpts.StoreTailer)tailer;
+                storeTailer.releaseResources();
+            }
+            //tailer.getCloserJob().run();
         }
     }
 }
