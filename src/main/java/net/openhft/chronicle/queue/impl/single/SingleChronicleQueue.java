@@ -432,11 +432,21 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         } else if (SHOULD_RELEASE_RESOURCES) {
             return ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
                     StoreComponentReferenceHandler.appenderQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+                    (ref) -> StoreComponentReferenceHandler.register(ref, cleanupJob(ref)));
         } else {
             appender = ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
         }
         return appender;
+    }
+
+    private Runnable cleanupJob(final WeakReference<ExcerptAppender> ref) {
+        return () -> {
+            final ExcerptAppender appender = ref.get();
+            // Protect from NPE:s, See https://github.com/OpenHFT/Chronicle-Queue/issues/667
+            if (appender != null) {
+                appender.getCloserJob().run();
+            }
+        };
     }
 
     @Override
