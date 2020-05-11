@@ -436,12 +436,22 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     this,
                     SingleChronicleQueue::newAppender,
                     StoreComponentReferenceHandler.appenderQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+                    (ref) -> StoreComponentReferenceHandler.register(ref, cleanupJob(ref)));
         } else {
             appender = ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
         }
         return appender;
     }
+
+    private Runnable cleanupJob(final WeakReference<ExcerptAppender> ref) {
+        final ExcerptAppender appender = ref.get();
+        if (appender == null)
+            return () -> {
+                LOG.warn("appender was NULL, If you see this please report this to Chronicle Software");
+            };
+        return appender.getCloserJob();
+    }
+
 
     @Override
     @NotNull
