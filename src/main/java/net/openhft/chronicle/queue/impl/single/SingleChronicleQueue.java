@@ -194,23 +194,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     StoreTailer acquireTailer() {
         if (SHOULD_RELEASE_RESOURCES) {
-            return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
+            return ThreadLocalHelper.getTL(tlTailer,
+                    this,
+                    StoreTailer::new,
                     StoreComponentReferenceHandler.tailerQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, storeTailerCleanupJob(ref)));
+                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
         }
         return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
-
-    private Runnable storeTailerCleanupJob(final WeakReference<StoreTailer> ref) {
-        return () -> {
-            final StoreTailer tailer = ref.get();
-            // Protect from NPE:s, See https://github.com/OpenHFT/Chronicle-Queue/issues/667
-            if (tailer != null) {
-                tailer.getCloserJob().run();
-            }
-        };
-    }
-
 
     @NotNull
     private Function<String, File> textToFile(@NotNull SingleChronicleQueueBuilder builder) {
@@ -441,23 +432,15 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (strongAppenders) {
             strongExcerptAppenderThreadLocal.set(appender = newAppender());
         } else if (SHOULD_RELEASE_RESOURCES) {
-            return ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender,
+            return ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal,
+                    this,
+                    SingleChronicleQueue::newAppender,
                     StoreComponentReferenceHandler.appenderQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, cleanupJob(ref)));
+                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
         } else {
             appender = ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
         }
         return appender;
-    }
-
-    private Runnable cleanupJob(final WeakReference<ExcerptAppender> ref) {
-        return () -> {
-            final ExcerptAppender appender = ref.get();
-            // Protect from NPE:s, See https://github.com/OpenHFT/Chronicle-Queue/issues/667
-            if (appender != null) {
-                appender.getCloserJob().run();
-            }
-        };
     }
 
     @Override
