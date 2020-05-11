@@ -196,10 +196,21 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (SHOULD_RELEASE_RESOURCES) {
             return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new,
                     StoreComponentReferenceHandler.tailerQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
+                    (ref) -> StoreComponentReferenceHandler.register(ref, storeTailerCleanupJob(ref)));
         }
         return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
+
+    private Runnable storeTailerCleanupJob(final WeakReference<StoreTailer> ref) {
+        return () -> {
+            final StoreTailer tailer = ref.get();
+            // Protect from NPE:s, See https://github.com/OpenHFT/Chronicle-Queue/issues/667
+            if (tailer != null) {
+                tailer.getCloserJob().run();
+            }
+        };
+    }
+
 
     @NotNull
     private Function<String, File> textToFile(@NotNull SingleChronicleQueueBuilder builder) {
