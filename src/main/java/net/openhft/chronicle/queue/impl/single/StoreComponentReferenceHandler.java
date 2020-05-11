@@ -97,12 +97,16 @@ public enum StoreComponentReferenceHandler implements Closeable {
                 if (reference.get() == null) {
                     final Runnable closeAction = CLOSE_ACTIONS.remove(reference);
                     if (closeAction != null && SHOULD_RELEASE_RESOURCES) {
-                        closeAction.run();
+                        try {
+                            closeAction.run();
+                        } catch (RuntimeException e) {
+                            LOGGER.warn("An error occurred in a close handler.", e);
+                        }
                     }
                 }
             }
         } catch (RuntimeException e) {
-            LOGGER.warn("Error occurred attempting to close ExcerptAppender.", e);
+            LOGGER.warn("Error occurred when processing a reference queue.", e);
         }
         return processedCount != 0;
     }
