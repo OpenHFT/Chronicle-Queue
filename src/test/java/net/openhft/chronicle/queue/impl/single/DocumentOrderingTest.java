@@ -24,10 +24,12 @@ public final class DocumentOrderingTest {
     private final AtomicInteger counter = new AtomicInteger(0);
 
     private static void expectValue(final int expectedValue, final ExcerptTailer tailer) {
+
         try (final DocumentContext documentContext = tailer.readingDocument()) {
             assertTrue(documentContext.isPresent());
             assertEquals(expectedValue, documentContext.wire().getValueIn().int32());
         }
+
     }
 
     @Test
@@ -59,6 +61,8 @@ public final class DocumentOrderingTest {
             // discard first record
             tailer.readingDocument().close();
 
+            otherDocumentWriter.get();
+            
             // assert that records are committed in order
             expectValue(0, tailer);
             expectValue(1, tailer);

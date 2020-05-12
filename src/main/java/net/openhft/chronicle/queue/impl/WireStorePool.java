@@ -16,10 +16,10 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.Jvm;
-import org.jetbrains.annotations.Nullable;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
@@ -108,7 +108,8 @@ public class WireStorePool implements StoreReleasable {
 
     @Override
     public synchronized void release(@NotNull CommonStore store) {
-        store.release();
+        if (store.refCount() > 0)
+            store.release();
 
         long refCount = store.refCount();
         assert refCount >= 0;

@@ -266,6 +266,7 @@ public class SingleChronicleQueueExcerpts {
 
             this.store = storePool.acquire(cycle, queue.epoch(), createIfAbsent);
 
+
             if (store != null) {
                 storePool.release(store);
             }
@@ -278,6 +279,10 @@ public class SingleChronicleQueueExcerpts {
             if (this.store == null)
                 return;
 
+            if (this.store.refCount() == 0) {
+                this.store = null;
+                return;
+            }
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
