@@ -52,6 +52,9 @@ public class RollCycleMultiThreadStressTest {
     final boolean DUMP_QUEUE;
     final boolean SHARED_WRITE_QUEUE;
 
+    static {
+        Jvm.disableDebugHandler();
+    }
     public RollCycleMultiThreadStressTest() {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 40_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
