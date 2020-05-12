@@ -29,7 +29,7 @@ public class PretoucherTest {
     private final List<Integer> capturedCycles = new ArrayList<>();
     private final CapturingChunkListener chunkListener = new CapturingChunkListener();
 
-    private static SingleChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
+    static SingleChronicleQueue createQueue(final File path, final TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder.
                 binary(path).
                 timeProvider(timeProvider).
@@ -75,18 +75,6 @@ public class PretoucherTest {
         cycleRollByPretoucher(0);
     }
 
-    @Test
-    public void shouldHandleEarlyCycleRollByPretoucher() throws IllegalAccessException {
-        hackStaticFinal(Pretoucher.class, "EARLY_ACQUIRE_NEXT_CYCLE", true);
-        hackStaticFinal(Pretoucher.class, "PRETOUCHER_PREROLL_TIME_MS", 100);
-        try {
-            cycleRollByPretoucher(100);
-        } finally {
-            hackStaticFinal(Pretoucher.class, "EARLY_ACQUIRE_NEXT_CYCLE", false);
-            hackStaticFinal(Pretoucher.class, "PRETOUCHER_PREROLL_TIME_MS", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
-        }
-    }
-
     private void cycleRollByPretoucher(int earlyMillis) {
         File dir = tempDir("shouldHandleEarlyCycleRoll");
         clock.set(100);
@@ -121,60 +109,8 @@ public class PretoucherTest {
         }
     }
 
-    @Test
-    public void dontWrite() throws IllegalAccessException {
-
-        hackStaticFinal(Pretoucher.class, "CAN_WRITE", false);
-        File dir = tempDir("shouldNotRoll");
-
-        try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(createQueue(dir, clock::get), chunkListener, capturedCycles::add)) {
-
-            range(0, 10).forEach(i -> {
-                try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
-                    assertEquals(i, capturedCycles.size());
-                    ctx.wire().write().int32(i);
-                    ctx.wire().write().bytes(new byte[1024]);
-                }
-                try {
-                    pretoucher.execute();
-                } catch (InvalidEventHandlerException e) {
-                    throw Jvm.rethrow(e);
-                }
-                assertEquals(i + 1, capturedCycles.size());
-                clock.addAndGet(TimeUnit.SECONDS.toMillis(5L));
-                try {
-                    pretoucher.execute();
-                } catch (InvalidEventHandlerException e) {
-                    throw Jvm.rethrow(e);
-                }
-                assertEquals(i + 1, capturedCycles.size());
-            });
-
-            assertEquals(10, capturedCycles.size());
-        } finally {
-            hackStaticFinal(Pretoucher.class, "CAN_WRITE", true);
-        }
-    }
-
-    private void hackStaticFinal(Class<Pretoucher> pretoucherClass, String name, Object newValue) throws IllegalAccessException {
-        // As junit has already initialised the class, and all tests are run in same classloader we need to hack the static variables.
-        // Setting system properties wont't do it.
-        // A better solution would be to run in separate classloaders but this was too much effort
-        Field f = Jvm.getField(pretoucherClass, name);
-        removeFinalModifier(f);
-        f.set(null, newValue);
-    }
-
-    private void removeFinalModifier(Field f) throws IllegalAccessException {
-        // yes this is the worst thing ever. Now wash your hands ;)
-        Field modifiersField = Jvm.getField(Field.class, "modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
-    }
-
-    private static final class CapturingChunkListener implements NewChunkListener {
-        private final TreeMap<String, List<Integer>> chunkMap = new TreeMap<>();
+    static final class CapturingChunkListener implements NewChunkListener {
+        final TreeMap<String, List<Integer>> chunkMap = new TreeMap<>();
 
         @Override
         public void onNewChunk(final String filename, final int chunk, final long delayMicros) {
