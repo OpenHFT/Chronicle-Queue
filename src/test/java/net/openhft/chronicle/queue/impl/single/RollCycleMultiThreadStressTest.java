@@ -20,11 +20,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.file.Files;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
@@ -91,12 +96,13 @@ public class RollCycleMultiThreadStressTest {
 
 
     @Test
-    public void stress() throws InterruptedException {
-        final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
+    public void stress() throws InterruptedException, IOException {
+       /* final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
                 map(s -> new File(s, UUID.randomUUID().toString())).
                 orElse(DirectoryUtils.tempDir("rollCycleStress"));
-
-        System.out.printf("Queue dir: %s at %s%n", path.getAbsolutePath(), Instant.now());
+*/
+        File file = Files.createTempDirectory("queue").toFile();
+        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(new NamedThreadFactory("pretouch"));
@@ -118,25 +124,25 @@ public class RollCycleMultiThreadStressTest {
         final List<Writer> writers = new ArrayList<>();
 
         if (READERS_READ_ONLY)
-            createQueue(path);
+            createQueue(file);
 
         if (SHARED_WRITE_QUEUE)
-            sharedWriterQueue = createQueue(path);
+            sharedWriterQueue = createQueue(file);
 
         PretoucherThread pretoucherThread = null;
         if (PRETOUCH) {
-            pretoucherThread = new PretoucherThread(path);
+            pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);
         }
 
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
-            final Writer tempWriter = new Writer(path, wrote, expectedNumberOfMessages);
-            try (ChronicleQueue queue = writerQueue(path)) {
+            final Writer tempWriter = new Writer(file, wrote, expectedNumberOfMessages);
+            try (ChronicleQueue queue = writerQueue(file)) {
                 tempWriter.write(queue.acquireAppender());
             }
         }
         for (int i = 0; i < numThreads - numWriters; i++) {
-            final Reader reader = new Reader(path, expectedNumberOfMessages);
+            final Reader reader = new Reader(file, expectedNumberOfMessages);
             readers.add(reader);
             results.add(executorServiceRead.submit(reader));
         }
@@ -145,12 +151,12 @@ public class RollCycleMultiThreadStressTest {
             Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
         }
         for (int i = 0; i < numWriters; i++) {
-            final Writer writer = new Writer(path, wrote, expectedNumberOfMessages);
+            final Writer writer = new Writer(file, wrote, expectedNumberOfMessages);
             writers.add(writer);
             results.add(executorServiceWrite.submit(writer));
         }
 
-        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + 5) + queueBuilder(path).timeoutMS();
+        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + 5) + queueBuilder(file).timeoutMS();
         long startTime = System.currentTimeMillis();
         final long giveUpWritingAt = startTime + maxWritingTime;
         long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
@@ -249,7 +255,7 @@ public class RollCycleMultiThreadStressTest {
         });
 
         System.out.println("Test complete");
-        DirectoryUtils.deleteDir(path);
+        DirectoryUtils.deleteDir(file);
     }
 
     @NotNull
