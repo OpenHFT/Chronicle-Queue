@@ -97,10 +97,7 @@ public class RollCycleMultiThreadStressTest {
 
     @Test
     public void stress() throws InterruptedException, IOException {
-       /* final File path = Optional.ofNullable(System.getProperty("stress.test.dir")).
-                map(s -> new File(s, UUID.randomUUID().toString())).
-                orElse(DirectoryUtils.tempDir("rollCycleStress"));
-*/
+
         File file = Files.createTempDirectory("queue").toFile();
         System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
