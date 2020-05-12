@@ -128,6 +128,20 @@ public class ChronicleReaderTest {
 
         final AtomicReference<Throwable> readerException = new AtomicReference<>();
         final CountDownLatch executeLatch = new CountDownLatch(1);
+
+
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+                build()) {
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            methodWriterBuilder.recordHistory(true);
+            final StringEvents events = methodWriterBuilder.build();
+
+            for (int i = 0; i < 24; i++) {
+                events.say(i % 2 == 0 ? "hello" : "goodbye");
+            }
+        }
+
         final Thread readerThread = new Thread(() -> {
 
             while (!Thread.currentThread().isInterrupted()) {
@@ -141,21 +155,11 @@ public class ChronicleReaderTest {
             }
         });
         readerThread.start();
+
         assertTrue(executeLatch.await(5, TimeUnit.SECONDS));
         assertTrue(capturedOutput.isEmpty());
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
-                build()) {
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
-            methodWriterBuilder.recordHistory(true);
-            final StringEvents events = methodWriterBuilder.build();
 
-            for (int i = 0; i < 24; i++) {
-                events.say(i % 2 == 0 ? "hello" : "goodbye");
-            }
-        }
-
-        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        assertTrue(latch.await(15, TimeUnit.SECONDS));
         while (recordsProcessed.get() < 10) {
             LockSupport.parkNanos(1L);
         }
