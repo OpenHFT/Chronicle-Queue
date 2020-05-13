@@ -540,10 +540,14 @@ public class SingleChronicleQueueExcerpts {
         }
 
         /**
-         * Appends bytes withut write lock. Should only be used if write lock is acquired externally. Never use wihtout
+         * Appends bytes withut write lock. Should only be used if write lock is acquired externally. Never use without
          * write locking as it WILL corrupt the queue file and cause data loss
          */
         protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
+            writeBytesInternal(index, bytes, false);
+        }
+
+        protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
             final int cycle = queue.rollCycle().toCycle(index);
 
             if (wire == null)
@@ -555,17 +559,17 @@ public class SingleChronicleQueueExcerpts {
             if (rollbackDontClose) {
                 if (index > wire.headerNumber() + 1)
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+                LOG.warn("Trying to overwrite index {} which is before the end of the queue", Long.toHexString(index));
                 return;
             }
-            writeBytesInternal(bytes);
+            writeBytesInternal(bytes, metadata);
         }
 
-        private void writeBytesInternal(@NotNull final BytesStore bytes) {
+        private void writeBytesInternal(@NotNull final BytesStore bytes, boolean metadata) {
             assert writeLock.locked();
             try {
                 int safeLength = (int) queue.overlapSize();
-                openContext(false, safeLength);
+                openContext(metadata, safeLength);
 
                 try {
                     context.wire().bytes().write(bytes);
@@ -582,7 +586,6 @@ public class SingleChronicleQueueExcerpts {
             if (position > store.writePosition() + queue.blockSize())
                 throw new IllegalArgumentException("pos: " + position + ", store.writePosition()=" +
                         store.writePosition() + " queue.blockSize()=" + queue.blockSize());
-            // System.err.println("----- "+Thread.currentThread().getName()+" pos: "+position);
             position0(position, startOfMessage);
         }
 
@@ -807,7 +810,7 @@ public class SingleChronicleQueueExcerpts {
                             unlock = false;
                         } else {
                             isClosed = true;
-                            writeBytesInternal(wire.bytes());
+                            writeBytesInternal(wire.bytes(), metaData);
                             wire = StoreAppender.this.wire;
                         }
                     }
