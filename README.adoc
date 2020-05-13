@@ -127,7 +127,7 @@ For more information on Chronicle Queue (Enterprise Edition), please contact mai
 - Messages are grouped by *topics*. A topic can contain any number of *sub-topics* which are logically stored together under the queue/topic.
 - An *appender* is the source of messages.
 - A *tailer* is a receiver of messages.
-- *Chronicle Queue* is broker-less by default. You can use *Chronicle Engine* to act as a broker for remote access.
+- *Chronicle Queue* is broker-less by default. You can use *Chronicle Datagrid* to act as a broker for remote access.
 
 NOTE: We deliberately avoid the term *consumer* as messages are not consumed/destroyed by reading.
 
@@ -136,7 +136,7 @@ At a high level:
 - *appenders* write to the end of a queue. There is no way to insert, or delete excerpts.
 - *tailers* read the next available message each time they are called.
 
-By using *Chronicle Engine*, a Java or C# client can publish to a *queue* to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
+By using *Chronicle Datagrid*, a Java or C# client can publish to a *queue* to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
 
 === Important note
 
@@ -1552,7 +1552,7 @@ Chronicle Queue supports over an order-of-magnitude of greater throughput, toget
 
 Chronicle Queue handles more volume from a single thread to a single partition. This avoids the need for the complexity, and the downsides, of having partitions.
 
-NOTE: Chronicle Engine does support partitioning of queues across machines, though not the partitioning of a single queue.
+NOTE: Chronicle Datagrid does support partitioning of queues across machines, though not the partitioning of a single queue.
 
 Kafka uses an intermediate broker to use the operating system's file system and cache, while Chronicle Queue directly uses the operating system's file system and cache.
 
