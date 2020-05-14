@@ -9,10 +9,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -97,7 +94,7 @@ public class RollCycleMultiThreadStressTest {
         return allReadersComplete;
     }
 
-
+    @Ignore("flaky test - see https://github.com/OpenHFT/Chronicle-Queue/issues/670")
     @Test
     public void stress() throws InterruptedException, IOException {
 
