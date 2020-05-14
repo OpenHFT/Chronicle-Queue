@@ -134,9 +134,11 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
                     if (!warnedOnFailure) {
-                        String message = "Failed to acquire " + type + " lock on the table store file. Retrying";
-                        if (Jvm.isDebugEnabled(SingleTableStore.class))
+
+                        if (Jvm.isDebugEnabled(SingleTableStore.class)) {
+                            String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath();
                             Jvm.debug().on(SingleTableStore.class, message, new StackTrace());
+                        }
                         warnedOnFailure = true;
                     }
                 }

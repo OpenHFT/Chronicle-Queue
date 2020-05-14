@@ -974,7 +974,7 @@ public class SingleChronicleQueueExcerpts {
             return history;
         }
 
-        @NotNull
+        @Nullable
         private static MessageHistory readHistoryFromWire(@NotNull final Wire wire, final MessageHistory history) {
             final StringBuilder sb = SBP.acquireStringBuilder();
             ValueIn valueIn = wire.read(sb);
