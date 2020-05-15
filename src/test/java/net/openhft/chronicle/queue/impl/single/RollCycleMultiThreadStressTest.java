@@ -95,7 +95,7 @@ public class RollCycleMultiThreadStressTest {
         return allReadersComplete;
     }
 
-    @Ignore("flaky test - see https://github.com/OpenHFT/Chronicle-Queue/issues/670")
+    //@Ignore("flaky test - see https://github.com/OpenHFT/Chronicle-Queue/issues/670")
     @Test
     public void stress() throws InterruptedException, IOException {
 
