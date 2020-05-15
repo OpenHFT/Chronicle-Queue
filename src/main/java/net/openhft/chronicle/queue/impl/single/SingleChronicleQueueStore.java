@@ -250,7 +250,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long refCount() {
-        return this.refCount.get();
+        return this.refCount.refCount();
     }
 
     @Override
@@ -260,7 +260,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void close() {
-        while (refCount.get() > 0) {
+        while (refCount.refCount() > 0) {
             refCount.release();
         }
     }
