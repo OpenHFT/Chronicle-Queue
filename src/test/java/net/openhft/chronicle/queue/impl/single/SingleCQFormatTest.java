@@ -95,7 +95,7 @@ public class SingleCQFormatTest {
         }
     }
 
-    @Test
+    @Test(expected = TimeoutException.class)
     public void testNoHeader() throws IOException {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
@@ -110,15 +110,18 @@ public class SingleCQFormatTest {
 
         @NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
+                .timeoutMS(500L)
                 .testBlockSize()
                 .build();
 
-        testQueue(queue);
-        queue.close();
         try {
-            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
-        } catch (Exception e) {
-            e.printStackTrace();
+            testQueue(queue);
+        }finally {
+            try {
+                IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -134,7 +137,7 @@ public class SingleCQFormatTest {
         bytes.release();
         @Nullable ChronicleQueue queue = null;
         try {
-            queue = binary(dir).timeoutMS(1_000L)
+            queue = binary(dir).timeoutMS(500L)
                     .testBlockSize()
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .build();
