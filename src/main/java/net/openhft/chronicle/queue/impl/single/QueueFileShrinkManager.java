@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.threads.Threads;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +36,12 @@ public enum QueueFileShrinkManager {
     public static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
 
     private static final Logger LOG = LoggerFactory.getLogger(QueueFileShrinkManager.class);
-    private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
+    private static final ExecutorService EXECUTOR = Threads.acquireExecutorService(THREAD_NAME, 1, true);
 
-
-    public static void scheduleShrinking(File queueFile, long writePos) {
+    public static void scheduleShrinking(@NotNull final File queueFile, final long writePos) {
         if (DISABLE_QUEUE_FILE_SHRINKING)
             return;
-        Runnable task = () -> {
+        final Runnable task = () -> {
             if (LOG.isDebugEnabled())
                 LOG.debug("Shrinking {} to {}", queueFile, writePos);
             int timeout = 50;
@@ -69,6 +69,6 @@ public enum QueueFileShrinkManager {
         if (RUN_SYNCHRONOUSLY)
             task.run();
         else
-            executor.submit(task);
+            EXECUTOR.submit(task);
     }
 }
