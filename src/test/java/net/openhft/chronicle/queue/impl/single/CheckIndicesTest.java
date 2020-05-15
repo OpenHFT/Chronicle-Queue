@@ -33,7 +33,7 @@ public class CheckIndicesTest extends ChronicleQueueTestBase {
                 if (f.isDone())
                     f.get();
                 if (f2.isDone())
-                    f.get();
+                    f2.get();
                 Thread.sleep(500);
             }
 
