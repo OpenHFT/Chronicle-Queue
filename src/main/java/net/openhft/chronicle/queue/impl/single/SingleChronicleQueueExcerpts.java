@@ -16,7 +16,6 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.PackageLocal;
@@ -26,7 +25,6 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.queue.impl.*;
-import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -279,10 +277,10 @@ public class SingleChronicleQueueExcerpts {
             if (this.store == null)
                 return;
 
-            if (this.store.refCount() == 0) {
-                this.store = null;
-                return;
-            }
+            // if (this.store.refCount() == 0) {
+            //    this.store = null;
+            //     return;
+            // }
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
