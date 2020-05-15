@@ -71,7 +71,7 @@ public class ToEndTest {
     }
 
     @Test
-    public void missingCyclesToEndTest() throws InterruptedException {
+    public void missingCyclesToEndTest() {
         String path = OS.TARGET + "/missingCyclesToEndTest-" + System.nanoTime();
         IOTools.shallowDeleteDirWithFiles(path);
 
@@ -99,7 +99,7 @@ public class ToEndTest {
         final ExcerptTailer tailer = queue.createTailer().toEnd();
         try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.isPresent()) {
-                fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()));
+                fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read(() -> "msg").int32());
             }
         }
 
