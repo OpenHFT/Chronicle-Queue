@@ -7,16 +7,6 @@ import java.io.IOException;
 
 public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThreadStressTest {
 
-    /*@Ignore("run manually")
-    @Test
-    public void repeatStress() throws InterruptedException {
-        Jvm.setExceptionHandlers(null, null, null);
-        for (int i = 0; i < 100; i++) {
-            stress();
-        }
-    }*/
-
-    @Ignore("flaky test")
     @Test
     public void stress() throws InterruptedException, IOException {
         super.stress();
