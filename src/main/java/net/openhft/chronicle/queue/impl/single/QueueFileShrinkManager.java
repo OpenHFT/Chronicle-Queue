@@ -26,16 +26,18 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public enum QueueFileShrinkManager {
     ;
     public static final String THREAD_NAME = "queue-file-shrink-daemon";
+    // don't use this with a Pretoucher enabled!
     public static boolean RUN_SYNCHRONOUSLY = Boolean.getBoolean("chronicle.queue.synchronousFileShrinking");
     public static boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
 
     private static final Logger LOG = LoggerFactory.getLogger(QueueFileShrinkManager.class);
-    private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
+    private static final ScheduledExecutorService executor = Threads.acquireScheduledExecutorService(THREAD_NAME, true);
 
 
     public static void scheduleShrinking(File queueFile, long writePos) {
@@ -69,6 +71,7 @@ public enum QueueFileShrinkManager {
         if (RUN_SYNCHRONOUSLY)
             task.run();
         else
-            executor.submit(task);
+            // have to give time to the Pretoucher to realize the file is gone and it doesn't need to (pre)touch it
+            executor.schedule(task, 30, TimeUnit.SECONDS);
     }
 }
