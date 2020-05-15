@@ -31,8 +31,8 @@ import java.util.concurrent.ExecutorService;
 public enum QueueFileShrinkManager {
     ;
     public static final String THREAD_NAME = "queue-file-shrink-daemon";
-    public static boolean RUN_SYNCHRONOUSLY = Boolean.getBoolean("chronicle.queue.synchronousFileShrinking");
-    public static boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
+    public static final boolean RUN_SYNCHRONOUSLY = Boolean.getBoolean("chronicle.queue.synchronousFileShrinking");
+    public static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
 
     private static final Logger LOG = LoggerFactory.getLogger(QueueFileShrinkManager.class);
     private static final ExecutorService executor = Threads.acquireExecutorService(THREAD_NAME, 1, true);
