@@ -7,11 +7,9 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Mocker;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.impl.single.QueueFileShrinkManager;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,12 +25,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
 
     @Before
     public void disableFileShrinking() {
-        QueueFileShrinkManager.DISABLE_QUEUE_FILE_SHRINKING = true;
-    }
-
-    @After
-    public void enableFileShrinking() {
-        QueueFileShrinkManager.DISABLE_QUEUE_FILE_SHRINKING = false;
+        System.setProperty("chronicle.queue.disableFileShrinking", "true");
     }
 
     @Test

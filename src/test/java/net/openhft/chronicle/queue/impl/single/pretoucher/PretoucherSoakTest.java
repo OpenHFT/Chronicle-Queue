@@ -52,7 +52,6 @@ public class PretoucherSoakTest {
         final String source;
         long time;
 
-        // TODO: should make sure this source is the same as Runner.name
         public Heartbeat(String source) {
             this.source = source;
         }

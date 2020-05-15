@@ -641,15 +641,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testReadAndAppend() {
-        try (final ChronicleQueue queue =
-                     builder(getTmpDir(), this.wireType)
-                             .build()) {
+    public void testReadAndAppend() throws InterruptedException {
+        try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType).build()) {
 
+            final CountDownLatch started = new CountDownLatch(1);
             int[] results = new int[2];
 
             Thread t = new Thread(() -> {
                 try {
+                    started.countDown();
                     final ExcerptTailer tailer = queue.createTailer();
                     for (int i = 0; i < 2; ) {
                         boolean read = tailer.readDocument(r -> {
@@ -666,15 +666,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    assertTrue(false);
+                    fail("exception");
                 }
             });
             t.setDaemon(true);
             t.start();
 
-            //Give the tailer thread enough time to initialise before send
-            //the messages
-            Jvm.pause(500); //TODO: latch
+            assertTrue(started.await(1, TimeUnit.SECONDS));
 
             final ExcerptAppender appender = queue.acquireAppender();
             for (int i = 0; i < 2; i++) {
@@ -682,7 +680,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
             }
 
-            Jvm.pause(500);
+            t.join(1_000);
 
             assertArrayEquals(new int[]{0, 1}, results);
         }
@@ -2578,30 +2576,27 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingWhenCycleIsSkippedBackwards() throws Exception {
 
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        long time = System.currentTimeMillis();
+        timeProvider.currentTimeMillis(time);
+
         final File dir = DirectoryUtils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build()) {
             queue.acquireAppender().writeText("first message");
         }
 
-        //TODO: this test fails when converted to use a TimeProvider. Need to work out why
-        Thread.sleep(2100);
+        timeProvider.advanceMillis(2100);
 
         // write second message
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build()) {
             queue.acquireAppender().writeText("second message");
         }
 
         // read both messages
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build()) {
             ExcerptTailer tailer = queue.createTailer();
             ExcerptTailer excerptTailer = tailer.direction(TailerDirection.BACKWARD).toEnd();
             assertEquals("second message", excerptTailer.readText());
@@ -2752,7 +2747,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    //    @Ignore("todo fix fails with enterprise queue")
     @Test
     public void testFromSizePrefixedBlobs() {
 

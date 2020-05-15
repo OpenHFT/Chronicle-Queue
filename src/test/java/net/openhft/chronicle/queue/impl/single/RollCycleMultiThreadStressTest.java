@@ -1,6 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.onoes.ExceptionKey;
+import net.openhft.chronicle.core.onoes.LogLevel;
+import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -23,16 +27,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class RollCycleMultiThreadStressTest {
     final long SLEEP_PER_WRITE_NANOS;
@@ -49,9 +51,13 @@ public class RollCycleMultiThreadStressTest {
     final boolean DUMP_QUEUE;
     final boolean SHARED_WRITE_QUEUE;
 
+    private ThreadDump threadDump;
+    private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
+
     static {
         Jvm.disableDebugHandler();
     }
+
     public RollCycleMultiThreadStressTest() {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 40_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
@@ -94,7 +100,7 @@ public class RollCycleMultiThreadStressTest {
         return allReadersComplete;
     }
 
-    @Ignore("flaky test - see https://github.com/OpenHFT/Chronicle-Queue/issues/670")
+    //@Ignore("flaky test - see https://github.com/OpenHFT/Chronicle-Queue/issues/670")
     @Test
     public void stress() throws InterruptedException, IOException {
 
@@ -483,5 +489,27 @@ public class RollCycleMultiThreadStressTest {
     @Before
     public void multiCPU() {
         Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+    }
+
+    @Before
+    public void before() {
+        threadDump = new ThreadDump();
+        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
+        threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
+        threadDump.ignore(QueueFileShrinkManager.THREAD_NAME);
+        exceptionKeyIntegerMap = Jvm.recordExceptions();
+    }
+
+    @After
+    public void after() {
+        threadDump.assertNoNewThreads();
+        // warnings are often expected
+        exceptionKeyIntegerMap.entrySet().removeIf(entry -> entry.getKey().level.equals(LogLevel.WARN));
+        if (Jvm.hasException(exceptionKeyIntegerMap)) {
+            Jvm.dumpException(exceptionKeyIntegerMap);
+            fail();
+        }
+        Jvm.resetExceptionHandlers();
+        BytesUtil.checkRegisteredBytes();
     }
 }
