@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public enum QueueFileShrinkManager {
     ;
@@ -36,15 +38,21 @@ public enum QueueFileShrinkManager {
     public static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Boolean.getBoolean("chronicle.queue.disableFileShrinking");
 
     private static final Logger LOG = LoggerFactory.getLogger(QueueFileShrinkManager.class);
-    private static final ExecutorService EXECUTOR = Threads.acquireExecutorService(THREAD_NAME, 1, true);
+    private static final ScheduledExecutorService EXECUTOR = Threads.acquireScheduledExecutorService(THREAD_NAME, true);
+    private static final long DELAY_S = 10;
 
     public static void scheduleShrinking(@NotNull final File queueFile, final long writePos) {
         if (DISABLE_QUEUE_FILE_SHRINKING)
             return;
         if (RUN_SYNCHRONOUSLY)
             task(queueFile, writePos);
-        else
-            EXECUTOR.submit(() -> task(queueFile, writePos));
+        else {
+            // The shrink is deferred a bit to allow any potentially lagging tailers/pre-touchers
+            // to move on to the next roll before the file can be safely shrunk.
+            // See https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise/issues/103
+            EXECUTOR.schedule(() -> task(queueFile, writePos), DELAY_S, TimeUnit.SECONDS);
+        }
+
     }
 
     private static void task(@NotNull final File queueFile, final long writePos) {
