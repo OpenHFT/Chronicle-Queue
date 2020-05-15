@@ -883,7 +883,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
                 WireStore wireStore;
                 try {
-                    if ((!readOnly) && wire.writeFirstHeader()) {
+                    if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
                         wireStore = storeFactory.apply(that, wire);
                         wire.updateFirstHeader();
                         if (wireStore.dataVersion() > 0)

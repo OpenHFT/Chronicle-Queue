@@ -160,10 +160,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     @NotNull
     private LongArrayValues array(@NotNull WireIn w, @NotNull LongArrayValues using, boolean index2index) {
         final StringBuilder sb = Wires.acquireStringBuilder();
+        long readPos = w.bytes().readPosition();
         @NotNull final ValueIn valueIn = w.readEventName(sb);
         String name = index2index ? "index2index" : "index";
         if (!name.contentEquals(sb))
-            throw new IllegalStateException("expecting index, was " + sb);
+            throw new IllegalStateException("expecting index, was " + sb + ", bytes: " + w.bytes().readPosition(readPos).toHexString());
 
         valueIn.int64array(using, this, (o1, o2) -> {
         });

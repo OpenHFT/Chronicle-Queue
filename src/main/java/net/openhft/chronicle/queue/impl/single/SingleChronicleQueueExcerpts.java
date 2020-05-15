@@ -1654,7 +1654,7 @@ public class SingleChronicleQueueExcerpts {
                 final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
                 this.setCycle(lastCycle);
                 if (wireStore == null)
-                    throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
+                    throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? lastCycle=" + lastCycle);
 
                 if (store != null)
                     queue.release(store);
@@ -1725,7 +1725,6 @@ public class SingleChronicleQueueExcerpts {
                     }
                     break;
                 case NOT_REACHED:
-                    approximateLastIndex();
                     throw new IllegalStateException("NOT_REACHED index: " + Long.toHexString(index));
                 case END_OF_FILE:
                     state = END_OF_CYCLE;

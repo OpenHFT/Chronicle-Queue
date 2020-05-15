@@ -13,8 +13,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public final class TailerSequenceRaceConditionTest {
     private final AtomicBoolean failedToMoveToEnd = new AtomicBoolean(false);
@@ -36,8 +36,8 @@ public final class TailerSequenceRaceConditionTest {
         }
 
         threadPool.shutdown();
-        assertThat(threadPool.awaitTermination(5L, TimeUnit.SECONDS), is(true));
-        assertThat(failedToMoveToEnd.get(), is(false));
+        assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
+        assertFalse(failedToMoveToEnd.get());
     }
 
     @After
