@@ -108,8 +108,8 @@ public class WireStorePool implements StoreReleasable {
 
     @Override
     public synchronized void release(@NotNull CommonStore store) {
-        if (store.refCount() > 0)
-            store.release();
+
+        store.release();
 
         long refCount = store.refCount();
         assert refCount >= 0;
