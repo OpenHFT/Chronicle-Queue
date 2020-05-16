@@ -206,11 +206,12 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
 
     @Override
     public void close() {
-
-        while (refCount.refCount() > 0) {
-            refCount.release();
+        if (!isClosed) {
+            while (refCount.refCount() > 0) {
+                refCount.release();
+            }
+            isClosed = true;
         }
-        isClosed = true;
     }
 
     /**
