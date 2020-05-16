@@ -39,6 +39,7 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -62,7 +63,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     private final Wire mappedWire;
     @NotNull
     private final ReferenceCounter refCount;
-    private volatile boolean isClosed;
+    private AtomicBoolean isClosed = new AtomicBoolean();
 
     /**
      * used by {@link Demarshallable}
@@ -152,7 +153,7 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
 
     @Override
     public boolean isClosed() {
-        return isClosed;
+        return isClosed.get();
     }
 
     @NotNull
@@ -206,11 +207,10 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
 
     @Override
     public void close() {
-        if (!isClosed) {
+        if (!isClosed.getAndSet(true)) {
             while (refCount.refCount() > 0) {
                 refCount.release();
             }
-            isClosed = true;
         }
     }
 
