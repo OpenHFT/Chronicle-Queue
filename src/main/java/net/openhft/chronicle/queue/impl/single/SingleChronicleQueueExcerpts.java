@@ -897,8 +897,8 @@ public class SingleChronicleQueueExcerpts {
                 releaseIfNotNull(wireForIndexReference);
                 releaseIfNotNull(wireReference);
 
-                // Object is no longer reachable
-                if (storeReference != null) {
+                // Object is no longer reachable, check that it has not already been released
+                if (storeReference != null && storeReference.refCount() > 0) {
                     storeReleasable.release(storeReference);
                 }
             }
