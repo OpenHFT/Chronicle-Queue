@@ -72,6 +72,18 @@ public class SingleChronicleQueueExcerpts {
         void writeBytes(long index, BytesStore bytes);
     }
 
+    private static void releaseIfNotNullAndReferenced(@Nullable final Bytes bytesReference) {
+        if (bytesReference != null) {
+            bytesReference.release();
+        }
+    }
+
+// *************************************************************************
+//
+// TAILERS
+//
+// *************************************************************************
+
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
         @NotNull
         private final SingleChronicleQueue queue;
@@ -96,6 +108,7 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private Pretoucher pretoucher = null;
         private NativeBytesStore<Void> batchTmp;
+        private final AtomicBoolean isClosed = new AtomicBoolean();
 
         StoreAppender(@NotNull final SingleChronicleQueue queue,
                       @NotNull final WireStorePool storePool,
@@ -141,25 +154,28 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        void close() {
-            if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
-            final Wire w0 = wireForIndex;
-            wireForIndex = null;
-            if (w0 != null)
-                releaseIfNotNullAndReferenced(w0.bytes());
-            final Wire w = wire;
-            wire = null;
-            if (w != null)
-                releaseIfNotNullAndReferenced(w.bytes());
-            if (pretoucher != null)
-                pretoucher.close();
 
-            if (store != null) {
-                storePool.release(store);
+        void close() {
+            if (!isClosed.getAndSet(true)) {
+                if (Jvm.isDebugEnabled(getClass()))
+                    Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
+                final Wire w0 = wireForIndex;
+                wireForIndex = null;
+                if (w0 != null)
+                    releaseIfNotNullAndReferenced(w0.bytes());
+                final Wire w = wire;
+                wire = null;
+                if (w != null)
+                    releaseIfNotNullAndReferenced(w.bytes());
+                if (pretoucher != null)
+                    pretoucher.close();
+
+                if (store != null) {
+                    storePool.release(store);
+                }
+                store = null;
+                storePool.close();
             }
-            store = null;
-            storePool.close();
         }
 
         /**
@@ -279,10 +295,7 @@ public class SingleChronicleQueueExcerpts {
             if (this.store == null)
                 return;
 
-            if (this.store.refCount() == 0) {
-                this.store = null;
-                return;
-            }
+            assert this.store.refCount() > 0;
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
@@ -860,12 +873,6 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
-// *************************************************************************
-//
-// TAILERS
-//
-// *************************************************************************
-
     private static final class ClosableResources<T extends StoreReleasable> {
         @NotNull
         private final T storeReleasable;
@@ -879,8 +886,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private static void releaseIfNotNull(final Bytes bytesReference) {
-            // Object is no longer reachable, check that it has not already been released
-            if (bytesReference != null && bytesReference.refCount() > 0) {
+            // Object is no longer reachable
+            if (bytesReference != null) {
                 bytesReference.release();
             }
         }
@@ -891,7 +898,9 @@ public class SingleChronicleQueueExcerpts {
                 releaseIfNotNull(wireReference);
 
                 // Object is no longer reachable, check that it has not already been released
-                if (storeReference != null && storeReference.refCount() > 0) {
+                CommonStore storeReference = this.storeReference;
+
+                if (storeReference != null) {
                     storeReleasable.release(storeReference);
                 }
             }
@@ -1006,17 +1015,21 @@ public class SingleChronicleQueueExcerpts {
             return readingDocument(false);
         }
 
+        private final AtomicBoolean isClosed = new AtomicBoolean();
+
         private void close() {
-            // the wire ref count will be released here by setting it to null
-            context.wire(null);
-            final Wire w0 = wireForIndex;
-            if (w0 != null)
-                releaseIfNotNullAndReferenced(w0.bytes());
-            wireForIndex = null;
-            if (store != null) {
-                queue.release(store);
+            if (!isClosed.getAndSet(true)) {
+                // the wire ref count will be released here by setting it to null
+                context.wire(null);
+                final Wire w0 = wireForIndex;
+                if (w0 != null)
+                    releaseIfNotNullAndReferenced(w0.bytes());
+                wireForIndex = null;
+                if (store != null) {
+                    queue.release(store);
+                }
+                store = null;
             }
-            store = null;
         }
 
         @Override
@@ -2104,12 +2117,6 @@ public class SingleChronicleQueueExcerpts {
                     releaseWireResources(oldWire);
                 }
             }
-        }
-    }
-
-    private static void releaseIfNotNullAndReferenced(@Nullable final Bytes bytesReference) {
-        if (bytesReference != null && bytesReference.refCount() > 0) {
-            bytesReference.release();
         }
     }
 
