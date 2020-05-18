@@ -61,7 +61,7 @@ public enum QueueFileShrinkManager {
         int timeout = 50;
         for (int i = OS.isWindows() ? 1 : 3; i >= 0; i--) {
             if (!queueFile.exists()) {
-                LOG.warn("Failed to shrink file as it no-longer existing, file=" + queueFile);
+                LOG.warn("Failed to shrink file as it exists no longer, file=" + queueFile);
                 return;
             }
             try (RandomAccessFile raf = new RandomAccessFile(queueFile, "rw")) {

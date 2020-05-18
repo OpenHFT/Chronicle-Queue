@@ -1159,8 +1159,11 @@ public class SingleChronicleQueueExcerpts {
                     }
 
                     case END_OF_CYCLE:
-                        if (endOfCycle())
+                        if (endOfCycle()) {
+                            Jvm.optionalSafepoint();
                             continue;
+                        }
+
                         return false;
 
                     case BEYOND_START_OF_CYCLE:
@@ -1207,13 +1210,18 @@ public class SingleChronicleQueueExcerpts {
         private boolean nextEndOfCycle(final long nextIndex) {
             if (moveToIndexInternal(nextIndex)) {
                 state = FOUND_CYCLE;
+                Jvm.optionalSafepoint();
                 return true;
             }
-            if (state == END_OF_CYCLE)
+            Jvm.optionalSafepoint();
+            if (state == END_OF_CYCLE) {
+                Jvm.optionalSafepoint();
                 return true;
+            }
             if (cycle < queue.lastCycle()) {
                 // we have encountered an empty file without an EOF marker
                 state = END_OF_CYCLE;
+                Jvm.optionalSafepoint();
                 return true;
             }
             // We are here because we are waiting for an entry to be written to this file.

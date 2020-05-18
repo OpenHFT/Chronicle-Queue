@@ -59,9 +59,9 @@ public class RollCycleMultiThreadStressTest {
     }
 
     public RollCycleMultiThreadStressTest() {
-        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 40_000);
+        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
-        ROLL_EVERY_MS = Integer.getInteger("rollEvery", 100);
+        ROLL_EVERY_MS = Integer.getInteger("rollEvery", 300);
         DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
         DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
         WRITE_ONE_THEN_WAIT_MS = Integer.getInteger("writeOneThenWait", 0);
@@ -74,7 +74,6 @@ public class RollCycleMultiThreadStressTest {
         SHARED_WRITE_QUEUE = Boolean.getBoolean("sharedWriteQ");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
 
-        System.setProperty("disableFastForwardHeaderNumber", "true");
         System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
     }
@@ -112,14 +111,14 @@ public class RollCycleMultiThreadStressTest {
         final ExecutorService executorServiceRead = Executors.newFixedThreadPool(numThreads - numWriters, new NamedThreadFactory("reader"));
 
         final AtomicInteger wrote = new AtomicInteger();
-        final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS);
+        final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters/2);
 
         System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
                 numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
         System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
                 SLEEP_PER_WRITE_NANOS);
-        System.out.printf("Should take ~%dsec%n",
-                TimeUnit.NANOSECONDS.toSeconds(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / numWriters);
+        System.out.printf("Should take ~%dms%n",
+                TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters/2));
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
