@@ -571,8 +571,8 @@ public class SingleChronicleQueueExcerpts {
             boolean rollbackDontClose = index != wire.headerNumber() + 1;
             if (rollbackDontClose) {
                 if (index > wire.headerNumber() + 1)
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                LOG.warn("Trying to overwrite index {} which is before the end of the queue", Long.toHexString(index));
+                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
+                LOG.warn("Trying to overwrite index {} which is before the end of the queue", Long.toHexString(index), new Exception());
                 return;
             }
             writeBytesInternal(bytes, metadata);
