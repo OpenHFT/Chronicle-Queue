@@ -32,8 +32,7 @@ import java.io.File;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 @RequiredForClient
 public class CreateAtIndexTest extends ChronicleQueueTestBase {
@@ -94,8 +93,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
                 appender.writeBytes(0x421d00000003L, HELLO_WORLD);
                 fail();
             } catch (IllegalStateException e) {
-                assertEquals("Unable to move to index 421d00000003 beyond the end of the queue",
-                        e.getMessage());
+                assertTrue(e.getMessage().startsWith("Unable to move to index 421d00000003 beyond the end of the queue"));
             }
         }
 
