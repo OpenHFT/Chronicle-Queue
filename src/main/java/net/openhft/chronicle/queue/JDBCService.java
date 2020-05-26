@@ -1,8 +1,10 @@
 /*
- * Copyright 2016 higherfrequencytrading.com
+ * Copyright 2016-2020 Chronicle Software
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
+ * https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *       http://www.apache.org/licenses/LICENSE-2.0
@@ -12,12 +14,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
-
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -31,14 +32,12 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-
-public class JDBCService implements Closeable {
+public class JDBCService extends AbstractCloseable implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
     @NotNull
     private final ChronicleQueue in;
     private final ChronicleQueue out;
     private final ThrowingSupplier<Connection, SQLException> connectionSupplier;
-    private volatile boolean closed = false;
 
     public JDBCService(@NotNull ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
         this.in = in;
@@ -60,7 +59,7 @@ public class JDBCService implements Closeable {
             JDBCComponent js = new JDBCComponent(connectionSupplier, result);
             MethodReader reader = in.createTailer().afterLastWritten(out).methodReader(js);
             Pauser pauser = Pauser.millis(1, 10);
-            while (!closed) {
+            while (!isClosed()) {
                 if (reader.readOne())
                     pauser.reset();
                 else
@@ -72,8 +71,7 @@ public class JDBCService implements Closeable {
     }
 
     @Override
-    public void close() {
-        closed = true;
+    protected void performClose() {
     }
 
     @NotNull

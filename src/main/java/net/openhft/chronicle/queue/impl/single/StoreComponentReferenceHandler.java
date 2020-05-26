@@ -111,6 +111,7 @@ public enum StoreComponentReferenceHandler implements Closeable {
         return processedCount != 0;
     }
 
+
     @Override
     public void close() {
         THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE.shutdownNow();
@@ -119,5 +120,10 @@ public enum StoreComponentReferenceHandler implements Closeable {
         } catch (InterruptedException ignore) {
 
         }
+    }
+
+    @Override
+    public boolean isClosed() {
+        throw new UnsupportedOperationException();
     }
 }
