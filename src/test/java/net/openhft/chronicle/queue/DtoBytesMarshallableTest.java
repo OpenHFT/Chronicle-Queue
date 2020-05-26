@@ -11,9 +11,6 @@ import org.junit.Test;
 
 import java.io.File;
 
-/**
- * Created by Rob Austin
- */
 @RequiredForClient
 public class DtoBytesMarshallableTest {
 

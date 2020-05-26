@@ -34,10 +34,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
-/*
- * Created by Jerry Shea on 12/10/17
- */
 public class ChronicleHistoryReaderTest {
 
     @Test

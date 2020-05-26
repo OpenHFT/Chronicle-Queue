@@ -34,10 +34,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-
-/*
- * Created by Rob Austin
- */
 public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
 
     public static final int SIZE_OF_SIZE = ClientWiredStatelessTcpConnectionHub.SIZE_OF_SIZE;

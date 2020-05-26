@@ -30,10 +30,6 @@ import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-
-/*
- * Created by Rob Austin
- */
 public class ClientWiredChronicleQueueStateless extends AbstractStatelessClient implements ChronicleQueue {
 
     private ClientWiredStatelessTcpConnectionHub hub;

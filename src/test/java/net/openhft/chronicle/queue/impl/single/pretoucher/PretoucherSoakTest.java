@@ -9,9 +9,6 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
 import java.util.UUID;
 
-/**
- * Created by Rob Austin
- */
 public class PretoucherSoakTest {
 
     public static void main(String[] args) {
