@@ -14,6 +14,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -168,6 +169,7 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
+    @Ignore
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws Exception {
         assumeThat(OS.isLinux(), is(true));
         System.gc();
