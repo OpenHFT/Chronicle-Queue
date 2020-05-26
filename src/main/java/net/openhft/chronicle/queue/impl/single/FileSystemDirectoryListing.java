@@ -50,4 +50,9 @@ final class FileSystemDirectoryListing implements DirectoryListing {
     public void close() {
         // no-op
     }
+
+    @Override
+    public boolean isClosed() {
+        throw new UnsupportedOperationException();
+    }
 }

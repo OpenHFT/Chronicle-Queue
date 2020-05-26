@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.values.LongArrayValues;
@@ -40,7 +41,7 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
-class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
+class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMarshallable, Closeable {
     private static final boolean IGNORE_INDEXING_FAILURE = Boolean.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Boolean.getBoolean("chronicle.queue.report.linear.scan.latency");
 
@@ -119,7 +120,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     @Override
-    public void close() {
+    protected void performClose() {
         Closeable.closeQuietly(index2Index);
         Closeable.closeQuietly(nextEntryToBeIndexed);
         // Eagerly clean up the contents of thread locals but only for this thread.

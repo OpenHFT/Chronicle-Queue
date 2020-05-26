@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -27,7 +28,7 @@ import net.openhft.chronicle.threads.TimingPauser;
 import java.io.File;
 import java.util.function.Supplier;
 
-public abstract class AbstractTSQueueLock implements Closeable {
+public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
     protected static final long UNLOCKED = Long.MIN_VALUE;
 
     protected final LongValue lock;
@@ -42,7 +43,7 @@ public abstract class AbstractTSQueueLock implements Closeable {
         this.path = tableStore.file();
     }
 
-    public void close() {
+    protected void performClose() {
         Closeable.closeQuietly(lock);
     }
 

@@ -1,11 +1,13 @@
 /*
- * Copyright 2016 higherfrequencytrading.com
+ * Copyright 2016-2020 Chronicle Software
+ *
+ * https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +23,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
@@ -40,7 +43,7 @@ import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class SingleChronicleQueueStore implements WireStore {
+public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
     }
@@ -259,7 +262,7 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public void close() {
+    protected void performClose() {
         while (refCount.refCount() > 0) {
             refCount.release();
         }

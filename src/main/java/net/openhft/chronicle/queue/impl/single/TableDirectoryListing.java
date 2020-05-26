@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -11,7 +12,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.function.ToIntFunction;
 
-final class TableDirectoryListing implements DirectoryListing {
+final class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
     private static final Logger LOGGER = LoggerFactory.getLogger(TableDirectoryListing.class);
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
@@ -113,7 +114,7 @@ final class TableDirectoryListing implements DirectoryListing {
         return tableStore.dump();
     }
 
-    public void close() {
+    protected void performClose() {
         Closeable.closeQuietly(minCycleValue, maxCycleValue, modCount);
     }
 

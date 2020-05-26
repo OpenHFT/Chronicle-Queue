@@ -37,4 +37,9 @@ public class NoopQueueLock implements QueueLock {
     public void close() {
 
     }
+
+    @Override
+    public boolean isClosed() {
+        throw new UnsupportedOperationException();
+    }
 }

@@ -1,11 +1,13 @@
 /*
- * Copyright 2016 higherfrequencytrading.com
+ * Copyright 2016-2020 Chronicle Software
+ *
+ * https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,6 +24,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
@@ -39,7 +42,6 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -47,7 +49,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static net.openhft.chronicle.core.util.Time.sleep;
 import static net.openhft.chronicle.core.util.Time.tickTime;
 
-public class SingleTableStore<T extends Metadata> implements TableStore<T> {
+public class SingleTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     public static final String SUFFIX = ".cq4t";
 
     private static final long timeoutMS = Long.getLong("chronicle.table.store.timeoutMS", 10_000);
@@ -63,7 +65,6 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     private final Wire mappedWire;
     @NotNull
     private final ReferenceCounter refCount;
-    private AtomicBoolean isClosed = new AtomicBoolean();
 
     /**
      * used by {@link Demarshallable}
@@ -151,11 +152,6 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
         throw new IllegalStateException("Unable to claim exclusive " + type + " lock on file " + file);
     }
 
-    @Override
-    public boolean isClosed() {
-        return isClosed.get();
-    }
-
     @NotNull
     @Override
     public File file() {
@@ -206,11 +202,9 @@ public class SingleTableStore<T extends Metadata> implements TableStore<T> {
     }
 
     @Override
-    public void close() {
-        if (!isClosed.getAndSet(true)) {
-            while (refCount.refCount() > 0) {
-                refCount.release();
-            }
+    protected void performClose() {
+        while (refCount.refCount() > 0) {
+            refCount.release();
         }
     }
 

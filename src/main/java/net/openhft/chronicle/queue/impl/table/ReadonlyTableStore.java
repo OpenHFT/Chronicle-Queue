@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.wire.WireOut;
@@ -27,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.util.function.Function;
 
-public class ReadonlyTableStore<T extends Metadata> implements TableStore<T> {
+public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     private final T metadata;
 
     public ReadonlyTableStore(T metadata) {
@@ -40,7 +41,7 @@ public class ReadonlyTableStore<T extends Metadata> implements TableStore<T> {
     }
 
     @Override
-    public void close() {
+    protected void performClose() {
     }
 
     @Override
