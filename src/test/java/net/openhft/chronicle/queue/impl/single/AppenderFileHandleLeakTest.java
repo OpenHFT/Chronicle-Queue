@@ -36,6 +36,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
 
+@Ignore
 public final class AppenderFileHandleLeakTest {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
@@ -169,7 +170,6 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
-    @Ignore
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws Exception {
         assumeThat(OS.isLinux(), is(true));
         System.gc();
