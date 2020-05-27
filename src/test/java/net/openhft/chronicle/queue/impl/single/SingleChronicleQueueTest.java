@@ -315,6 +315,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
         }
+
+        try {
+            checkMappedFiles();
+        } catch (AssertionError ignored) {
+        }
     }
 
     @Test
@@ -1609,9 +1614,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Thread.sleep(1);
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                String message = "dump: " + builder(dir, wireType).rollCycle(RollCycles.HOURLY).build().dump();
-                assertTrue(message, dc.isPresent());
-                assertEquals(message, "text", dc.wire().read("test").text());
+                try (final SingleChronicleQueue build = builder(dir, wireType).rollCycle(HOURLY).build()) {
+                    String message = "dump: " + build.dump();
+                    assertTrue(message, dc.isPresent());
+                    assertEquals(message, "text", dc.wire().read("test").text());
+                }
             }
         }
     }
@@ -1662,14 +1669,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Files.find(dir.toPath(), 1, (p, basicFileAttributes) -> p.toString().endsWith("cq4"), FileVisitOption.FOLLOW_LINKS)
                     .forEach(path -> assertTrue(path.toFile().delete()));
 
-            ChronicleQueue q2 = builder(dir, wireType).build();
-            tailer = q2.createTailer();
-            tailer.toEnd();
-            assertEquals(TailerState.UNINITIALISED, tailer.state());
-            append = q2.acquireAppender();
-            append.writeDocument(w -> w.write(() -> "test").text("before text"));
+            try (ChronicleQueue q2 = builder(dir, wireType).build()) {
+                tailer = q2.createTailer();
+                tailer.toEnd();
+                assertEquals(TailerState.UNINITIALISED, tailer.state());
+                append = q2.acquireAppender();
+                append.writeDocument(w -> w.write(() -> "test").text("before text"));
 
-            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("before text", Assert::assertEquals)));
+                assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("before text", Assert::assertEquals)));
+            }
         }
     }
 
@@ -2471,46 +2479,48 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testCountExceptsBetweenCycles() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
-        final SingleChronicleQueueBuilder builder = binary(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY).timeProvider(timeProvider);
-        final RollingChronicleQueue queue = builder.build();
-        final ExcerptAppender appender = queue.acquireAppender();
+        try (final RollingChronicleQueue queue = binary(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(timeProvider)
+                .build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
 
-        long[] indexs = new long[10];
-        for (int i = 0; i < indexs.length; i++) {
-            System.out.println(".");
-            try (DocumentContext writingContext = appender.writingDocument()) {
-                writingContext.wire().write().text("some-text-" + i);
-                indexs[i] = writingContext.index();
+            long[] indexs = new long[10];
+            for (int i = 0; i < indexs.length; i++) {
+                System.out.println(".");
+                try (DocumentContext writingContext = appender.writingDocument()) {
+                    writingContext.wire().write().text("some-text-" + i);
+                    indexs[i] = writingContext.index();
+                }
+
+                // we add the pause times to vary the test, to ensure it can handle when cycles are
+                // skipped
+                if ((i + 1) % 5 == 0)
+                    timeProvider.advanceMillis(2000);
+                else if ((i + 1) % 3 == 0)
+                    timeProvider.advanceMillis(1000);
             }
 
-            // we add the pause times to vary the test, to ensure it can handle when cycles are
-            // skipped
-            if ((i + 1) % 5 == 0)
-                timeProvider.advanceMillis(2000);
-            else if ((i + 1) % 3 == 0)
-                timeProvider.advanceMillis(1000);
-        }
-
-        for (int lower = 0; lower < indexs.length; lower++) {
-            for (int upper = lower; upper < indexs.length; upper++) {
-                System.out.println("lower=" + lower + ",upper=" + upper);
-                assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
-                        indexs[upper]));
+            for (int lower = 0; lower < indexs.length; lower++) {
+                for (int upper = lower; upper < indexs.length; upper++) {
+                    System.out.println("lower=" + lower + ",upper=" + upper);
+                    assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
+                            indexs[upper]));
+                }
             }
+
+            // check the base line of the test below
+            assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]));
+
+            /// check for the case when the last index has a sequence number of -1
+            assertEquals(queue.rollCycle().toSequenceNumber(indexs[6]), 0);
+            assertEquals(5, queue.countExcerpts(indexs[0],
+                    indexs[6] - 1));
+
+            /// check for the case when the first index has a sequence number of -1
+            assertEquals(7, queue.countExcerpts(indexs[0] - 1,
+                    indexs[6]));
         }
-
-        // check the base line of the test below
-        assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]));
-
-        /// check for the case when the last index has a sequence number of -1
-        assertEquals(queue.rollCycle().toSequenceNumber(indexs[6]), 0);
-        assertEquals(5, queue.countExcerpts(indexs[0],
-                indexs[6] - 1));
-
-        /// check for the case when the first index has a sequence number of -1
-        assertEquals(7, queue.countExcerpts(indexs[0] - 1,
-                indexs[6]));
 
     }
 
@@ -2838,48 +2848,49 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection() {
 
-        final ChronicleQueue queue = binary(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY).build();
+        try (final ChronicleQueue queue = binary(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY).build()) {
 
-        int value = 0;
-        long cycle = 0;
+            int value = 0;
+            long cycle = 0;
 
-        long startIndex = 0;
-        for (int i = 0; i < 56; i++) {
-            try (final DocumentContext dc = queue.acquireAppender().writingDocument()) {
+            long startIndex = 0;
+            for (int i = 0; i < 56; i++) {
+                try (final DocumentContext dc = queue.acquireAppender().writingDocument()) {
 
-                if (cycle == 0)
-                    cycle = queue.rollCycle().toCycle(dc.index());
-                final long index = dc.index();
-                final long seq = queue.rollCycle().toSequenceNumber(index);
+                    if (cycle == 0)
+                        cycle = queue.rollCycle().toCycle(dc.index());
+                    final long index = dc.index();
+                    final long seq = queue.rollCycle().toSequenceNumber(index);
 
-                if (seq == 52)
-                    startIndex = dc.index();
+                    if (seq == 52)
+                        startIndex = dc.index();
 
-                if (seq >= 52) {
-                    final int v = value++;
-                    dc.wire().write("value").int64(v);
-                } else {
-                    dc.wire().write("value").int64(0);
+                    if (seq >= 52) {
+                        final int v = value++;
+                        dc.wire().write("value").int64(v);
+                    } else {
+                        dc.wire().write("value").int64(0);
+                    }
                 }
             }
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            assertTrue(tailer.moveToIndex(startIndex));
+
+            tailer = tailer.direction(TailerDirection.FORWARD);
+            assertEquals(0, action(tailer, queue.rollCycle()));
+            assertEquals(1, action(tailer, queue.rollCycle()));
+
+            tailer = tailer.direction(TailerDirection.BACKWARD);
+            assertEquals(2, action(tailer, queue.rollCycle()));
+            assertEquals(1, action(tailer, queue.rollCycle()));
+
+            tailer = tailer.direction(TailerDirection.FORWARD);
+            assertEquals(0, action(tailer, queue.rollCycle()));
+            assertEquals(1, action(tailer, queue.rollCycle()));
         }
-
-        ExcerptTailer tailer = queue.createTailer();
-
-        assertTrue(tailer.moveToIndex(startIndex));
-
-        tailer = tailer.direction(TailerDirection.FORWARD);
-        assertEquals(0, action(tailer, queue.rollCycle()));
-        assertEquals(1, action(tailer, queue.rollCycle()));
-
-        tailer = tailer.direction(TailerDirection.BACKWARD);
-        assertEquals(2, action(tailer, queue.rollCycle()));
-        assertEquals(1, action(tailer, queue.rollCycle()));
-
-        tailer = tailer.direction(TailerDirection.FORWARD);
-        assertEquals(0, action(tailer, queue.rollCycle()));
-        assertEquals(1, action(tailer, queue.rollCycle()));
     }
 
     @Test
@@ -2998,11 +3009,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         // remove change of cycle roll in test, cross-cycle atomicity is covered elsewhere
         final AtomicLong fixedClock = new AtomicLong(System.currentTimeMillis());
-        try {
-            ChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
-                    rollCycle(RollCycles.TEST_SECONDLY).
-                    timeoutMS(3_000).timeProvider(fixedClock::get).
-                    testBlockSize().build();
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
+                rollCycle(RollCycles.TEST_SECONDLY).
+                timeoutMS(3_000).timeProvider(fixedClock::get).
+                testBlockSize().build()) {
             final int iterationsPerThread = Short.MAX_VALUE / 8;
             final int totalIterations = iterationsPerThread * threadCount;
             final int[] nonAtomicCounter = new int[]{0};

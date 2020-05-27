@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
@@ -46,6 +47,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.core.util.Time.sleep;
 import static net.openhft.chronicle.core.util.Time.tickTime;
 
@@ -206,6 +208,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         while (refCount.refCount() > 0) {
             refCount.release();
         }
+        mappedFile.close();
     }
 
     /**

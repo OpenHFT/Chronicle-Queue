@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -22,8 +23,10 @@ public final class TailerSequenceRaceConditionTest {
 
     @Test
     public void shouldAlwaysBeAbleToTail() throws Exception {
+        ChronicleQueue[] queues = new ChronicleQueue[10];
         for (int i = 0; i < 10; i++) {
             final ChronicleQueue queue = createNewQueue();
+            queues[i] = queue;
             for (int j = 0; j < 4; j++) {
                 threadPool.submit(() -> attemptToMoveToTail(queue));
             }
@@ -38,6 +41,7 @@ public final class TailerSequenceRaceConditionTest {
         threadPool.shutdown();
         assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
         assertFalse(failedToMoveToEnd.get());
+        Closeable.closeQuietly(queues);
     }
 
     @After

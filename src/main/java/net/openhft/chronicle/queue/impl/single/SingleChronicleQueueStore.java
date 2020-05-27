@@ -266,6 +266,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         while (refCount.refCount() > 0) {
             refCount.release();
         }
+        Closeable.closeQuietly(writePosition);
+        Closeable.closeQuietly(indexing);
     }
 
     /**

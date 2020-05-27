@@ -166,7 +166,7 @@ public class ChronicleReaderTest {
 
         readerThread.interrupt();
 
-        assertThat(readerException.get(), is(nullValue()));
+        assertNull(readerException.get());
     }
 
     @Test

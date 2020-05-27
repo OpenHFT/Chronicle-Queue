@@ -77,40 +77,40 @@ public class LastIndexAppendedTest {
             }
             a_index = appender.lastIndexAppended();
         }
-        ChronicleQueue tailer_queue = single(path)
+        try (ChronicleQueue tailer_queue = single(path)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
-                .build();
-        ExcerptTailer tailer = tailer_queue.createTailer();
-        tailer = tailer.toStart();
-        long t_index;
-        t_index = doRead(tailer, 5);
-        assertEquals(a_index, t_index);
-        System.out.println("Continue appending");
-        try (
-                ChronicleQueue appender_queue = single(path)
-                        .testBlockSize()
-                        .rollCycle(TEST_DAILY)
-                        //.buffered(false)
-                        .build()) {
-            ExcerptAppender appender = appender_queue.acquireAppender();
-            for (int i = 0; i < 5; i++) {
-                appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
-                        m.write("msg").text("hello world2 ")));
+                .build()) {
+            ExcerptTailer tailer = tailer_queue.createTailer();
+            tailer = tailer.toStart();
+            long t_index;
+            t_index = doRead(tailer, 5);
+            assertEquals(a_index, t_index);
+            System.out.println("Continue appending");
+            try (ChronicleQueue appender_queue = single(path)
+                            .testBlockSize()
+                            .rollCycle(TEST_DAILY)
+                            //.buffered(false)
+                            .build()) {
+                ExcerptAppender appender = appender_queue.acquireAppender();
+                for (int i = 0; i < 5; i++) {
+                    appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
+                            m.write("msg").text("hello world2 ")));
+                }
+                a_index = appender.lastIndexAppended();
+                assertTrue(a_index > t_index);
             }
-            a_index = appender.lastIndexAppended();
-            assertTrue(a_index > t_index);
-        }
-        // if the tailer continues as well it should see the 5 new messages
-        System.out.println("Reading messages added");
-        t_index = doRead(tailer, 5);
-        assertEquals(a_index, t_index);
+            // if the tailer continues as well it should see the 5 new messages
+            System.out.println("Reading messages added");
+            t_index = doRead(tailer, 5);
+            assertEquals(a_index, t_index);
 
-        // if the tailer is expecting to read all the message again
-        System.out.println("Reading all the messages again");
-        tailer.toStart();
-        t_index = doRead(tailer, 10);
-        assertEquals(a_index, t_index);
+            // if the tailer is expecting to read all the message again
+            System.out.println("Reading all the messages again");
+            tailer.toStart();
+            t_index = doRead(tailer, 10);
+            assertEquals(a_index, t_index);
+        }
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception index) {

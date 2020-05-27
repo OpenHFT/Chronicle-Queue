@@ -94,20 +94,20 @@ public class ChronicleHistoryReader {
     }
 
     public Map<String, Histogram> readChronicle() {
-        final ChronicleQueue q = createQueue();
-        final ExcerptTailer tailer = q.createTailer();
-        final WireParselet parselet = parselet();
-        MessageHistory.set(new VanillaMessageHistory());
-        try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, null, parselet)) {
-    
-            while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
-                ++counter;
-                if (this.progress && counter % 1_000_000L == 0) {
-                    System.out.println("Progress: " + counter);
+        try (final ChronicleQueue q = createQueue()) {
+            final ExcerptTailer tailer = q.createTailer();
+            final WireParselet parselet = parselet();
+            MessageHistory.set(new VanillaMessageHistory());
+            try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, null, parselet)) {
+
+                while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
+                    ++counter;
+                    if (this.progress && counter % 1_000_000L == 0) {
+                        System.out.println("Progress: " + counter);
+                    }
                 }
             }
         }
-
         return histos;
     }
 

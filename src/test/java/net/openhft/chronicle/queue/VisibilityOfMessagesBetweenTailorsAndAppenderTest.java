@@ -27,43 +27,44 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
     @Test
     public void test() throws InterruptedException, ExecutionException {
 
-        ChronicleQueue x = SingleChronicleQueueBuilder
+        try (ChronicleQueue x = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .rollCycle(RollCycles.MINUTELY)
-                .build();
+                .build()) {
 
-        ExecutorService e1 = Executors.newSingleThreadExecutor();
-        e1.submit(() -> {
-            ExcerptAppender excerptAppender = x.acquireAppender();
-            for (long i = 0; i < 1_000_000; i++) {
-                try (DocumentContext dc = excerptAppender.writingDocument()) {
-                    dc.wire().getValueOut().int64(i);
+            ExecutorService e1 = Executors.newSingleThreadExecutor();
+            e1.submit(() -> {
+                ExcerptAppender excerptAppender = x.acquireAppender();
+                for (long i = 0; i < 1_000_000; i++) {
+                    try (DocumentContext dc = excerptAppender.writingDocument()) {
+                        dc.wire().getValueOut().int64(i);
+                    }
+                    lastWrittenIndex = excerptAppender.lastIndexAppended();
+
                 }
-                lastWrittenIndex = excerptAppender.lastIndexAppended();
+            });
+
+            ExecutorService e2 = Executors.newSingleThreadExecutor();
+            Future f2 = e2.submit(() -> {
+                ExcerptTailer tailer = x.createTailer();
+
+                for (; ; ) {
+                    long i = lastWrittenIndex;
+                    if (i != Long.MIN_VALUE)
+                        if (!tailer.moveToIndex(i))
+                            throw new ExecutionException("non atomic, index=" + Long.toHexString(i), null);
+                }
+            });
+
+            try {
+                f2.get(5, TimeUnit.SECONDS);
+            } catch (TimeoutException ignore) {
 
             }
-        });
 
-        ExecutorService e2 = Executors.newSingleThreadExecutor();
-        Future f2 = e2.submit(() -> {
-            ExcerptTailer tailer = x.createTailer();
-
-            for (; ; ) {
-                long i = lastWrittenIndex;
-                if (i != Long.MIN_VALUE)
-                    if (!tailer.moveToIndex(i))
-                        throw new ExecutionException("non atomic, index=" + Long.toHexString(i), null);
-            }
-        });
-
-        try {
-            f2.get(5, TimeUnit.SECONDS);
-        } catch (TimeoutException ignore) {
-
+            e2.shutdownNow();
+            e1.shutdownNow();
         }
-
-        e2.shutdownNow();
-        e1.shutdownNow();
 
     }
 

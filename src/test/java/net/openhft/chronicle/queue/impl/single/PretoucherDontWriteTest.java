@@ -26,8 +26,10 @@ public class PretoucherDontWriteTest {
         System.setProperty("SingleChronicleQueueExcerpts.dontWrite", "true");
         File dir = tempDir("shouldNotRoll");
 
+
         try (final SingleChronicleQueue queue = PretoucherTest.createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(PretoucherTest.createQueue(dir, clock::get), chunkListener, capturedCycles::add)) {
+             final SingleChronicleQueue pretoucherQueue = PretoucherTest.createQueue(dir, clock::get);
+             final Pretoucher pretoucher = new Pretoucher(pretoucherQueue, chunkListener, capturedCycles::add)) {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {

@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +32,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WireStorePool implements StoreReleasable {
+public class WireStorePool extends AbstractCloseable implements StoreReleasable {
     // must be power-of-two
     private static final int ROLL_CYCLE_CACHE_SIZE = 64;
     private static final int INDEX_MASK = ROLL_CYCLE_CACHE_SIZE - 1;
@@ -42,7 +43,6 @@ public class WireStorePool implements StoreReleasable {
     private final StoreFileListener storeFileListener;
     // protected by synchronized on acquire()
     private final RollDetails[] cache = new RollDetails[ROLL_CYCLE_CACHE_SIZE];
-    private boolean isClosed = false;
 
     private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
@@ -59,11 +59,8 @@ public class WireStorePool implements StoreReleasable {
         return cycle & INDEX_MASK;
     }
 
-    public synchronized void close() {
-        if (isClosed)
-            return;
-        isClosed = true;
-
+    @Override
+    protected void performClose() {
         stores.values().stream()
                 .map(Reference::get)
                 .filter(Objects::nonNull)
@@ -72,6 +69,7 @@ public class WireStorePool implements StoreReleasable {
 
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
+        throwExceptionIfClosed();
         final int cacheIndex = cacheIndex(cycle);
         RollDetails rollDetails;
         rollDetails = cache[cacheIndex];
@@ -121,6 +119,8 @@ public class WireStorePool implements StoreReleasable {
                 if (ref != null && ref.get() == store) {
                     stores.remove(entry.getKey());
                     storeFileListener.onReleased(entry.getKey().cycle(), store.file());
+
+                    store.close();
                     return;
                 }
             }

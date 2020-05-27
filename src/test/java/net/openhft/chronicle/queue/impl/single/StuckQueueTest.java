@@ -50,8 +50,10 @@ public class StuckQueueTest {
                 }
 
                 //  Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
-                try (DocumentContext dc = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).build().acquireAppender().writingDocument()) {
-                    dc.wire().write("hello").text("world");
+                try (final SingleChronicleQueue q2 = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).build()) {
+                    try (DocumentContext dc = q2.acquireAppender().writingDocument()) {
+                        dc.wire().write("hello").text("world");
+                    }
                 }
                 tailer = q.createTailer();
                 try (DocumentContext dc = tailer.readingDocument()) {

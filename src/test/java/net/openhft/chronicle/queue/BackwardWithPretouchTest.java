@@ -32,31 +32,32 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis());
         File tmpDir = getTmpDir();
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir).timeProvider(timeProvider).rollCycle(RollCycles.TEST_SECONDLY).build();
-        ExcerptAppender excerptAppender = queue.acquireAppender();
-        try (DocumentContext dc = excerptAppender.writingDocument()) {
-            dc.wire().write("hello").text("world");
-        }
-
-        timeProvider.advanceMillis(pause);
-
-        {
-            ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD);
-            tailer.toEnd();
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertEquals("world", dc.wire().read("hello").text());
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir).timeProvider(timeProvider).rollCycle(RollCycles.TEST_SECONDLY).build()) {
+            ExcerptAppender excerptAppender = queue.acquireAppender();
+            try (DocumentContext dc = excerptAppender.writingDocument()) {
+                dc.wire().write("hello").text("world");
             }
-        }
 
-        // pretouch to create next cycle file  ----- IF YOU COMMENT THIS LINE THE TEST PASSES
-        excerptAppender.pretouch();
+            timeProvider.advanceMillis(pause);
 
-        {
-            ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD);
-            tailer.toEnd();
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
-                assertEquals("world", dc.wire().read("hello").text());
+            {
+                ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD);
+                tailer.toEnd();
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertEquals("world", dc.wire().read("hello").text());
+                }
+            }
+
+            // pretouch to create next cycle file  ----- IF YOU COMMENT THIS LINE THE TEST PASSES
+            excerptAppender.pretouch();
+
+            {
+                ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD);
+                tailer.toEnd();
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent());
+                    assertEquals("world", dc.wire().read("hello").text());
+                }
             }
         }
     }

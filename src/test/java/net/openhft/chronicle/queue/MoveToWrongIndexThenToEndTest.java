@@ -41,7 +41,8 @@ public class MoveToWrongIndexThenToEndTest {
 
     private final Path basePath;
 
-    private ExcerptAppender appender;
+    private final SingleChronicleQueue queue;
+    private final ExcerptAppender appender;
 
     private Bytes<ByteBuffer> outbound;
 
@@ -49,14 +50,15 @@ public class MoveToWrongIndexThenToEndTest {
         basePath = Files.createTempDirectory("MoveToWrongIndexThenToEndTest");
         basePath.toFile().deleteOnExit();
 
-        SingleChronicleQueue appenderChronicle = createChronicle(basePath);
-        appender = appenderChronicle.acquireAppender();
+        queue = createChronicle(basePath);
+        appender = queue.acquireAppender();
         outbound = Bytes.elasticByteBuffer();
     }
 
     @After
     public void after() {
         outbound.release();
+        queue.close();
         DirectoryUtils.deleteDir(basePath.toFile());
     }
 

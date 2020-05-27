@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public final class DuplicateMessageReadTest {
@@ -38,33 +39,34 @@ public final class DuplicateMessageReadTest {
     public void shouldNotReceiveDuplicateMessages() throws Exception {
         final File location = DirectoryUtils.tempDir(DuplicateMessageReadTest.class.getSimpleName());
 
-        final ChronicleQueue chronicleQueue = SingleChronicleQueueBuilder
+        try (final ChronicleQueue chronicleQueue = SingleChronicleQueueBuilder
                 .binary(location)
                 .rollCycle(QUEUE_CYCLE)
-                .build();
+                .build()) {
 
-        final ExcerptAppender appender = chronicleQueue.acquireAppender();
-        appender.pretouch();
+            final ExcerptAppender appender = chronicleQueue.acquireAppender();
+            appender.pretouch();
 
-        final List<Data> expected = new ArrayList<>();
-        for (int i = 50; i < 60; i++) {
-            expected.add(new Data(i));
+            final List<Data> expected = new ArrayList<>();
+            for (int i = 50; i < 60; i++) {
+                expected.add(new Data(i));
+            }
+
+            final ExcerptTailer tailer = chronicleQueue.createTailer();
+            tailer.toEnd(); // move to end of chronicle before writing
+
+            for (final Data data : expected) {
+                write(appender, data);
+            }
+
+            final List<Data> actual = new ArrayList<>();
+            Data data;
+            while ((data = read(tailer)) != null) {
+                actual.add(data);
+            }
+
+            assertEquals(expected, actual);
         }
-
-        final ExcerptTailer tailer = chronicleQueue.createTailer();
-        tailer.toEnd(); // move to end of chronicle before writing
-
-        for (final Data data : expected) {
-            write(appender, data);
-        }
-
-        final List<Data> actual = new ArrayList<>();
-        Data data;
-        while ((data = read(tailer)) != null) {
-            actual.add(data);
-        }
-
-        assertThat(actual, is(expected));
     }
 
     private static final class Data {

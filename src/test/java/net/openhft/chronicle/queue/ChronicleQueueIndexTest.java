@@ -175,51 +175,52 @@ public class ChronicleQueueIndexTest {
 
         File file1 = DirectoryUtils.tempDir("indexQueueTest2");
         file1.deleteOnExit();
-        ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DAILY)
-                .build();
-        InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build() ) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-        Bytes<byte[]> hello_world = Bytes.fromString("Hello World 1");
-        appender.writeBytes(RollCycles.DAILY.toIndex(18264, 0L), hello_world);
-        hello_world.release();
-        hello_world = Bytes.fromString("Hello World 2");
-        appender.writeBytes(RollCycles.DAILY.toIndex(18264, 1L), hello_world);
-        hello_world.release();
+            Bytes<byte[]> hello_world = Bytes.fromString("Hello World 1");
+            appender.writeBytes(RollCycles.DAILY.toIndex(18264, 0L), hello_world);
+            hello_world.release();
+            hello_world = Bytes.fromString("Hello World 2");
+            appender.writeBytes(RollCycles.DAILY.toIndex(18264, 1L), hello_world);
+            hello_world.release();
 
-        // Simulate the end of the day i.e the queue closes the day rolls
-        // (note the change of index from 18264 to 18265)
-        queue.close();
-        queue = SingleChronicleQueueBuilder.builder()
+            // Simulate the end of the day i.e the queue closes the day rolls
+            // (note the change of index from 18264 to 18265)
+        }
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DAILY)
-                .build();
-        appender = (InternalAppender) queue.acquireAppender();
+                .build()) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-        // add a message for the new day
-        hello_world = Bytes.fromString("Hello World 3");
-        appender.writeBytes(RollCycles.DAILY.toIndex(18265, 0L), hello_world);
-        hello_world.release();
+            // add a message for the new day
+            Bytes<byte[]> hello_world = Bytes.fromString("Hello World 3");
+            appender.writeBytes(RollCycles.DAILY.toIndex(18265, 0L), hello_world);
+            hello_world.release();
 
-        final ExcerptTailer tailer = queue.createTailer();
+            final ExcerptTailer tailer = queue.createTailer();
 
-        final Bytes<?> forRead = Bytes.elasticByteBuffer();
-        try {
-            final List<String> results = new ArrayList<>();
-            while (tailer.readBytes(forRead)) {
-                results.add(forRead.to8bitString());
-                forRead.clear();
+            final Bytes<?> forRead = Bytes.elasticByteBuffer();
+            try {
+                final List<String> results = new ArrayList<>();
+                while (tailer.readBytes(forRead)) {
+                    results.add(forRead.to8bitString());
+                    forRead.clear();
+                }
+                assertTrue(results.toString(), results.contains("Hello World 1"));
+                assertTrue(results.contains("Hello World 2"));
+                // The reader fails to read the third message. The reason for this is
+                // that there was no EOF marker placed at end of the 18264 indexed file
+                // so when the reader started reading through the queues it got stuck on
+                // that file and never progressed to the latest queue file.
+                assertTrue(results.contains("Hello World 3"));
+            } finally {
+                forRead.release();
             }
-            assertTrue(results.toString(), results.contains("Hello World 1"));
-            assertTrue(results.contains("Hello World 2"));
-            // The reader fails to read the third message. The reason for this is
-            // that there was no EOF marker placed at end of the 18264 indexed file
-            // so when the reader started reading through the queues it got stuck on
-            // that file and never progressed to the latest queue file.
-            assertTrue(results.contains("Hello World 3"));
-        } finally {
-            forRead.release();
         }
     }
 

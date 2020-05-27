@@ -98,7 +98,7 @@ public class IndexTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex() throws Exception {
+    public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
@@ -120,25 +120,25 @@ public class IndexTest extends ChronicleQueueTestBase {
                     (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
             tailer.moveToIndex(indices[0]);
 
-            assertThat(tailer.index(), is(indices[0]));
-            assertThat(tailer.getIndexMoveCount(), is(1));
+            assertEquals(indices[0], tailer.index());
+            assertEquals(1, tailer.getIndexMoveCount());
 
             tailer.moveToIndex(indices[0]);
-            assertThat(tailer.index(), is(indices[0]));
-            assertThat(tailer.getIndexMoveCount(), is(1));
+            assertEquals(indices[0], tailer.index());
+            assertEquals(1, tailer.getIndexMoveCount());
 
             tailer.moveToIndex(indices[2]);
-            assertThat(tailer.index(), is(indices[2]));
-            assertThat(tailer.getIndexMoveCount(), is(1));
+            assertEquals(indices[2], tailer.index());
+            assertEquals(1, tailer.getIndexMoveCount());
 
             tailer.moveToIndex(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 2]);
-            assertThat(tailer.index(), is(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 2]));
-            assertThat(tailer.getIndexMoveCount(), is(2));
+            assertEquals(indices[INDEXING_LINEAR_SCAN_THRESHOLD + 2], tailer.index());
+            assertEquals(2, tailer.getIndexMoveCount());
 
             // document that moving backwards requires an index scan
             tailer.moveToIndex(indices[INDEXING_LINEAR_SCAN_THRESHOLD - 1]);
-            assertThat(tailer.index(), is(indices[INDEXING_LINEAR_SCAN_THRESHOLD - 1]));
-            assertThat(tailer.getIndexMoveCount(), is(3));
+            assertEquals(indices[INDEXING_LINEAR_SCAN_THRESHOLD - 1], tailer.index());
+            assertEquals(3, tailer.getIndexMoveCount());
         }
     }
 

@@ -38,6 +38,7 @@ public class ChronicleQueueTestBase {
     static {
         System.setProperty("queue.check.index", "true");
     }
+
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
     private static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("queue.traceTestExecution");
 
@@ -119,12 +120,7 @@ public class ChronicleQueueTestBase {
 
     @After
     public void checkMappedFiles() {
-        try {
-            MappedFile.checkMappedFiles();
-        } catch (AssertionError e) {
-            // TODO Fix this, https://github.com/OpenHFT/Chronicle-Queue/issues/680
-            e.printStackTrace();
-        }
+        MappedFile.checkMappedFiles();
     }
 
     public enum TestKey implements WireKey {

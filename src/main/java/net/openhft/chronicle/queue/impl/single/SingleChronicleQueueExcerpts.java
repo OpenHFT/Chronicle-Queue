@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.PackageLocal;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.values.LongValue;
@@ -84,7 +85,7 @@ public class SingleChronicleQueueExcerpts {
 //
 // *************************************************************************
 
-    static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
+    static class StoreAppender extends AbstractCloseable implements ExcerptAppender, ExcerptContext, InternalAppender {
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -108,7 +109,6 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private Pretoucher pretoucher = null;
         private NativeBytesStore<Void> batchTmp;
-        private final AtomicBoolean isClosed = new AtomicBoolean();
 
         StoreAppender(@NotNull final SingleChronicleQueue queue,
                       @NotNull final WireStorePool storePool,
@@ -154,9 +154,8 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-
-        void close() {
-            if (!isClosed.getAndSet(true)) {
+        @Override
+        protected void performClose() {
                 if (Jvm.isDebugEnabled(getClass()))
                     Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
                 final Wire w0 = wireForIndex;
@@ -175,7 +174,6 @@ public class SingleChronicleQueueExcerpts {
                 }
                 store = null;
                 storePool.close();
-            }
         }
 
         /**

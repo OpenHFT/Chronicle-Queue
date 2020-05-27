@@ -24,6 +24,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -57,7 +58,7 @@ import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreTailer;
 
-public class SingleChronicleQueue implements RollingChronicleQueue {
+public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
@@ -611,18 +612,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
     }
 
-    @Override
-    public boolean isClosed() {
-        return isClosed.get();
-    }
-
     @SuppressWarnings("unchecked")
     @Override
-    public void close() {
-
-        if (isClosed.getAndSet(true))
-            return;
-
+    protected void performClose() {
         closeQuietly(directoryListing, queueLock, writeLock, lastAcknowledgedIndexReplicated, lastIndexReplicated);
 
         synchronized (closers) {
@@ -630,6 +622,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             closers.clear();
         }
         this.pool.close();
+        this.storeSupplier.close();
         closeQuietly(metaStore);
     }
 
@@ -833,7 +826,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     static long lastTimeMapped = 0;
 
-    private class StoreSupplier implements WireStoreSupplier {
+    private class StoreSupplier extends AbstractCloseable implements WireStoreSupplier {
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
         private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache =
                 new ReferenceCountedCache<>(MappedBytes::mappedBytes, SingleChronicleQueue.this::mappedFile);
@@ -926,6 +919,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             } catch (@NotNull TimeoutException | IOException e) {
                 throw Jvm.rethrow(e);
             }
+        }
+
+        @Override
+        protected void performClose() {
+            mappedFileCache.close();
         }
 
         private void createFile(final File path) {

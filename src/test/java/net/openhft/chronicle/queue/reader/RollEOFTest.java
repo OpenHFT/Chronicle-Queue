@@ -193,17 +193,18 @@ public class RollEOFTest {
 
     private void createQueueAndWriteData(TimeProvider timeProvider, File path) {
 
-        final ChronicleQueue queue = SingleChronicleQueueBuilder
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .timeProvider(timeProvider)
-                .build();
+                .build()) {
 
-        ExcerptAppender excerptAppender = queue.acquireAppender();
+            ExcerptAppender excerptAppender = queue.acquireAppender();
 
-        try (DocumentContext dc = excerptAppender.writingDocument(false)) {
-            dc.wire().write(() -> "test").int64(0);
+            try (DocumentContext dc = excerptAppender.writingDocument(false)) {
+                dc.wire().write(() -> "test").int64(0);
+            }
         }
     }
 }

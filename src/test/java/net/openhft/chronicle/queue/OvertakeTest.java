@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
@@ -70,20 +70,20 @@ public class OvertakeTest {
 
     @Test
     public void appendAndTail() {
-        ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
+        try (ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .writeBufferMode(BufferMode.None)
-                .build();
-        ExcerptTailer tailer = tailer_queue.createTailer();
-        tailer = tailer.toStart();
-        long t_index;
-        t_index = doReadBad(tailer, messages, false);
-        assertEquals(a_index, t_index);
-        tailer = tailer_queue.createTailer();
-        tailer = tailer.toStart();
-        t_index = doReadBad(tailer, messages, true);
-        assertEquals(a_index, t_index);
-
+                .build()) {
+            ExcerptTailer tailer = tailer_queue.createTailer();
+            tailer = tailer.toStart();
+            long t_index;
+            t_index = doReadBad(tailer, messages, false);
+            assertEquals(a_index, t_index);
+            tailer = tailer_queue.createTailer();
+            tailer = tailer.toStart();
+            t_index = doReadBad(tailer, messages, true);
+            assertEquals(a_index, t_index);
+        }
     }
 
     @After
@@ -103,57 +103,53 @@ public class OvertakeTest {
 
         MyAppender myapp = new MyAppender(sync);
         Future<Long> f = execService.submit(myapp);
-        ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
+        try (ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .writeBufferMode(BufferMode.None)
-                .build();
-        t_index = 0;
-        MyTailer mytailer = new MyTailer(tailer_queue, t_index, sync);
-        Future<Long> f2 = execService.submit(mytailer);
-        t_index = f2.get(10, TimeUnit.SECONDS);
-        a_index = f.get(10, TimeUnit.SECONDS);
-        assertTrue(a_index == t_index);
+                .build()) {
+            t_index = 0;
+            MyTailer mytailer = new MyTailer(tailer_queue, t_index, sync);
+            Future<Long> f2 = execService.submit(mytailer);
+            t_index = f2.get(10, TimeUnit.SECONDS);
+            a_index = f.get(10, TimeUnit.SECONDS);
+            assertTrue(a_index == t_index);
+        }
     }
 
     class MyAppender implements Callable<Long> {
-
-        ChronicleQueue queue;
         ExcerptAppender appender;
         SynchronousQueue<Long> sync;
 
-        MyAppender(
-                //SingleChronicleQueue q,
-                SynchronousQueue<Long> sync) {
-            //queue = q;
-
+        MyAppender(SynchronousQueue<Long> sync) {
             this.sync = sync;
         }
 
         @Override
         public Long call() throws Exception {
-            queue = ChronicleQueue.singleBuilder(path)
+            try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path)
                     //.testBlockSize()
                     //.rollCycle(TEST_DAILY)
                     .writeBufferMode(BufferMode.None)
-                    .build();
-            appender = queue.acquireAppender();
-            for (int i = 0; i < 50; i++) {
-                appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
-                        m.write("msg").text("hello world2 ")));
+                    .build()) {
+                appender = queue.acquireAppender();
+                for (int i = 0; i < 50; i++) {
+                    appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
+                            m.write("msg").text("hello world2 ")));
+                }
+                long index = appender.lastIndexAppended();
+                sync.put(index);
+                Long fromReader = sync.take();
+                if (index != fromReader) {
+                    System.out.println("Writer:Not the same:" + index + " vs. " + fromReader);
+                }
+                for (int i = 0; i < 50; i++) {
+                    appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
+                            m.write("msg").text("hello world2 ")));
+                }
+                index = appender.lastIndexAppended();
+                sync.put(index);
+                return index;
             }
-            long index = appender.lastIndexAppended();
-            sync.put(index);
-            Long fromReader = sync.take();
-            if (index != fromReader) {
-                System.out.println("Writer:Not the same:" + index + " vs. " + fromReader);
-            }
-            for (int i = 0; i < 50; i++) {
-                appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
-                        m.write("msg").text("hello world2 ")));
-            }
-            index = appender.lastIndexAppended();
-            sync.put(index);
-            return index;
         }
     }
 

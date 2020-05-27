@@ -30,8 +30,10 @@ public class PretoucherEarlyCycleTest {
     private void cycleRollByPretoucher(int earlyMillis) {
         File dir = tempDir("shouldHandleEarlyCycleRoll");
         clock.set(100);
+
         try (final SingleChronicleQueue queue = PretoucherTest.createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(PretoucherTest.createQueue(dir, clock::get), chunkListener, capturedCycles::add)) {
+             final SingleChronicleQueue pretoucherQueue = PretoucherTest.createQueue(dir, clock::get);
+             final Pretoucher pretoucher = new Pretoucher(pretoucherQueue, chunkListener, capturedCycles::add)) {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {

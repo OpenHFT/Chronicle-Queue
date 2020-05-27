@@ -145,21 +145,22 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
     public void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY).build();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
+                .rollCycle(RollCycles.TEST_SECONDLY).build()) {
 
-        final ExcerptTailer tailer = queue.createTailer();
-        tailer.direction(TailerDirection.NONE);
+            final ExcerptTailer tailer = queue.createTailer();
+            tailer.direction(TailerDirection.NONE);
 
-        final ExcerptAppender excerptAppender = queue.acquireAppender();
-        for (int i = 0; i < 10; i++) {
-            excerptAppender.writeDocument(i, (out, value) -> {
-                out.int32(value);
-            });
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            for (int i = 0; i < 10; i++) {
+                excerptAppender.writeDocument(i, (out, value) -> {
+                    out.int32(value);
+                });
+            }
+
+            DocumentContext document = tailer.readingDocument();
+            assertFalse(document.isPresent());
         }
-
-        DocumentContext document = tailer.readingDocument();
-        assertFalse(document.isPresent());
     }
 
     @Test
