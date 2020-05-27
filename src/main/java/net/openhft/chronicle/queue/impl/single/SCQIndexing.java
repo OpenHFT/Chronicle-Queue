@@ -36,9 +36,12 @@ import org.jetbrains.annotations.Nullable;
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMarshallable, Closeable {
@@ -62,6 +65,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     Sequence sequence;
     // visible for testing
     int linearScanCount;
+    Collection<Closeable> closeables = new ArrayList<>();
+    private LongValue index2IndexRef;
+    private LongValue lastIndexRef;
 
     /**
      * used by {@link Demarshallable}
@@ -70,11 +76,21 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
      */
     @UsedViaReflection
     private SCQIndexing(@NotNull WireIn wire) {
-        this(wire.read(IndexingFields.indexCount).int32(),
-                wire.read(IndexingFields.indexSpacing).int32(),
-                wire.read(IndexingFields.index2Index).int64ForBinding(wire.newLongReference()),
-                wire.read(IndexingFields.lastIndex).int64ForBinding(wire.newLongReference()),
-                wire::newLongArrayReference);
+        int indexCount1 = wire.read(IndexingFields.indexCount).int32();
+        int indexSpacing1 = wire.read(IndexingFields.indexSpacing).int32();
+        this.indexCount = indexCount1;
+        this.indexCountBits = Maths.intLog2(indexCount1);
+        this.indexSpacing = indexSpacing1;
+        this.indexSpacingBits = Maths.intLog2(indexSpacing1);
+        index2IndexRef = wire.newLongReference();
+        this.index2Index = wire.read(IndexingFields.index2Index).int64ForBinding(index2IndexRef);
+        lastIndexRef = wire.newLongReference();
+        this.nextEntryToBeIndexed = wire.read(IndexingFields.lastIndex).int64ForBinding(lastIndexRef);
+        this.longArraySupplier = wire::newLongArrayReference;
+        this.index2indexArray = new ThreadLocal<>();
+        this.indexArray = new ThreadLocal<>();
+        this.index2IndexTemplate = w -> w.writeEventName(() -> "index2index").int64array(indexCount1);
+        this.indexTemplate = w -> w.writeEventName(() -> "index").int64array(indexCount1);
     }
 
     SCQIndexing(@NotNull WireType wireType, int indexCount, int indexSpacing) {
@@ -95,14 +111,20 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         this.indexTemplate = w -> w.writeEventName(() -> "index").int64array(indexCount);
     }
 
+    private LongArrayValuesHolder newLogArrayValuesHolder(Supplier<LongArrayValues> las) {
+        LongArrayValuesHolder longArrayValuesHolder = new LongArrayValuesHolder(las.get());
+        closeables.add(longArrayValuesHolder);
+        return longArrayValuesHolder;
+    }
+
     @NotNull
     private LongArrayValuesHolder getIndex2IndexArray() {
-        return ThreadLocalHelper.getTL(index2indexArray, longArraySupplier, las -> new LongArrayValuesHolder(las.get()));
+        return ThreadLocalHelper.getTL(index2indexArray, longArraySupplier, this::newLogArrayValuesHolder);
     }
 
     @NotNull
     private LongArrayValuesHolder getIndexArray() {
-        return ThreadLocalHelper.getTL(indexArray, longArraySupplier, las -> new LongArrayValuesHolder(las.get()));
+        return ThreadLocalHelper.getTL(indexArray, longArraySupplier, this::newLogArrayValuesHolder);
     }
 
     public long toAddress0(long index) {
@@ -121,8 +143,8 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     @Override
     protected void performClose() {
-        Closeable.closeQuietly(index2Index);
-        Closeable.closeQuietly(nextEntryToBeIndexed);
+        closeQuietly(index2Index, nextEntryToBeIndexed, index2IndexRef, lastIndexRef);
+        closeQuietly(closeables);
         // Eagerly clean up the contents of thread locals but only for this thread.
         // The contents of the thread local for other threads will be cleaned up in
         // MappedFile.performRelease
@@ -136,7 +158,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             return;
         LongArrayValuesHolder holder = weakReference.get();
         if (holder != null)
-            Closeable.closeQuietly(holder.values);
+            closeQuietly(holder.values);
     }
 
     @Override
@@ -173,11 +195,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     /**
-     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is
-     * used for creating both the primary and secondary indexes. Chronicle Queue uses a root primary
-     * index ( each entry in the primary index points to a unique a secondary index. The secondary
-     * index only records the addressForRead of every 64th except, the except are linearly scanned from
-     * there on.  )
+     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is used for creating both the primary and secondary
+     * indexes. Chronicle Queue uses a root primary index ( each entry in the primary index points to a unique a secondary index. The secondary index
+     * only records the addressForRead of every 64th except, the except are linearly scanned from there on.  )
      *
      * @param wire the current wire
      * @return the addressForRead of the Excerpt containing the usable index, just after the header
@@ -210,14 +230,11 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     /**
-     * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so the
-     * index2index tells chronicle where ( in other words the addressForRead of where ) the root first
-     * level targetIndex is stored. The indexing works like a tree, but only 2 levels deep, the root
-     * of the tree is at index2index ( this first level targetIndex is 1MB in size and there is only
-     * one of them, it only holds the addresses of the second level indexes, there will be many
-     * second level indexes ( created on demand ), each is about 1MB in size  (this second level
-     * targetIndex only stores the position of every 64th excerpt (depending on RollCycle)), so from every 64th excerpt a
-     * linear scan occurs.
+     * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so the index2index tells chronicle where ( in other words
+     * the addressForRead of where ) the root first level targetIndex is stored. The indexing works like a tree, but only 2 levels deep, the root of
+     * the tree is at index2index ( this first level targetIndex is 1MB in size and there is only one of them, it only holds the addresses of the
+     * second level indexes, there will be many second level indexes ( created on demand ), each is about 1MB in size  (this second level targetIndex
+     * only stores the position of every 64th excerpt (depending on RollCycle)), so from every 64th excerpt a linear scan occurs.
      *
      * @param ec    the data structure we are navigating
      * @param index the index we wish to move to
@@ -288,12 +305,10 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     /**
-     * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code
-     * fromKnownIndex} at  {@code knownAddress} <p> note meta data is skipped and does not count to
-     * the indexes
+     * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code fromKnownIndex} at  {@code knownAddress} <p> note meta
+     * data is skipped and does not count to the indexes
      *
-     * @param wire           if successful, moves the context to an addressForRead relating to the index
-     *                       {@code toIndex }
+     * @param wire           if successful, moves the context to an addressForRead relating to the index {@code toIndex }
      * @param toIndex        the index that we wish to move the context to
      * @param fromKnownIndex a know index ( used as a starting point )
      * @param knownAddress   a know addressForRead ( used as a starting point )
@@ -340,8 +355,8 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
         long tookUS = (end - start) / 1000;
         Jvm.warn().on(getClass(), "Took " + tookUS + " us to " + desc + " from " +
-                fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
-                + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
+                        fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
+                        + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
                         (toIndex - fromKnownIndex),
                 st);
         return true;
@@ -708,7 +723,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         lastIndex // NOTE: the nextEntryToBeIndexed
     }
 
-    static class LongArrayValuesHolder {
+    static class LongArrayValuesHolder extends AbstractCloseable {
         final LongArrayValues values;
         long address;
 
@@ -716,5 +731,11 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             this.values = values;
             address = Long.MIN_VALUE;
         }
+
+        @Override
+        protected void performClose() {
+            values.close();
+        }
+
     }
 }
