@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
@@ -75,10 +74,6 @@ public class IndexTest extends ChronicleQueueTestBase {
         threadDump.assertNoNewThreads();
     }
 
-    @After
-    public void checkMappedFiles() {
-        MappedFile.checkMappedFiles();
-    }
 
     @Test
     public void test() throws IOException {

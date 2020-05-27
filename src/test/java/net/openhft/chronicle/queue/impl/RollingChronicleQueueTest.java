@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -9,7 +8,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
@@ -240,8 +238,4 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
     }
 
-    @After
-    public void checkRegisteredBytes() {
-        BytesUtil.checkRegisteredBytes();
-    }
 }

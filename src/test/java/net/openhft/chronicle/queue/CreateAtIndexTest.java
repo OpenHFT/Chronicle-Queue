@@ -18,13 +18,11 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -157,10 +155,5 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
                 }
             }
         }
-    }
-
-    @After
-    public void checkRegisteredBytes() {
-        BytesUtil.checkRegisteredBytes();
     }
 }

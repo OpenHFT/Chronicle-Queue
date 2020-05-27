@@ -1,15 +1,16 @@
 package net.openhft.chronicle.queue.cleanup;
 
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
@@ -98,12 +99,6 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
     }
-
-    @After
-    public void checkRegisteredBytes() {
-        BytesUtil.checkRegisteredBytes();
-    }
-
 
     /**
      * Returns a Stream of Files that are likely to be removable

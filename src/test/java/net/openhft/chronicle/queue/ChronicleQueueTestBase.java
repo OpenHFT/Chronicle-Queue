@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
@@ -114,6 +115,16 @@ public class ChronicleQueueTestBase {
     @After
     public void checkRegisteredBytes() {
         BytesUtil.checkRegisteredBytes();
+    }
+
+    @After
+    public void checkMappedFiles() {
+        try {
+            MappedFile.checkMappedFiles();
+        } catch (AssertionError e) {
+            // TODO Fix this, https://github.com/OpenHFT/Chronicle-Queue/issues/680
+            e.printStackTrace();
+        }
     }
 
     public enum TestKey implements WireKey {

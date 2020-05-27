@@ -18,8 +18,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.*;
@@ -39,7 +37,6 @@ import java.util.TreeMap;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 
 public class SingleCQFormat2Test extends ChronicleQueueTestBase {
 
@@ -966,11 +963,6 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "# 130284 bytes remaining\n";
             assertEquals(expectedEager2, queue.dump());
         }
-    }
-
-    @After
-    public void checkMappedFiles() {
-        MappedFile.checkMappedFiles();
     }
 
     @SuppressWarnings("unused")

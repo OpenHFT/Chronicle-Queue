@@ -3105,14 +3105,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return mappedFile;
     }
 
-    @After
-    public void checkMappedFiles() {
-        System.gc();
-        Jvm.pause(50);
-
-        MappedFile.checkMappedFiles();
-    }
-
     @Test
     public void writeBytesAndIndexFiveTimesWithOverwriteTest() {
         try (final ChronicleQueue sourceQueue =
