@@ -81,67 +81,68 @@ public class ToEndTest {
         long timeIncMs = 1001;
         timeProvider.currentTimeMillis(now);
 
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+        try(final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(timeProvider)
-                .build();
+                .build()) {
 
-        final ExcerptAppender appender = queue.acquireAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
 
-        appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
 
-        // roll
-        timeProvider.currentTimeMillis(now += timeIncMs);
+            // roll
+            timeProvider.currentTimeMillis(now += timeIncMs);
 
-        appender.writeDocument(wire -> wire.write(() -> "msg").int32(2));
-        appender.writeDocument(wire -> wire.write(() -> "msg").int32(3));
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(2));
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(3));
 
-        final ExcerptTailer tailer = queue.createTailer().toEnd();
-        try (DocumentContext dc = tailer.readingDocument()) {
-            if (dc.isPresent()) {
-                fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read(() -> "msg").int32());
+            final ExcerptTailer tailer = queue.createTailer().toEnd();
+            try (DocumentContext dc = tailer.readingDocument()) {
+                if (dc.isPresent()) {
+                    fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read(() -> "msg").int32());
+                }
             }
-        }
 
-        // append same cycle.
-        appender.writeDocument(wire -> wire.write(() -> "msg").int32(4));
+            // append same cycle.
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(4));
 
-        try (DocumentContext dc = tailer.readingDocument()) {
-            assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
-            int i = dc.wire().read(() -> "msg").int32();
-            assertEquals("Should've read 4, instead we read: " + i, 4, i);
-        }
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
+                int i = dc.wire().read(() -> "msg").int32();
+                assertEquals("Should've read 4, instead we read: " + i, 4, i);
+            }
 
-        // read from the beginning
-        tailer.toStart();
+            // read from the beginning
+            tailer.toStart();
 
-        for (int j = 1; j <= 4; j++) {
+            for (int j = 1; j <= 4; j++) {
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent());
+                    int i = dc.wire().read(() -> "msg").int32();
+                    assertEquals(j, i);
+                }
+            }
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                if (dc.isPresent()) {
+                    fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()));
+                }
+            }
+
+            // write another
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(5));
+
+            // roll 5 cycles
+            timeProvider.currentTimeMillis(now += timeIncMs * 5);
+
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
-                int i = dc.wire().read(() -> "msg").int32();
-                assertEquals(j, i);
+                assertEquals(5, dc.wire().read(() -> "msg").int32());
             }
-        }
-
-        try (DocumentContext dc = tailer.readingDocument()) {
-            if (dc.isPresent()) {
-                fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()));
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent());
             }
-        }
-
-        // write another
-        appender.writeDocument(wire -> wire.write(() -> "msg").int32(5));
-
-        // roll 5 cycles
-        timeProvider.currentTimeMillis(now += timeIncMs * 5);
-
-        try (DocumentContext dc = tailer.readingDocument()) {
-            assertTrue(dc.isPresent());
-            assertEquals(5, dc.wire().read(() -> "msg").int32());
-        }
-        try (DocumentContext dc = tailer.readingDocument()) {
-            assertFalse(dc.isPresent());
         }
     }
 
@@ -154,31 +155,32 @@ public class ToEndTest {
         long now = System.currentTimeMillis();
         time.currentTimeMillis(now);
 
-        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(time)
-                .build();
+                .build()) {
 
-        final SingleChronicleQueueExcerpts.StoreAppender appender = (SingleChronicleQueueExcerpts.StoreAppender) queue.acquireAppender();
-        Field storeF1 = SingleChronicleQueueExcerpts.StoreAppender.class.getDeclaredField("store");
-        Jvm.setAccessible(storeF1);
-        SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
-        System.out.println(store1);
+            final SingleChronicleQueueExcerpts.StoreAppender appender = (SingleChronicleQueueExcerpts.StoreAppender) queue.acquireAppender();
+            Field storeF1 = SingleChronicleQueueExcerpts.StoreAppender.class.getDeclaredField("store");
+            Jvm.setAccessible(storeF1);
+            SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
+            System.out.println(store1);
 
-        appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
 
-        final SingleChronicleQueueExcerpts.StoreTailer tailer = (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
-        System.out.println(tailer);
-        tailer.toEnd();
-        System.out.println(tailer);
+            final SingleChronicleQueueExcerpts.StoreTailer tailer = (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
+            System.out.println(tailer);
+            tailer.toEnd();
+            System.out.println(tailer);
 
-        Field storeF2 = SingleChronicleQueueExcerpts.StoreTailer.class.getDeclaredField("store");
-        Jvm.setAccessible(storeF2);
-        SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
+            Field storeF2 = SingleChronicleQueueExcerpts.StoreTailer.class.getDeclaredField("store");
+            Jvm.setAccessible(storeF2);
+            SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
-        // the reference count here is 1, the queue itself
-        assertEquals(1, store2.refCount());
+            // the reference count here is 1, the queue itself
+            assertEquals(1, store2.refCount());
+        }
     }
 
     @Test
@@ -337,12 +339,7 @@ public class ToEndTest {
 
     @After
     public void checkMappedFiles() {
-        try {
-            MappedFile.checkMappedFiles();
-        } catch (AssertionError e) {
-            // TODO Fix this, https://github.com/OpenHFT/Chronicle-Queue/issues/680
-            e.printStackTrace();
-        }
+        MappedFile.checkMappedFiles();
     }
 
 }

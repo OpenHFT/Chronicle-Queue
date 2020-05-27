@@ -109,15 +109,13 @@ public class SingleCQFormatTest {
             }
         }
 
-        @NotNull ChronicleQueue queue = binary(dir)
+        try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .timeoutMS(500L)
                 .testBlockSize()
-                .build();
-
-        try {
+                .build()) {
             testQueue(queue);
-        }finally {
+        } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
             } catch (Exception e) {
@@ -297,11 +295,6 @@ public class SingleCQFormatTest {
 
     @After
     public void checkMappedFiles() {
-        try {
-            MappedFile.checkMappedFiles();
-        } catch (AssertionError e) {
-            // TODO FIX This, https://github.com/OpenHFT/Chronicle-Queue/issues/680
-            e.printStackTrace();
-        }
+        MappedFile.checkMappedFiles();
     }
 }

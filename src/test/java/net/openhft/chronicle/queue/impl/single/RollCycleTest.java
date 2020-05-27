@@ -96,12 +96,7 @@ public class RollCycleTest {
 
     @After
     public void checkMappedFiles() {
-        try {
-            MappedFile.checkMappedFiles();
-        } catch (AssertionError e) {
-            // TODO FIX This, https://github.com/OpenHFT/Chronicle-Queue/issues/680
-            e.printStackTrace();
-        }
+        MappedFile.checkMappedFiles();
     }
 
     @After
