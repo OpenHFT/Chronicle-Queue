@@ -14,8 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public final class DocumentOrderingTest {
     private static final RollCycles ROLL_CYCLE = RollCycles.TEST_SECONDLY;
@@ -67,7 +66,7 @@ public final class DocumentOrderingTest {
             expectValue(0, tailer);
             expectValue(1, tailer);
             expectValue(2, tailer);
-            assertEquals(false, tailer.readingDocument().isPresent());
+            assertFalse(tailer.readingDocument().isPresent());
         }
     }
 
@@ -92,7 +91,7 @@ public final class DocumentOrderingTest {
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(1, tailer);
-            assertEquals(false, tailer.readingDocument().isPresent());
+            assertFalse(tailer.readingDocument().isPresent());
         }
     }
 

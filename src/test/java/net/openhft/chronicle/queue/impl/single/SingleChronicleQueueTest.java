@@ -407,43 +407,43 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (DocumentContext documentContext2 = tailer.readingDocument()) {
                     assertEquals(0, toSeq(q, documentContext2.index()));
-                    assertEquals(false, documentContext2.isMetaData());
+                    assertFalse(documentContext2.isMetaData());
                     assertEquals("one", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
                     assertEquals(1, toSeq(q, documentContext2.index()));
-                    assertEquals(false, documentContext2.isMetaData());
+                    assertFalse(documentContext2.isMetaData());
                     assertEquals("two", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
                     assertEquals(2, toSeq(q, documentContext2.index()));
-                    assertEquals(true, documentContext2.isMetaData());
+                    assertTrue(documentContext2.isMetaData());
                     assertEquals("meta1", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
                     assertEquals(2, toSeq(q, documentContext2.index()));
-                    assertEquals(false, documentContext2.isMetaData());
+                    assertFalse(documentContext2.isMetaData());
                     assertEquals("three", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
                     assertEquals(3, toSeq(q, documentContext2.index()));
-                    assertEquals(true, documentContext2.isMetaData());
+                    assertTrue(documentContext2.isMetaData());
                     assertEquals("meta2", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
                     assertEquals(3, toSeq(q, documentContext2.index()));
-                    assertEquals(true, documentContext2.isMetaData());
+                    assertTrue(documentContext2.isMetaData());
                     assertEquals("meta3", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
                     assertEquals(3, toSeq(q, documentContext2.index()));
-                    assertEquals(false, documentContext2.isMetaData());
+                    assertFalse(documentContext2.isMetaData());
                     assertEquals("four", documentContext2.wire().getValueIn().text());
                 }
             }
@@ -453,19 +453,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (DocumentContext documentContext2 = tailer.readingDocument()) {
                     assertEquals(0, toSeq(q, documentContext2.index()));
-                    assertEquals(false, documentContext2.isMetaData());
+                    assertFalse(documentContext2.isMetaData());
                     assertEquals("one", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
                     assertEquals(1, toSeq(q, documentContext2.index()));
-                    assertEquals(false, documentContext2.isMetaData());
+                    assertFalse(documentContext2.isMetaData());
                     assertEquals("two", documentContext2.wire().getValueIn().text());
                 }
 
                 try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
                     assertEquals(2, toSeq(q, documentContext2.index()));
-                    assertEquals(false, documentContext2.isMetaData());
+                    assertFalse(documentContext2.isMetaData());
                     assertEquals("three", documentContext2.wire().getValueIn().text());
                 }
             }
@@ -1248,7 +1248,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
-            assertTrue(appender.cycle() == 0);
+            assertEquals(0, appender.cycle());
         }
     }
 
@@ -1261,7 +1261,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
-            assertTrue(appender.cycle() == 0);
+            assertEquals(0, appender.cycle());
 
             final ExcerptTailer excerptTailer = chronicle.createTailer().toStart();
             assertTrue(excerptTailer.readingDocument().isPresent());
@@ -2245,7 +2245,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = q.createTailer();
 
             assertEquals("first", tailer.readText());
-            assertEquals(null, tailer.readText());
+            assertNull(tailer.readText());
 
         }
 
@@ -2655,7 +2655,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     assertTrue(dc.isPresent());
                 }
 
-                assertTrue(q1.file().equals(q2.file()));
+                assertEquals(q1.file(), q2.file());
                 // this is required for queue to re-request last/first cycle
                 timeProvider.advanceMillis(1);
 

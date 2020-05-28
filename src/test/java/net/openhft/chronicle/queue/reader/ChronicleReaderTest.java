@@ -199,7 +199,7 @@ public class ChronicleReaderTest {
                         withInclusionRegex("goodbye").
                 asMethodReader(null).
                 execute();
-        assertEquals(false, capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
+        assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test(timeout = 5000)

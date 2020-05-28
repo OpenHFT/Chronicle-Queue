@@ -18,8 +18,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class StoreTailerTest extends ChronicleQueueTestBase {
     private final Collection<ChronicleQueue> createdQueues = new ArrayList<>();
@@ -68,7 +67,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         }
         tailer.toEnd();
         try (final DocumentContext context = tailer.readingDocument()) {
-            assertEquals(false, context.isPresent());
+            assertFalse(context.isPresent());
         }
     }
 

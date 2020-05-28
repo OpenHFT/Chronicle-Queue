@@ -114,7 +114,7 @@ public final class MessageHistoryTest {
         clock.addAndGet(TimeUnit.DAYS.toMillis(2));
 
         assertTrue(reader.readOne());
-        assertEquals(false, reader.readOne());
+        assertFalse(reader.readOne());
     }
 
     private ChronicleQueue createQueue(final File queueDir, final int sourceId) {

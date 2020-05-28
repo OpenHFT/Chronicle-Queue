@@ -11,7 +11,8 @@ import org.junit.Test;
 
 import java.util.concurrent.*;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Index runs away on double close - AM
@@ -112,7 +113,7 @@ public class OvertakeTest {
             Future<Long> f2 = execService.submit(mytailer);
             t_index = f2.get(10, TimeUnit.SECONDS);
             a_index = f.get(10, TimeUnit.SECONDS);
-            assertTrue(a_index == t_index);
+            assertEquals(a_index, t_index);
         }
     }
 

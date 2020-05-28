@@ -6,6 +6,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class RestartableTailerTest {
     @Test
@@ -39,7 +40,7 @@ public class RestartableTailerTest {
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
             ExcerptTailer atailer = cq.createTailer("a");
             assertEquals("test 6", atailer.readText());
-            assertEquals(null, atailer.readText());
+            assertNull(atailer.readText());
 
             ExcerptTailer btailer = cq.createTailer("b");
             assertEquals("test 2", btailer.readText());
@@ -47,7 +48,7 @@ public class RestartableTailerTest {
 
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
             ExcerptTailer atailer = cq.createTailer("a");
-            assertEquals(null, atailer.readText());
+            assertNull(atailer.readText());
 
             ExcerptTailer btailer = cq.createTailer("b");
             assertEquals("test 3", btailer.readText());

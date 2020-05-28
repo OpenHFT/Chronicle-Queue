@@ -126,12 +126,12 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
         assertEquals("[Backward] Wrong message 0", testMessage(0), readNextEntry(tailer));
 
         String res = readNextEntry(tailer);
-        assertTrue("Backward: res is" + res, res == null);
+        assertNull("Backward: res is" + res, res);
 
         tailer.direction(TailerDirection.FORWARD);
 
         res = readNextEntry(tailer);
-        assertTrue("Forward: res is" + res, res == null);
+        assertNull("Forward: res is" + res, res);
 
         assertEquals("[Forward 2] Wrong message 0", testMessage(0), readNextEntry(tailer));
         assertEquals("[Forward 2] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());

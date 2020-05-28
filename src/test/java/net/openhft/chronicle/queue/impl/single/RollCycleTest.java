@@ -16,7 +16,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class RollCycleTest {
     @Test
@@ -142,7 +141,7 @@ public class RollCycleTest {
                     System.out.println("Read a document " + readText);
                     documentsRead++;
                     int docId = Integer.parseInt(readText);
-                    assertTrue(docId == lastDocId + 1);
+                    assertEquals(docId, lastDocId + 1);
                     lastDocId = docId;
                 }
             }
