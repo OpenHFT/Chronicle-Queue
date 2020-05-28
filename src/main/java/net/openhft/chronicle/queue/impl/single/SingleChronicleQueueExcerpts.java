@@ -887,12 +887,12 @@ public class SingleChronicleQueueExcerpts {
 
         private static void releaseIfNotNull(final Bytes bytesReference) {
             // Object is no longer reachable
-            if (bytesReference != null) {
+            if (bytesReference != null && bytesReference.refCount() > 0) {
                 bytesReference.release();
             }
         }
 
-        private void releaseResources() {
+        void releaseResources() {
             if (released.compareAndSet(false, true)) {
                 releaseIfNotNull(wireForIndexReference);
                 releaseIfNotNull(wireReference);
