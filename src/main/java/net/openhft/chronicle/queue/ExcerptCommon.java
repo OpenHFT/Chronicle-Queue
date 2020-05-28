@@ -22,8 +22,6 @@ import org.jetbrains.annotations.NotNull;
 /**
  * The ExcerptCommon is common to both ExcerptAppender
  * and ExcerptTailer.
- *
- * @author peter.lawrey
  */
 public interface ExcerptCommon<E extends ExcerptCommon<E>> {
 

@@ -29,8 +29,6 @@ import org.jetbrains.annotations.NotNull;
 /**
  * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.</p>
  * <p><b>NOTE:</b> Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.</p>
- *
- * @author peter.lawrey
  */
 public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
 
@@ -106,11 +104,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
      * </b>
      *
-     * @param tClass of the main interface to be implemented
+     * @param tClass     of the main interface to be implemented
      * @param additional interfaces to be implemented
-     * @param <T> type parameter of the main interface
+     * @param <T>        type parameter of the main interface
      * @return a new proxy for the given interface {@code tclass} and the given {@code additional }
-     *         interfaces
+     * interfaces
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
     @NotNull
@@ -128,9 +126,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * </b>
      *
      * @param tClass of the main interface to be implemented
-     * @param <T> type parameter of the main interface
+     * @param <T>    type parameter of the main interface
      * @return a new proxy for the given interface {@code tclass}
-     *
      * @throws NullPointerException if the provided parameter is {@code null}.
      */
     @NotNull
@@ -148,14 +145,13 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     /**
      * Appends a number of excerpts in a single batch operation.
      *
-     * @deprecated This method is not recommended unless you really
-     * know what you are doing. Misuse of this API could corrupt your data or even
-     * worst cause the JVM or your application to crash.
-     *
-     * @param timeoutMS time out in miliseconds
+     * @param timeoutMS     time out in miliseconds
      * @param batchAppender to apply for the batch append
      * @return the number of messages written in call the batches
      * @see BatchAppender
+     * @deprecated This method is not recommended unless you really
+     * know what you are doing. Misuse of this API could corrupt your data or even
+     * worst cause the JVM or your application to crash.
      */
     @Deprecated
     long batchAppend(int timeoutMS, BatchAppender batchAppender);

@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
@@ -38,14 +37,9 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
 
     @Test
     public void testWriteBytesWithIndex() {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
         final Bytes HELLO_WORLD = Bytes.fromString("hello world");
         File tmp = getTmpDir();
-        try (ChronicleQueue queue = single(tmp)
-                .testBlockSize()
-                .rollCycle(TEST_DAILY)
-                .build()) {
+        try (ChronicleQueue queue = single(tmp).testBlockSize().rollCycle(TEST_DAILY).build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             appender.writeBytes(0x421d00000000L, HELLO_WORLD);

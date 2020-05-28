@@ -1026,6 +1026,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
             initializeMetadata();
         } catch (Exception ex) {
             metaStore.close();
+            throw ex;
         }
     }
 

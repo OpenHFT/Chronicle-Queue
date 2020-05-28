@@ -157,7 +157,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
-        // TODO FIX
+        // too many hacks are required to make the (artificial) code below release resources correctly
         AbstractCloseable.disableCloseableTracing();
 
         @NotNull File dir = DirectoryUtils.tempDir("testCompleteHeader");
@@ -195,13 +195,13 @@ public class SingleCQFormatTest {
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
-        @NotNull ChronicleQueue queue = binary(dir)
+        try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .testBlockSize()
-                .build();
-        testQueue(queue);
+                .build()) {
+            testQueue(queue);
+        }
 
-        queue.close();
         try {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         } catch (Exception e) {
@@ -211,34 +211,32 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader2() throws FileNotFoundException {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE * 2);
         @NotNull Wire wire = new BinaryWire(bytes);
-        try (DocumentContext dc = wire.writingDocument(true)) {
-            dc.wire().writeEventName(() -> "header").typedMarshallable(
-                    new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4));
-        }
+        try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
+            try (DocumentContext dc = wire.writingDocument(true)) {
 
-        assertEquals("--- !!meta-data #binary\n" +
-                "header: !SCQStore {\n" +
-                "  writePosition: [\n" +
-                "    0,\n" +
-                "    0\n" +
-                "  ],\n" +
-                "  indexing: !SCQSIndexing {\n" +
-                "    indexCount: !short 4096,\n" +
-                "    indexSpacing: 4,\n" +
-                "    index2Index: 0,\n" +
-                "    lastIndex: 0\n" +
-                "  },\n" +
-                "  dataFormat: 1\n" +
-                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
-        bytes.release();
+                dc.wire().write("header").typedMarshallable(store);
+            }
+
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  writePosition: [\n" +
+                    "    0,\n" +
+                    "    0\n" +
+                    "  ],\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: !short 4096,\n" +
+                    "    indexSpacing: 4,\n" +
+                    "    index2Index: 0,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  dataFormat: 1\n" +
+                    "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+        }
 
         @NotNull RollingChronicleQueue queue = binary(dir)
                 .testBlockSize()
