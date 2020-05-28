@@ -18,8 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.stream.IntStream.range;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
 public final class TailerIndexingQueueTest {
@@ -72,14 +71,14 @@ public final class TailerIndexingQueueTest {
             final ExcerptTailer tailer = queue.createTailer().toEnd();
             // move to END_OF_CYCLE
             try (final DocumentContext readCtx = tailer.readingDocument()) {
-                assertThat(readCtx.isPresent(), is(false));
+                assertFalse(readCtx.isPresent());
             }
-            assertThat(tailer.state(), is(TailerState.END_OF_CYCLE));
+            assertEquals(TailerState.END_OF_CYCLE, tailer.state());
 
             tailer.direction(TailerDirection.BACKWARD);
 
             tailer.toEnd();
-            assertThat(tailer.readingDocument().isPresent(), is(true));
+            assertTrue(tailer.readingDocument().isPresent());
         }
     }
 

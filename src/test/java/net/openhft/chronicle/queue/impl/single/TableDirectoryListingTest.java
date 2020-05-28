@@ -12,8 +12,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 public class TableDirectoryListingTest {
     private TableDirectoryListing listing;
@@ -54,13 +53,13 @@ public class TableDirectoryListingTest {
 
         listing.onFileCreated(tempFile, 7);
 
-        assertThat(listing.getMaxCreatedCycle(), is(7));
-        assertThat(listing.getMinCreatedCycle(), is(7));
+        assertEquals(7, listing.getMaxCreatedCycle());
+        assertEquals(7, listing.getMinCreatedCycle());
 
         listing.onFileCreated(tempFile, 8);
 
-        assertThat(listing.getMaxCreatedCycle(), is(8));
-        assertThat(listing.getMinCreatedCycle(), is(7));
+        assertEquals(8, listing.getMaxCreatedCycle());
+        assertEquals(7, listing.getMinCreatedCycle());
     }
 
     @Test
@@ -71,8 +70,8 @@ public class TableDirectoryListingTest {
 
         listing.refresh();
 
-        assertThat(listing.getMaxCreatedCycle(), is(3));
-        assertThat(listing.getMinCreatedCycle(), is(1));
+        assertEquals(3, listing.getMaxCreatedCycle());
+        assertEquals(1, listing.getMinCreatedCycle());
     }
 
     @Test
@@ -80,6 +79,6 @@ public class TableDirectoryListingTest {
         listing.onFileCreated(tempFile, 8);
 
         listing.onFileCreated(tempFile, 9);
-        assertThat(listing.getMaxCreatedCycle(), is(9));
+        assertEquals(9, listing.getMaxCreatedCycle());
     }
 }

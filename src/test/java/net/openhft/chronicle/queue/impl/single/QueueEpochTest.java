@@ -11,8 +11,7 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 public final class QueueEpochTest {
     private static final boolean DEBUG = false;
@@ -63,22 +62,22 @@ public final class QueueEpochTest {
             setCurrentTime(ONE_SECOND_BEFORE_ROLL_TIME);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_BEFORE_ROLL_TIME));
 
-            assertThat(fileListener.numberOfRollEvents(), is(0));
+            assertEquals(0, fileListener.numberOfRollEvents());
 
             setCurrentTime(ONE_SECOND_AFTER_ROLL_TIME);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_AFTER_ROLL_TIME));
 
-            assertThat(fileListener.numberOfRollEvents(), is(1));
+            assertEquals(1, fileListener.numberOfRollEvents());
 
             setCurrentTime(ONE_SECOND_BEFORE_ROLL_TIME + ONE_DAY);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_BEFORE_ROLL_TIME + ONE_DAY));
 
-            assertThat(fileListener.numberOfRollEvents(), is(1));
+            assertEquals(1, fileListener.numberOfRollEvents());
 
             setCurrentTime(ONE_SECOND_AFTER_ROLL_TIME + ONE_DAY);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_AFTER_ROLL_TIME + ONE_DAY));
 
-            assertThat(fileListener.numberOfRollEvents(), is(2));
+            assertEquals(2, fileListener.numberOfRollEvents());
         }
     }
 

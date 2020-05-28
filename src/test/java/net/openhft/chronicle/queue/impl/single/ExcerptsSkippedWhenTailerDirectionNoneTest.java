@@ -8,8 +8,7 @@ import org.junit.Test;
 import java.io.File;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
     @Test
@@ -37,11 +36,11 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
 
             final ExcerptTailer tailer = readQueue.createTailer();
             final RollCycle rollCycle = readQueue.rollCycle();
-            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(0L));
+            assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()));
             try (final DocumentContext ctx = tailer.direction(TailerDirection.NONE).readingDocument()) {
                 // access the first document without incrementing sequence number
             }
-            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(0L));
+            assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()));
 
             String value;
             try (DocumentContext dc =
@@ -49,27 +48,27 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
                 ValueIn valueIn = dc.wire().getValueIn();
                 value = (String) valueIn.object();
             }
-            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(1L));
+            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()));
 
-            assertThat(value, is("first"));
-
-            try (DocumentContext dc =
-                         tailer.direction(TailerDirection.NONE).readingDocument()) {
-                ValueIn valueIn = dc.wire().getValueIn();
-                value = (String) valueIn.object();
-            }
-            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(1L));
-
-            assertThat(value, is("second"));
+            assertEquals("first", value);
 
             try (DocumentContext dc =
                          tailer.direction(TailerDirection.NONE).readingDocument()) {
                 ValueIn valueIn = dc.wire().getValueIn();
                 value = (String) valueIn.object();
             }
-            assertThat(rollCycle.toSequenceNumber(tailer.index()), is(1L));
+            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()));
 
-            assertThat(value, is("second"));
+            assertEquals("second", value);
+
+            try (DocumentContext dc =
+                         tailer.direction(TailerDirection.NONE).readingDocument()) {
+                ValueIn valueIn = dc.wire().getValueIn();
+                value = (String) valueIn.object();
+            }
+            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()));
+
+            assertEquals("second", value);
         }
     }
 }

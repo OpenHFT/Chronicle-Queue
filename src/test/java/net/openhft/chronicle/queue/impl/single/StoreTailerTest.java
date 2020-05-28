@@ -18,8 +18,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class StoreTailerTest extends ChronicleQueueTestBase {
     private final Collection<ChronicleQueue> createdQueues = new ArrayList<>();
@@ -64,11 +64,11 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         final ExcerptTailer tailer = readerQueue.createTailer();
         tailer.toStart();
         try (final DocumentContext context = tailer.readingDocument()) {
-            assertThat(context.isPresent(), is(true));
+            assertTrue(context.isPresent());
         }
         tailer.toEnd();
         try (final DocumentContext context = tailer.readingDocument()) {
-            assertThat(context.isPresent(), is(false));
+            assertEquals(false, context.isPresent());
         }
     }
 
@@ -102,10 +102,10 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         final MethodReader secondMethodReader = secondInputQueue.createTailer().methodReader(outputWriter);
 
         // replay events from the inputs into the output queue
-        assertThat(firstMethodReader.readOne(), is(true));
-        assertThat(firstMethodReader.readOne(), is(true));
-        assertThat(secondMethodReader.readOne(), is(true));
-        assertThat(secondMethodReader.readOne(), is(true));
+        assertTrue(firstMethodReader.readOne());
+        assertTrue(firstMethodReader.readOne());
+        assertTrue(secondMethodReader.readOne());
+        assertTrue(secondMethodReader.readOne());
 
         // ensures that tailer is not moved to index from the incorrect source
         secondInputQueue.createTailer().afterLastWritten(outputQueue);

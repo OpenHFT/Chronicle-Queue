@@ -73,7 +73,7 @@ public final class AppenderFileHandleLeakTest {
                 tailer.toStart().readBytes(bytes);
             }
             refHolder.accept(tailer);
-            assertThat(Math.signum(bytes.readInt()) >= 0, is(true));
+            assertTrue(Math.signum(bytes.readInt()) >= 0);
 
             if (manuallyReleaseResources) {
                 try {
@@ -157,7 +157,7 @@ public final class AppenderFileHandleLeakTest {
             }
 
             for (Future<Boolean> future : futures) {
-                assertThat(future.get(1, TimeUnit.MINUTES), is(true));
+                assertTrue(future.get(1, TimeUnit.MINUTES));
             }
 
             waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);

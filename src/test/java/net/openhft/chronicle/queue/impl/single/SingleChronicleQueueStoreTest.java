@@ -15,8 +15,8 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class SingleChronicleQueueStoreTest {
     private static final int INDEX_SPACING = 4;
@@ -34,12 +34,12 @@ public class SingleChronicleQueueStoreTest {
         for (int i = 0; i < RECORD_COUNT; i++) {
             final int startLinearScanCount = indexing.linearScanCount;
             final ScanResult scanResult = indexing.moveToIndex((SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer(), indices[i]);
-            assertThat(scanResult, is(expectedScanResult));
+            assertEquals(expectedScanResult, scanResult);
 
             if (shouldBeIndexed.apply(i)) {
-                assertThat(indexing.linearScanCount, is(startLinearScanCount));
+                assertEquals(startLinearScanCount, indexing.linearScanCount);
             } else {
-                assertThat(indexing.linearScanCount, is(startLinearScanCount + 1));
+                assertEquals(startLinearScanCount + 1, indexing.linearScanCount);
             }
         }
     }
@@ -54,7 +54,7 @@ public class SingleChronicleQueueStoreTest {
 
         for (int i = 0; i < RECORD_COUNT; i++) {
             try (final DocumentContext ctx = tailer.readingDocument()) {
-                assertThat("Expected record at index " + i, ctx.isPresent(), is(true));
+                assertTrue("Expected record at index " + i, ctx.isPresent());
                 indices[i] = tailer.index();
             }
         }

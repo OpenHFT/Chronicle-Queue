@@ -56,7 +56,6 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
@@ -179,7 +178,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
 
-            assertThat(countEntries(queue), is(10L));
+            assertEquals(10L, countEntries(queue));
         }
     }
 
@@ -1136,7 +1135,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         tailer.moveToIndex(
                                 index));
                 final DocumentContext context = tailer.readingDocument();
-                assertThat(context.index(), is(index));
+                assertEquals(index, context.index());
                 context.wire().read(() -> "key").text(sb);
                 assertEquals("value=" + i, sb.toString());
             }
@@ -1265,7 +1264,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertTrue(appender.cycle() == 0);
 
             final ExcerptTailer excerptTailer = chronicle.createTailer().toStart();
-            assertThat(excerptTailer.readingDocument().isPresent(), is(true));
+            assertTrue(excerptTailer.readingDocument().isPresent());
         }
     }
 
@@ -1281,7 +1280,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
 
             final ExcerptTailer excerptTailer = chronicle.createTailer().toStart();
-            assertThat(excerptTailer.readingDocument().isPresent(), is(true));
+            assertTrue(excerptTailer.readingDocument().isPresent());
         }
     }
 
@@ -1934,7 +1933,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             tailer.toEnd();
             tailer.direction(TailerDirection.BACKWARD);
 
-            assertThat(tailer.readingDocument().isPresent(), is(true));
+            assertTrue(tailer.readingDocument().isPresent());
         }
     }
 
@@ -3111,7 +3110,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
 
-        assertThat(new File(QUEUE_METADATA_FILE).delete(), is(true));
+        assertTrue(new File(QUEUE_METADATA_FILE).delete());
     }
 
     @NotNull

@@ -87,8 +87,8 @@ public class RollingResourcesCacheTest {
     private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
                                                 final Instant instant, final DateTimeFormatter formatter) {
         final String expectedFileName = formatter.format(instant);
-        assertThat(cache.resourceFor(cycle).text, is(expectedFileName));
-        assertThat(cache.parseCount(expectedFileName), is(cycle));
+        assertEquals(expectedFileName, cache.resourceFor(cycle).text);
+        assertEquals(cycle, cache.parseCount(expectedFileName));
     }
 
     @Test
@@ -105,8 +105,8 @@ public class RollingResourcesCacheTest {
     private void doTestCycleAndResourceNames(long epoch, RollCycle rollCycle, int cycleNumber, String filename) {
         RollingResourcesCache cache =
                 new RollingResourcesCache(rollCycle, epoch, File::new, File::getName);
-        assertThat(cache.resourceFor(cycleNumber).text, is(filename));
-        assertThat(cache.parseCount(filename), is(cycleNumber));
+        assertEquals(filename, cache.resourceFor(cycleNumber).text);
+        assertEquals(cycleNumber, cache.parseCount(filename));
     }
 
     @Test
@@ -220,7 +220,7 @@ public class RollingResourcesCacheTest {
 
                 final long daysBetweenEpochAndInstant = (instantAfterEpoch - epoch) / ONE_DAY_IN_MILLIS;
 
-                assertThat((long) cycle, is(daysBetweenEpochAndInstant));
+                assertEquals(daysBetweenEpochAndInstant, (long) cycle);
 
                 assertThat(((long) cycle) * ONE_DAY_IN_MILLIS,
                         is((long) cycle * RollCycles.DAILY.length()));

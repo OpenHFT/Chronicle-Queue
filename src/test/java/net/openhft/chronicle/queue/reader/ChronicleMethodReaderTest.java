@@ -31,8 +31,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ChronicleMethodReaderTest {
 
@@ -83,14 +82,14 @@ public class ChronicleMethodReaderTest {
     public void shouldNotFailWhenNoMetadata() throws IOException {
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
         basicReader().execute();
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test
     public void shouldIncludeMessageHistoryByDefault() {
         basicReader().execute();
 
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Ignore("TODO FIX")
@@ -101,7 +100,7 @@ public class ChronicleMethodReaderTest {
                         withInclusionRegex("goodbye").
                 asMethodReader(null).
                 execute();
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(false));
+        assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test
@@ -115,7 +114,7 @@ public class ChronicleMethodReaderTest {
                 orElseThrow(() ->
                         new AssertionError("Could not find queue file in directory " + dataDir));
 
-        assertThat(queueFile.toFile().setWritable(false), is(true));
+        assertTrue(queueFile.toFile().setWritable(false));
 
         basicReader().execute();
     }
@@ -125,15 +124,15 @@ public class ChronicleMethodReaderTest {
     public void shouldConvertEntriesToText() {
         basicReader().execute();
 
-        assertThat(capturedOutput.size(), is(48));
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("hello")), is(true));
+        assertEquals(48, capturedOutput.size());
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("hello")));
     }
 
     @Test
     public void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
-        assertThat(capturedOutput.size(), is(24));
+        assertEquals(24, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
                 forEach(msg -> assertThat(msg, containsString("goodbye")));
     }
@@ -143,7 +142,7 @@ public class ChronicleMethodReaderTest {
     public void shouldFilterByMultipleInclusionRegex() {
         basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
 
-        assertThat(capturedOutput.size(), is(24));
+        assertEquals(24, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
                 forEach(msg -> assertThat(msg, containsString("goodbye")));
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
@@ -160,7 +159,7 @@ public class ChronicleMethodReaderTest {
     public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
-        assertThat(capturedOutput.size(), is(24));
+        assertEquals(24, capturedOutput.size());
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
@@ -169,7 +168,7 @@ public class ChronicleMethodReaderTest {
     public void shouldFilterByMultipleExclusionRegex() {
         basicReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
-        assertThat(capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count(), is(0L));
+        assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")

@@ -25,8 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 public final class EofMarkerOnEmptyQueueTest {
     @Rule
@@ -69,7 +68,7 @@ public final class EofMarkerOnEmptyQueueTest {
             assertNull(firstCycleStore);
 //            final long firstCycleWritePosition = firstCycleStore.writePosition();
 //            // assert that no write was completed
-//            assertThat(firstCycleWritePosition, is(0L));
+//            assertEquals(0L, firstCycleWritePosition) ;
 
             final ExcerptTailer tailer = queue.createTailer();
 
@@ -87,8 +86,8 @@ public final class EofMarkerOnEmptyQueueTest {
                     lastItem = field.int32();
                 }
             }
-            assertThat(recordCount, is(1));
-            assertThat(lastItem, is(7));
+            assertEquals(1, recordCount);
+            assertEquals(7, lastItem);
         }
     }
 }

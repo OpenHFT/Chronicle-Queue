@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
@@ -25,7 +24,7 @@ public final class RollAtEndOfCycleTest {
         final long count = Files.list(path).filter(p -> p.toString().
                 endsWith(SingleChronicleQueue.SUFFIX)).count();
 
-        assertThat(count, is(expectedCount));
+        assertEquals(expectedCount, count);
     }
 
     @Test
@@ -70,7 +69,7 @@ public final class RollAtEndOfCycleTest {
                 }
             }
 
-            assertThat(totalCount, is(2));
+            assertEquals(2, totalCount);
         }
     }
 

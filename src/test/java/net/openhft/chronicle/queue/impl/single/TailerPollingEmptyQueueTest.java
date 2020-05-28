@@ -5,9 +5,8 @@ import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 
 public final class TailerPollingEmptyQueueTest {
 
@@ -15,7 +14,7 @@ public final class TailerPollingEmptyQueueTest {
     public void shouldNotGenerateExcessGarbage() {
         try (final SingleChronicleQueue queue = createQueue()) {
             queue.path.mkdirs();
-            assertThat(queue.path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length, is(0));
+            assertEquals(0, queue.path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
 
             final ExcerptTailer tailer = queue.createTailer();
 
@@ -29,7 +28,7 @@ public final class TailerPollingEmptyQueueTest {
                 assertFalse(tailer.readingDocument().isPresent());
             }
 
-            assertThat(GcControls.getGcCount() - startCollectionCount, is(0L));
+            assertEquals(0L, GcControls.getGcCount() - startCollectionCount);
         }
     }
 

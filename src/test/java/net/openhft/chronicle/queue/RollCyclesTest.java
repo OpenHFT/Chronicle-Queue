@@ -11,9 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 @RunWith(Parameterized.class)
 @RequiredForClient
@@ -81,14 +79,14 @@ public class RollCyclesTest {
 
         clock.addAndGet(cycle.length());
 
-        assertThat(cycle.current(timeProvider, epochOffset), is(startCycle + 1));
-        assertThat(cycle.current(plusOneMillisecond(timeProvider), epochOffset), is(startCycle + 1));
-        assertThat(cycle.current(minusOneMillisecond(timeProvider), epochOffset), is(startCycle));
+        assertEquals(startCycle + 1, cycle.current(timeProvider, epochOffset));
+        assertEquals(startCycle + 1, cycle.current(plusOneMillisecond(timeProvider), epochOffset));
+        assertEquals(startCycle, cycle.current(minusOneMillisecond(timeProvider), epochOffset));
 
         clock.addAndGet(cycle.length());
 
-        assertThat(cycle.current(timeProvider, epochOffset), is(startCycle + 2));
-        assertThat(cycle.current(plusOneMillisecond(timeProvider), epochOffset), is(startCycle + 2));
-        assertThat(cycle.current(minusOneMillisecond(timeProvider), epochOffset), is(startCycle + 1));
+        assertEquals(startCycle + 2, cycle.current(timeProvider, epochOffset));
+        assertEquals(startCycle + 2, cycle.current(plusOneMillisecond(timeProvider), epochOffset));
+        assertEquals(startCycle + 1, cycle.current(minusOneMillisecond(timeProvider), epochOffset));
     }
 }

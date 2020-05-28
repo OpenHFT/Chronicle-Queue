@@ -11,6 +11,7 @@ import java.nio.file.Path;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class DumpQueueMainTest {
 
@@ -32,7 +33,7 @@ public class DumpQueueMainTest {
                     filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
                     findFirst().orElseThrow(() ->
                     new AssertionError("Could not find queue file in directory " + dataDir));
-            assertThat(queueFile.toFile().setWritable(false), is(true));
+            assertTrue(queueFile.toFile().setWritable(false));
 
             final CountingOutputStream countingOutputStream = new CountingOutputStream();
             DumpQueueMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);

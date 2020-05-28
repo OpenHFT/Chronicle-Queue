@@ -182,14 +182,14 @@ public class ChronicleReaderTest {
     public void shouldNotFailWhenNoMetadata() throws IOException {
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
         basicReader().execute();
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test
     public void shouldIncludeMessageHistoryByDefault() {
         basicReader().execute();
 
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(true));
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test
@@ -199,7 +199,7 @@ public class ChronicleReaderTest {
                         withInclusionRegex("goodbye").
                 asMethodReader(null).
                 execute();
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")), is(false));
+        assertEquals(false, capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test(timeout = 5000)
@@ -247,7 +247,7 @@ public class ChronicleReaderTest {
                 orElseThrow(() ->
                         new AssertionError("Could not find queue file in directory " + dataDir));
 
-        assertThat(queueFile.toFile().setWritable(false), is(true));
+        assertTrue(queueFile.toFile().setWritable(false));
 
         basicReader().execute();
     }
@@ -256,15 +256,15 @@ public class ChronicleReaderTest {
     public void shouldConvertEntriesToText() {
         basicReader().execute();
 
-        assertThat(capturedOutput.size(), is(48));
-        assertThat(capturedOutput.stream().anyMatch(msg -> msg.contains("hello")), is(true));
+        assertEquals(48, capturedOutput.size());
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("hello")));
     }
 
     @Test
     public void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
-        assertThat(capturedOutput.size(), is(24));
+        assertEquals(24, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
                 forEach(msg -> assertThat(msg, containsString("goodbye")));
     }
@@ -273,7 +273,7 @@ public class ChronicleReaderTest {
     public void shouldFilterByMultipleInclusionRegex() {
         basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
 
-        assertThat(capturedOutput.size(), is(24));
+        assertEquals(24, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
                 forEach(msg -> assertThat(msg, containsString("goodbye")));
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
@@ -289,7 +289,7 @@ public class ChronicleReaderTest {
     public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
-        assertThat(capturedOutput.size(), is(24));
+        assertEquals(24, capturedOutput.size());
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
@@ -297,7 +297,7 @@ public class ChronicleReaderTest {
     public void shouldFilterByMultipleExclusionRegex() {
         basicReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
-        assertThat(capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count(), is(0L));
+        assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test
@@ -313,10 +313,10 @@ public class ChronicleReaderTest {
         final long knownIndex = Long.decode(findAnExistingIndex());
         basicReader().withStartIndex(knownIndex).execute();
 
-        assertThat(capturedOutput.size(), is(25));
+        assertEquals(25, capturedOutput.size());
         // discard first message
         capturedOutput.poll();
-        assertThat(capturedOutput.poll().contains(Long.toHexString(knownIndex)), is(true));
+        assertTrue(capturedOutput.poll().contains(Long.toHexString(knownIndex)));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -342,7 +342,7 @@ public class ChronicleReaderTest {
             // expected
         }
 
-        assertThat(pollMethod.invocationCount, is(expectedPollCountWhenDocumentIsEmpty));
+        assertEquals(expectedPollCountWhenDocumentIsEmpty, pollMethod.invocationCount);
     }
 
     private String findAnExistingIndex() {

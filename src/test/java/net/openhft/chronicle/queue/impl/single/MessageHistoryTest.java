@@ -16,7 +16,6 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 public final class MessageHistoryTest {
@@ -48,8 +47,8 @@ public final class MessageHistoryTest {
             final ValidatingSecond validatingSecond = new ValidatingSecond();
             final MethodReader validator = tailer.methodReader(validatingSecond);
 
-            assertThat(validator.readOne(), is(true));
-            assertThat(validatingSecond.messageHistoryPresent(), is(true));
+            assertTrue(validator.readOne());
+            assertTrue(validatingSecond.messageHistoryPresent());
         }
     }
 
@@ -65,8 +64,8 @@ public final class MessageHistoryTest {
             final ValidatingSecond validatingSecond = new ValidatingSecond();
             final MethodReader validator = tailer.methodReader(validatingSecond);
 
-            assertThat(validator.readOne(), is(true));
-            assertThat(validatingSecond.messageHistoryPresent(), is(true));
+            assertTrue(validator.readOne());
+            assertTrue(validatingSecond.messageHistoryPresent());
         }
     }
 
@@ -89,7 +88,7 @@ public final class MessageHistoryTest {
     private void say3(String text) {
         final MessageHistory messageHistory = MessageHistory.get();
         assertNotNull(messageHistory);
-        assertThat(messageHistory.sources(), is(2));
+        assertEquals(2, messageHistory.sources());
     }
 
     private void generateTestData(final ChronicleQueue inputQueue, final ChronicleQueue outputQueue) {
@@ -108,14 +107,14 @@ public final class MessageHistoryTest {
         final MethodReader reader = inputQueue.createTailer().
                 methodReaderBuilder().build(loggingFirst);
 
-        assertThat(reader.readOne(), is(true));
-        assertThat(reader.readOne(), is(true));
+        assertTrue(reader.readOne());
+        assertTrue(reader.readOne());
 
         // roll queue file
         clock.addAndGet(TimeUnit.DAYS.toMillis(2));
 
-        assertThat(reader.readOne(), is(true));
-        assertThat(reader.readOne(), is(false));
+        assertTrue(reader.readOne());
+        assertEquals(false, reader.readOne());
     }
 
     private ChronicleQueue createQueue(final File queueDir, final int sourceId) {
@@ -154,7 +153,7 @@ public final class MessageHistoryTest {
         public void count(final int value) {
             final MessageHistory messageHistory = MessageHistory.get();
             assertNotNull(messageHistory);
-            assertThat(messageHistory.sources(), is(1));
+            assertEquals(1, messageHistory.sources());
             messageHistoryPresent = true;
         }
 
