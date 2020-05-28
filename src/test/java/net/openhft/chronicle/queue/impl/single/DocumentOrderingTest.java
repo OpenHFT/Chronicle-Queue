@@ -33,7 +33,7 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws Exception {
+    public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
 
@@ -72,7 +72,7 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws Exception {
+    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
         // as below, but don't actually close the initial context
         try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
@@ -97,7 +97,7 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws Exception {
+    public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
         final File dir = DirectoryUtils.tempDir("document-ordering");
         // must be different instances of queue to work around synchronization on acquireStore()
         try (final ChronicleQueue queue =
@@ -145,7 +145,7 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws Exception {
+    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
 
@@ -174,7 +174,7 @@ public final class DocumentOrderingTest {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws Exception {
+    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
 

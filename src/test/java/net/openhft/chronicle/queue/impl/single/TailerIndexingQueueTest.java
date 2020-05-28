@@ -45,7 +45,7 @@ public final class TailerIndexingQueueTest {
     }
 
     @Test
-    public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws Exception {
+    public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws IOException {
         assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue = createQueue(path, clock::get)) {
             final ExcerptAppender appender = queue.acquireAppender();
@@ -84,7 +84,7 @@ public final class TailerIndexingQueueTest {
     }
 
     @After
-    public void deleteDir() throws Exception {
+    public void deleteDir() {
         DirectoryUtils.deleteDir(path);
     }
 }

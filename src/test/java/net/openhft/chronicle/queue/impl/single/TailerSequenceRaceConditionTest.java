@@ -22,7 +22,7 @@ public final class TailerSequenceRaceConditionTest {
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8);
 
     @Test
-    public void shouldAlwaysBeAbleToTail() throws Exception {
+    public void shouldAlwaysBeAbleToTail() throws InterruptedException {
         ChronicleQueue[] queues = new ChronicleQueue[10];
         for (int i = 0; i < 10; i++) {
             final ChronicleQueue queue = createNewQueue();
@@ -45,7 +45,7 @@ public final class TailerSequenceRaceConditionTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         threadPool.shutdownNow();
     }
 

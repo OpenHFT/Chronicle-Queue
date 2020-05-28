@@ -15,7 +15,7 @@ import static org.junit.Assert.assertThat;
 public class DumpQueueMainTest {
 
     @Test
-    public void shouldBeAbleToDumpReadOnlyQueueFile() throws Exception {
+    public void shouldBeAbleToDumpReadOnlyQueueFile() throws IOException {
         if (OS.isWindows())
             return;
 
@@ -42,7 +42,7 @@ public class DumpQueueMainTest {
     }
 
     @Test
-    public void shouldDumpDirectoryListing() throws Exception {
+    public void shouldDumpDirectoryListing() {
         final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).

@@ -26,7 +26,9 @@ import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.batch.BatchAppender;
-import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.impl.ExcerptContext;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -92,11 +94,11 @@ public class SingleChronicleQueueExcerpts {
         private final WriteLock writeLock;
         @NotNull
         private final StoreAppenderContext context;
-        private final ClosableResources<?> closableResources;
+        private final ClosableResources closableResources;
         private final WireStorePool storePool;
         private final boolean checkInterrupts;
         @Nullable
-        WireStore store;
+        SingleChronicleQueueStore store;
         private int cycle = Integer.MIN_VALUE;
         @Nullable
         private Wire wire;
@@ -118,7 +120,7 @@ public class SingleChronicleQueueExcerpts {
             this.checkInterrupts = checkInterrupts;
             this.writeLock = queue.writeLock();
             this.context = new StoreAppenderContext();
-            this.closableResources = new ClosableResources<>(storePool);
+            this.closableResources = new ClosableResources(queue);
 
             // always put references to "this" last.
             queue.addCloseListener(this, StoreAppender::close);
@@ -276,7 +278,7 @@ public class SingleChronicleQueueExcerpts {
 
             SingleChronicleQueue queue = this.queue;
 
-            WireStore store = this.store;
+            SingleChronicleQueueStore store = this.store;
 
             this.store = storePool.acquire(cycle, queue.epoch(), createIfAbsent);
 
@@ -871,15 +873,15 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
-    private static final class ClosableResources<T extends StoreReleasable> {
+    private static final class ClosableResources {
         @NotNull
-        private final T storeReleasable;
+        private final SingleChronicleQueue storeReleasable;
         private final AtomicBoolean released = new AtomicBoolean();
         private volatile Bytes wireReference = null;
         private volatile Bytes wireForIndexReference = null;
-        private volatile CommonStore storeReference = null;
+        private volatile SingleChronicleQueueStore storeReference = null;
 
-        private ClosableResources(@NotNull final T storeReleasable) {
+        private ClosableResources(@NotNull final SingleChronicleQueue storeReleasable) {
             this.storeReleasable = storeReleasable;
         }
 
@@ -896,7 +898,7 @@ public class SingleChronicleQueueExcerpts {
                 releaseIfNotNull(wireReference);
 
                 // Object is no longer reachable, check that it has not already been released
-                CommonStore storeReference = this.storeReference;
+                SingleChronicleQueueStore storeReference = this.storeReference;
 
                 if (storeReference != null) {
                     storeReleasable.release(storeReference);
@@ -914,11 +916,11 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         private final LongValue indexValue;
         private final StoreTailerContext context = new StoreTailerContext();
-        private final ClosableResources<?> closableResources;
+        private final ClosableResources closableResources;
         private final MoveToState moveToState = new MoveToState();
         long index; // index of the next read.
         @Nullable
-        WireStore store;
+        SingleChronicleQueueStore store;
         private int cycle;
         private TailerDirection direction = TailerDirection.FORWARD;
         private Wire wireForIndex;
@@ -940,7 +942,7 @@ public class SingleChronicleQueueExcerpts {
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
-            closableResources = new ClosableResources<>(queue);
+            closableResources = new ClosableResources(queue);
 
             if (indexValue == null) {
                 toStart();
@@ -1559,7 +1561,7 @@ public class SingleChronicleQueueExcerpts {
                 if (lastCycle == Integer.MIN_VALUE)
                     return Long.MIN_VALUE;
 
-                final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
+                final SingleChronicleQueueStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
                 this.setCycle(lastCycle);
                 if (wireStore == null)
                     throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
@@ -1670,7 +1672,7 @@ public class SingleChronicleQueueExcerpts {
                     return this;
                 }
 
-                final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
+                final SingleChronicleQueueStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
                 this.setCycle(lastCycle);
                 if (wireStore == null)
                     throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? lastCycle=" + lastCycle);
@@ -1868,7 +1870,7 @@ public class SingleChronicleQueueExcerpts {
             if (this.cycle == cycle && state == FOUND_CYCLE)
                 return true;
 
-            final WireStore nextStore = queue.storeForCycle(cycle, queue.epoch(), false);
+            final SingleChronicleQueueStore nextStore = queue.storeForCycle(cycle, queue.epoch(), false);
 
             if (nextStore == null && store == null)
                 return false;

@@ -99,7 +99,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final TimeProvider time;
     @NotNull
-    private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
+    private final BiFunction<RollingChronicleQueue, Wire, SingleChronicleQueueStore> storeFactory;
     private final Map<Object, Consumer> closers = new WeakHashMap<>();
     private final boolean readOnly;
     @NotNull
@@ -279,7 +279,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public String dumpLastHeader() {
         StringBuilder sb = new StringBuilder(256);
-        WireStore wireStore = storeForCycle(lastCycle(), epoch, false);
+        SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false);
         if (wireStore != null) {
             try {
                 sb.append(wireStore.dumpHeader());
@@ -295,7 +295,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public String dump() {
         StringBuilder sb = new StringBuilder(1024);
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
-            CommonStore commonStore = storeForCycle(i, epoch, false);
+            SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false);
             if (commonStore != null) {
                 try {
 //                    sb.append("# ").append(wireStore.bytes().mappedFile().file()).append("\n");
@@ -491,7 +491,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     @Override
-    public final WireStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent) {
+    public final SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent) {
         return this.pool.acquire(cycle, epoch, createIfAbsent);
     }
 
@@ -626,8 +626,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         closeQuietly(metaStore);
     }
 
-    @Override
-    public final void release(@Nullable CommonStore store) {
+    public final void release(@Nullable SingleChronicleQueueStore store) {
         if (store != null)
             this.pool.release(store);
     }
@@ -791,7 +790,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             int cycle = cycle();
             int lastCycle = lastCycle();
             while (lastCycle < cycle && lastCycle >= 0) {
-                final WireStore store = storeSupplier.acquire(lastCycle, false);
+                final SingleChronicleQueueStore store = storeSupplier.acquire(lastCycle, false);
                 if (store == null)
                     return;
                 try {
@@ -834,7 +833,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         @SuppressWarnings("resource")
         @Override
-        public WireStore acquire(int cycle, boolean createIfAbsent) {
+        public SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent) {
 
             SingleChronicleQueue that = SingleChronicleQueue.this;
             @NotNull final RollingResourcesCache.Resource dateValue = that
@@ -876,7 +875,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 wire.pauser(pauserSupplier.get());
                 wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
 
-                WireStore wireStore;
+                SingleChronicleQueueStore wireStore;
                 try {
                     if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
                         wireStore = storeFactory.apply(that, wire);

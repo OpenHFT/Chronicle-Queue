@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredForClient
 public class AcquireReleaseTest extends ChronicleQueueTestBase {
     @Test
-    public void testAccquireAndRelease() throws Exception {
+    public void testAccquireAndRelease() {
         File dir = DirectoryUtils.tempDir("AcquireReleaseTest");
         try {
             AtomicInteger acount = new AtomicInteger();

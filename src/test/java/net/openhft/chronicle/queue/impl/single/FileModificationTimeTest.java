@@ -29,7 +29,7 @@ public final class FileModificationTimeTest {
     }
 
     @Test
-    public void shouldUpdateDirectoryModificationTime() throws Exception {
+    public void shouldUpdateDirectoryModificationTime() {
         final File dir = DirectoryUtils.tempDir(FileModificationTimeTest.class.getSimpleName());
         dir.mkdirs();
 

@@ -37,7 +37,7 @@ public final class QueueEpochTest {
     }
 
     @Test
-    public void shouldRollQueueFilesAccordingToUtcOffset() throws Exception {
+    public void shouldRollQueueFilesAccordingToUtcOffset() {
         logDebug("UTC offset is %dms%n", UTC_OFFSET);
         final File queueDir = DirectoryUtils.tempDir(QueueEpochTest.class.getSimpleName());
         final CapturingStoreFileListener fileListener = new CapturingStoreFileListener();

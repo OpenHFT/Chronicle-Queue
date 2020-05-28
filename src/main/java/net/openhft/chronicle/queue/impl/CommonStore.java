@@ -1,8 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.core.ReferenceCounted;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.wire.Demarshallable;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
@@ -10,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 
-public interface CommonStore extends ReferenceCounted, Demarshallable, WriteMarshallable, Closeable {
+public interface CommonStore extends Demarshallable, WriteMarshallable {
     /**
      * @return the file associated with this store.
      */

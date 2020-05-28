@@ -92,7 +92,7 @@ public class RollingResourcesCacheTest {
     }
 
     @Test
-    public void shouldConvertCyclesToResourceNamesWithNoEpoch() throws Exception {
+    public void shouldConvertCyclesToResourceNamesWithNoEpoch() {
         final int epoch = 0;
         final RollingResourcesCache cache =
                 new RollingResourcesCache(RollCycles.DAILY, epoch, File::new, File::getName);
@@ -110,7 +110,7 @@ public class RollingResourcesCacheTest {
     }
 
     @Test
-    public void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() throws Exception {
+    public void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() {
         // AM_EPOCH is 2018-04-12 02:08:53.145 UTC
         // cycle 24 should be formatted as:
         // 2018-04-12 00:00:00 UTC (1523491200000) +
@@ -191,14 +191,14 @@ public class RollingResourcesCacheTest {
     }
 
     @Test(expected = RuntimeException.class)
-    public void parseIncorrectlyFormattedName() throws Exception {
+    public void parseIncorrectlyFormattedName() {
         final RollingResourcesCache cache =
                 new RollingResourcesCache(RollCycles.HOURLY, PM_EPOCH, File::new, File::getName);
         cache.parseCount("foobar-qux");
     }
 
     @Test
-    public void fuzzyConversionTest() throws Exception {
+    public void fuzzyConversionTest() {
         final int maxAddition = (int) ChronoUnit.DECADES.getDuration().toMillis();
         final Random random = new Random(SEED);
 

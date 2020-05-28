@@ -17,9 +17,9 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -147,7 +147,7 @@ public class ToEndTest {
     }
 
     @Test
-    public void tailerToEndIncreasesRefCount() throws Exception {
+    public void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
         String path = OS.TARGET + "/toEndIncRefCount-" + System.nanoTime();
         IOTools.shallowDeleteDirWithFiles(path);
 
@@ -337,9 +337,14 @@ public class ToEndTest {
         return results;
     }
 
+    @Before
+    public void enableCloseableTracing() {
+        AbstractCloseable.enableCloseableTracing();
+    }
+
     @After
-    public void checkMappedFiles() {
-        MappedFile.checkMappedFiles();
+    public void assertCloseablesClosed() {
+        AbstractCloseable.assertCloseablesClosed();
     }
 
 }

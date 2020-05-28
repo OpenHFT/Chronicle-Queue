@@ -5,12 +5,13 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class Stackoveflow52274284Test {
     @Test
-    public void fails() throws Exception {
+    public void fails() throws IOException {
         String basePath = OS.TARGET;
         String path = Files.createTempDirectory(Paths.get(basePath), "chronicle-")
                 .toAbsolutePath()

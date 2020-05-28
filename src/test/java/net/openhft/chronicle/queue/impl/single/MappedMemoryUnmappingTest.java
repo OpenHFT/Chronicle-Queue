@@ -7,6 +7,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,7 +18,7 @@ public final class MappedMemoryUnmappingTest {
     public TemporaryFolder tmp = new TemporaryFolder();
 
     @Test
-    public void shouldUnmapMemoryAsCycleRolls() throws Exception {
+    public void shouldUnmapMemoryAsCycleRolls() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         long initialQueueMappedMemory = 0L;
 

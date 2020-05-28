@@ -55,7 +55,7 @@ import static org.junit.Assert.*;
 public class RollEOFTest {
 
     @Test(timeout = 5000L)
-    public void testRollWritesEOF() throws Exception {
+    public void testRollWritesEOF() throws IOException {
         final File path = DirectoryUtils.tempDir(getClass().getName());
         try {
             path.mkdirs();
@@ -81,7 +81,7 @@ public class RollEOFTest {
     }
 
     @Test(timeout = 5000L)
-    public void testRollWithoutEOFDoesntBlowup() throws Exception {
+    public void testRollWithoutEOFDoesntBlowup() throws IOException {
         final File path = DirectoryUtils.tempDir(getClass().getName());
         try {
             path.mkdirs();
@@ -115,7 +115,7 @@ public class RollEOFTest {
     }
 
     @Test(timeout = 5000L)
-    public void testRollWithoutEOF() throws Exception {
+    public void testRollWithoutEOF() throws IOException {
         final File path = DirectoryUtils.tempDir(getClass().getName());
         try {
             path.mkdirs();

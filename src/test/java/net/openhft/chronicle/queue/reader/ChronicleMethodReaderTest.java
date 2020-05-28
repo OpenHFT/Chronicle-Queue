@@ -105,7 +105,7 @@ public class ChronicleMethodReaderTest {
     }
 
     @Test
-    public void shouldBeAbleToReadFromReadOnlyFile() throws Exception {
+    public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
         if (OS.isWindows()) {
             System.err.println("#460 read-only not supported on Windows");
             return;

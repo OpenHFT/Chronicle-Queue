@@ -17,8 +17,8 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -95,9 +96,13 @@ public class MultiThreadedRollTest {
         }
     }
 
-    @After
-    public void checkMappedFiles() {
-        MappedFile.checkMappedFiles();
+    @Before
+    public void enableCloseableTracing() {
+        AbstractCloseable.enableCloseableTracing();
+    }
 
+    @After
+    public void assertCloseablesClosed() {
+        AbstractCloseable.assertCloseablesClosed();
     }
 }

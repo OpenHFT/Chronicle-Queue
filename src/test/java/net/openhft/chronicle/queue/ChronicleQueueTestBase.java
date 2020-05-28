@@ -18,12 +18,13 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesUtil;
-import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.*;
@@ -118,9 +119,14 @@ public class ChronicleQueueTestBase {
         BytesUtil.checkRegisteredBytes();
     }
 
+    @Before
+    public void enableCloseableTracing() {
+        AbstractCloseable.enableCloseableTracing();
+    }
+
     @After
-    public void checkMappedFiles() {
-        MappedFile.checkMappedFiles();
+    public void assertCloseablesClosed() {
+        AbstractCloseable.assertCloseablesClosed();
     }
 
     public enum TestKey implements WireKey {

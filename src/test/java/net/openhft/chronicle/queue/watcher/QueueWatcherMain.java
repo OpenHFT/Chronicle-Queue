@@ -4,11 +4,11 @@
 
 package net.openhft.chronicle.queue.watcher;
 
+import io.hawt.embedded.Main;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.watcher.FileSystemWatcher;
 
 import java.io.File;
-import io.hawt.embedded.Main;
 
 public class QueueWatcherMain {
     public static void main(String[] args) throws Exception {

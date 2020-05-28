@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -18,7 +19,7 @@ public final class MoveToIndexTest {
     public TemporaryFolder tmpFolder = new TemporaryFolder();
 
     @Test
-    public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws Exception {
+    public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
         File queuePath = tmpFolder.newFolder("cq");
 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).build()) {
@@ -40,7 +41,7 @@ public final class MoveToIndexTest {
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/401
     @Test
-    public void testRandomMove() throws Exception {
+    public void testRandomMove() throws IOException {
         final Map<Long, String> messageByIndex = new HashMap<>();
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.

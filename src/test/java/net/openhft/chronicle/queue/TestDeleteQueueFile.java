@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,7 +26,7 @@ public class TestDeleteQueueFile {
     private Path tempQueueDir;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() throws IOException {
         tempQueueDir = Files.createTempDirectory("unitTestQueueDir");
     }
 
@@ -38,7 +39,7 @@ public class TestDeleteQueueFile {
     }
 
     @Test
-    public void testQueueFileDeletionWhileInUse() throws Exception {
+    public void testQueueFileDeletionWhileInUse() throws IOException {
 
         assumeFalse(OS.isWindows());
 

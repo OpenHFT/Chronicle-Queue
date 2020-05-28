@@ -29,7 +29,7 @@ public final class RollAtEndOfCycleTest {
     }
 
     @Test
-    public void shouldRollAndAppendToNewFile() throws Exception {
+    public void shouldRollAndAppendToNewFile() throws IOException {
         assumeFalse(Jvm.isArm());
 
         try (final SingleChronicleQueue queue = createQueue()) {
@@ -75,7 +75,7 @@ public final class RollAtEndOfCycleTest {
     }
 
     @Test
-    public void shouldAppendToExistingQueueFile() throws Exception {
+    public void shouldAppendToExistingQueueFile() throws IOException {
         try (final SingleChronicleQueue queue = createQueue()) {
             final ExcerptAppender appender = queue.acquireAppender();
 

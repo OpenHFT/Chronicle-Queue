@@ -17,16 +17,16 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import org.jetbrains.annotations.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.QueueLock;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.text.ParseException;
 
-public interface RollingChronicleQueue extends ChronicleQueue, StoreReleasable {
+public interface RollingChronicleQueue extends ChronicleQueue {
 
     long epoch();
 

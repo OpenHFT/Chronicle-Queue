@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -43,7 +44,7 @@ import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
+public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore, ReferenceCounted {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
     }
@@ -263,6 +264,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     protected void performClose() {
+        // TODO FIX
         while (refCount.refCount() > 0) {
             refCount.release();
         }

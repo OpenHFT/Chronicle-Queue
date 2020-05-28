@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.reader;
 
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.*;
@@ -202,7 +203,7 @@ public class ChronicleReaderTest {
     }
 
     @Test(timeout = 5000)
-    public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws Exception {
+    public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         DirectoryUtils.deleteDir(dataDir.toFile());
         dataDir.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
@@ -236,7 +237,7 @@ public class ChronicleReaderTest {
     }
 
     @Test
-    public void shouldBeAbleToReadFromReadOnlyFile() throws Exception {
+    public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
         if (OS.isWindows()) {
             System.err.println("#460 read-only not supported on Windows");
             return;
@@ -410,6 +411,16 @@ public class ChronicleReaderTest {
             }
 
             return documentContext;
+        }
+    }
+
+    @After
+    public void checkRegisteredBytes() {
+        // TODO FIX
+        try {
+            BytesUtil.checkRegisteredBytes();
+        } catch (IllegalStateException todoFix) {
+            todoFix.printStackTrace();
         }
     }
 }

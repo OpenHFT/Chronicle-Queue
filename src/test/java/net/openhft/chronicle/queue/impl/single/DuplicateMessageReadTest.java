@@ -5,26 +5,25 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 public final class DuplicateMessageReadTest {
     private static final RollCycles QUEUE_CYCLE = RollCycles.DAILY;
 
-    private static void write(final ExcerptAppender appender, final Data data) throws Exception {
+    private static void write(final ExcerptAppender appender, final Data data) throws IOException {
         try (final DocumentContext dc = appender.writingDocument()) {
             final ObjectOutput out = dc.wire().objectOutput();
             out.writeInt(data.id);
         }
     }
 
-    private static Data read(final ExcerptTailer tailer) throws Exception {
+    private static Data read(final ExcerptTailer tailer) throws IOException {
         try (final DocumentContext dc = tailer.readingDocument()) {
             if (!dc.isPresent()) {
                 return null;
@@ -36,7 +35,7 @@ public final class DuplicateMessageReadTest {
     }
 
     @Test
-    public void shouldNotReceiveDuplicateMessages() throws Exception {
+    public void shouldNotReceiveDuplicateMessages() throws IOException {
         final File location = DirectoryUtils.tempDir(DuplicateMessageReadTest.class.getSimpleName());
 
         try (final ChronicleQueue chronicleQueue = SingleChronicleQueueBuilder

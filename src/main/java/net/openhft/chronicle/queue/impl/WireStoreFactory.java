@@ -17,10 +17,11 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.Wire;
 
 import java.util.function.BiFunction;
 
 @FunctionalInterface
-public interface WireStoreFactory extends BiFunction<RollingChronicleQueue, Wire, WireStore> {
+public interface WireStoreFactory extends BiFunction<RollingChronicleQueue, Wire, SingleChronicleQueueStore> {
 }

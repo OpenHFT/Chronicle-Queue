@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 
@@ -38,7 +39,7 @@ public class TestEmptyFile {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Before
-    public void setup() throws Exception {
+    public void setup() throws IOException {
         tmpDir.toFile().mkdirs();
         File file = tmpDir.resolve("20170320.cq4").toFile();
         new FileOutputStream(file).close();

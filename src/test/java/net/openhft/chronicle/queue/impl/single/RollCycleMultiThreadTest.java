@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.StopCharTesters;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
@@ -13,13 +13,11 @@ import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static net.openhft.chronicle.queue.RollCycles.DAILY;
 import static org.junit.Assert.assertEquals;
@@ -27,7 +25,7 @@ import static org.junit.Assert.assertEquals;
 public class RollCycleMultiThreadTest {
 
     @Test
-    public void testRead1() throws Exception {
+    public void testRead1() throws ExecutionException, InterruptedException {
         File path = DirectoryUtils.tempDir(getClass().getSimpleName());
         TestTimeProvider timeProvider = new TestTimeProvider();
 
@@ -66,7 +64,7 @@ public class RollCycleMultiThreadTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testRead2() throws Exception {
+    public void testRead2() throws ExecutionException, InterruptedException {
         File path = DirectoryUtils.tempDir("testRead2");
         TestTimeProvider timeProvider = new TestTimeProvider();
 
@@ -112,9 +110,14 @@ public class RollCycleMultiThreadTest {
         }
     }
 
+    @Before
+    public void enableCloseableTracing() {
+        AbstractCloseable.enableCloseableTracing();
+    }
+
     @After
-    public void checkMappedFiles() {
-        MappedFile.checkMappedFiles();
+    public void assertCloseablesClosed() {
+        AbstractCloseable.assertCloseablesClosed();
     }
 
     private class TestTimeProvider implements TimeProvider {
@@ -153,7 +156,7 @@ public class RollCycleMultiThreadTest {
         }
 
         @Override
-        public synchronized Integer call() throws Exception {
+        public synchronized Integer call() {
 
             try (final DocumentContext dc = tailer.readingDocument()) {
 

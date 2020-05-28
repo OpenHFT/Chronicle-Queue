@@ -5,7 +5,6 @@ import net.openhft.chronicle.bytes.NewChunkListener;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.impl.WireStore;
 
 import java.io.Closeable;
 import java.util.function.IntConsumer;
@@ -32,7 +31,7 @@ public final class Pretoucher implements Closeable {
     private final PretoucherState pretoucherState;
     private final TimeProvider pretouchTimeProvider;
     private int currentCycle = Integer.MIN_VALUE;
-    private WireStore currentCycleWireStore;
+    private SingleChronicleQueueStore currentCycleWireStore;
     private MappedBytes currentCycleMappedBytes;
 
     public Pretoucher(final SingleChronicleQueue queue) {

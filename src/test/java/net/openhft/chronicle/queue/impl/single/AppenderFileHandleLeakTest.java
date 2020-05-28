@@ -24,10 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -101,7 +98,7 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
-    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws Exception {
+    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, IOException, TimeoutException, ExecutionException {
         assumeThat(OS.isLinux(), is(true));
 
         // this might help the test be more stable when there is multiple tests.
@@ -138,7 +135,7 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
-    public void tailerResourcesCanBeReleasedManually() throws Exception {
+    public void tailerResourcesCanBeReleasedManually() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         assumeThat(OS.isLinux(), is(true));
 
         GcControls.requestGcCycle();
@@ -170,7 +167,7 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
-    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws Exception {
+    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         assumeThat(OS.isLinux(), is(true));
         System.gc();
         Thread.sleep(100);
@@ -228,7 +225,7 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @After
-    public void checkRegisteredBytes() throws Exception {
+    public void checkRegisteredBytes() throws InterruptedException {
         threadPool.shutdownNow();
         assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
         BytesUtil.checkRegisteredBytes();

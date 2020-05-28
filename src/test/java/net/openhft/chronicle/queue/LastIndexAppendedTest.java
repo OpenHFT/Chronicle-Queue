@@ -17,8 +17,8 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
@@ -61,7 +61,7 @@ public class LastIndexAppendedTest {
     }
 
     @Test
-    public void testTwoAppenders() throws Exception {
+    public void testTwoAppenders() {
         File path = DirectoryUtils.tempDir("testTwoAppenders");
         long a_index;
 

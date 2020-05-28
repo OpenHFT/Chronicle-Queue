@@ -11,6 +11,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -61,7 +62,7 @@ public class SingleChronicleQueueStoreTest {
     }
 
     @Test
-    public void shouldPerformIndexingOnAppend() throws Exception {
+    public void shouldPerformIndexingOnAppend() throws IOException {
         runTest(queue -> {
             final ExcerptAppender appender = queue.acquireAppender();
             final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
@@ -69,7 +70,7 @@ public class SingleChronicleQueueStoreTest {
         });
     }
 
-    private void runTest(final ThrowingConsumer<RollingChronicleQueue, Exception> testMethod) throws Exception {
+    private <T extends Exception> void runTest(final ThrowingConsumer<RollingChronicleQueue, T> testMethod) throws T, IOException {
         try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(tmpDir.newFolder()).
                 testBlockSize().timeProvider(clock::get).
                 rollCycle(ROLL_CYCLE).indexSpacing(INDEX_SPACING).

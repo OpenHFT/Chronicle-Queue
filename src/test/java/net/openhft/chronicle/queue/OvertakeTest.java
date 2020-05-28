@@ -95,7 +95,7 @@ public class OvertakeTest {
     }
 
     @Test
-    public void threadingTest() throws Exception {
+    public void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
         System.out.println("Continue appending");
         ExecutorService execService = Executors.newFixedThreadPool(2);
         SynchronousQueue<Long> sync = new SynchronousQueue<>();
@@ -125,7 +125,7 @@ public class OvertakeTest {
         }
 
         @Override
-        public Long call() throws Exception {
+        public Long call() throws InterruptedException {
             try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path)
                     //.testBlockSize()
                     //.rollCycle(TEST_DAILY)
@@ -166,7 +166,7 @@ public class OvertakeTest {
         }
 
         @Override
-        public Long call() throws Exception {
+        public Long call() throws InterruptedException {
             ExcerptTailer tailer = queue.createTailer();
             tailer.moveToIndex(startIndex);
             Long fromWriter = sync.take();

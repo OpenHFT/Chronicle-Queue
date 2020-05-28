@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -26,7 +27,7 @@ public class TableDirectoryListingTest {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() throws IOException {
         testDirectory = testDirectory();
         testDirectory.mkdirs();
         File tableFile = new File(testDirectory, "dir-list" + SingleTableStore.SUFFIX);
@@ -63,7 +64,7 @@ public class TableDirectoryListingTest {
     }
 
     @Test
-    public void shouldInitialiseFromFilesystem() throws Exception {
+    public void shouldInitialiseFromFilesystem() throws IOException {
         new File(testDirectory, 1 + SingleChronicleQueue.SUFFIX).createNewFile();
         new File(testDirectory, 2 + SingleChronicleQueue.SUFFIX).createNewFile();
         new File(testDirectory, 3 + SingleChronicleQueue.SUFFIX).createNewFile();

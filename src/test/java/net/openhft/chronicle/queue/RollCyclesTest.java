@@ -52,17 +52,17 @@ public class RollCyclesTest {
     }
 
     @Test
-    public void shouldDetermineCurrentCycle() throws Exception {
+    public void shouldDetermineCurrentCycle() {
         assertCycleRollTimes(NO_EPOCH_OFFSET, withDelta(timeProvider, NO_EPOCH_OFFSET));
     }
 
     @Test
-    public void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle() throws Exception {
+    public void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle() {
         assertCycleRollTimes(SOME_EPOCH_OFFSET, withDelta(timeProvider, SOME_EPOCH_OFFSET));
     }
 
     @Test
-    public void shouldHandleReasonableDateRange() throws Exception {
+    public void shouldHandleReasonableDateRange() {
         final int currentCycle = DefaultCycleCalculator.INSTANCE.currentCycle(cycle, timeProvider, 0);
         // ~ 14 Jul 2017 to 18 May 2033
         for (long nowMillis = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += 3e10) {

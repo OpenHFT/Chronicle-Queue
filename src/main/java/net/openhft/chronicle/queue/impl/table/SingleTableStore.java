@@ -21,11 +21,9 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
-import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
@@ -47,7 +45,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.core.util.Time.sleep;
 import static net.openhft.chronicle.core.util.Time.tickTime;
 
@@ -65,8 +62,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     private final MappedFile mappedFile;
     @NotNull
     private final Wire mappedWire;
-    @NotNull
-    private final ReferenceCounter refCount;
 
     /**
      * used by {@link Demarshallable}
@@ -81,7 +76,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             this.wireType = Objects.requireNonNull(wire.read(MetaDataField.wireType).object(WireType.class));
             this.mappedBytes = (MappedBytes) (wire.bytes());
             this.mappedFile = mappedBytes.mappedFile();
-            this.refCount = ReferenceCounter.onReleased(this::onCleanup);
 
             wire.consumePadding();
             if (wire.bytes().readRemaining() > 0) {
@@ -108,7 +102,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         this.metadata = metadata;
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
-        this.refCount = ReferenceCounter.onReleased(this::onCleanup);
         mappedWire = wireType.apply(mappedBytes);
     }
 
@@ -184,30 +177,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     @Override
-    public void reserve() throws IllegalStateException {
-        this.refCount.reserve();
-    }
-
-    @Override
-    public void release() throws IllegalStateException {
-        this.refCount.release();
-    }
-
-    @Override
-    public long refCount() {
-        return this.refCount.refCount();
-    }
-
-    @Override
-    public boolean tryReserve() {
-        return refCount.tryReserve();
-    }
-
-    @Override
     protected void performClose() {
-        while (refCount.refCount() > 0) {
-            refCount.release();
-        }
+        mappedBytes.release();
         mappedFile.close();
     }
 
@@ -227,7 +198,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         return getClass().getSimpleName() + "{" +
                 "wireType=" + wireType +
                 ", mappedFile=" + mappedFile +
-                ", refCount=" + refCount +
                 '}';
     }
 

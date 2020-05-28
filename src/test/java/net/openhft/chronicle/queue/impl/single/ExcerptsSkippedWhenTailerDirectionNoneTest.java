@@ -13,7 +13,7 @@ import static org.junit.Assert.assertThat;
 
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
     @Test
-    public void shouldNotSkipMessageAtStartOfQueue() throws Exception {
+    public void shouldNotSkipMessageAtStartOfQueue() {
         final File tmpDir = DirectoryUtils.tempDir(ExcerptsSkippedWhenTailerDirectionNoneTest.class.getSimpleName());
         try (final ChronicleQueue writeQueue =
                      ChronicleQueue.singleBuilder(tmpDir)

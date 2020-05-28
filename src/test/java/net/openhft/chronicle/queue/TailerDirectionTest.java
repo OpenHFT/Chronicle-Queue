@@ -90,7 +90,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
     // 3) Redo step 1)
     //
     @Test
-    public void testTailerForwardBackwardRead() throws Exception {
+    public void testTailerForwardBackwardRead() {
         String basePath = OS.TARGET + "/tailerForwardBackward-" + System.nanoTime();
 
         ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)

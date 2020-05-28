@@ -89,32 +89,6 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     }
 
     @Override
-    public void reserve() throws IllegalStateException {
-        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
-        throw read_only;
-    }
-
-    @Override
-    public void release() throws IllegalStateException {
-        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
-        throw read_only;
-    }
-
-    @Override
-    public long refCount() {
-        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
-        throw read_only;
-    }
-
-    @Override
-    public boolean tryReserve() {
-        return false;
-    }
-
-    @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();

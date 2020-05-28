@@ -16,8 +16,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -30,7 +33,7 @@ public final class EofMarkerOnEmptyQueueTest {
     public TemporaryFolder tmpFolder = new TemporaryFolder();
 
     @Test
-    public void shouldRecoverFromEmptyQueueOnRoll() throws Exception {
+    public void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         Assume.assumeFalse(OS.isWindows());
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         try (final RollingChronicleQueue queue =
@@ -54,11 +57,13 @@ public final class EofMarkerOnEmptyQueueTest {
             // ensure that the cycle file will roll
             assertThat(startCycle, is(not(nextCycle)));
 
-            Executors.newSingleThreadExecutor().submit(() -> {
-                try (final DocumentContext nextCtx = queue.acquireAppender().writingDocument()) {
-                    nextCtx.wire().writeEventName("bar").int32(7);
-                }
-            }).get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);
+            Executors.newSingleThreadExecutor()
+                    .submit(() -> {
+                        try (final DocumentContext nextCtx = queue.acquireAppender().writingDocument()) {
+                            nextCtx.wire().writeEventName("bar").int32(7);
+                        }
+                    })
+                    .get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);
 
             final WireStore firstCycleStore = queue.storeForCycle(startCycle, 0, false);
             assertNull(firstCycleStore);

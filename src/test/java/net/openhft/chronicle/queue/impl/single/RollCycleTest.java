@@ -1,12 +1,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -19,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 
 public class RollCycleTest {
     @Test
-    public void newRollCycleIgnored() throws Exception {
+    public void newRollCycleIgnored() throws InterruptedException {
         File path = DirectoryUtils.tempDir("newRollCycleIgnored");
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
@@ -56,7 +57,7 @@ public class RollCycleTest {
     }
 
     @Test
-    public void newRollCycleIgnored2() throws Exception {
+    public void newRollCycleIgnored2() throws InterruptedException {
         File path = DirectoryUtils.tempDir("newRollCycleIgnored2");
 
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -94,9 +95,14 @@ public class RollCycleTest {
         observer.queue.close();
     }
 
+    @Before
+    public void enableCloseableTracing() {
+        AbstractCloseable.enableCloseableTracing();
+    }
+
     @After
-    public void checkMappedFiles() {
-        MappedFile.checkMappedFiles();
+    public void assertCloseablesClosed() {
+        AbstractCloseable.assertCloseablesClosed();
     }
 
     @After
@@ -142,7 +148,7 @@ public class RollCycleTest {
             }
         }
 
-        public void await() throws Exception {
+        public void await() throws InterruptedException {
             progressLatch.await();
         }
 

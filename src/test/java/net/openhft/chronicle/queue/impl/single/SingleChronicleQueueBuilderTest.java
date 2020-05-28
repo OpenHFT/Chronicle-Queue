@@ -9,11 +9,12 @@ import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class SingleChronicleQueueBuilderTest {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
@@ -32,7 +33,7 @@ public class SingleChronicleQueueBuilderTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws Exception {
+    public void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws IOException {
         final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
         tempFile.deleteOnExit();
         SingleChronicleQueueBuilder.
