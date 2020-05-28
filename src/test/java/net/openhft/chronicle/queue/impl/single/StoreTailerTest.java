@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.service.HelloWorld;
@@ -75,6 +76,9 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
+        // TODO FIX
+        AbstractCloseable.disableCloseableTracing();
+
         try (ChronicleQueue firstInputQueue =
                      createQueue(dataDirectory, RollCycles.TEST_DAILY, 1, "firstInputQueue");
              // different RollCycle means that indicies are not identical to firstInputQueue
