@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -11,6 +12,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
 import org.junit.Before;
@@ -33,7 +35,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
 
-@Ignore
 public final class AppenderFileHandleLeakTest {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
@@ -167,6 +168,7 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
+    @Ignore
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         assumeThat(OS.isLinux(), is(true));
         System.gc();
@@ -216,7 +218,7 @@ public final class AppenderFileHandleLeakTest {
             }
 
             assertEquals(expectedMessageCount, messageCount);
-            assertThat(storeFileListener.toString(),
+            MatcherAssert.assertThat(storeFileListener.toString(),
                     storeFileListener.releasedCount,
                     is(withinDelta(storeFileListener.acquiredCount, 3)));
 
