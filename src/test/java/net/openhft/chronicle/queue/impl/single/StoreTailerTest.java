@@ -48,66 +48,71 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
     @Test
     public void shouldHandleCycleRollWhenInReadOnlyMode() {
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
-        final ChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
-                timeProvider(timeProvider));
+        try (ChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
+                timeProvider(timeProvider))) {
 
-        final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
-        timeProvider.setTime(System.currentTimeMillis());
-        events.onEvent("firstEvent");
-        timeProvider.addTime(2, TimeUnit.MINUTES);
-        events.onEvent("secondEvent");
+            final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
+            timeProvider.setTime(System.currentTimeMillis());
+            events.onEvent("firstEvent");
+            timeProvider.addTime(2, TimeUnit.MINUTES);
+            events.onEvent("secondEvent");
 
-        final ChronicleQueue readerQueue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", true).
-                timeProvider(timeProvider));
+            try (final ChronicleQueue readerQueue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", true).
+                    timeProvider(timeProvider))) {
 
-        final ExcerptTailer tailer = readerQueue.createTailer();
-        tailer.toStart();
-        try (final DocumentContext context = tailer.readingDocument()) {
-            assertTrue(context.isPresent());
-        }
-        tailer.toEnd();
-        try (final DocumentContext context = tailer.readingDocument()) {
-            assertFalse(context.isPresent());
+                final ExcerptTailer tailer = readerQueue.createTailer();
+                tailer.toStart();
+                try (final DocumentContext context = tailer.readingDocument()) {
+                    assertTrue(context.isPresent());
+                }
+                tailer.toEnd();
+                try (final DocumentContext context = tailer.readingDocument()) {
+                    assertFalse(context.isPresent());
+                }
+            }
         }
     }
 
     @Test
     public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
-        final ChronicleQueue firstInputQueue =
-                createQueue(dataDirectory, RollCycles.TEST_DAILY, 1, "firstInputQueue");
-        // different RollCycle means that indicies are not identical to firstInputQueue
-        final ChronicleQueue secondInputQueue =
-                createQueue(dataDirectory, RollCycles.TEST_SECONDLY, 2, "secondInputQueue");
-        final ChronicleQueue outputQueue =
-                createQueue(dataDirectory, RollCycles.TEST_DAILY, 0, "outputQueue");
+        try (ChronicleQueue firstInputQueue =
+                     createQueue(dataDirectory, RollCycles.TEST_DAILY, 1, "firstInputQueue");
+             // different RollCycle means that indicies are not identical to firstInputQueue
+             ChronicleQueue secondInputQueue =
+                     createQueue(dataDirectory, RollCycles.TEST_SECONDLY, 2, "secondInputQueue");
+             ChronicleQueue outputQueue =
+                     createQueue(dataDirectory, RollCycles.TEST_DAILY, 0, "outputQueue")) {
 
-        final StringEvents firstWriter = firstInputQueue.acquireAppender().
-                methodWriterBuilder(StringEvents.class).get();
-        final HelloWorld secondWriter = secondInputQueue.acquireAppender().
-                methodWriterBuilder(HelloWorld.class).get();
+            final StringEvents firstWriter = firstInputQueue.acquireAppender()
+                    .methodWriterBuilder(StringEvents.class)
+                    .get();
+            final HelloWorld secondWriter = secondInputQueue.acquireAppender()
+                    .methodWriterBuilder(HelloWorld.class)
+                    .get();
 
-        // generate some data in the input queues
-        firstWriter.onEvent("one");
-        firstWriter.onEvent("two");
+            // generate some data in the input queues
+            firstWriter.onEvent("one");
+            firstWriter.onEvent("two");
 
-        secondWriter.hello("thirteen");
-        secondWriter.hello("thirtyOne");
+            secondWriter.hello("thirteen");
+            secondWriter.hello("thirtyOne");
 
-        final StringEvents eventSink = outputQueue.acquireAppender().
-                methodWriterBuilder(StringEvents.class).recordHistory(true).get();
+            final StringEvents eventSink = outputQueue.acquireAppender().
+                    methodWriterBuilder(StringEvents.class).recordHistory(true).get();
 
-        final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
-        final MethodReader firstMethodReader = firstInputQueue.createTailer().methodReader(outputWriter);
-        final MethodReader secondMethodReader = secondInputQueue.createTailer().methodReader(outputWriter);
+            final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
+            final MethodReader firstMethodReader = firstInputQueue.createTailer().methodReader(outputWriter);
+            final MethodReader secondMethodReader = secondInputQueue.createTailer().methodReader(outputWriter);
 
-        // replay events from the inputs into the output queue
-        assertTrue(firstMethodReader.readOne());
-        assertTrue(firstMethodReader.readOne());
-        assertTrue(secondMethodReader.readOne());
-        assertTrue(secondMethodReader.readOne());
+            // replay events from the inputs into the output queue
+            assertTrue(firstMethodReader.readOne());
+            assertTrue(firstMethodReader.readOne());
+            assertTrue(secondMethodReader.readOne());
+            assertTrue(secondMethodReader.readOne());
 
-        // ensures that tailer is not moved to index from the incorrect source
-        secondInputQueue.createTailer().afterLastWritten(outputQueue);
+            // ensures that tailer is not moved to index from the incorrect source
+            secondInputQueue.createTailer().afterLastWritten(outputQueue);
+        }
     }
 
     @Test
@@ -115,10 +120,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         File dir = getTmpDir();
         MutableTimeProvider timeProvider = new MutableTimeProvider();
         timeProvider.setTime(System.currentTimeMillis());
-        try (ChronicleQueue chronicle = minutely(dir, timeProvider)
-                .build();
-             ChronicleQueue chronicle2 = minutely(dir, timeProvider)
-                     .build()) {
+        try (ChronicleQueue chronicle = minutely(dir, timeProvider).build();
+             ChronicleQueue chronicle2 = minutely(dir, timeProvider).build()) {
 
             //ExcerptAppender append = chronicle2.acquireAppender();
             //append.writeDocument(w -> w.write(() -> "test").text("before text"));
