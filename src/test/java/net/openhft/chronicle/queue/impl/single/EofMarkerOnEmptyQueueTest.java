@@ -23,9 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public final class EofMarkerOnEmptyQueueTest {
     @Rule
@@ -45,7 +44,7 @@ public final class EofMarkerOnEmptyQueueTest {
             final DocumentContext context = appender.writingDocument();
             // start to write a message, but don't close the context - simulates crashed writer
             final long expectedEofMarkerPosition = context.wire().bytes().writePosition() - Wires.SPB_HEADER_SIZE;
-            context.wire().writeEventName("foo").int32(1);
+            context.wire().write("foo").int32(1);
 
             final int startCycle = queue.cycle();
 
@@ -54,21 +53,19 @@ public final class EofMarkerOnEmptyQueueTest {
             final int nextCycle = queue.cycle();
 
             // ensure that the cycle file will roll
-            assertThat(startCycle, is(not(nextCycle)));
+            assertNotEquals(nextCycle, startCycle);
 
-            Executors.newSingleThreadExecutor()
-                    .submit(() -> {
-                        try (final DocumentContext nextCtx = queue.acquireAppender().writingDocument()) {
-                            nextCtx.wire().writeEventName("bar").int32(7);
-                        }
-                    })
-                    .get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);
+            Executors.newSingleThreadExecutor().submit(() -> {
+                try (final DocumentContext nextCtx = queue.acquireAppender().writingDocument()) {
+                    nextCtx.wire().write("bar").int32(7);
+                }
+            }).get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);
 
             final WireStore firstCycleStore = queue.storeForCycle(startCycle, 0, false);
-            assertNull(firstCycleStore);
-//            final long firstCycleWritePosition = firstCycleStore.writePosition();
-//            // assert that no write was completed
-//            assertEquals(0L, firstCycleWritePosition) ;
+            //assertNull(firstCycleStore);
+            final long firstCycleWritePosition = firstCycleStore.writePosition();
+            // assert that no write was completed
+            assertEquals(0L, firstCycleWritePosition);
 
             final ExcerptTailer tailer = queue.createTailer();
 

@@ -28,8 +28,6 @@ import org.jetbrains.annotations.NotNull;
  * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
  *
  * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing a Tailer between threads will lead to errors and unpredictable behaviour.</p>
- *
- * @author peter.lawrey
  */
 public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 

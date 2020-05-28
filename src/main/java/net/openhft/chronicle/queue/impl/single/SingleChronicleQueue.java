@@ -790,21 +790,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             int cycle = cycle();
             int lastCycle = lastCycle();
             while (lastCycle < cycle && lastCycle >= 0) {
-                final SingleChronicleQueueStore store = storeSupplier.acquire(lastCycle, false);
+                final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false);
                 if (store == null)
                     return;
-                try {
-                    if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
-                        // couldn't delete? Let's try writing EOF
-                        // if this blows up we should blow up too so don't catch anything
-                        ((SingleChronicleQueueStore) store).writeEOFAndShrink(wireType.apply(store.bytes()), timeoutMS);
-                        lastCycle--;
-                        continue;
-                    }
-                    break;
-                } finally {
-                    store.release();
+                if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
+                    // couldn't delete? Let's try writing EOF
+                    // if this blows up we should blow up too so don't catch anything
+                    store.writeEOFAndShrink(wireType.apply(store.bytes()), timeoutMS);
+                    lastCycle--;
+                    continue;
                 }
+                break;
             }
             directoryListing.refresh();
             firstAndLastCycleTime = 0;

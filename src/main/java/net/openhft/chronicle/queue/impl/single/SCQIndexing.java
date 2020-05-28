@@ -66,8 +66,6 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     // visible for testing
     int linearScanCount;
     Collection<Closeable> closeables = new ArrayList<>();
-    private LongValue index2IndexRef;
-    private LongValue lastIndexRef;
 
     /**
      * used by {@link Demarshallable}
@@ -76,25 +74,19 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
      */
     @UsedViaReflection
     private SCQIndexing(@NotNull WireIn wire) {
-        int indexCount1 = wire.read(IndexingFields.indexCount).int32();
-        int indexSpacing1 = wire.read(IndexingFields.indexSpacing).int32();
-        this.indexCount = indexCount1;
-        this.indexCountBits = Maths.intLog2(indexCount1);
-        this.indexSpacing = indexSpacing1;
-        this.indexSpacingBits = Maths.intLog2(indexSpacing1);
-        index2IndexRef = wire.newLongReference();
-        this.index2Index = wire.read(IndexingFields.index2Index).int64ForBinding(index2IndexRef);
-        lastIndexRef = wire.newLongReference();
-        this.nextEntryToBeIndexed = wire.read(IndexingFields.lastIndex).int64ForBinding(lastIndexRef);
-        this.longArraySupplier = wire::newLongArrayReference;
-        this.index2indexArray = new ThreadLocal<>();
-        this.indexArray = new ThreadLocal<>();
-        this.index2IndexTemplate = w -> w.writeEventName(() -> "index2index").int64array(indexCount1);
-        this.indexTemplate = w -> w.writeEventName(() -> "index").int64array(indexCount1);
+        this(wire.read(IndexingFields.indexCount).int32(),
+                wire.read(IndexingFields.indexSpacing).int32(),
+                wire.read(IndexingFields.index2Index).int64ForBinding(null),
+                wire.read(IndexingFields.lastIndex).int64ForBinding(null),
+                wire::newLongArrayReference);
     }
 
     SCQIndexing(@NotNull WireType wireType, int indexCount, int indexSpacing) {
-        this(indexCount, indexSpacing, wireType.newLongReference().get(), wireType.newLongReference().get(), wireType.newLongArrayReference());
+        this(indexCount,
+                indexSpacing,
+                wireType.newLongReference().get(),
+                wireType.newLongReference().get(),
+                wireType.newLongArrayReference());
     }
 
     private SCQIndexing(int indexCount, int indexSpacing, LongValue index2Index, LongValue nextEntryToBeIndexed, Supplier<LongArrayValues> longArraySupplier) {
@@ -143,7 +135,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     @Override
     protected void performClose() {
-        closeQuietly(index2Index, nextEntryToBeIndexed, index2IndexRef, lastIndexRef);
+        closeQuietly(index2Index, nextEntryToBeIndexed);
         closeQuietly(closeables);
         // Eagerly clean up the contents of thread locals but only for this thread.
         // The contents of the thread local for other threads will be cleaned up in

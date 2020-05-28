@@ -306,8 +306,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalStateException.class)
     public void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle() {
-        // TODO FIX (occurs due to exception being thrown.)
-        AbstractCloseable.disableCloseableTracing();
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
@@ -1683,9 +1681,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadWrite() {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
                 .rollCycle(RollCycles.HOURLY)
@@ -2142,10 +2137,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws InterruptedException {
-
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         // some text to simulate load.
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
@@ -2226,9 +2217,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testToEndPrevCycleEOF() {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType)
@@ -2535,9 +2523,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingWritingWhenNextCycleIsInSequence() {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         final File dir = DirectoryUtils.tempDir(testName.getMethodName());
@@ -2568,8 +2553,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingWritingWhenCycleIsSkipped() {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
 
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -2602,9 +2585,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingWritingWhenCycleIsSkippedBackwards() {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         final SetTimeProvider timeProvider = new SetTimeProvider();
         long time = System.currentTimeMillis();
         timeProvider.currentTimeMillis(time);
@@ -2679,9 +2659,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTailerSnappingRollWithNewAppender() throws InterruptedException, ExecutionException, TimeoutException {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
         final File dir = DirectoryUtils.tempDir(testName.getMethodName());
