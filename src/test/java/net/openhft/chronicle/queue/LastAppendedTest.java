@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
@@ -57,7 +57,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 msg.msg("somedata-3");
                 msg.msg("somedata-4");
 
-                System.out.println(inQueue.dump());
+//                System.out.println(inQueue.dump());
 
                 AtomicReference<String> actualValue = new AtomicReference<>();
 
