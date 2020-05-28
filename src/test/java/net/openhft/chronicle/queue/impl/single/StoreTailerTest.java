@@ -76,9 +76,6 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         try (ChronicleQueue firstInputQueue =
                      createQueue(dataDirectory, RollCycles.TEST_DAILY, 1, "firstInputQueue");
              // different RollCycle means that indicies are not identical to firstInputQueue
