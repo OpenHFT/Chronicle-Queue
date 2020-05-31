@@ -41,7 +41,7 @@ public class ChronicleQueueTestBase {
     }
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
-    private static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("queue.traceTestExecution");
+    private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
 
     // *************************************************************************
     // JUNIT Rules

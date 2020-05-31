@@ -23,8 +23,8 @@ import java.util.function.IntConsumer;
 public final class Pretoucher implements Closeable {
     static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
     private static final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
-    private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Boolean.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
-    private static final boolean CAN_WRITE = !Boolean.getBoolean("SingleChronicleQueueExcerpts.dontWrite");
+    private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Jvm.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
+    private static final boolean CAN_WRITE = !Jvm.getBoolean("SingleChronicleQueueExcerpts.dontWrite");
     private final SingleChronicleQueue queue;
     private final NewChunkListener chunkListener;
     private final IntConsumer cycleChangedListener;

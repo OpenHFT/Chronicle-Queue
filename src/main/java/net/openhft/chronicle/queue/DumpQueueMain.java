@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
@@ -32,8 +33,8 @@ import static java.lang.System.err;
 
 public class DumpQueueMain {
     private static final String FILE = System.getProperty("file");
-    private static final Boolean SKIP_TABLE_STORE = Boolean.getBoolean("skipTableStoreDump");
-    private static final Boolean UNALIGNED = Boolean.getBoolean("dumpUnaligned");
+    private static final boolean SKIP_TABLE_STORE = Jvm.getBoolean("skipTableStoreDump");
+    private static final boolean UNALIGNED = Jvm.getBoolean("dumpUnaligned");
     private static final int LENGTH = ", 0".length();
 
     public static void main(String[] args) throws FileNotFoundException {

@@ -66,10 +66,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
-    private static final boolean SHOULD_CHECK_CYCLE = Boolean.getBoolean("chronicle.queue.checkrollcycle");
-    private static final boolean SHOULD_RELEASE_RESOURCES = Boolean.parseBoolean(
-            System.getProperty("chronicle.queue.release.weakRef.resources", "" + true));
-
+    private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
+    private static final boolean SHOULD_RELEASE_RESOURCES = Jvm.getBoolean(
+            "chronicle.queue.release.weakRef.resources", true);
+    static long lastTimeMapped = 0;
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
     @NotNull
@@ -455,7 +455,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return appender.getCloserJob();
     }
 
-
     @Override
     @NotNull
     public QueueLock queueLock() {
@@ -716,13 +715,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return this.blockSize;
     }
 
-    public long overlapSize() {
-        return this.overlapSize;
-    }
-
     // *************************************************************************
     //
     // *************************************************************************
+
+    public long overlapSize() {
+        return this.overlapSize;
+    }
 
     @NotNull
     @Override
@@ -818,8 +817,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             this.cachedCycleTree = cachedCycleTree;
         }
     }
-
-    static long lastTimeMapped = 0;
 
     private class StoreSupplier extends AbstractCloseable implements WireStoreSupplier {
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();

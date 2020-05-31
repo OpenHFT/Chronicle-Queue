@@ -45,8 +45,8 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMarshallable, Closeable {
-    private static final boolean IGNORE_INDEXING_FAILURE = Boolean.getBoolean("queue.ignoreIndexingFailure");
-    private static final boolean REPORT_LINEAR_SCAN = Boolean.getBoolean("chronicle.queue.report.linear.scan.latency");
+    private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
+    private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount, indexCountBits;

@@ -29,7 +29,7 @@ public enum RunLargeQueueMain {
     private static final int FILE_SIZE = Integer.getInteger("file.size", 1024);
     private static final int MSG_SIZE = Integer.getInteger("msg.size", 512);
     private static final double BLOCK_SIZE = Double.parseDouble(System.getProperty("block.size", "64"));
-    private static final boolean PRETOUCH = Boolean.getBoolean("pretouch");
+    private static final boolean PRETOUCH = Jvm.getBoolean("pretouch");
 
     public static void main(String[] args) {
         System.out.println("file.size: " + FILE_SIZE + " # GB");
