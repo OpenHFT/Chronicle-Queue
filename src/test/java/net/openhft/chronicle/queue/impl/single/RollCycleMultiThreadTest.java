@@ -104,7 +104,7 @@ public class RollCycleMultiThreadTest {
 
                 Assert.assertEquals(2, (int) scheduledExecutorService.submit(observer).get());
 
-                System.out.println(queue.dump());
+//                System.out.println(queue.dump());
                 assertEquals(2, observer.documentsRead);
             }
         }

@@ -30,7 +30,7 @@ public class ValueStringArrayTest {
             try (DocumentContext dc = queue.createTailer().readingDocument()) {
                 dc.wire().read("data").marshallable(using);
                 CharSequence actual = using.getCsArr().getCharSequenceWrapperAt(1).getCharSequence();
-                System.out.println(actual);
+//                System.out.println(actual);
                 Assert.assertEquals(EXPECTED, actual.toString());
             }
 

@@ -365,7 +365,7 @@ public class RollCycleMultiThreadStressTest {
                             for (int i = 0; i < NUMBER_OF_INTS; i++) {
                                 v = valueIn.int32();
                                 if (lastRead + 1 != v) {
-                                    System.out.println(dc.wire());
+//                                    System.out.println(dc.wire());
                                     String failureMessage = "Expected: " + (lastRead + 1) +
                                             ", actual: " + v + ", pos: " + i + ", index: " + Long
                                             .toHexString(dc.index()) +

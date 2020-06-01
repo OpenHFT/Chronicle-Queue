@@ -37,7 +37,8 @@ import org.junit.Test;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class RollingCycleTest {
 
@@ -243,9 +244,10 @@ public class RollingCycleTest {
 
             System.out.println("Wrote " + numWritten + " Read " + numRead);
 
-            assertTrue(queue.dump().contains(expectedEagerFile1));
-            assertTrue(queue.dump().contains(expectedEagerFile2));
-            assertTrue(queue.dump().contains(expectedEagerFile3));
+            String dump = queue.dump();
+            assertTrue(dump.contains(expectedEagerFile1));
+            assertTrue(dump.contains(expectedEagerFile2));
+            assertTrue(dump.contains(expectedEagerFile3));
             try {
                 IOTools.deleteDirWithFiles(basePath, 2);
             } catch (IORuntimeException e) {

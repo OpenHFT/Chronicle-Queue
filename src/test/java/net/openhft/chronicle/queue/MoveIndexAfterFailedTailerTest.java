@@ -17,8 +17,8 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
@@ -47,7 +47,7 @@ public class MoveIndexAfterFailedTailerTest {
         int messages = 10;
         try (final ChronicleQueue myWrite = myBuilder.build()) {
             write(myWrite, messages);
-            System.out.println(myWrite.dump());
+//            System.out.println(myWrite.dump());
         }
 
         try (final ChronicleQueue myRead = myBuilder.build()) {

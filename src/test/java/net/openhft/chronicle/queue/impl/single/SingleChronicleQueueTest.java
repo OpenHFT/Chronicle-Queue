@@ -2702,7 +2702,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
 
             f1.get(10, TimeUnit.SECONDS);
-            System.out.println(queue.dump());
+//            System.out.println(queue.dump());
             f2.get(10, TimeUnit.SECONDS);
 
             executorService.shutdownNow();
@@ -3165,7 +3165,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     closeQuietly(bytesWithIndies);
                 }
 
-                assertTrue(queue.dump(), queue.dump().contains(
+                String dump = queue.dump();
+                assertTrue(dump, dump.contains(
                         "# position: 776, header: 0\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world0\n" +
