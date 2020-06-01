@@ -628,6 +628,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // close it if we created it.
         if (eventLoop instanceof OnDemandEventLoop)
             eventLoop.close();
+        StoreComponentReferenceHandler.processWireQueue();
     }
 
     public final void release(@Nullable SingleChronicleQueueStore store) {

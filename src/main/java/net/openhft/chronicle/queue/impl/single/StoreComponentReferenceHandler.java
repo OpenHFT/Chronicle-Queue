@@ -63,17 +63,17 @@ public enum StoreComponentReferenceHandler implements Closeable {
         WIRES_TO_RELEASE.add(wire);
     }
 
-    private static boolean processWireQueue() {
-        Wire wireToRelease;
-        boolean released = false;
-        while ((wireToRelease = WIRES_TO_RELEASE.poll()) != null) {
-            try {
-                released = true;
-                wireToRelease.bytes().release();
-            } catch (IllegalStateException e) {
-                // ignore this - resource may have already been released by explicit close() operation
-            } catch (Throwable t) {
-                LOGGER.warn("Failed to release wire bytes", t);
+     static boolean processWireQueue() {
+         Wire wireToRelease;
+         boolean released = false;
+         while ((wireToRelease = WIRES_TO_RELEASE.poll()) != null) {
+             try {
+                 released = true;
+                 wireToRelease.bytes().release();
+             } catch (IllegalStateException e) {
+                 // ignore this - resource may have already been released by explicit close() operation
+             } catch (Throwable t) {
+                 LOGGER.warn("Failed to release wire bytes", t);
             }
         }
 
