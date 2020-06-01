@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
@@ -566,7 +567,7 @@ public class SingleChronicleQueueExcerpts {
             if (rollbackDontClose) {
                 if (index > wire.headerNumber() + 1)
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
-                LOG.warn("Trying to overwrite index {} which is before the end of the queue", Long.toHexString(index), new Exception());
+                LOG.warn("Trying to overwrite index {} which is before the end of the queue", Long.toHexString(index), new StackTrace());
                 return;
             }
             writeBytesInternal(bytes, metadata);
