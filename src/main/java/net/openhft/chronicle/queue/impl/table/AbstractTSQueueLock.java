@@ -49,7 +49,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
     protected void closeCheck() {
         if (tableStore.isClosed()) {
-            throw new IllegalStateException("Underlying TableStore is already closed - was the Queue closed?");
+            throw new IllegalStateException("Underlying TableStore is already closed - was the Queue '" + path + "' closed?");
         }
     }
 
