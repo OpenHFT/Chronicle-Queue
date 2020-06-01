@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -624,6 +625,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         this.pool.close();
         this.storeSupplier.close();
         closeQuietly(metaStore);
+        // close it if we created it.
+        if (eventLoop instanceof OnDemandEventLoop)
+            eventLoop.close();
     }
 
     public final void release(@Nullable SingleChronicleQueueStore store) {

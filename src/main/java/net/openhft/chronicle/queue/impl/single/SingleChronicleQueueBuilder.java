@@ -27,6 +27,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
+import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
@@ -802,7 +803,8 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     @NotNull
     public EventLoop eventLoop() {
         if (eventLoop == null)
-            eventLoop = new EventGroup(true, Pauser.balanced(), "none", "none", path.getName(), 4, EnumSet.of(HandlerPriority.MEDIUM, HandlerPriority.REPLICATION));
+            eventLoop = new OnDemandEventLoop(
+                    () -> new EventGroup(true, Pauser.balanced(), "none", "none", path.getName(), 4, EnumSet.of(HandlerPriority.MEDIUM, HandlerPriority.REPLICATION)));
         return eventLoop;
     }
 
