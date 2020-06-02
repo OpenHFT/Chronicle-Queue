@@ -22,6 +22,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -45,8 +46,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     /**
      * Stores current PID to table store, and any other process trying to acquire lock will wait for
      * <code>chronicle.queue.lock.timeoutMS</code> millis (default is 30000) for the lock to be released, and if it is not
-     * after timeout, throws {@link IllegalStateException}. Also the locking thread ID is stored in threadLocal field, so
-     * that only locking thread is allowed to {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender} while the queue is locked.
+     * after timeout, throws {@link IllegalStateException}. Also the locking thread ID is stored in threadLocal field, so that only locking thread is
+     * allowed to {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender} while the queue is locked.
      */
     @Override
     public void acquireLock() {
@@ -77,8 +78,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     /**
-     * checks if current thread holds lock. If not, it will wait for <code>chronicle.queue.lock.timeoutMS</code> millis
-     * for the lock to be released, and if it is not after timeout, throws {@link IllegalStateException}.
+     * checks if current thread holds lock. If not, it will wait for <code>chronicle.queue.lock.timeoutMS</code> millis for the lock to be released,
+     * and if it is not after timeout, throws {@link IllegalStateException}.
      */
     @Override
     public void waitForLock() {
@@ -107,15 +108,20 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     /**
-     * Checks if the lock is held by current thread and if so, releases it, removing entry from TableStore and clearing
-     * ThreadLocal state, allowing anyone to proceed with {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender}.
+     * Checks if the lock is held by current thread and if so, releases it, removing entry from TableStore and clearing ThreadLocal state, allowing
+     * anyone to proceed with {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender}.
      */
     @Override
     public void unlock() {
         closeCheck();
         long tid = Thread.currentThread().getId();
-        if (!isLockHeldByCurrentThread(tid))
-            throw new IllegalStateException("Can't unlock when lock is not held by this thread");
+        if (!isLockHeldByCurrentThread(tid)) {
+            String absolutePath = "unknown";
+            if (tableStore != null && tableStore.file() != null) {
+                absolutePath = Objects.requireNonNull(tableStore.file()).getAbsolutePath();
+            }
+            throw new IllegalStateException("Can't unlock when lock is not held by this thread, tableStore.file=" + absolutePath);
+        }
 
         if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
             warn().on(getClass(), "Queue lock was unlocked by someone else!");
@@ -123,7 +129,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     private boolean isLockHeldByCurrentThread(long tid) {
-        return lock.getVolatileValue()  == getLockValueFromTid(tid);
+        return lock.getVolatileValue() == getLockValueFromTid(tid);
     }
 
 }
