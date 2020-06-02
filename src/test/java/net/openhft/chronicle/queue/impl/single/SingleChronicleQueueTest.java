@@ -1860,10 +1860,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testToEndBeforeWrite() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
-                .build()) {
-
-            ExcerptAppender appender = chronicle.acquireAppender();
-            ExcerptTailer tailer = chronicle.createTailer();
+                .build();
+             ExcerptAppender appender = chronicle.acquireAppender();
+             ExcerptTailer tailer = chronicle.createTailer()) {
 
             int entries = chronicle.rollCycle().defaultIndexSpacing() * 2 + 2;
 
@@ -1937,23 +1936,24 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     void readForward(@NotNull ChronicleQueue chronicle, int entries) {
-        ExcerptTailer forwardTailer = chronicle.createTailer()
+        try (ExcerptTailer forwardTailer = chronicle.createTailer()
                 .direction(TailerDirection.FORWARD)
-                .toStart();
+                .toStart()) {
 
-        for (int i = 0; i < entries; i++) {
-            try (DocumentContext documentContext = forwardTailer.readingDocument()) {
-                assertTrue(documentContext.isPresent());
-                assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
-                StringBuilder sb = Wires.acquireStringBuilder();
-                ValueIn valueIn = documentContext.wire().readEventName(sb);
-                assertTrue("hello".contentEquals(sb));
-                String actual = valueIn.text();
-                assertEquals("world" + i, actual);
+            for (int i = 0; i < entries; i++) {
+                try (DocumentContext documentContext = forwardTailer.readingDocument()) {
+                    assertTrue(documentContext.isPresent());
+                    assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
+                    StringBuilder sb = Wires.acquireStringBuilder();
+                    ValueIn valueIn = documentContext.wire().readEventName(sb);
+                    assertTrue("hello".contentEquals(sb));
+                    String actual = valueIn.text();
+                    assertEquals("world" + i, actual);
+                }
             }
-        }
-        try (DocumentContext documentContext = forwardTailer.readingDocument()) {
-            assertFalse(documentContext.isPresent());
+            try (DocumentContext documentContext = forwardTailer.readingDocument()) {
+                assertFalse(documentContext.isPresent());
+            }
         }
     }
 
@@ -2228,7 +2228,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             q.acquireAppender()
                     .writeText("first");
         }
-
+        AbstractCloseable.assertCloseablesClosed();
         clock.addAndGet(1100);
 
         // this will write an EOF
@@ -2243,6 +2243,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertNull(tailer.readText());
 
         }
+        AbstractCloseable.assertCloseablesClosed();
 
         try (ChronicleQueue q = builder(dir, wireType)
                 .rollCycle(TEST_SECONDLY)
@@ -2259,6 +2260,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertFalse(documentContext.isPresent());
             }
         }
+        AbstractCloseable.assertCloseablesClosed();
 
         clock.addAndGet(50L);
 
@@ -2276,6 +2278,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals("even more text", excerptTailerAfterAppend.readText());
             assertEquals("even more text", excerptTailerBeforeAppend.readText());
         }
+        AbstractCloseable.assertCloseablesClosed();
+
     }
 
     @Test
@@ -2297,9 +2301,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (ChronicleQueue q = builder(dir, wireType)
                 .rollCycle(TEST_SECONDLY)
                 .timeProvider(clock::get)
-                .build()) {
+                .build();
 
-            ExcerptTailer tailer = q.createTailer();
+             ExcerptTailer tailer = q.createTailer()) {
 
             assertEquals("first", tailer.readText());
             GcControls.waitForGcCycle();
@@ -2322,9 +2326,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = binary(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY).timeProvider(timeProvider)
-                .build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
-            final ExcerptTailer tailer = queue.createTailer();
+                .build();
+             final ExcerptAppender appender = queue.acquireAppender();
+             final ExcerptTailer tailer = queue.createTailer()) {
 
             final List<String> stringsToPut = Arrays.asList("one", "two", "three");
 
@@ -2384,11 +2388,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testMultipleAppenders() {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST_DAILY)
-                .build()) {
-
-            ExcerptAppender syncA = syncQ.acquireAppender();
-            ExcerptAppender syncB = syncQ.acquireAppender();
-            ExcerptAppender syncC = syncQ.acquireAppender();
+                .build();
+             ExcerptAppender syncA = syncQ.acquireAppender();
+             ExcerptAppender syncB = syncQ.acquireAppender();
+             ExcerptAppender syncC = syncQ.acquireAppender()) {
             int count = 0;
             for (int i = 0; i < 3; i++) {
                 syncA.writeText("hello A" + i);
@@ -2480,8 +2483,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final RollingChronicleQueue queue = binary(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(timeProvider)
-                .build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             final ExcerptAppender appender = queue.acquireAppender()) {
 
             long[] indexs = new long[10];
             for (int i = 0; i < indexs.length; i++) {
@@ -2545,8 +2548,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         // read both messages
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
-            ExcerptTailer tailer = queue.createTailer();
+                .rollCycle(rollCycle).timeProvider(timeProvider).build();
+             ExcerptTailer tailer = queue.createTailer()) {
             assertEquals("first message", tailer.readText());
             assertEquals("second message", tailer.readText());
         }
@@ -2577,8 +2580,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         // read both messages
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
-            ExcerptTailer tailer = queue.createTailer();
+                .rollCycle(rollCycle).timeProvider(timeProvider).build();
+             ExcerptTailer tailer = queue.createTailer()) {
             assertEquals("first message", tailer.readText());
             assertEquals("second message", tailer.readText());
         }
@@ -2606,8 +2609,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
         // read both messages
-        try (ChronicleQueue queue = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build()) {
-            ExcerptTailer tailer = queue.createTailer();
+        try (ChronicleQueue queue = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build();
+             ExcerptTailer tailer = queue.createTailer()) {
             ExcerptTailer excerptTailer = tailer.direction(TailerDirection.BACKWARD).toEnd();
             assertEquals("second message", excerptTailer.readText());
             assertEquals("first message", excerptTailer.readText());
@@ -2628,11 +2631,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (ChronicleQueue q2 = binary(dir)
                     .timeProvider(timeProvider)
-                    .build()) {
+                    .build();
 
-                final ExcerptAppender appender2 = q2.acquireAppender();
-                final ExcerptTailer tailer1 = q1.createTailer();
-                final ExcerptTailer tailer2 = q2.createTailer();
+                 final ExcerptAppender appender2 = q2.acquireAppender();
+                 final ExcerptTailer tailer1 = q1.createTailer();
+                 final ExcerptTailer tailer2 = q2.createTailer()) {
 
                 try (final DocumentContext dc = appender2.writingDocument()) {
                     dc.wire().write().text("some data");
@@ -2668,9 +2671,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // write first message
         try (ChronicleQueue queue =
                      binary(dir)
-                             .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
+                             .rollCycle(rollCycle).timeProvider(timeProvider).build();
 
-            ExcerptAppender excerptAppender = queue.acquireAppender();
+             ExcerptAppender excerptAppender = queue.acquireAppender()) {
             excerptAppender.writeText("someText");
 
             ExecutorService executorService = Executors.newFixedThreadPool(2);
@@ -2718,9 +2721,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queuet = binary(dir)
                 .rollCycle(rollCycle)
                 .timeProvider(timeProvider)
-                .build()) {
-
-            final ExcerptTailer tailer = queuet.createTailer();
+                .build();
+             final ExcerptTailer tailer = queuet.createTailer()) {
 
             // write first message
             try (ChronicleQueue queue =
@@ -2805,9 +2807,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (final ChronicleQueue q =
                          binary(source)
-                                 .build()) {
+                                 .build();
+                 ExcerptAppender excerptAppender = q.acquireAppender()) {
 
-                ExcerptAppender excerptAppender = q.acquireAppender();
                 excerptAppender.writeMessage(() -> "one", 1);
                 excerptAppender.writeMessage(() -> "two", 2);
                 excerptAppender.writeMessage(() -> "three", 3);
@@ -2815,15 +2817,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
         {
-            try (final ChronicleQueue s =
-                         binary(source)
-                                 .build();
-                 final ChronicleQueue t =
-                         binary(target)
-                                 .build()) {
-                ExcerptTailer sourceTailer = s.createTailer();
-
-                ExcerptAppender appender = t.acquireAppender();
+            try (final ChronicleQueue s = binary(source).build();
+                 final ChronicleQueue t = binary(target).build();
+                 ExcerptTailer sourceTailer = s.createTailer();
+                 ExcerptAppender appender = t.acquireAppender()) {
 
                 for (; ; ) {
                     try (DocumentContext rdc = sourceTailer.readingDocument()) {
@@ -2873,21 +2870,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
-            ExcerptTailer tailer = queue.createTailer();
+            try (ExcerptTailer tailer = queue.createTailer()) {
 
-            assertTrue(tailer.moveToIndex(startIndex));
+                assertTrue(tailer.moveToIndex(startIndex));
 
-            tailer = tailer.direction(TailerDirection.FORWARD);
-            assertEquals(0, action(tailer, queue.rollCycle()));
-            assertEquals(1, action(tailer, queue.rollCycle()));
+                tailer.direction(TailerDirection.FORWARD);
+                assertEquals(0, action(tailer, queue.rollCycle()));
+                assertEquals(1, action(tailer, queue.rollCycle()));
 
-            tailer = tailer.direction(TailerDirection.BACKWARD);
-            assertEquals(2, action(tailer, queue.rollCycle()));
-            assertEquals(1, action(tailer, queue.rollCycle()));
+                tailer.direction(TailerDirection.BACKWARD);
+                assertEquals(2, action(tailer, queue.rollCycle()));
+                assertEquals(1, action(tailer, queue.rollCycle()));
 
-            tailer = tailer.direction(TailerDirection.FORWARD);
-            assertEquals(0, action(tailer, queue.rollCycle()));
-            assertEquals(1, action(tailer, queue.rollCycle()));
+                tailer.direction(TailerDirection.FORWARD);
+                assertEquals(0, action(tailer, queue.rollCycle()));
+                assertEquals(1, action(tailer, queue.rollCycle()));
+            }
         }
     }
 
@@ -2961,8 +2959,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                      binary(getTmpDir())
                              .rollCycle(RollCycles.TEST_SECONDLY)
                              .timeProvider(timeProvider)
-                             .build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+                             .build();
+             ExcerptAppender appender = queue.acquireAppender()) {
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write().text("some text");
@@ -2974,17 +2972,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 mappedFile2 = toMappedFile(dc);
             }
 
-            ExcerptTailer tailer = queue.createTailer();
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                mappedFile3 = toMappedFile(documentContext);
-                assertEquals("some text", documentContext.wire().read().text());
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                try (DocumentContext documentContext = tailer.readingDocument()) {
+                    mappedFile3 = toMappedFile(documentContext);
+                    assertEquals("some text", documentContext.wire().read().text());
 
-            }
+                }
 
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                mappedFile4 = toMappedFile(documentContext);
-                assertEquals("some more text", documentContext.wire().read().text());
+                try (DocumentContext documentContext = tailer.readingDocument()) {
+                    mappedFile4 = toMappedFile(documentContext);
+                    assertEquals("some more text", documentContext.wire().read().text());
 
+                }
             }
         }
 
@@ -3127,9 +3126,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
-            ExcerptTailer tailer = sourceQueue.createTailer();
-
-            try (final ChronicleQueue queue =
+            try (ExcerptTailer tailer = sourceQueue.createTailer();
+                 ChronicleQueue queue =
                          builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
 
                 ExcerptAppender appender0 = queue.acquireAppender();
@@ -3204,9 +3202,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             String before = sourceQueue.dump();
-            ExcerptTailer tailer = sourceQueue.createTailer();
-
-            try (final ChronicleQueue queue =
+            try (ExcerptTailer tailer = sourceQueue.createTailer();
+                 ChronicleQueue queue =
                          builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
 
                 ExcerptAppender appender = queue.acquireAppender();
@@ -3247,9 +3244,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         File file = DirectoryUtils.tempDir("to-be-deleted");
         try (final ChronicleQueue sourceQueue =
                      builder(file, wireType).
-                             testBlockSize().build()) {
-
-            ExcerptAppender excerptAppender = sourceQueue.acquireAppender();
+                             testBlockSize().build();
+             ExcerptAppender excerptAppender = sourceQueue.acquireAppender()) {
             try (DocumentContext dc = excerptAppender.writingDocument()) {
                 dc.wire().write("hello").text("world1");
             }
@@ -3261,9 +3257,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
         try (final ChronicleQueue queue =
-                     builder(file, wireType).testBlockSize().build()) {
-
-            ExcerptTailer tailer1 = queue.createTailer();
+                     builder(file, wireType).testBlockSize().build();
+             ExcerptTailer tailer1 = queue.createTailer()) {
 
             StringBuilder sb = Wires.acquireStringBuilder();
             try (DocumentContext documentContext = tailer1.readingDocument()) {
@@ -3371,8 +3366,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(queueFolder).
                 timeProvider(clock::get).
                 testBlockSize().rollCycle(RollCycles.HOURLY).
-                build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+                build();
+             ExcerptAppender appender = queue.acquireAppender()) {
             for (int i = 0; i < 20_000; i++) {
                 final int batchSize = random.nextInt(10);
                 appender.writeDocument(batchSize, ValueOut::int64);

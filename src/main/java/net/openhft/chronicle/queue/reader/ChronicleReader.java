@@ -255,7 +255,9 @@ public final class ChronicleReader {
     }
 
     private long getCurrentTailIndex(ChronicleQueue queue) {
-        return queue.createTailer().toEnd().index();
+        try (ExcerptTailer tailer = queue.createTailer()) {
+            return tailer.toEnd().index();
+        }
     }
 
     @NotNull

@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
 import static net.openhft.chronicle.core.UnsafeMemory.UNSAFE;
@@ -69,17 +68,17 @@ public class SingleChronicleQueueExcerpts {
     //
     // *************************************************************************
 
+    private static void releaseIfNotNullAndReferenced(@Nullable final Bytes bytesReference) {
+        if (bytesReference != null) {
+            bytesReference.release();
+        }
+    }
+
     /**
      * please don't use this interface as its an internal implementation.
      */
     public interface InternalAppender extends ExcerptAppender {
         void writeBytes(long index, BytesStore bytes);
-    }
-
-    private static void releaseIfNotNullAndReferenced(@Nullable final Bytes bytesReference) {
-        if (bytesReference != null) {
-            bytesReference.release();
-        }
     }
 
 // *************************************************************************
@@ -88,7 +87,8 @@ public class SingleChronicleQueueExcerpts {
 //
 // *************************************************************************
 
-    static class StoreAppender extends AbstractCloseable implements ExcerptAppender, ExcerptContext, InternalAppender {
+    static class StoreAppender extends AbstractCloseable
+            implements ExcerptAppender, ExcerptContext, InternalAppender {
         @NotNull
         private final SingleChronicleQueue queue;
         @NotNull
@@ -111,6 +111,20 @@ public class SingleChronicleQueueExcerpts {
         @Nullable
         private Pretoucher pretoucher = null;
         private NativeBytesStore<Void> batchTmp;
+        private final ThreadLocal<Bytes<?>> bufferBytes = ThreadLocal.withInitial(Bytes::allocateElasticDirect);
+        private final ThreadLocal<Wire> bufferWire = new ThreadLocal<Wire>() {
+            @Override
+            protected Wire initialValue() {
+                return queue().wireType().apply(bufferBytes.get());
+            }
+
+            @Override
+            public Wire get() {
+                final Wire wire = super.get();
+                bufferBytes.get().clear();
+                return wire;
+            }
+        };
 
         StoreAppender(@NotNull final SingleChronicleQueue queue,
                       @NotNull final WireStorePool storePool,
@@ -122,7 +136,7 @@ public class SingleChronicleQueueExcerpts {
             this.context = new StoreAppenderContext();
 
             // always put references to "this" last.
-            queue.addCloseListener(this, StoreAppender::close);
+            queue.addCloseListener(this);
 
             queue.cleanupStoreFilesWithNoData();
             int cycle = queue.cycle();
@@ -130,6 +144,12 @@ public class SingleChronicleQueueExcerpts {
             if (lastCycle != cycle && lastCycle >= 0)
                 // ensure that the EOF is written on the last cycle
                 setCycle2(lastCycle, false);
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            super.warnIfNotClosed();
+            super.finalize();
         }
 
         @Deprecated // Should not be providing accessors to reference-counted objects
@@ -170,7 +190,7 @@ public class SingleChronicleQueueExcerpts {
                 pretoucher.close();
 
             if (store != null) {
-                storePool.release(store);
+                storePool.release(store, false);
             }
             store = null;
             storePool.close();
@@ -282,7 +302,7 @@ public class SingleChronicleQueueExcerpts {
 
 
             if (store != null) {
-                storePool.release(store);
+                storePool.release(store, false);
             }
             resetWires(queue);
 
@@ -368,26 +388,11 @@ public class SingleChronicleQueueExcerpts {
             return writingDocument(false); // avoid overhead of a default method.
         }
 
-        private final ThreadLocal<Bytes<?>> bufferBytes = ThreadLocal.withInitial(Bytes::allocateElasticDirect);
-        private final ThreadLocal<Wire> bufferWire = new ThreadLocal<Wire>() {
-            @Override
-            protected Wire initialValue() {
-                return queue().wireType().apply(bufferBytes.get());
-            }
-
-            @Override
-            public Wire get() {
-                final Wire wire = super.get();
-                bufferBytes.get().clear();
-                return wire;
-            }
-        };
-
         @NotNull
         @Override
         public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
-            if (queue.isClosed.get())
-                throw new IllegalStateException("Queue is closed");
+            queue.throwExceptionIfClosed();
+
             if (queue.doubleBuffer && writeLock.locked() && !metaData) {
                 context.isClosed = false;
                 context.rollbackOnClose = false;
@@ -536,8 +541,7 @@ public class SingleChronicleQueueExcerpts {
          */
         public void writeBytes(final long index, @NotNull final BytesStore bytes) {
 
-            if (queue.isClosed.get())
-                throw new IllegalStateException("Queue is closed");
+            queue.throwExceptionIfClosed();
 
             writeLock.lock();
             try {
@@ -871,7 +875,8 @@ public class SingleChronicleQueueExcerpts {
     /**
      * Tailer
      */
-    public static class StoreTailer implements ExcerptTailer, SourceContext, ExcerptContext {
+    public static class StoreTailer extends AbstractCloseable
+            implements ExcerptTailer, SourceContext, ExcerptContext {
         static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
         @NotNull
         private final SingleChronicleQueue queue;
@@ -901,7 +906,7 @@ public class SingleChronicleQueueExcerpts {
             this.indexValue = indexValue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
-            queue.addCloseListener(this, StoreTailer::close);
+            queue.addCloseListener(this);
 
             if (indexValue == null) {
                 toStart();
@@ -954,6 +959,12 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        protected void finalize() throws Throwable {
+            super.warnIfNotClosed();
+            super.finalize();
+        }
+
+        @Override
         public boolean readDocument(@NotNull final ReadMarshallable reader) {
             try (@NotNull DocumentContext dc = readingDocument(false)) {
                 if (!dc.isPresent())
@@ -974,21 +985,15 @@ public class SingleChronicleQueueExcerpts {
             return readingDocument(false);
         }
 
-        private final AtomicBoolean isClosed = new AtomicBoolean();
-
-        private void close() {
-            if (!isClosed.getAndSet(true)) {
-                // the wire ref count will be released here by setting it to null
-                context.wire(null);
-                final Wire w0 = wireForIndex;
-                if (w0 != null)
-                    releaseIfNotNullAndReferenced(w0.bytes());
-                wireForIndex = null;
-                if (store != null) {
-                    queue.release(store);
-                }
-                store = null;
-            }
+        @Override
+        protected void performClose() {
+            // the wire ref count will be released here by setting it to null
+            context.wire(null);
+            final Wire w0 = wireForIndex;
+            if (w0 != null)
+                releaseIfNotNullAndReferenced(w0.bytes());
+            wireForIndex = null;
+            releaseStore();
         }
 
         @Override
@@ -1025,9 +1030,8 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public DocumentContext readingDocument(final boolean includeMetaData) {
             Jvm.optionalSafepoint();
+            queue.throwExceptionIfClosed();
 
-            if (queue.isClosed.get())
-                throw new IllegalStateException("Queue is closed");
             try {
                 Jvm.optionalSafepoint();
                 boolean next = false, tryAgain = true;
@@ -1524,17 +1528,15 @@ public class SingleChronicleQueueExcerpts {
                 if (wireStore == null)
                     throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
 
-                if (store != null)
-                    queue.release(store);
-
                 if (this.store != wireStore) {
+                    releaseStore();
                     this.store = wireStore;
                     resetWires();
                 }
                 // give the position of the last entry and
                 // flag we want to count it even though we don't know if it will be meta data or not.
 
-                final long sequenceNumber = store.lastSequenceNumber(this);
+                final long sequenceNumber = this.store.lastSequenceNumber(this);
 
                 // fixes #378
                 if (sequenceNumber == -1L) {
@@ -1632,10 +1634,9 @@ public class SingleChronicleQueueExcerpts {
                 if (wireStore == null)
                     throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? lastCycle=" + lastCycle);
 
-                if (store != null)
-                    queue.release(store);
 
                 if (this.store != wireStore) {
+                    releaseStore();
                     this.store = wireStore;
                     resetWires();
                 }
@@ -1837,11 +1838,13 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             }
 
-            if (store != null)
-                queue.release(store);
-
-            if (nextStore == store)
+            if (nextStore == store) {
+                // already use it so bring the refCount back down one.
+                nextStore.release();
                 return true;
+            }
+
+            releaseStore();
 
             context.wire(null);
             store = nextStore;
@@ -1854,7 +1857,7 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-        void release() {
+        void releaseStore() {
             if (store != null) {
                 queue.release(store);
                 store = null;

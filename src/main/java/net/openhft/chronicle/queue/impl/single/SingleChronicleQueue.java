@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
@@ -51,7 +52,6 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
@@ -83,7 +83,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     final File path;
     final String fileAbsolutePath;
-    final AtomicBoolean isClosed = new AtomicBoolean();
     private final StoreSupplier storeSupplier;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
     @NotNull
@@ -102,7 +101,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final TimeProvider time;
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, SingleChronicleQueueStore> storeFactory;
-    private final Map<Object, Consumer> closers = new WeakIdentityHashMap<>();
+    private final Set<Closeable> closers = Collections.newSetFromMap(new WeakIdentityHashMap<>());
     private final boolean readOnly;
     @NotNull
     private final CycleCalculator cycleCalculator;
@@ -514,7 +513,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
         } finally {
-            tailer.release();
+            tailer.releaseStore();
         }
     }
 
@@ -607,9 +606,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return pool.listCyclesBetween(lowerCycle, upperCycle);
     }
 
-    public <T> void addCloseListener(T key, Consumer<T> closer) {
+    public <T> void addCloseListener(Closeable key) {
         synchronized (closers) {
-            closers.put(key, closer);
+            closers.add(key);
         }
     }
 
@@ -619,7 +618,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         closeQuietly(directoryListing, queueLock, writeLock, lastAcknowledgedIndexReplicated, lastIndexReplicated);
 
         synchronized (closers) {
-            closers.forEach((k, v) -> v.accept(k));
+            closers.forEach(Closeable::closeQuietly);
             closers.clear();
         }
         this.pool.close();
@@ -633,7 +632,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     public final void release(@Nullable SingleChronicleQueueStore store) {
         if (store != null)
-            this.pool.release(store);
+            this.pool.release(store, false);
     }
 
     @Override
@@ -837,6 +836,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             SingleChronicleQueue that = SingleChronicleQueue.this;
             @NotNull final RollingResourcesCache.Resource dateValue = that
                     .dateCache.resourceFor(cycle);
+            MappedBytes mappedBytes = null;
             try {
                 File path = dateValue.path;
 
@@ -855,7 +855,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                 dateValue.pathExists = true;
 
-                MappedBytes mappedBytes;
                 try {
                     mappedBytes = mappedFileCache.get(path);
                 } catch (FileNotFoundException e) {
@@ -915,6 +914,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {
+                Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
             }
         }

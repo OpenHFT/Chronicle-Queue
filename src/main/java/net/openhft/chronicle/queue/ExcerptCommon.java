@@ -17,13 +17,14 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.io.Closeable;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * The ExcerptCommon is common to both ExcerptAppender
  * and ExcerptTailer.
  */
-public interface ExcerptCommon<E extends ExcerptCommon<E>> {
+public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
 
     /**
      * Returns the source id of the backing ChronicleQueue

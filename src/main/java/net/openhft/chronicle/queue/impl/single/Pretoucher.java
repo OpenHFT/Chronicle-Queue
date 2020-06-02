@@ -3,10 +3,10 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.NewChunkListener;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
 
-import java.io.Closeable;
 import java.util.function.IntConsumer;
 
 /**
@@ -20,7 +20,7 @@ import java.util.function.IntConsumer;
  * Alternatively, the {@code shutdown()} method can be called to close the supplied queue and release any other resources.
  * Invocation of the {@code execute()} method after {@code shutdown()} has been called with cause an {@code IllegalStateException} to be thrown.
  */
-public final class Pretoucher implements Closeable {
+public final class Pretoucher extends AbstractCloseable {
     static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
     private static final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
     private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Jvm.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
@@ -45,7 +45,7 @@ public final class Pretoucher implements Closeable {
         this.queue = queue;
         this.chunkListener = chunkListener;
         this.cycleChangedListener = cycleChangedListener;
-        queue.addCloseListener(this, Pretoucher::releaseResources);
+        queue.addCloseListener(this);
         pretoucherState = new PretoucherState(this::getStoreWritePosition);
         pretouchTimeProvider = () -> queue.time().currentTimeMillis() + (EARLY_ACQUIRE_NEXT_CYCLE ? PRETOUCHER_PREROLL_TIME_MS : 0);
     }
@@ -122,7 +122,7 @@ public final class Pretoucher implements Closeable {
     }
 
     @Override
-    public void close() {
+    protected void performClose() {
         releaseResources();
     }
 }

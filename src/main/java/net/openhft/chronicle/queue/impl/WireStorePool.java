@@ -65,7 +65,7 @@ public class WireStorePool extends AbstractCloseable {
         stores.values().stream()
                 .map(Reference::get)
                 .filter(Objects::nonNull)
-                .forEach(this::release);
+                .forEach(s -> release(s, true));
     }
 
     @Nullable
@@ -107,9 +107,18 @@ public class WireStorePool extends AbstractCloseable {
         return supplier.nextCycle(currentCycle, direction);
     }
 
-    public synchronized void release(@NotNull SingleChronicleQueueStore store) {
-
-        store.release();
+    public synchronized void release(@NotNull SingleChronicleQueueStore store, boolean closeQueue) {
+        // TODO FIX
+        if (closeQueue) {
+            while (store.refCount() > 1)
+                store.release();
+            store.close();
+        } else {
+            if (store.refCount() > 1)
+                store.release();
+            else
+                store.close();
+        }
 
         long refCount = store.refCount();
         assert refCount >= 0;

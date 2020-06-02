@@ -48,9 +48,9 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
 
-        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build()) {
+        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build();
+             Pretoucher pretoucher = new Pretoucher(queue)) {
             int cyclesAdded = 0;
-            final Pretoucher pretoucher = new Pretoucher(queue);
             ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeText("0"); // to file ...000000
@@ -115,8 +115,8 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
      *
      * @param baseDir containing queue file removal candidates
      * @return a Stream of Files that are likely to be removable
-     *         from the given {@code baseDir} without affecting any Queue process
-     *         that is currently active
+     * from the given {@code baseDir} without affecting any Queue process
+     * that is currently active
      */
     @NotNull
     private Stream<File> removableFileCandidates(@NotNull File baseDir) {
@@ -125,8 +125,8 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
             return Stream.empty();
         }
         return Stream.of(files)
-            .filter(this::isNotOpenByAnyProcess)
-            .sorted();
+                .filter(this::isNotOpenByAnyProcess)
+                .sorted();
     }
 
     boolean isNotOpenByAnyProcess(@NotNull File file) {

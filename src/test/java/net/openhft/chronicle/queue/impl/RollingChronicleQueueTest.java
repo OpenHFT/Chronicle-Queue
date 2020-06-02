@@ -186,9 +186,9 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
     private void testTailing(Function<Pretoucher, Integer> createGap) {
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
-        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build()) {
+        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build();
+             final Pretoucher pretoucher = new Pretoucher(queue)) {
             int cyclesAdded = 0;
-            final Pretoucher pretoucher = new Pretoucher(queue);
             ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeText("0"); // to file ...000000
