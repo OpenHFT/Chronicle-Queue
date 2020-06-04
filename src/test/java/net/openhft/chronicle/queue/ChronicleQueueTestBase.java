@@ -114,11 +114,6 @@ public class ChronicleQueueTestBase {
         System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
     }
 
-    @After
-    public void checkRegisteredBytes() {
-        BytesUtil.checkRegisteredBytes();
-    }
-
     @Before
     public void enableCloseableTracing() {
         AbstractCloseable.enableCloseableTracing();
@@ -127,6 +122,8 @@ public class ChronicleQueueTestBase {
     @After
     public void assertCloseablesClosed() {
         AbstractCloseable.assertCloseablesClosed();
+        // Only worth check if everything is closed.
+        BytesUtil.checkRegisteredBytes();
     }
 
     public enum TestKey implements WireKey {

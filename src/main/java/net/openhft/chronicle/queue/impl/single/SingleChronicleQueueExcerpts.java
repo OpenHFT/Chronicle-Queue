@@ -175,6 +175,11 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        protected boolean performCloseInBackground() {
+            return true;
+        }
+
+        @Override
         protected void performClose() {
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
@@ -375,11 +380,8 @@ public class SingleChronicleQueueExcerpts {
                 return true;
             }
             int header = bytes.readVolatileInt(positionOfHeader);
-            if (isReadyData(header)) {
-                return true;
-            } else
-                // overwriting an incomplete message header?
-                return header == NOT_COMPLETE;
+            // ready or an incomplete message header?
+            return isReadyData(header) || isNotComplete(header);
         }
 
         @NotNull

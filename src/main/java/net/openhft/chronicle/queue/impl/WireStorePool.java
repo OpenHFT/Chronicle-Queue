@@ -61,6 +61,11 @@ public class WireStorePool extends AbstractCloseable {
     }
 
     @Override
+    protected boolean performCloseInBackground() {
+        return true;
+    }
+
+    @Override
     protected void performClose() {
         stores.values().stream()
                 .map(Reference::get)

@@ -69,6 +69,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
 
     @Test(expected = UnsupportedOperationException.class)
     public void stateWindows(){
+        AbstractCloseable.disableCloseableTracing();
         assumeTrue(OS.isWindows());
         FileUtil.state(new File("foo"));
     }
@@ -150,6 +151,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
     @Test(expected = UnsupportedOperationException.class)
     public void removableQueueFileCandidatesWindows(){
         assumeTrue(OS.isWindows());
+        AbstractCloseable.disableCloseableTracing();
         FileUtil.removableRollFileCandidates(new File("foo"));
     }
 

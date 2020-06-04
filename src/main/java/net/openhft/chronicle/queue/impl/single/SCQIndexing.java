@@ -133,6 +133,11 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         return mask & siftedIndex;
     }
 
+/*    @Override
+    protected boolean performCloseInBackground() {
+        return true;
+    }*/
+
     @Override
     protected void performClose() {
         closeQuietly(index2Index, nextEntryToBeIndexed);
