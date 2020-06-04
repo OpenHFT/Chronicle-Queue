@@ -1492,12 +1492,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             int cycle = appender.cycle();
 
             // create 100 documents
-            for (int i = 0; i < 5; i++) {
+            int last = 4;
+            for (int i = 0; i <= last; i++) {
                 final int j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
-                if (i == 2) {
+                if (i == last) {
                     final long cycle1 = queue.rollCycle().toCycle(appender.lastIndexAppended());
-                    assertEquals(cycle1, cycle);
+                    if (cycle + 1 != cycle1)
+                        assertEquals(cycle, cycle1);
                 }
             }
 
