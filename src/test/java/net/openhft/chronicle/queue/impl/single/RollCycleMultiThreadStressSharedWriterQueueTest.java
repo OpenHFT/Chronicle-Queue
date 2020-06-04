@@ -1,6 +1,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import org.junit.Ignore;
+import net.openhft.chronicle.core.FlakyTestRunner;
+import net.openhft.chronicle.core.Jvm;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -16,13 +19,23 @@ public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMu
         }
     }*/
 
-    @Ignore("flaky test")
+    //    @Ignore("flaky test")
     @Test
     public void stress() throws InterruptedException, IOException {
-        super.stress();
+        try {
+            FlakyTestRunner.run(super::stress);
+        } catch (Exception e) {
+            throw Jvm.rethrow(e);
+        }
     }
 
-    static {
-        System.setProperty("sharedWriteQ", "true");
+    @Before
+    public void sharedWriteQ() {
+        SHARED_WRITE_QUEUE = true;
+    }
+
+    @After
+    public void rm_sharedWriteQ() {
+        SHARED_WRITE_QUEUE = false;
     }
 }

@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -135,8 +136,12 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
-    @Ignore("Flaky")
-    public void tailerResourcesCanBeReleasedManually() throws IOException, InterruptedException, TimeoutException, ExecutionException {
+//    @Ignore("Flaky")
+    public void tailerResourcesCanBeReleasedManually() throws Exception {
+        FlakyTestRunner.run(this::tailerResourcesCanBeReleasedManually0);
+    }
+
+    public void tailerResourcesCanBeReleasedManually0() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         assumeThat(OS.isLinux(), is(true));
 
         GcControls.requestGcCycle();
@@ -168,7 +173,7 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
-    @Ignore
+    @Ignore("TODO FIX")
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         assumeThat(OS.isLinux(), is(true));
         System.gc();

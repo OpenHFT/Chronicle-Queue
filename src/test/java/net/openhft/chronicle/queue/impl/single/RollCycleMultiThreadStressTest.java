@@ -49,7 +49,7 @@ public class RollCycleMultiThreadStressTest {
     final boolean PRETOUCH;
     final boolean READERS_READ_ONLY;
     final boolean DUMP_QUEUE;
-    final boolean SHARED_WRITE_QUEUE;
+    boolean SHARED_WRITE_QUEUE;
 
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
