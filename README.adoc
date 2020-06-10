@@ -4,20 +4,13 @@ Peter Lawrey, Rob Austin
 :toc: macro
 
 image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[caption="", link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
+image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 
 image::images/Queue_line.png[]
 == Contents
 
 toc::[]
-
-== The Changes from Chronicle Queue version 4 to version 5
-
-In Chronicle Queue 5 tailers are now read-only, in Chronicle Queue 4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise,  when lazy indexing was turned on the indexing was done by the first tailer that read the data. Since in chronicle queue 4 tailers could do the indexing we could not rely on them to be read-only. We decided to drop lazy indexing in chronicle queue 5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations elsewhere in the code.
-
-The locking model of Chronicle Queue was changed, in Chronicle Queue 4 a write lock ( to prevent concurrent writes to the queue ) exists in the .cq4 file, In Chronicle Queue 5 this was moved to a single file called a table store (queuelock.cq4t). This simplifies the locking code internally as only the table store file has to be inspected.
-
-You can use Chronicle 5 to read messages written with Chronicle 4, however you should not concurrently run chronicle queue 4 and chronicle queue 5 at the same time. In other words avoid running Chronicle Queue 4’s appenders and tailers on a queue which at the same time is also be read and written to via Chronicle Queue 5.
 
 == About Chronicle Software
 
@@ -59,6 +52,9 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 
 IMPORTANT: This performance is not achieved using a *large cluster of machines*. This is using one thread to publish, and one thread to consume.
 
+===  Java Docs
+see http://openhft.github.io/Chronicle-Queue/apidocs/
+
 === More benchmarks
 
 https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
@@ -83,9 +79,6 @@ Click here to get the http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.open
 Snapshots are available on https://oss.sonatype.org
 
 https://github.com/OpenHFT/Chronicle-Queue/releases[Chronicle Queue Release Notes]
-
-===  Java Doc (3.6)
-see http://openhft.github.io/Chronicle-Queue/apidocs/
 
 == Simple Step-By-Step Guide
 see https://github.com/OpenHFT/Chronicle-Queue-Sample
@@ -1078,6 +1071,23 @@ worst:      71925.76     80314.37     62537.73        15.93
 ------------------------------------------------------------------------------------------------------------------
 ----
 
+== The Changes from Chronicle Queue version 4 to version 5
+
+In Chronicle Queue 5 tailers are now read-only, in Chronicle Queue 4 we have the concept of lazy indexing, where the
+appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise,
+when lazy indexing was turned on the indexing was done by the first tailer that read the data. Since in chronicle
+queue 4 tailers could do the indexing we could not rely on them to be read-only. We decided to drop lazy indexing in
+chronicle queue 5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations
+elsewhere in the code.
+
+The locking model of Chronicle Queue was changed, in Chronicle Queue 4 a write lock (to prevent concurrent writes to
+the queue) exists in the .cq4 file. In Chronicle Queue 5 this was moved to a single file called a table store
+(metadata.cq4t). This simplifies the locking code internally as only the table store file has to be inspected.
+
+You can use Chronicle 5 to read messages written with Chronicle 4, however you should not concurrently run chronicle
+queue 4 and chronicle queue 5 at the same time. In other words avoid running Chronicle Queue 4’s appenders and tailers
+on a queue which at the same time is also read and written to via Chronicle Queue 5.
+
 == Changes from Chronicle Queue v3
 
 Chronicle Queue v4 solves a number of issues that existed in Chronicle Queue v3.
@@ -1645,7 +1655,7 @@ from this, we can see that most of the samples (on this occasion 28 of them ) we
 we will often add a `net.openhft.chronicle.core.Jvm.safepoint` into the code because thread dumps are only reported at safe-points.
 
 
-===== Summary
+==== Summary
 
 In the test described above, the typical latency varied between 14 and 40 microseconds. The 99 percentile varied between 17 and 56 microseconds depending on the throughput being tested. Notably, the 99.93% latency varied between 21 microseconds and 41 milliseconds, a factor of 2000.
 
