@@ -29,6 +29,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -98,20 +99,25 @@ import java.util.Map;
  * mvn -DenableAffinity=true exec:java -Dexec.classpathScope="test" -Dexec.mainClass=net.openhft.chronicle.queue.ChronicleQueueLatencyDistribution
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
-    static final boolean SAMPLING = Boolean.getBoolean("sampling");
-    static final int ITERATIONS = Integer.getInteger("iterations", 20_000_000);
-    static final int WARMUP = 500_000;
+    private static final boolean PRETOUCH = ! Boolean.getBoolean("no_pretouch");
+    private static final boolean SAMPLING = Boolean.getBoolean("sampling");
+    private static final int ITERATIONS = Integer.getInteger("iterations", 20_000_000);
+    private static final int WARMUP = 500_000;
     @Nullable
-    final StackSampler sampler = SAMPLING ? new StackSampler() : null;
+    private final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws Exception {
         assert false : "test runs slower with assertions on";
         new ChronicleQueueLatencyDistribution().run(args);
     }
 
-    public void run(String[] args) throws InterruptedException {
+    public void run(String[] args) throws Exception {
+        // use CQ dir in current directory, not tmp as that is often tmpfs
+        final File tmpDir = new File(this.getClass().getSimpleName() + "_" + System.currentTimeMillis());
+        tmpDir.deleteOnExit();
+        System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
-                .fieldlessBinary(getTmpDir())
+                .fieldlessBinary(tmpDir)
                 .blockSize(128 << 20)
                 .build()) {
 
@@ -129,15 +135,17 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Histogram histogramCo = new Histogram();
         Histogram histogramIn = new Histogram();
         Histogram histogramWr = new Histogram();
-        Thread pretoucher = new Thread(() -> {
-            ExcerptAppender appender = queue.acquireAppender();
-            while (!Thread.currentThread().isInterrupted()) {
-                appender.pretouch();
-                Jvm.pause(500);
-            }
-        });
-        pretoucher.setDaemon(true);
-        pretoucher.start();
+        if (PRETOUCH) {
+            Thread pretoucher = new Thread(() -> {
+                ExcerptAppender appender = queue.acquireAppender();
+                while (!Thread.currentThread().isInterrupted()) {
+                    appender.pretouch();
+                    Jvm.pause(500);
+                }
+            });
+            pretoucher.setDaemon(true);
+            pretoucher.start();
+        }
 
         ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
