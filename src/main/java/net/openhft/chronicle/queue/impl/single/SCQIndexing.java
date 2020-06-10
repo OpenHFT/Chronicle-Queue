@@ -622,7 +622,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             if (IGNORE_INDEXING_FAILURE) {
                 return;
             }
-            throw new IllegalStateException("Unable to index " + sequenceNumber);
+            throw new IllegalStateException("Unable to index " + sequenceNumber + ", the number of entries exceeds max number for the current rollcycle");
         }
         long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
         if (secondaryAddress > bytes.capacity())
