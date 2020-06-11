@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -38,9 +39,10 @@ import java.util.concurrent.Future;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
-public class MultiThreadedRollTest {
+public class MultiThreadedRollTest extends QueueTestCommon {
 
-    final ExecutorService reader = Executors.newSingleThreadExecutor(new NamedThreadFactory("reader", true));
+    final ExecutorService reader = Executors.newSingleThreadExecutor(
+            new NamedThreadFactory("reader"));
 
     @After
     public void after() {
@@ -87,7 +89,7 @@ public class MultiThreadedRollTest {
                 });
 
                 timeProvider.currentTimeMillis(2000);
-                ((SingleChronicleQueueExcerpts.StoreAppender) wqueue.acquireAppender())
+                ((StoreAppender) wqueue.acquireAppender())
                         .writeEndOfCycleIfRequired();
                 Jvm.pause(200);
                 wqueue.acquireAppender().writeText("hello world");

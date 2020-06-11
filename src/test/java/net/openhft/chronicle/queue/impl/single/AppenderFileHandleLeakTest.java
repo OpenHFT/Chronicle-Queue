@@ -1,13 +1,14 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.hamcrest.Description;
@@ -34,13 +35,15 @@ import java.util.stream.Stream;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 
-public final class AppenderFileHandleLeakTest {
+public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
 
-    private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT);
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
+            new NamedThreadFactory("test"));
     private final List<Path> lastFileHandles = new ArrayList<>();
     private TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
@@ -78,13 +81,13 @@ public final class AppenderFileHandleLeakTest {
 
             if (manuallyReleaseResources) {
                 try {
-                    ((SingleChronicleQueueExcerpts.StoreTailer) tailer).releaseResources();
+                    ((StoreTailer) tailer).releaseResources();
                 } catch (RuntimeException e) {
                     // ignore
                 }
             }
         } finally {
-            bytes.release();
+            bytes.releaseLast();
         }
     }
 
@@ -136,13 +139,13 @@ public final class AppenderFileHandleLeakTest {
     }
 
     @Test
-//    @Ignore("Flaky")
+    @Ignore("Flaky")
     public void tailerResourcesCanBeReleasedManually() throws Exception {
         FlakyTestRunner.run(this::tailerResourcesCanBeReleasedManually0);
     }
 
     public void tailerResourcesCanBeReleasedManually0() throws IOException, InterruptedException, TimeoutException, ExecutionException {
-        assumeThat(OS.isLinux(), is(true));
+        assumeTrue(OS.isLinux());
 
         GcControls.requestGcCycle();
         Thread.sleep(100);
@@ -235,7 +238,7 @@ public final class AppenderFileHandleLeakTest {
     public void checkRegisteredBytes() throws InterruptedException {
         threadPool.shutdownNow();
         assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
-        BytesUtil.checkRegisteredBytes();
+        AbstractReferenceCounted.assertReferencesReleased();
     }
 
     private void waitForFileHandleCountToDrop(

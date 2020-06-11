@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY;
 
-public class RollCycleDefaultingTest {
+public class RollCycleDefaultingTest extends QueueTestCommon {
     @Test
     public void correctConfigGetsLoaded() {
         String aClass = RollCycles.HOURLY.getClass().getName();

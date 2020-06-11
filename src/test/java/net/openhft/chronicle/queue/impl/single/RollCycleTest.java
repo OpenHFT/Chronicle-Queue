@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
-public class RollCycleTest {
+public class RollCycleTest extends QueueTestCommon {
     @Test
     public void newRollCycleIgnored() throws InterruptedException {
         File path = DirectoryUtils.tempDir("newRollCycleIgnored");

@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -18,7 +19,7 @@ import static org.junit.Assert.assertNotNull;
  * Index runs away on double close - AM
  */
 @RequiredForClient
-public class OvertakeTest {
+public class OvertakeTest extends QueueTestCommon {
 
     private String path;
 
@@ -98,7 +99,8 @@ public class OvertakeTest {
     @Test
     public void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
         System.out.println("Continue appending");
-        ExecutorService execService = Executors.newFixedThreadPool(2);
+        ExecutorService execService = Executors.newFixedThreadPool(2,
+                new NamedThreadFactory("test"));
         SynchronousQueue<Long> sync = new SynchronousQueue<>();
         long t_index;
 

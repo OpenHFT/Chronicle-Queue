@@ -45,7 +45,7 @@ import static junit.framework.TestCase.assertFalse;
  * The rare appender will have very bad latency proportional to the number of messages written since
  * it last appended.
  */
-public class RareAppenderLatencyTest {
+public class RareAppenderLatencyTest extends QueueTestCommon {
     private final static int HEAVY_MSGS = 1_000_000;
     private final static int RARE_MSGS = 50;
 
@@ -54,8 +54,8 @@ public class RareAppenderLatencyTest {
 
     @Before
     public void before() {
-        appenderES = Executors.newSingleThreadExecutor(new NamedThreadFactory
-                ("Appender", false));
+        appenderES = Executors.newSingleThreadExecutor(
+                new NamedThreadFactory("Appender", false));
     }
 
     @After

@@ -20,10 +20,7 @@ package net.openhft.chronicle.queue.micros;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.Test;
 
@@ -33,7 +30,7 @@ import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 
-public class OrderManagerTest {
+public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testOnOrderIdea() {

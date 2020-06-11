@@ -101,7 +101,7 @@ public class DumpQueueMain {
         } catch (IOException ioe) {
             err.println("Failed to read " + file + " " + ioe);
         } finally {
-            buffer.release();
+            buffer.releaseLast();
         }
     }
 

@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @RequiredForClient
-public class ChronicleRollingIssueTest {
+public class ChronicleRollingIssueTest extends QueueTestCommon {
 
     @Test
     public void test() {

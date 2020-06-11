@@ -3,11 +3,9 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.StopCharTesters;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
@@ -22,7 +20,7 @@ import java.util.concurrent.*;
 import static net.openhft.chronicle.queue.RollCycles.DAILY;
 import static org.junit.Assert.assertEquals;
 
-public class RollCycleMultiThreadTest {
+public class RollCycleMultiThreadTest extends QueueTestCommon {
 
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {
@@ -37,8 +35,8 @@ public class RollCycleMultiThreadTest {
 
             ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
 
-            final ExecutorService scheduledExecutorService = Executors
-                    .newSingleThreadScheduledExecutor();
+            final ExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+                    new NamedThreadFactory("test"));
 
             try (ChronicleQueue queue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
@@ -77,8 +75,8 @@ public class RollCycleMultiThreadTest {
 
             final ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
 
-            final ExecutorService scheduledExecutorService = Executors
-                    .newSingleThreadScheduledExecutor();
+            final ExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+                    new NamedThreadFactory("test"));
 
             try (ChronicleQueue queue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)

@@ -3,12 +3,13 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-public class RestartableTailerTest {
+public class RestartableTailerTest extends QueueTestCommon {
     @Test
     public void restartable() {
         String tmp = OS.TARGET + "/restartable-" + System.nanoTime();

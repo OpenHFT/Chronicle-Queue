@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ import java.util.function.LongSupplier;
 
 import static org.junit.Assert.assertEquals;
 
-public class PretoucherStateTest {
+public class PretoucherStateTest extends QueueTestCommon {
     @Test
     public void pretouch() {
         long[] pos = {0};

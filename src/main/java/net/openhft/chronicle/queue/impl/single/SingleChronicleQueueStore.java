@@ -21,10 +21,8 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
-import net.openhft.chronicle.core.ReferenceCounted;
-import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
-import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
@@ -44,27 +42,26 @@ import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore, ReferenceCounted {
+public class SingleChronicleQueueStore extends AbstractReferenceCounted implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
     }
 
     @NotNull
     final SCQIndexing indexing;
+    // retains the MappedBytes used by the MappedFile
     @NotNull
     private final LongValue writePosition;
     @NotNull
     private final MappedBytes mappedBytes;
     @NotNull
     private final MappedFile mappedFile;
-    @NotNull
-    private final ReferenceCounter refCount;
     private final int dataVersion;
-
     @NotNull
     private final transient Sequence sequence;
 
     private volatile Thread lastAccessedThread;
+    private volatile boolean released;
 
     /**
      * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -76,9 +73,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         assert wire.startUse();
         try {
             writePosition = loadWritePosition(wire);
-            this.mappedBytes = (MappedBytes) (wire.bytes());
+            this.mappedBytes = (MappedBytes) wire.bytes();
             this.mappedFile = mappedBytes.mappedFile();
-            this.refCount = ReferenceCounter.onReleased(this::onCleanup);
+            mappedFile.reserve(this);
             this.indexing = Objects.requireNonNull(wire.read(MetaDataField.indexing).typedMarshallable());
             this.indexing.writePosition = writePosition;
             this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
@@ -108,8 +105,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                                      int indexSpacing) {
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
-        this.refCount = ReferenceCounter.onReleased(this::onCleanup);
-
+        mappedFile.reserve(this);
         indexCount = Maths.nextPower2(indexCount, 8);
         indexSpacing = Maths.nextPower2(indexSpacing, 1);
 
@@ -179,29 +175,23 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     private String dump(boolean abbrev) {
-        MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
-        try {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
             bytes.readLimit(bytes.realCapacity());
             final Wire w = WireType.BINARY.apply(bytes);
             if (dataVersion > 0)
                 w.usePadding(true);
             return Wires.fromSizePrefixedBlobs(w, abbrev);
-        } finally {
-            bytes.release();
         }
     }
 
     @Override
     public String dumpHeader() {
-        MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
-        try {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
             int size = bytes.readInt(0);
             if (!Wires.isReady(size))
                 return "not ready";
             bytes.readLimit(Wires.lengthOf(size) + 4);
             return Wires.fromSizePrefixedBlobs(bytes);
-        } finally {
-            bytes.release();
         }
     }
 
@@ -215,7 +205,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public WireStore writePosition(long position) {
         assert singleThreadedAccess();
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
-        assert Wires.isReadyData(mappedBytes.readVolatileInt(position));
         writePosition.setMaxValue(position);
         return this;
     }
@@ -243,33 +232,20 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @Override
-    public void reserve() throws IllegalStateException {
-        this.refCount.reserve();
-    }
+    protected void performRelease() {
+        if (released)
+            return;
 
-    @Override
-    public void release() throws IllegalStateException {
-        this.refCount.release();
-    }
-
-    @Override
-    public long refCount() {
-        return this.refCount.refCount();
-    }
-
-    @Override
-    public boolean tryReserve() {
-        return this.refCount.tryReserve();
-    }
-
-    @Override
-    protected void performClose() {
-        // TODO FIX
-        while (refCount.refCount() > 0) {
-            refCount.release();
-        }
+        released = true;
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
+
+        mappedBytes.release(INIT);
+        try {
+            mappedFile.release(this);
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -300,7 +276,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 "indexing=" + indexing +
                 ", writePosition/seq=" + writePosition.toString() +
                 ", mappedFile=" + mappedFile +
-                ", refCount=" + refCount +
+                ", refCount=" + refCount() +
                 '}';
     }
 
@@ -308,11 +284,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     // Marshalling
     // *************************************************************************
 
-    private void onCleanup() {
-        Closeable.closeQuietly(writePosition);
-        Closeable.closeQuietly(indexing);
-        mappedBytes.release();
-    }
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
@@ -361,12 +332,12 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         String fileName = mappedFile.file().getAbsolutePath();
 
         // just in case we are about to release this
-        if (wire.bytes().tryReserve()) {
+        if (wire.bytes().tryReserve(this)) {
             try {
                 return writeEOFAndShrink(wire, timeoutMS);
 
             } finally {
-                wire.bytes().release();
+                wire.bytes().release(this);
             }
         }
 

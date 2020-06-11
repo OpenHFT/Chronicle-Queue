@@ -19,13 +19,14 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.threads.ThreadDump;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class IndexOffsetTest {
+public class IndexOffsetTest extends QueueTestCommon {
 
     static final SCQIndexing indexing = new SCQIndexing(WireType.BINARY, 1 << 17, 1 << 6);
     static final SCQIndexing indexing2 = new SCQIndexing(WireType.BINARY, 1 << 7, 1 << 3);

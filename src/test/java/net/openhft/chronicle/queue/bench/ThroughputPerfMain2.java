@@ -40,7 +40,7 @@ public class ThroughputPerfMain2 {
             count += appender.batchAppend(time * 1000, ThroughputPerfMain2::writeMessages);
         }
 
-        nbs.release();
+        nbs.releaseLast();
         long mid = System.nanoTime();
         long time1 = mid - start;
 
@@ -57,7 +57,7 @@ public class ThroughputPerfMain2 {
                 }
             }
         }
-        bytes.release();
+        bytes.releaseLast();
         long end = System.nanoTime();
         long time2 = end - mid;
 

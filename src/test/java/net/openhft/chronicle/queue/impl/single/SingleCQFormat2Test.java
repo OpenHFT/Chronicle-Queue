@@ -230,7 +230,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.readLimit(bytes.realCapacity());
         assertEquals(expected, Wires.fromAlignedSizePrefixedBlobs(bytes));
-        bytes.release();
+        bytes.releaseLast();
     }
 
     @Test
@@ -658,7 +658,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 Bytes bytes = Bytes.elasticByteBuffer();
                 new BinaryWire(bytes).write(() -> "msg").text(msg);
                 appender.writeBytes(bytes);
-                bytes.release();
+                bytes.releaseLast();
 
                 break;
 

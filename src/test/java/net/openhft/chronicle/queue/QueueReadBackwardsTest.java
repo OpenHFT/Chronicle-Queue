@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertEquals;
 
-public class QueueReadBackwardsTest {
+public class QueueReadBackwardsTest extends QueueTestCommon {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 

@@ -13,7 +13,7 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class DumpQueueMainTest {
+public class DumpQueueMainTest extends QueueTestCommon {
 
     @Test
     public void shouldBeAbleToDumpReadOnlyQueueFile() throws IOException {

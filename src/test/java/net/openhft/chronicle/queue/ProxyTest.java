@@ -11,10 +11,10 @@ import java.io.File;
 
 /**
  * To avoid the arg[] array created via the methodWriter java.lang.reflect.Proxy, this test shows how you can create a custom proxy
- *
+ * <p>
  * Created by Rob Austin
  */
-public class ProxyTest {
+public class ProxyTest extends QueueTestCommon {
 
     @Test
     public void testReadWrite() {

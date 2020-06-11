@@ -1,10 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -17,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public final class RollAtEndOfCycleTest {
+public final class RollAtEndOfCycleTest extends QueueTestCommon {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
     private static void assertQueueFileCount(final Path path, final long expectedCount) throws IOException {

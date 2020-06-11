@@ -1,9 +1,9 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -43,7 +43,7 @@ public class MultiQueueStressMain {
             }
             long mid2 = System.currentTimeMillis();
             for (MappedBytes bytes : queues) {
-                bytes.release();
+                bytes.releaseLast();
             }
             long end0 = System.currentTimeMillis();
             long time0 = end0 - start0;

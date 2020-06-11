@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Rule;
@@ -13,7 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.*;
 
 @RequiredForClient
-public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
+public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
     @Rule
     public final TestName testName = new TestName();
     volatile long lastWrittenIndex = Long.MIN_VALUE;
@@ -32,7 +33,8 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
                 .rollCycle(RollCycles.MINUTELY)
                 .build()) {
 
-            ExecutorService e1 = Executors.newSingleThreadExecutor();
+            ExecutorService e1 = Executors.newSingleThreadExecutor(
+                    new NamedThreadFactory("e1"));
             e1.submit(() -> {
                 ExcerptAppender excerptAppender = x.acquireAppender();
                 for (long i = 0; i < 1_000_000; i++) {
@@ -44,7 +46,8 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest {
                 }
             });
 
-            ExecutorService e2 = Executors.newSingleThreadExecutor();
+            ExecutorService e2 = Executors.newSingleThreadExecutor(
+                    new NamedThreadFactory("e2"));
             Future f2 = e2.submit(() -> {
                 ExcerptTailer tailer = x.createTailer();
 

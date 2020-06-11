@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.bench;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.batch.BatchAppenderNative;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -16,7 +17,7 @@ import java.nio.ByteBuffer;
  * <p>
  * see Chronicle-Queue/c++/src/BatchAppenderNative.cpp
  */
-public class BatchAppenderNativeTest {
+public class BatchAppenderNativeTest extends QueueTestCommon {
 
     @Test
     public void testNative() {
@@ -46,7 +47,7 @@ public class BatchAppenderNativeTest {
                 }
             }
         } finally {
-            bytes.release();
+            bytes.releaseLast();
         }
     }
 }

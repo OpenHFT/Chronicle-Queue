@@ -249,32 +249,16 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     @NotNull
     static SingleChronicleQueueStore createStore(@NotNull RollingChronicleQueue queue,
                                                  @NotNull Wire wire) {
+        MappedBytes mappedBytes = (MappedBytes) wire.bytes();
         final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
                 queue.rollCycle(),
                 queue.wireType(),
-                (MappedBytes) wire.bytes(),
+                mappedBytes,
                 queue.indexCount(),
                 queue.indexSpacing());
 
         wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
-
         return wireStore;
-    }
-
-    @Nullable
-    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
-        final StringBuilder eventName = new StringBuilder();
-        wire.readEventName(eventName);
-        if (eventName.toString().equals(MetaDataKeys.header.name())) {
-            final SingleChronicleQueueStore store = wire.read().typedMarshallable();
-            if (store == null) {
-                throw new IllegalArgumentException("Unable to load wire store");
-            }
-            return store;
-        }
-
-        LOGGER.warn("Unable to load store file from input. Queue file may be corrupted.");
-        return null;
     }
 
     private static boolean isQueueReplicationAvailable() {

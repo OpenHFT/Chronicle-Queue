@@ -17,33 +17,16 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.threads.ThreadDump;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
 
-public class ReadmeTest {
-    private ThreadDump threadDump;
-
-    @Before
-    public void threadDump() {
-        threadDump = new ThreadDump();
-        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
-        threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
-    }
-
-    @After
-    public void checkThreadDump() {
-        threadDump.assertNoNewThreads();
-    }
+public class ReadmeTest extends QueueTestCommon {
 
     @Test
     public void createAQueue() {
@@ -72,6 +55,6 @@ public class ReadmeTest {
 
     @After
     public void checkRegisteredBytes() {
-        BytesUtil.checkRegisteredBytes();
+        AbstractReferenceCounted.assertReferencesReleased();
     }
 }

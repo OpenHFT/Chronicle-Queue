@@ -166,7 +166,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             bytes.readLimit(bytes.realCapacity());
             return Wires.fromSizePrefixedBlobs(bytes, abbrev);
         } finally {
-            bytes.release();
+            bytes.releaseLast();
         }
     }
 
@@ -178,8 +178,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     @Override
     protected void performClose() {
-        mappedBytes.release();
-        mappedFile.close();
+        mappedBytes.releaseLast();
     }
 
     /**
@@ -206,7 +205,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     // *************************************************************************
 
     private void onCleanup() {
-        mappedBytes.release();
+        mappedBytes.releaseLast();
     }
 
     @Override
@@ -227,7 +226,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, long defaultValue) { // TODO Change to ThreadLocal values if performance is a problem.
         StringBuilder sb = Wires.acquireStringBuilder();
-        mappedBytes.reserve();
+        mappedBytes.reserve(this);
         try {
             mappedBytes.readPosition(0);
             mappedBytes.readLimit(mappedBytes.realCapacity());
@@ -258,7 +257,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new IORuntimeException(e);
 
         } finally {
-            mappedBytes.release();
+            mappedBytes.release(this);
         }
     }
 

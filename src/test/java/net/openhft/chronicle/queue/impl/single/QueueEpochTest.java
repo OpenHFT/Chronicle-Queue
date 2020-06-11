@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
-public final class QueueEpochTest {
+public final class QueueEpochTest extends QueueTestCommon {
     private static final boolean DEBUG = false;
     private static final long MIDNIGHT_UTC_BASE_TIME = 1504569600000L;
     // 17:15 EDT, 21:15 UTC

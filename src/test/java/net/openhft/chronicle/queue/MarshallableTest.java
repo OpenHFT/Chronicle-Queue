@@ -10,7 +10,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class MarshallableTest {
+public class MarshallableTest extends QueueTestCommon {
     @Test
     public void testWriteText() {
         File dir = DirectoryUtils.tempDir("testWriteText");

@@ -10,7 +10,7 @@ import java.io.File;
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
-public final class ExcerptsSkippedWhenTailerDirectionNoneTest {
+public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
     @Test
     public void shouldNotSkipMessageAtStartOfQueue() {
         final File tmpDir = DirectoryUtils.tempDir(ExcerptsSkippedWhenTailerDirectionNoneTest.class.getSimpleName());

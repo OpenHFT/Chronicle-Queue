@@ -21,7 +21,7 @@ import static org.junit.Assert.assertNull;
  * checkWritePositionHeaderNumber() method.
  * see https://github.com/OpenHFT/Chronicle-Queue/issues/611
  */
-public class ChronicleAppenderCycleTest {
+public class ChronicleAppenderCycleTest extends QueueTestCommon {
 
     private static final long LATCH_TIMEOUT_MS = 5000;
 
@@ -32,7 +32,7 @@ public class ChronicleAppenderCycleTest {
         int n = 20;
         for (int i = 0; i < n; ++i)
             runTest(id + '-' + i, msg);
-        msg.release();
+        msg.releaseLast();
     }
 
     private void runTest(String id, Bytes msg) throws IOException {

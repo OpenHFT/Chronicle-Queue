@@ -3,9 +3,10 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -21,7 +22,7 @@ import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.bytes.Bytes.fromString;
 import static org.junit.Assert.*;
 
-public class ChronicleQueueIndexTest {
+public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFile() {
@@ -183,10 +184,10 @@ public class ChronicleQueueIndexTest {
 
             Bytes<byte[]> hello_world = Bytes.fromString("Hello World 1");
             appender.writeBytes(RollCycles.DAILY.toIndex(18264, 0L), hello_world);
-            hello_world.release();
+            hello_world.releaseLast();
             hello_world = Bytes.fromString("Hello World 2");
             appender.writeBytes(RollCycles.DAILY.toIndex(18264, 1L), hello_world);
-            hello_world.release();
+            hello_world.releaseLast();
 
             // Simulate the end of the day i.e the queue closes the day rolls
             // (note the change of index from 18264 to 18265)
@@ -200,7 +201,7 @@ public class ChronicleQueueIndexTest {
             // add a message for the new day
             Bytes<byte[]> hello_world = Bytes.fromString("Hello World 3");
             appender.writeBytes(RollCycles.DAILY.toIndex(18265, 0L), hello_world);
-            hello_world.release();
+            hello_world.releaseLast();
 
             final ExcerptTailer tailer = queue.createTailer();
 
@@ -219,13 +220,13 @@ public class ChronicleQueueIndexTest {
                 // that file and never progressed to the latest queue file.
                 assertTrue(results.contains("Hello World 3"));
             } finally {
-                forRead.release();
+                forRead.releaseLast();
             }
         }
     }
 
     @After
     public void checkRegisteredBytes() {
-        BytesUtil.checkRegisteredBytes();
+        AbstractReferenceCounted.assertReferencesReleased();
     }
 }

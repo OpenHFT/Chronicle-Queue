@@ -23,10 +23,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.ThreadDump;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -44,7 +41,7 @@ import java.util.concurrent.TimeoutException;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
 
-public class SingleCQFormatTest {
+public class SingleCQFormatTest extends QueueTestCommon {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
@@ -133,7 +130,7 @@ public class SingleCQFormatTest {
         file.createNewFile();
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
-        bytes.release();
+        bytes.releaseLast();
         @Nullable ChronicleQueue queue = null;
         try {
             queue = binary(dir).timeoutMS(500L)
@@ -193,7 +190,7 @@ public class SingleCQFormatTest {
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: 0\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
-        bytes.release();
+        bytes.releaseLast();
 
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
@@ -216,12 +213,12 @@ public class SingleCQFormatTest {
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE * 2);
         @NotNull Wire wire = new BinaryWire(bytes);
-        try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
+        final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4);
+        try {
             try (DocumentContext dc = wire.writingDocument(true)) {
 
                 dc.wire().write("header").typedMarshallable(store);
             }
-
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -236,7 +233,10 @@ public class SingleCQFormatTest {
                     "  },\n" +
                     "  dataFormat: 1\n" +
                     "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+        } finally {
+            store.releaseLast();
         }
+
 
         @NotNull RollingChronicleQueue queue = binary(dir)
                 .testBlockSize()
@@ -265,7 +265,7 @@ public class SingleCQFormatTest {
                     w -> w.write(() -> "wireType").object(WireType.BINARY));
         }
 
-        bytes.release();
+        bytes.releaseLast();
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)

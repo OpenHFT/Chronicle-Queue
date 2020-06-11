@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
@@ -57,14 +58,13 @@ import java.util.function.*;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreTailer;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
+    static final boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
@@ -280,12 +280,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public String dumpLastHeader() {
         StringBuilder sb = new StringBuilder(256);
-        SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false);
+        ReferenceOwner dump = ReferenceOwner.temporary("dumpLastHeader");
+        SingleChronicleQueueStore wireStore = storeForCycle(dump, lastCycle(), epoch, false, null);
         if (wireStore != null) {
             try {
                 sb.append(wireStore.dumpHeader());
             } finally {
-                release(wireStore);
+                wireStore.release(dump);
             }
         }
         return sb.toString();
@@ -295,14 +296,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public String dump() {
         StringBuilder sb = new StringBuilder(1024);
+        ReferenceOwner dump = ReferenceOwner.temporary("dump");
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
-            SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false);
+            SingleChronicleQueueStore commonStore = storeForCycle(dump, i, epoch, false, null);
             if (commonStore != null) {
                 try {
-//                    sb.append("# ").append(wireStore.bytes().mappedFile().file()).append("\n");
                     sb.append(commonStore.dump());
                 } finally {
-                    release(commonStore);
+                    commonStore.release(dump);
                 }
             }
         }
@@ -491,8 +492,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     @Override
-    public final SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent) {
-        return this.pool.acquire(cycle, epoch, createIfAbsent);
+    public final SingleChronicleQueueStore storeForCycle(ReferenceOwner owner, int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore) {
+        return this.pool.acquire(owner, cycle, epoch, createIfAbsent, oldStore);
     }
 
     @Override
@@ -630,9 +631,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         StoreComponentReferenceHandler.processWireQueue();
     }
 
-    public final void release(@Nullable SingleChronicleQueueStore store) {
+    public final void release(ReferenceOwner owner, @Nullable SingleChronicleQueueStore store) {
         if (store != null)
-            this.pool.release(store, false);
+            this.pool.release(owner, store);
     }
 
     @Override
@@ -793,18 +794,23 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             int cycle = cycle();
             int lastCycle = lastCycle();
+            ReferenceOwner cleanup = ReferenceOwner.temporary("cleanupStoreFilesWithNoData");
             while (lastCycle < cycle && lastCycle >= 0) {
-                final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false);
+                final SingleChronicleQueueStore store = this.pool.acquire(cleanup, lastCycle, epoch(), false, null);
                 if (store == null)
                     return;
-                if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
-                    // couldn't delete? Let's try writing EOF
-                    // if this blows up we should blow up too so don't catch anything
-                    store.writeEOFAndShrink(wireType.apply(store.bytes()), timeoutMS);
-                    lastCycle--;
-                    continue;
+                try {
+                    if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
+                        // couldn't delete? Let's try writing EOF
+                        // if this blows up we should blow up too so don't catch anything
+                        store.writeEOFAndShrink(wireType.apply(store.bytes()), timeoutMS);
+                        lastCycle--;
+                        continue;
+                    }
+                    break;
+                } finally {
+                    store.release(cleanup);
                 }
-                break;
             }
             directoryListing.refresh();
             firstAndLastCycleTime = 0;
@@ -825,13 +831,19 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private class StoreSupplier extends AbstractCloseable implements WireStoreSupplier {
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
-        private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache =
-                new ReferenceCountedCache<>(MappedBytes::mappedBytes, SingleChronicleQueue.this::mappedFile);
+        private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache;
         private boolean queuePathExists;
+
+        private StoreSupplier() {
+            mappedFileCache = new ReferenceCountedCache<>(
+                    MappedBytes::mappedBytes,
+                    SingleChronicleQueue.this::mappedFile,
+                    this);
+        }
 
         @SuppressWarnings("resource")
         @Override
-        public SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent) {
+        public SingleChronicleQueueStore acquire(ReferenceOwner owner, int cycle, boolean createIfAbsent) {
 
             SingleChronicleQueue that = SingleChronicleQueue.this;
             @NotNull final RollingResourcesCache.Resource dateValue = that
@@ -876,6 +888,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 SingleChronicleQueueStore wireStore;
                 try {
                     if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
+                        // implicitly reserves the wireStore for this StoreSupplier
                         wireStore = storeFactory.apply(that, wire);
                         wire.updateFirstHeader();
                         if (wireStore.dataVersion() > 0)
@@ -893,6 +906,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
                             wireStore = valueIn.typedMarshallable();
+
                         } else {
                             throw new StreamCorruptedException("The first message should be the header, was " + name);
                         }
@@ -910,7 +924,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 //                        System.err.println("wire.bytes.byteStore.refCount="+wire.bytes().bytesStore().refCount());
                     throw e;
                 }
-
+                wireStore.reserveTransfer(ReferenceOwner.INIT, owner);
+                assert wireStore.reservedBy(owner);
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {

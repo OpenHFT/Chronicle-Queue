@@ -122,7 +122,7 @@ public final class ChronicleReader {
                             pauser.reset();
                         }
                     } finally {
-                        textConversionTarget.release();
+                        textConversionTarget.releaseLast();
                         highestReachedIndex = tailer.index();
                         isFirstIteration = false;
                     }

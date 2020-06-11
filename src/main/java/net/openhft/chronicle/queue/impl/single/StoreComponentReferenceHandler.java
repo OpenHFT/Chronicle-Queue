@@ -19,7 +19,7 @@ public enum StoreComponentReferenceHandler implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreComponentReferenceHandler.class);
     private static final ReferenceQueue<ExcerptAppender> EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE = new ReferenceQueue<>();
-    private static final ReferenceQueue<SingleChronicleQueueExcerpts.StoreTailer>
+    private static final ReferenceQueue<StoreTailer>
             EXPIRED_THREAD_LOCAL_TAILERS_QUEUE = new ReferenceQueue<>();
     private static final ScheduledExecutorService THREAD_LOCAL_CLEANER_EXECUTOR_SERVICE =
             Threads.acquireScheduledExecutorService(THREAD_NAME, true);
@@ -51,7 +51,7 @@ public enum StoreComponentReferenceHandler implements Closeable {
         return EXPIRED_THREAD_LOCAL_APPENDERS_QUEUE;
     }
 
-    static ReferenceQueue<SingleChronicleQueueExcerpts.StoreTailer> tailerQueue() {
+    static ReferenceQueue<StoreTailer> tailerQueue() {
         return EXPIRED_THREAD_LOCAL_TAILERS_QUEUE;
     }
 
@@ -69,7 +69,7 @@ public enum StoreComponentReferenceHandler implements Closeable {
          while ((wireToRelease = WIRES_TO_RELEASE.poll()) != null) {
              try {
                  released = true;
-                 wireToRelease.bytes().release();
+                 wireToRelease.bytes().releaseLast();
              } catch (IllegalStateException e) {
                  // ignore this - resource may have already been released by explicit close() operation
              } catch (Throwable t) {

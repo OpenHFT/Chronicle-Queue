@@ -13,7 +13,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public final class DuplicateMessageReadTest {
+public final class DuplicateMessageReadTest extends QueueTestCommon {
     private static final RollCycles QUEUE_CYCLE = RollCycles.DAILY;
 
     private static void write(final ExcerptAppender appender, final Data data) throws IOException {

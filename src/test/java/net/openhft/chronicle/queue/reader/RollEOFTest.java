@@ -22,12 +22,11 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
@@ -35,12 +34,12 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Calendar;
@@ -52,7 +51,25 @@ import java.util.stream.Stream;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static org.junit.Assert.*;
 
-public class RollEOFTest {
+public class RollEOFTest extends QueueTestCommon {
+
+    private static final ReferenceOwner test = ReferenceOwner.temporary("test");
+
+    @Nullable
+    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
+        final StringBuilder eventName = new StringBuilder();
+        wire.readEventName(eventName);
+        if (eventName.toString().equals(MetaDataKeys.header.name())) {
+            final SingleChronicleQueueStore store = wire.read().typedMarshallable();
+            if (store == null) {
+                throw new IllegalArgumentException("Unable to load wire store");
+            }
+            return store;
+        }
+
+        Jvm.warn().on(RollEOFTest.class, "Unable to load store file from input. Queue file may be corrupted.");
+        return null;
+    }
 
     @Test(timeout = 5000L)
     public void testRollWritesEOF() throws IOException {
@@ -153,33 +170,23 @@ public class RollEOFTest {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
         final MappedBytes mappedBytes = MappedBytes.mappedBytes(path.toFile(), chunkSize, overlapSize, false);
-        mappedBytes.reserve();
+        mappedBytes.reserve(test);
         try {
             final Wire wire = WireType.BINARY_LIGHT.apply(mappedBytes);
             final Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
             bytes.readSkip(4);
             // move past header
-            try (final SingleChronicleQueueStore qs = loadStore(wire)) {
-                assertNotNull(qs);
-                long l = qs.writePosition();
-                long len = Wires.lengthOf(bytes.readVolatileInt(l));
-                long eofOffset = l + len + 4L;
-                bytes.writePosition(eofOffset);
-                bytes.writeInt(0);
-            }
+            final SingleChronicleQueueStore qs = loadStore(wire);
+            assertNotNull(qs);
+            long l = qs.writePosition();
+            long len = Wires.lengthOf(bytes.readVolatileInt(l));
+            long eofOffset = l + len + 4L;
+            bytes.writePosition(eofOffset);
+            bytes.writeInt(0);
+            qs.releaseLast();
         } finally {
-            mappedBytes.release();
-        }
-    }
-
-    private SingleChronicleQueueStore loadStore(Wire wire) {
-        try {
-            Method loadStoreMethod = SingleChronicleQueueBuilder.class.getDeclaredMethod("loadStore", Wire.class);
-            Jvm.setAccessible(loadStoreMethod);
-            return (SingleChronicleQueueStore) loadStoreMethod.invoke(null, wire);
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException(e);
+            mappedBytes.release(test);
         }
     }
 

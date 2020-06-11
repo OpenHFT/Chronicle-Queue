@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertEquals;
 
-public class QueueReadForwardSkippingACycleBiggerThanADayTest {
+public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 

@@ -1,10 +1,10 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.ReferenceOwner;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
@@ -29,7 +29,7 @@ import static org.junit.Assert.assertTrue;
  * The ChronicleQueueIT class implements a test that causes Chronicle Queue to
  * fail with a BufferUnderflowException whilst executing a tailer.toEnd() call.
  */
-public class MoveToWrongIndexThenToEndTest {
+public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
     private static final int msgSize = 64;
 
@@ -55,11 +55,25 @@ public class MoveToWrongIndexThenToEndTest {
         outbound = Bytes.elasticByteBuffer();
     }
 
+    private static final ReferenceOwner test = ReferenceOwner.temporary("test");
+
     @After
     public void after() {
-        outbound.release();
+        outbound.releaseLast();
         queue.close();
         DirectoryUtils.deleteDir(basePath.toFile());
+    }
+
+    private void waitFor(Semaphore semaphore, String message)
+            throws InterruptedException {
+        boolean ok = semaphore.tryAcquire(5, SECONDS);
+        assertTrue(message, ok);
+    }
+
+    private void append() {
+        outbound.clear();
+        outbound.write(new byte[msgSize], 0, msgSize);
+        appender.writeBytes(outbound);
     }
 
     @Test
@@ -69,7 +83,8 @@ public class MoveToWrongIndexThenToEndTest {
 
         long lastIndex = getLastIndex(basePath);
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newSingleThreadExecutor(
+                new NamedThreadFactory("executor"));
         try {
             Semaphore l0 = new Semaphore(0);
             Semaphore l1 = new Semaphore(0);
@@ -116,23 +131,11 @@ public class MoveToWrongIndexThenToEndTest {
         }
     }
 
-    private void waitFor(Semaphore semaphore, String message)
-            throws InterruptedException {
-        boolean ok = semaphore.tryAcquire(5, SECONDS);
-        assertTrue(message, ok);
-    }
-
-    private void append() {
-        outbound.clear();
-        outbound.write(new byte[msgSize], 0, msgSize);
-        appender.writeBytes(outbound);
-    }
-
     private long getLastIndex(Path queuePath) {
         try (SingleChronicleQueue chronicle = createChronicle(queuePath)) {
 
-            SingleChronicleQueueExcerpts.StoreTailer tailer =
-                    new SingleChronicleQueueExcerpts.StoreTailer(chronicle);
+            StoreTailer tailer =
+                    new StoreTailer(chronicle);
 
             int firstCycle = chronicle.firstCycle();
             int lastCycle = chronicle.lastCycle();
@@ -160,9 +163,9 @@ public class MoveToWrongIndexThenToEndTest {
     }
 
     private long approximateLastIndex(int cycle, SingleChronicleQueue queue,
-                                      SingleChronicleQueueExcerpts.StoreTailer tailer) {
+                                      StoreTailer tailer) {
         try {
-            WireStore wireStore = queue.storeForCycle(cycle, queue.epoch(), false);
+            WireStore wireStore = queue.storeForCycle(test, cycle, queue.epoch(), false, null);
             if (wireStore == null) {
                 return noIndex;
             }

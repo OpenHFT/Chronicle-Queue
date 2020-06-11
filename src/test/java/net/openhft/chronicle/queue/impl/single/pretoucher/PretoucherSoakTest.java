@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single.pretoucher;
 
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -9,7 +10,7 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
 import java.util.UUID;
 
-public class PretoucherSoakTest {
+public class PretoucherSoakTest extends QueueTestCommon {
 
     public static void main(String[] args) {
         SingleChronicleQueue outQueue = SingleChronicleQueueBuilder.binary("target/" + "monitor")

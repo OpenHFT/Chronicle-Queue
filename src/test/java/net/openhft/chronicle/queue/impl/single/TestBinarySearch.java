@@ -89,7 +89,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
                     Assert.assertTrue(documentContext.toString().contains("some value where the key=" + j));
                 }
-                key.bytes().release();
+                key.bytes().releaseLast();
             }
         } finally {
             System.gc();

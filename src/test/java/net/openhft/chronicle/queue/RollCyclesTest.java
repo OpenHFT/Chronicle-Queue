@@ -15,7 +15,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 @RequiredForClient
-public class RollCyclesTest {
+public class RollCyclesTest extends QueueTestCommon {
     private static final long NO_EPOCH_OFFSET = 0L;
     private static final long SOME_EPOCH_OFFSET = 17L * 37L;
     private static final RollCycles[] TEST_DATA = RollCycles.values();

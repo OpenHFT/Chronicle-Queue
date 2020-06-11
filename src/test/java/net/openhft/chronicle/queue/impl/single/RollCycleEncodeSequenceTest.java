@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryTwoLongReference;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.Sequence;
 import org.junit.After;
@@ -16,7 +17,7 @@ import java.util.Collection;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
-public class RollCycleEncodeSequenceTest {
+public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     private final BinaryTwoLongReference longValue;
     private final RollCycleEncodeSequence rollCycleEncodeSequence;
     private final Bytes<ByteBuffer> bytes;
@@ -40,7 +41,7 @@ public class RollCycleEncodeSequenceTest {
 
     @After
     public void before() {
-        bytes.release();
+        bytes.releaseLast();
     }
 
     @Test

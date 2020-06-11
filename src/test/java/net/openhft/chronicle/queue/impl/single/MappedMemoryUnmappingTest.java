@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.fail;
 
-public final class MappedMemoryUnmappingTest {
+public final class MappedMemoryUnmappingTest extends QueueTestCommon {
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 

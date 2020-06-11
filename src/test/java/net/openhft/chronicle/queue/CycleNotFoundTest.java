@@ -17,19 +17,17 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.NamedThreadFactory;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
@@ -47,7 +45,8 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
         File path = DirectoryUtils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make
 
-        ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG);
+        ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG,
+                new NamedThreadFactory("tailerCycleNotFoundTest"));
         AtomicLong counter = new AtomicLong();
 
         Runnable reader = () -> {
@@ -93,7 +92,8 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
         }
 
         // Appender run in a different thread
-        ExecutorService executorService1 = Executors.newSingleThreadExecutor();
+        ExecutorService executorService1 = Executors.newSingleThreadExecutor(
+                new NamedThreadFactory("appender"));
         Future<?> submit = executorService1.submit(() -> {
             ChronicleQueue wqueue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
@@ -124,6 +124,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
         for (Future f : tailers) {
             f.get();
         }
+        executorService.shutdownNow();
+        executorService1.shutdownNow();
+        executorService.awaitTermination(5, TimeUnit.SECONDS);
+        executorService1.awaitTermination(5, TimeUnit.SECONDS);
 
         assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get());
     }

@@ -17,9 +17,9 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -32,7 +32,7 @@ import java.sql.DriverManager;
 import java.util.concurrent.atomic.AtomicLong;
 
 
-public class JDBCServiceTest {
+public class JDBCServiceTest extends QueueTestCommon {
 
     @Test
     public void testCreateTable() {
@@ -102,6 +102,6 @@ public class JDBCServiceTest {
 
     @After
     public void checkRegisteredBytes() {
-        BytesUtil.checkRegisteredBytes();
+        AbstractReferenceCounted.assertReferencesReleased();
     }
 }

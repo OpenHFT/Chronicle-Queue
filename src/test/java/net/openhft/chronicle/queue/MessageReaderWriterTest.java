@@ -20,15 +20,10 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.util.ObjectUtils;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.StoreComponentReferenceHandler;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -38,20 +33,7 @@ import static org.junit.Assert.assertTrue;
 
 
 @RequiredForClient
-public class MessageReaderWriterTest {
-    private ThreadDump threadDump;
-
-    @Before
-    public void threadDump() {
-        threadDump = new ThreadDump();
-        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
-        threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
-    }
-
-    @After
-    public void checkThreadDump() {
-        threadDump.assertNoNewThreads();
-    }
+public class MessageReaderWriterTest extends QueueTestCommon {
 
     @Test
     public void testWriteWhileReading() {

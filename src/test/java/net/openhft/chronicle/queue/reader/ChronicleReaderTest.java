@@ -1,13 +1,14 @@
 package net.openhft.chronicle.queue.reader;
 
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.junit.After;
@@ -32,7 +33,7 @@ import static net.openhft.chronicle.queue.impl.single.GcControls.waitForGcCycle;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class ChronicleReaderTest {
+public class ChronicleReaderTest extends QueueTestCommon {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
     private static final String LAST_MESSAGE = "LAST_MESSAGE";
 
@@ -222,7 +223,8 @@ public class ChronicleReaderTest {
             final RecordCounter recordCounter = new RecordCounter();
             final ChronicleReader chronicleReader = basicReader().withMessageSink(recordCounter);
 
-            final ExecutorService executorService = Executors.newSingleThreadExecutor();
+            final ExecutorService executorService = Executors.newSingleThreadExecutor(
+                    new NamedThreadFactory("executor"));
             Future<?> submit = executorService.submit(chronicleReader::execute);
 
             final long expectedReadingDocumentCount = (readerCapacity / ONE_KILOBYTE.length) + 1;
@@ -382,7 +384,7 @@ public class ChronicleReaderTest {
         }
         // TODO FIX
         try {
-            BytesUtil.checkRegisteredBytes();
+            AbstractReferenceCounted.assertReferencesReleased();
         } catch (IllegalStateException todoFix) {
             todoFix.printStackTrace();
         }

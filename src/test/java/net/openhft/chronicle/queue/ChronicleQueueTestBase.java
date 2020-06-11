@@ -17,14 +17,9 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.*;
@@ -35,7 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.UUID;
 
-public class ChronicleQueueTestBase {
+public class ChronicleQueueTestBase extends QueueTestCommon {
     static {
         System.setProperty("queue.check.index", "true");
     }
@@ -114,19 +109,4 @@ public class ChronicleQueueTestBase {
         System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
     }
 
-    @Before
-    public void enableCloseableTracing() {
-        AbstractCloseable.enableCloseableTracing();
-    }
-
-    @After
-    public void assertCloseablesClosed() {
-        AbstractCloseable.assertCloseablesClosed();
-        // Only worth check if everything is closed.
-        BytesUtil.checkRegisteredBytes();
-    }
-
-    public enum TestKey implements WireKey {
-        test, test2
-    }
 }

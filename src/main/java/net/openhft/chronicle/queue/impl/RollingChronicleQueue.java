@@ -17,10 +17,12 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.QueueLock;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,6 +33,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     long epoch();
 
     /**
+     * @param owner
      * @param cycle          the cycle
      * @param epoch          an epoch offset as the number of number of milliseconds since January
      *                       1, 1970, 00:00:00 GMT
@@ -39,7 +42,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * is false and absent
      */
     @Nullable
-    WireStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent);
+    SingleChronicleQueueStore storeForCycle(ReferenceOwner owner, int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);
 
     /**
      * @return the first cycle number found, or Integer.MAX_VALUE is none found.

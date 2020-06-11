@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class RollCycleMultiThreadStressTest {
+public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     final long SLEEP_PER_WRITE_NANOS;
     final int TEST_TIME;
     final int ROLL_EVERY_MS;
@@ -106,19 +106,22 @@ public class RollCycleMultiThreadStressTest {
         System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
-        final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(new NamedThreadFactory("pretouch"));
-        final ExecutorService executorServiceWrite = Executors.newFixedThreadPool(numWriters, new NamedThreadFactory("writer"));
-        final ExecutorService executorServiceRead = Executors.newFixedThreadPool(numThreads - numWriters, new NamedThreadFactory("reader"));
+        final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(
+                new NamedThreadFactory("pretouch"));
+        final ExecutorService executorServiceWrite = Executors.newFixedThreadPool(numWriters,
+                new NamedThreadFactory("writer"));
+        final ExecutorService executorServiceRead = Executors.newFixedThreadPool(numThreads - numWriters,
+                new NamedThreadFactory("reader"));
 
         final AtomicInteger wrote = new AtomicInteger();
-        final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters/2);
+        final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
 
         System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
                 numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
         System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
                 SLEEP_PER_WRITE_NANOS);
         System.out.printf("Should take ~%dms%n",
-                TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters/2));
+                TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters / 2));
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
@@ -508,6 +511,6 @@ public class RollCycleMultiThreadStressTest {
             fail();
         }
         Jvm.resetExceptionHandlers();
-        BytesUtil.checkRegisteredBytes();
+        AbstractReferenceCounted.assertReferencesReleased();
     }
 }

@@ -1,10 +1,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Test;
@@ -17,9 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public final class TailerSequenceRaceConditionTest {
+public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     private final AtomicBoolean failedToMoveToEnd = new AtomicBoolean(false);
-    private final ExecutorService threadPool = Executors.newFixedThreadPool(8);
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(8,
+            new NamedThreadFactory("test"));
 
     @Test
     public void shouldAlwaysBeAbleToTail() throws InterruptedException {
@@ -61,8 +60,8 @@ public final class TailerSequenceRaceConditionTest {
     }
 
     private void attemptToMoveToTail(final ChronicleQueue queue) {
-        final SingleChronicleQueueExcerpts.StoreTailer tailer =
-                (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
+        final StoreTailer tailer =
+                (StoreTailer) queue.createTailer();
         try {
             tailer.toEnd();
         } catch (IllegalStateException e) {

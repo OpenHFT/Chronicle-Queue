@@ -21,7 +21,7 @@ import static java.util.stream.IntStream.range;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public final class TailerIndexingQueueTest {
+public final class TailerIndexingQueueTest extends QueueTestCommon {
     private final File path = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName() + "-" + System.nanoTime());
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 

@@ -31,6 +31,6 @@ public final class DummyMethodReaderQueueEntryHandler implements QueueEntryHandl
 
     @Override
     public void close() {
-        textConversionTarget.release();
+        textConversionTarget.releaseLast();
     }
 }

@@ -64,7 +64,7 @@ public class ThroughputPerfMain {
             } while (start + time * 1e9 > System.nanoTime());
         }
 
-        nbs.release();
+        nbs.releaseLast();
         long mid = System.nanoTime();
         long time1 = mid - start;
 
@@ -81,7 +81,7 @@ public class ThroughputPerfMain {
                 }
             }
         }
-        bytes.release();
+        bytes.releaseLast();
         long end = System.nanoTime();
         long time2 = end - mid;
 

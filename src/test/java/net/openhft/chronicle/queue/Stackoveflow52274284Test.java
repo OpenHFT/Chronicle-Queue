@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class Stackoveflow52274284Test {
+public class Stackoveflow52274284Test extends QueueTestCommon {
     @Test
     public void fails() throws IOException {
         String basePath = OS.TARGET;

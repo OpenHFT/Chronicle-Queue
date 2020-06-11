@@ -21,6 +21,7 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.TestKey;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -35,10 +36,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreTailer.INDEXING_LINEAR_SCAN_THRESHOLD;
-import static org.hamcrest.CoreMatchers.is;
+import static net.openhft.chronicle.queue.impl.single.StoreTailer.INDEXING_LINEAR_SCAN_THRESHOLD;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 @RunWith(Parameterized.class)
 public class IndexTest extends ChronicleQueueTestBase {
@@ -116,8 +115,8 @@ public class IndexTest extends ChronicleQueueTestBase {
                 }
             }
 
-            final SingleChronicleQueueExcerpts.StoreTailer tailer =
-                    (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
+            final StoreTailer tailer =
+                    (StoreTailer) queue.createTailer();
             tailer.moveToIndex(indices[0]);
 
             assertEquals(indices[0], tailer.index());

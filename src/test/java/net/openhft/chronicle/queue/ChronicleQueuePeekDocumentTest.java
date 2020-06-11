@@ -11,7 +11,7 @@ import java.nio.file.Path;
 
 import static org.junit.Assert.assertEquals;
 
-public class ChronicleQueuePeekDocumentTest {
+public class ChronicleQueuePeekDocumentTest extends QueueTestCommon {
 
     boolean firstMessage = true;
 

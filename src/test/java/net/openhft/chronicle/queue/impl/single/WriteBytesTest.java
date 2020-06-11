@@ -1,12 +1,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 
-public final class WriteBytesTest {
+public final class WriteBytesTest extends QueueTestCommon {
     private static final byte[] PAYLOAD = {0x7E, 0x42, 0x19, 0x37};
 
     @Rule

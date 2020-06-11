@@ -18,8 +18,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -34,7 +34,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class WriteBytesTest {
+public class WriteBytesTest extends QueueTestCommon {
     final Bytes<?> outgoingBytes = Bytes.elasticByteBuffer();
     private final byte[] incomingMsgBytes = new byte[100];
     private final byte[] outgoingMsgBytes = new byte[100];
@@ -1131,7 +1131,7 @@ public class WriteBytesTest {
 
     @After
     public void checkRegisteredBytes() {
-        outgoingBytes.release();
-        BytesUtil.checkRegisteredBytes();
+        outgoingBytes.releaseLast();
+        AbstractReferenceCounted.assertReferencesReleased();
     }
 }

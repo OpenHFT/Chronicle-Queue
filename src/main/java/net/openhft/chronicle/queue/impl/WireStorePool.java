@@ -19,18 +19,17 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.text.ParseException;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WireStorePool extends AbstractCloseable {
@@ -61,20 +60,16 @@ public class WireStorePool extends AbstractCloseable {
     }
 
     @Override
-    protected boolean performCloseInBackground() {
-        return true;
-    }
-
-    @Override
     protected void performClose() {
-        stores.values().stream()
-                .map(Reference::get)
-                .filter(Objects::nonNull)
-                .forEach(s -> release(s, true));
+
     }
 
     @Nullable
-    public synchronized SingleChronicleQueueStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
+    public synchronized SingleChronicleQueueStore acquire(ReferenceOwner owner,
+                                                          final int cycle,
+                                                          final long epoch,
+                                                          boolean createIfAbsent,
+                                                          SingleChronicleQueueStore oldStore) {
         throwExceptionIfClosed();
         final int cacheIndex = cacheIndex(cycle);
         RollDetails rollDetails;
@@ -89,7 +84,9 @@ public class WireStorePool extends AbstractCloseable {
         if (reference != null) {
             store = reference.get();
             if (store != null) {
-                if (store.tryReserve())
+                if (store == oldStore)
+                    return store; // no need to reserve it again.
+                if (store.tryReserve(owner))
                     return store;
                 else
                     /// this should never happen,
@@ -100,7 +97,7 @@ public class WireStorePool extends AbstractCloseable {
             }
         }
 
-        store = this.supplier.acquire(cycle, createIfAbsent);
+        store = this.supplier.acquire(owner, cycle, createIfAbsent);
         if (store != null) {
             stores.put(rollDetails, new WeakReference<>(store));
             storeFileListener.onAcquired(cycle, store.file());
@@ -112,19 +109,10 @@ public class WireStorePool extends AbstractCloseable {
         return supplier.nextCycle(currentCycle, direction);
     }
 
-    public synchronized void release(@NotNull SingleChronicleQueueStore store, boolean closeQueue) {
-        // TODO FIX
-        if (closeQueue) {
-            while (store.refCount() > 1)
-                store.release();
-            store.close();
-        } else {
-            if (store.refCount() > 1)
-                store.release();
-            else
-                store.close();
-        }
+    public void release(ReferenceOwner owner, @NotNull SingleChronicleQueueStore store) {
+        store.release(owner);
 
+        // TODO re-organize this so it can be done as it's released.
         long refCount = store.refCount();
         assert refCount >= 0;
         if (refCount == 0) {
@@ -133,8 +121,6 @@ public class WireStorePool extends AbstractCloseable {
                 if (ref != null && ref.get() == store) {
                     stores.remove(entry.getKey());
                     storeFileListener.onReleased(entry.getKey().cycle(), store.file());
-
-                    store.close();
                     return;
                 }
             }

@@ -12,7 +12,7 @@ import org.junit.Test;
 import java.io.File;
 
 @RequiredForClient
-public class DtoBytesMarshallableTest {
+public class DtoBytesMarshallableTest extends QueueTestCommon {
 
     @Test
     public void testDtoBytesMarshallable() {

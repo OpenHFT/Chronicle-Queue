@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 
 
 @RequiredForClient
-public class MethodReaderObjectReuseTest {
+public class MethodReaderObjectReuseTest extends QueueTestCommon {
     @Test
     public void testOneOne() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);

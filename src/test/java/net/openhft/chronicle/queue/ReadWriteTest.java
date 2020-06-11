@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 
 @RequiredForClient
-public class ReadWriteTest {
+public class ReadWriteTest extends QueueTestCommon {
 
     private static final String STR1 = "hello", STR2 = "hey";
     private File chroniclePath;

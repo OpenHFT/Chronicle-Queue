@@ -14,7 +14,7 @@ import java.io.File;
 import static net.openhft.chronicle.bytes.Bytes.fromString;
 import static org.junit.Assert.*;
 
-public class PeekDocumentTest {
+public class PeekDocumentTest extends QueueTestCommon {
 
     private static final String EXPECTED_MESSAGE = "hello world";
 

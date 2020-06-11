@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.After;
@@ -16,9 +17,10 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.*;
 
-public final class DocumentOrderingTest {
+public final class DocumentOrderingTest extends QueueTestCommon {
     private static final RollCycles ROLL_CYCLE = RollCycles.TEST_SECONDLY;
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final ExecutorService executorService = Executors.newCachedThreadPool(
+            new NamedThreadFactory("test"));
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final AtomicInteger counter = new AtomicInteger(0);
 

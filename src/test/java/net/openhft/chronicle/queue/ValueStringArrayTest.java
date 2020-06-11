@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-public class ValueStringArrayTest {
+public class ValueStringArrayTest extends QueueTestCommon {
 
     private static final String EXPECTED = "hello world";
     private final ValueStringArray using = new ValueStringArray();

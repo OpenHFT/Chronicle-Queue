@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
@@ -16,7 +17,7 @@ import java.nio.file.Paths;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class SingleChronicleQueueBuilderTest {
+public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
 
     @Test

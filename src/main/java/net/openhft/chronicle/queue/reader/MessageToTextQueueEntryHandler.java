@@ -39,6 +39,6 @@ public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
 
     @Override
     public void close() {
-        textConversionTarget.release();
+        textConversionTarget.releaseLast();
     }
 }

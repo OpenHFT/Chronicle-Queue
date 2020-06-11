@@ -33,7 +33,7 @@ import static java.lang.System.currentTimeMillis;
 import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 
 @RequiredForClient
-public class MoveIndexAfterFailedTailerTest {
+public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
     private static final Logger LOGGER = LoggerFactory.getLogger(MoveIndexAfterFailedTailerTest.class);
 
     @Test

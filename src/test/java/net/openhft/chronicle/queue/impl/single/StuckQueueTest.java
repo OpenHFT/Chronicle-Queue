@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -16,7 +17,8 @@ import java.nio.file.StandardCopyOption;
 
 import static org.junit.Assume.assumeFalse;
 
-public class StuckQueueTest {
+public class StuckQueueTest extends QueueTestCommon {
+    private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
     @Test
     public void test() throws IOException {
@@ -38,7 +40,7 @@ public class StuckQueueTest {
                 ExcerptTailer tailer = q.createTailer();
 
                 int cycle = q.rollCycle().toCycle(0x18406e100000000L);
-                WireStore wireStore = q.storeForCycle(cycle, q.epoch(), false);
+                WireStore wireStore = q.storeForCycle(test, cycle, q.epoch(), false, null);
                 String absolutePath = wireStore.file().getAbsolutePath();
                 System.out.println(absolutePath);
                 Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));

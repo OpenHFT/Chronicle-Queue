@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import java.io.File;
@@ -29,7 +30,7 @@ import java.io.File;
 import static org.easymock.EasyMock.*;
 
 
-public class HelloWorldTest {
+public class HelloWorldTest extends QueueTestCommon {
     @Test
     public void testViaMock() {
         HelloReplier replier = createMock(HelloReplier.class);

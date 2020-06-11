@@ -31,7 +31,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.*;
 
 @RequiredForClient
-public class LastIndexAppendedTest {
+public class LastIndexAppendedTest extends QueueTestCommon {
 
     @Test
     public void testLastIndexAppendedAcrossRestarts() {
