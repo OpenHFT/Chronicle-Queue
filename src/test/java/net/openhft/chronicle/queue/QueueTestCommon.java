@@ -68,12 +68,8 @@ public class QueueTestCommon {
 
     @After
     public void afterChecks() {
-//        try {
         assertReferencesReleased();
         checkThreadDump();
         checkExceptions();
-//        } catch (Throwable e) {
-//            System.err.println(e);
-//        }
     }
 }

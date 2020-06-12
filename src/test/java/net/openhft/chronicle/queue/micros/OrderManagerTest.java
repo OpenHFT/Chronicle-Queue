@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.*;
@@ -102,6 +103,10 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testWithQueueHistory() {
+        FlakyTestRunner.run(this::testWithQueueHistory0);
+    }
+
+    public void testWithQueueHistory0() {
         File queuePath = new File(OS.TARGET, "testWithQueueHistory-" + System.nanoTime());
         File queuePath2 = new File(OS.TARGET, "testWithQueueHistory-down-" + System.nanoTime());
         try {
