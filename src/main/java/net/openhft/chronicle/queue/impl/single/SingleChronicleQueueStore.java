@@ -61,7 +61,6 @@ public class SingleChronicleQueueStore extends AbstractReferenceCounted implemen
     private final transient Sequence sequence;
 
     private volatile Thread lastAccessedThread;
-    private volatile boolean released;
 
     /**
      * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -233,10 +232,6 @@ public class SingleChronicleQueueStore extends AbstractReferenceCounted implemen
 
     @Override
     protected void performRelease() {
-        if (released)
-            return;
-
-        released = true;
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
 
