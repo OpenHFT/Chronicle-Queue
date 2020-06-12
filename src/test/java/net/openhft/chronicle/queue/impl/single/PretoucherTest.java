@@ -41,7 +41,8 @@ public class PretoucherTest extends QueueTestCommon {
     public void shouldHandleCycleRoll() {
         File dir = tempDir("shouldHandleCycleRoll");
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(createQueue(dir, clock::get), chunkListener, capturedCycles::add)) {
+             SingleChronicleQueue queue2 = createQueue(dir, clock::get);
+             final Pretoucher pretoucher = new Pretoucher(queue2, chunkListener, capturedCycles::add)) {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
@@ -77,7 +78,8 @@ public class PretoucherTest extends QueueTestCommon {
         File dir = tempDir("shouldHandleEarlyCycleRoll");
         clock.set(100);
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(createQueue(dir, clock::get), chunkListener, capturedCycles::add)) {
+             final SingleChronicleQueue queue2 = createQueue(dir, clock::get);
+             final Pretoucher pretoucher = new Pretoucher(queue2, chunkListener, capturedCycles::add)) {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {

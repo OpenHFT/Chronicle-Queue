@@ -18,9 +18,11 @@
 package net.openhft.chronicle.queue.service;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.EventGroup;
 import org.jetbrains.annotations.NotNull;
@@ -41,6 +43,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     private boolean createdEventLoop = false;
     private int inputSourceId;
     private int outputSourceId;
+    private List<ChronicleQueue> queues = new ArrayList<>();
 
     ServiceWrapperBuilder() {
     }
@@ -151,20 +154,24 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
 
     @NotNull
     public ChronicleQueue inputQueue() {
-        return SingleChronicleQueueBuilder
+        SingleChronicleQueue build = SingleChronicleQueueBuilder
                 .binary(inputPaths.get(0))
                 .sourceId(inputSourceId())
                 .checkInterrupts(false)
                 .build();
+        queues.add(build);
+        return build;
     }
 
     @NotNull
     public ChronicleQueue outputQueue() {
-        return SingleChronicleQueueBuilder
+        SingleChronicleQueue build = SingleChronicleQueueBuilder
                 .binary(outputPath)
                 .sourceId(outputSourceId())
                 .checkInterrupts(false)
                 .build();
+        queues.add(build);
+        return build;
     }
 
     @NotNull
@@ -183,5 +190,9 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
                 .recordHistory(true)
                 .onClose(queue)
                 .get();
+    }
+
+    public void closeQueues() {
+        Closeable.closeQuietly(queues);
     }
 }

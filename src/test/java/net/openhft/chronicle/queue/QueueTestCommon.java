@@ -11,11 +11,14 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public class QueueTestCommon {
-    private ThreadDump threadDump;
-    private Map<ExceptionKey, Integer> exceptions;
+    protected ThreadDump threadDump;
+    protected Map<ExceptionKey, Integer> exceptions;
+    private Map<Predicate<ExceptionKey>, String> expectedExceptions = new LinkedHashMap<>();
 
     @Before
     public void enableReferenceTracing() {
@@ -43,7 +46,19 @@ public class QueueTestCommon {
         exceptions = Jvm.recordExceptions();
     }
 
+    public void expectException(String message) {
+        expectException(k -> k.message.contains(message), message);
+    }
+
+    public void expectException(Predicate<ExceptionKey> predicate, String description) {
+        expectedExceptions.put(predicate, description);
+    }
+
     public void checkExceptions() {
+        for (Map.Entry<Predicate<ExceptionKey>, String> expectedException : expectedExceptions.entrySet()) {
+            if (!exceptions.keySet().removeIf(expectedException.getKey()))
+                throw new AssertionError("No error for " + expectedException.getValue());
+        }
         if (Jvm.hasException(exceptions)) {
             Jvm.dumpException(exceptions);
             Jvm.resetExceptionHandlers();
@@ -53,12 +68,12 @@ public class QueueTestCommon {
 
     @After
     public void afterChecks() {
-        try {
-            assertReferencesReleased();
-            checkThreadDump();
-            checkExceptions();
-        } catch (Throwable e) {
-            System.err.println(e);
-        }
+//        try {
+        assertReferencesReleased();
+        checkThreadDump();
+        checkExceptions();
+//        } catch (Throwable e) {
+//            System.err.println(e);
+//        }
     }
 }

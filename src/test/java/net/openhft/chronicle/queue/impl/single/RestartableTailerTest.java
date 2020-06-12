@@ -18,41 +18,45 @@ public class RestartableTailerTest extends QueueTestCommon {
                 cq.acquireAppender().writeText("test " + i);
         }
 
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
-            ExcerptTailer atailer = cq.createTailer("a");
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();
+             ExcerptTailer atailer = cq.createTailer("a")) {
             assertEquals("test 0", atailer.readText());
             assertEquals("test 1", atailer.readText());
             assertEquals("test 2", atailer.readText());
 
-            ExcerptTailer btailer = cq.createTailer("b");
-            assertEquals("test 0", btailer.readText());
+            try (ExcerptTailer btailer = cq.createTailer("b")) {
+                assertEquals("test 0", btailer.readText());
+            }
         }
 
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
-            ExcerptTailer atailer = cq.createTailer("a");
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();
+             ExcerptTailer atailer = cq.createTailer("a")) {
             assertEquals("test 3", atailer.readText());
             assertEquals("test 4", atailer.readText());
             assertEquals("test 5", atailer.readText());
 
-            ExcerptTailer btailer = cq.createTailer("b");
-            assertEquals("test 1", btailer.readText());
+            try (ExcerptTailer btailer = cq.createTailer("b")) {
+                assertEquals("test 1", btailer.readText());
+            }
         }
 
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
-            ExcerptTailer atailer = cq.createTailer("a");
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();
+             ExcerptTailer atailer = cq.createTailer("a")) {
             assertEquals("test 6", atailer.readText());
             assertNull(atailer.readText());
 
-            ExcerptTailer btailer = cq.createTailer("b");
-            assertEquals("test 2", btailer.readText());
+            try (ExcerptTailer btailer = cq.createTailer("b")) {
+                assertEquals("test 2", btailer.readText());
+            }
         }
 
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
-            ExcerptTailer atailer = cq.createTailer("a");
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();
+             ExcerptTailer atailer = cq.createTailer("a")) {
             assertNull(atailer.readText());
 
-            ExcerptTailer btailer = cq.createTailer("b");
-            assertEquals("test 3", btailer.readText());
+            try (ExcerptTailer btailer = cq.createTailer("b")) {
+                assertEquals("test 3", btailer.readText());
+            }
         }
     }
 }

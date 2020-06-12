@@ -57,6 +57,8 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                 assertEquals(1, observer.documentsRead);
 
             }
+            scheduledExecutorService.shutdown();
+            scheduledExecutorService.awaitTermination(1, TimeUnit.SECONDS);
         }
     }
 
@@ -105,6 +107,8 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 //                System.out.println(queue.dump());
                 assertEquals(2, observer.documentsRead);
             }
+            scheduledExecutorService.shutdown();
+            scheduledExecutorService.awaitTermination(1, TimeUnit.SECONDS);
         }
     }
 

@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.io.File;
 
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -37,6 +38,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "b: 2\n" +
                     "...\n" +
                     "# 65436 bytes remaining\n", table.dump());
+            closeQuietly(a, b);
         }
 
         try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
@@ -63,6 +65,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "...\n" +
                     "# 65420 bytes remaining\n", table.dump());
 //            System.out.println(table.dump());
+            closeQuietly(c, b);
         }
     }
 }

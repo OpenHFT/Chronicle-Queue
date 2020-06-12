@@ -36,6 +36,7 @@ public class JDBCServiceTest extends QueueTestCommon {
 
     @Test
     public void testCreateTable() {
+        threadDump.ignore("HSQLDB Timer ");
         doCreateTable(4, 5000);
     }
 

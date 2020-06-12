@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-@Ignore("TODO FIX")
+@Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
 public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     @Rule

@@ -176,7 +176,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    @Ignore("TODO FIX")
+    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         assumeThat(OS.isLinux(), is(true));
         System.gc();
@@ -270,7 +270,9 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                 } catch (IOException e) {
                     return p;
                 }
-            }).filter(p -> p.toString().contains(queuePath.getName())).forEach(lastFileHandles::add);
+            })
+                    .filter(p -> p.toString().contains(queuePath.getName()))
+                    .forEach(lastFileHandles::add);
         }
         try (final Stream<Path> fileHandles = Files.list(Paths.get("/proc/self/fd"))) {
             return fileHandles.count();

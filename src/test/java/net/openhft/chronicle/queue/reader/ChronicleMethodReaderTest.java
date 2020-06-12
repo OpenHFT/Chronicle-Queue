@@ -64,6 +64,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Test
     public void shouldNotFailOnEmptyQueue() {
+        expectException("Failback to readonly tablestore");
         Path path = DirectoryUtils.tempDir("shouldNotFailOnEmptyQueue").toPath();
         path.toFile().mkdirs();
         basicReader(path).execute();
@@ -77,6 +78,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Test
     public void shouldNotFailWhenNoMetadata() throws IOException {
+        expectException("Failback to readonly tablestore");
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
         basicReader().execute();
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));

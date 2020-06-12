@@ -5,6 +5,7 @@ import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.values.LongValue;
@@ -101,6 +102,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     protected void performClose() {
+        Closeable.closeQuietly(indexValue);
         // the wire ref count will be released here by setting it to null
         context.wire(null);
         final Wire w0 = wireForIndex;

@@ -87,7 +87,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         assertTrue(FileUtil.hasQueueSuffix(file));
     }
 
-    @Ignore("TODO FIX")
+    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     @Test
     public void removableQueueFileCandidates(){
         assumeFalse(OS.isWindows());

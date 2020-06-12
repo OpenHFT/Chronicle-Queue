@@ -117,6 +117,8 @@ public class OvertakeTest extends QueueTestCommon {
             a_index = f.get(10, TimeUnit.SECONDS);
             assertEquals(a_index, t_index);
         }
+        execService.shutdown();
+        execService.awaitTermination(1, TimeUnit.SECONDS);
     }
 
     class MyAppender implements Callable<Long> {

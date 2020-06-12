@@ -95,6 +95,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
         if (OS.isWindows())
             return;
+        expectException("Failback to readonly tablestore");
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
@@ -181,12 +182,14 @@ public class ChronicleReaderTest extends QueueTestCommon {
     public void shouldNotFailOnEmptyQueue() {
         Path path = DirectoryUtils.tempDir("shouldNotFailOnEmptyQueue").toPath();
         path.toFile().mkdirs();
+        expectException("Failback to readonly tablestore");
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertTrue(capturedOutput.isEmpty());
     }
 
     @Test
     public void shouldNotFailWhenNoMetadata() throws IOException {
+        expectException("Failback to readonly tablestore");
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
         basicReader().execute();
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));

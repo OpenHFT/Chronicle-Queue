@@ -77,6 +77,7 @@ public class HelloWorldTest extends QueueTestCommon {
 //            System.out.println(helloWorldService.outputQueue().dump());
             verify(replier);
         } finally {
+            builder.closeQueues();
             try {
                 IOTools.deleteDirWithFiles(new File(input), 2);
                 IOTools.deleteDirWithFiles(new File(output), 2);
