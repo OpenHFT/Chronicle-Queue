@@ -3,12 +3,10 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -73,7 +71,6 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
         appender.writeBytes(outbound);
     }
 
-    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     @Test
     public void testBufferUnderflowException() throws InterruptedException {
         append();
@@ -131,7 +128,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
     private long getLastIndex(Path queuePath) {
         try (SingleChronicleQueue chronicle = createChronicle(queuePath);
-             StoreTailer tailer = new StoreTailer(chronicle)) {
+             StoreTailer tailer = chronicle.acquireTailer()) {
 
             int firstCycle = chronicle.firstCycle();
             int lastCycle = chronicle.lastCycle();
@@ -161,26 +158,30 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     private long approximateLastIndex(int cycle, SingleChronicleQueue queue,
                                       StoreTailer tailer) {
         try {
-            WireStore wireStore = queue.storeForCycle(test, cycle, queue.epoch(), false, null);
+            SingleChronicleQueueStore wireStore = queue.storeForCycle(test, cycle, queue.epoch(), false, null);
             if (wireStore == null) {
                 return noIndex;
             }
 
-            long baseIndex = rollCycle.toIndex(cycle, 0);
+            try {
+                long baseIndex = rollCycle.toIndex(cycle, 0);
 
-            tailer.moveToIndex(baseIndex);
+                tailer.moveToIndex(baseIndex);
 
-            long seq = wireStore.sequenceForPosition(tailer, Long.MAX_VALUE, false);
-            long sequenceNumber = seq + 1;
-            long index = rollCycle.toIndex(cycle, sequenceNumber);
+                long seq = wireStore.sequenceForPosition(tailer, Long.MAX_VALUE, false);
+                long sequenceNumber = seq + 1;
+                long index = rollCycle.toIndex(cycle, sequenceNumber);
 
-            int cycleOfIndex = rollCycle.toCycle(index);
-            if (cycleOfIndex != cycle) {
-                throw new IllegalStateException(
-                        "Expected cycle " + cycle + " but got " + cycleOfIndex);
+                int cycleOfIndex = rollCycle.toCycle(index);
+                if (cycleOfIndex != cycle) {
+                    throw new IllegalStateException(
+                            "Expected cycle " + cycle + " but got " + cycleOfIndex);
+                }
+
+                return index;
+            } finally {
+                wireStore.release(test);
             }
-
-            return index;
         } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }

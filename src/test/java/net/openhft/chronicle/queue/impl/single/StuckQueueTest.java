@@ -20,10 +20,11 @@ import static org.junit.Assume.assumeFalse;
 public class StuckQueueTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
-    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     @Test
     public void test() throws IOException {
         Path tmpDir = DirectoryUtils.tempDir(StuckQueueTest.class.getSimpleName()).toPath();
+
+        expectException("Failback to readonly tablestore");
 
         try {
             tmpDir.toFile().mkdirs();

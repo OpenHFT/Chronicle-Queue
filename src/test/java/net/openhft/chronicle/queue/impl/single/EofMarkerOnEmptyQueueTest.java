@@ -19,10 +19,8 @@ import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.*;
 
-@Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
 public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     @Rule
@@ -65,11 +63,11 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
             appenderExecutor.awaitTermination(1, TimeUnit.SECONDS);
 
             final SingleChronicleQueueStore firstCycleStore = queue.storeForCycle(test, startCycle, 0, false, null);
-            //assertNull(firstCycleStore);
-            final long firstCycleWritePosition = firstCycleStore.writePosition();
-            // assert that no write was completed
-            assertEquals(0L, firstCycleWritePosition);
-            firstCycleStore.release(test);
+            assertNull(firstCycleStore);
+//            final long firstCycleWritePosition = firstCycleStore.writePosition();
+//            // assert that no write was completed
+//            assertEquals(0L, firstCycleWritePosition) ;
+//            firstCycleStore.release(test);
 
             final ExcerptTailer tailer = queue.createTailer();
             int recordCount = 0;

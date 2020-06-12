@@ -2640,8 +2640,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     public void testTailerSnappingRollWithNewAppender() throws InterruptedException, ExecutionException, TimeoutException {
+        expectException("");
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
         final File dir = DirectoryUtils.tempDir(testName.getMethodName());
@@ -2657,7 +2657,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExecutorService executorService = Executors.newFixedThreadPool(2,
                     new NamedThreadFactory("test"));
 
-            Future f1 = executorService.submit(() -> {
+            Future<?> f1 = executorService.submit(() -> {
 
                 try (ChronicleQueue queue2 = binary(dir)
                         .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
@@ -2670,7 +2670,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             });
 
-            Future f2 = executorService.submit(() -> {
+            Future<?> f2 = executorService.submit(() -> {
 
                 // write second message
                 try (ChronicleQueue queue2 = binary(dir)
@@ -2688,13 +2688,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             f2.get(10, TimeUnit.SECONDS);
 
             executorService.shutdownNow();
-            try {
-                // TODO FIX
-//                excerptAppender.close();
-            } catch (Exception e) {
-                // TODO FIX
-                e.printStackTrace();
-            }
         }
     }
 

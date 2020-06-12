@@ -85,7 +85,10 @@ public final class Pretoucher extends AbstractCloseable {
                     } catch (Exception ex) {
                         Jvm.warn().on(getClass(), "unable to write the EOF file=" + currentCycleMappedBytes.mappedFile().file(), ex);
                     }
+                SingleChronicleQueueStore oldStore = currentCycleWireStore;
                 currentCycleWireStore = queue.storeForCycle(this, qCycle, queue.epoch(), CAN_WRITE, currentCycleWireStore);
+                if (oldStore != null && oldStore != currentCycleWireStore)
+                    oldStore.release(this);
             } finally {
                 if (CAN_WRITE)
                     queue.writeLock().unlock();

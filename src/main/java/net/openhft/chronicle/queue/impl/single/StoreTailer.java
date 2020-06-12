@@ -106,12 +106,8 @@ class StoreTailer extends AbstractCloseable
         // the wire ref count will be released here by setting it to null
         context.wire(null);
         final Wire w0 = wireForIndex;
-        if (w0 != null) {
-            @Nullable final Bytes bytesReference = w0.bytes();
-            if (bytesReference != null) {
-                bytesReference.releaseLast();
-            }
-        }
+        if (w0 != null)
+            StoreComponentReferenceHandler.queueForRelease(w0);
         wireForIndex = null;
         releaseStore();
     }
@@ -756,7 +752,6 @@ class StoreTailer extends AbstractCloseable
             if (wireStore == null)
                 throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? lastCycle=" + lastCycle);
 
-
             if (this.store != wireStore) {
                 releaseStore();
                 this.store = wireStore;
@@ -1190,9 +1185,8 @@ class StoreTailer extends AbstractCloseable
             final AbstractWire oldWire = this.wire;
             this.wire = wire;
 
-            if (oldWire != null) {
+            if (oldWire != null)
                 StoreComponentReferenceHandler.queueForRelease(oldWire);
-            }
         }
     }
 }
