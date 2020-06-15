@@ -28,8 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertNull;
 
 public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
     @Rule
