@@ -150,12 +150,14 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @NotNull
     @Override
     public File file() {
+        throwExceptionIfClosed();
         return mappedFile.file();
     }
 
     @NotNull
     @Override
     public String dump() {
+        throwExceptionIfClosed();
         return dump(false);
     }
 
@@ -173,6 +175,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @NotNull
     @Override
     public String shortDump() {
+        throwExceptionIfClosed();
         return dump(true);
     }
 
@@ -188,6 +191,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @NotNull
     @Override
     public MappedBytes bytes() {
+        throwExceptionIfClosed();
         return MappedBytes.mappedBytes(mappedFile);
     }
 
@@ -210,6 +214,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
+        ;
 
         wire.write(MetaDataField.wireType).object(wireType);
 

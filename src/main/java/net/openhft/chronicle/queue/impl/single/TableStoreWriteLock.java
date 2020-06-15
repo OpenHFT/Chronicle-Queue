@@ -41,6 +41,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @Override
     public void lock() {
+        throwExceptionIfClosed();
         assert !lockedByCurrentThread.get() : "Lock is already acquired by current thread and is not reentrant - nested document context?";
         closeCheck();
         try {
@@ -74,6 +75,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @Override
     public void unlock() {
+        throwExceptionIfClosed();
         closeCheck();
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
             warn().on(getClass(), "Write lock was unlocked by someone else! For the lock file:" + path);
@@ -83,6 +85,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @Override
     public boolean locked() {
+        throwExceptionIfClosed();
         return lock.getVolatileValue() != UNLOCKED;
     }
 }

@@ -211,6 +211,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int sourceId() {
+        throwExceptionIfClosed();
         return sourceId;
     }
 
@@ -219,17 +220,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long lastAcknowledgedIndexReplicated() {
+        throwExceptionIfClosed();
         return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue();
     }
 
     @Override
     public void lastAcknowledgedIndexReplicated(long newValue) {
+        throwExceptionIfClosed();
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
 
     @Override
     public void refreshDirectoryListing() {
+        throwExceptionIfClosed();
         directoryListing.refresh();
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
@@ -240,11 +244,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long lastIndexReplicated() {
+        throwExceptionIfClosed();
         return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue();
     }
 
     @Override
     public void lastIndexReplicated(long indexReplicated) {
+        throwExceptionIfClosed();
         if (lastIndexReplicated != null)
             lastIndexReplicated.setMaxValue(indexReplicated);
     }
@@ -263,11 +269,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public String fileAbsolutePath() {
+        throwExceptionIfClosed();
         return fileAbsolutePath;
     }
 
     @Override
     public String dumpLastHeader() {
+        throwExceptionIfClosed();
         StringBuilder sb = new StringBuilder(256);
         try (SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false, null)) {
             sb.append(wireStore.dumpHeader());
@@ -278,6 +286,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public String dump() {
+        throwExceptionIfClosed();
         StringBuilder sb = new StringBuilder(1024);
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
             try (SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false, null)) {
@@ -290,6 +299,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public void dump(@NotNull Writer writer, long fromIndex, long toIndex) {
+        throwExceptionIfClosed();
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
@@ -339,11 +349,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int indexCount() {
+        throwExceptionIfClosed();
         return indexCount;
     }
 
     @Override
     public int indexSpacing() {
+        throwExceptionIfClosed();
         return indexSpacing;
     }
 
@@ -355,11 +367,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public RollCycle rollCycle() {
+        throwExceptionIfClosed();
         return this.rollCycle;
     }
 
     @Override
     public int deltaCheckpointInterval() {
+        throwExceptionIfClosed();
         return deltaCheckpointInterval;
     }
 
@@ -367,11 +381,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the Chronicle Queue using a background thread
      */
     public boolean buffered() {
+        throwExceptionIfClosed();
         return this.isBuffered;
     }
 
     @NotNull
     public EventLoop eventLoop() {
+        throwExceptionIfClosed();
         return this.eventLoop;
     }
 
@@ -395,6 +411,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
+        throwExceptionIfClosed();
         if (readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
@@ -426,6 +443,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public QueueLock queueLock() {
+        throwExceptionIfClosed();
         return queueLock;
     }
 
@@ -437,6 +455,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
+        throwExceptionIfClosed();
         LongValue index = id == null
                 ? null
                 : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
@@ -448,6 +467,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public ExcerptTailer createTailer() {
+        throwExceptionIfClosed();
         return createTailer(null);
     }
 
@@ -459,10 +479,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int nextCycle(int cycle, @NotNull TailerDirection direction) throws ParseException {
+        throwExceptionIfClosed();
         return pool.nextCycle(cycle, direction);
     }
 
     public long exceptsPerCycle(int cycle) {
+        throwExceptionIfClosed();
         StoreTailer tailer = acquireTailer();
         try {
             long index = rollCycle.toIndex(cycle, 0);
@@ -489,6 +511,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long countExcerpts(long fromIndex, long toIndex) throws IllegalStateException {
+        throwExceptionIfClosed();
         if (fromIndex > toIndex) {
             long temp = fromIndex;
             fromIndex = toIndex;
@@ -564,6 +587,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+        throwExceptionIfClosed();
         return pool.listCyclesBetween(lowerCycle, upperCycle);
     }
 
@@ -606,6 +630,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public long firstIndex() {
+        throwExceptionIfClosed();
         // TODO - as discussed, peter is going find another way to do this as this solution
         // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
 
@@ -618,6 +643,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public long entryCount() {
+        throwExceptionIfClosed();
         final ExcerptTailer tailer = createTailer();
         tailer.toEnd();
         long lastIndex = tailer.index();
@@ -645,6 +671,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int firstCycle() {
+        throwExceptionIfClosed();
         setFirstAndLastCycle();
         return firstCycle;
     }
@@ -663,6 +690,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int lastCycle() {
+        throwExceptionIfClosed();
         setFirstAndLastCycle();
         return lastCycle;
     }
@@ -673,10 +701,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
+        throwExceptionIfClosed();
         return this.onRingBufferStats;
     }
 
     public long blockSize() {
+        throwExceptionIfClosed();
         return this.blockSize;
     }
 
@@ -685,16 +715,19 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     // *************************************************************************
 
     public long overlapSize() {
+        throwExceptionIfClosed();
         return this.overlapSize;
     }
 
     @NotNull
     @Override
     public WireType wireType() {
+        throwExceptionIfClosed();
         return wireType;
     }
 
     public long bufferCapacity() {
+        throwExceptionIfClosed();
         return this.bufferCapacity;
     }
 
@@ -745,6 +778,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     public TableStore metaStore() {
+        throwExceptionIfClosed();
         return metaStore;
     }
 
@@ -797,6 +831,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         @SuppressWarnings("resource")
         @Override
         public SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent) {
+            throwExceptionIfClosed();
 
             SingleChronicleQueue that = SingleChronicleQueue.this;
             @NotNull final RollingResourcesCache.Resource dateValue = that
@@ -960,6 +995,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         @Override
         public int nextCycle(int currentCycle, @NotNull TailerDirection direction) {
+            throwExceptionIfClosed();
 
             if (direction == NONE)
                 throw new AssertionError("direction is NONE");
@@ -1020,6 +1056,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          */
         @Override
         public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) {
+            throwExceptionIfClosed();
             final NavigableMap<Long, File> tree = cycleTree(false);
             final Long lowerKey = toKey(lowerCycle, "lowerCycle");
             final Long upperKey = toKey(upperCycle, "upperCycle");

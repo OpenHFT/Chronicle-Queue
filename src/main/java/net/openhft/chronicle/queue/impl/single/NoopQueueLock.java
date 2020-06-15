@@ -21,15 +21,18 @@ public class NoopQueueLock implements QueueLock {
 
     @Override
     public void waitForLock() {
+        throwExceptionIfClosed();
     }
 
     @Override
     public void acquireLock() {
+        throwExceptionIfClosed();
 
     }
 
     @Override
     public void unlock() {
+        throwExceptionIfClosed();
 
     }
 
@@ -40,6 +43,6 @@ public class NoopQueueLock implements QueueLock {
 
     @Override
     public boolean isClosed() {
-        throw new UnsupportedOperationException();
+        return false;
     }
 }

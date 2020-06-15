@@ -39,6 +39,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public void init() {
+        throwExceptionIfClosed();
         tableStore.doWithExclusiveLock(ts -> {
             maxCycleValue = ts.acquireValueFor(HIGHEST_CREATED_CYCLE);
             minCycleValue = ts.acquireValueFor(LOWEST_CREATED_CYCLE);
@@ -53,6 +54,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public void refresh() {
+        throwExceptionIfClosed();
         closeCheck();
         if (readOnly) {
             return;
@@ -77,6 +79,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
+        throwExceptionIfClosed();
         closeCheck();
         if (readOnly) {
             LOGGER.warn("DirectoryListing is read-only, not updating listing");
@@ -93,18 +96,21 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public int getMaxCreatedCycle() {
+        throwExceptionIfClosed();
         closeCheck();
         return getMaxCycleValue();
     }
 
     @Override
     public int getMinCreatedCycle() {
+        throwExceptionIfClosed();
         closeCheck();
         return getMinCycleValue();
     }
 
     @Override
     public long modCount() {
+        throwExceptionIfClosed();
         closeCheck();
         return modCount.getVolatileValue();
     }

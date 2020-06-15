@@ -91,7 +91,7 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
     }
 
     @Override
-    public boolean action() throws InvalidEventHandlerException, InterruptedException {
+    public boolean action() throws InvalidEventHandlerException {
         if (isClosed()) {
             Closeable.closeQuietly(serviceImpl);
             Closeable.closeQuietly(serviceIn);
@@ -117,6 +117,9 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
     public void close() {
         closed = true;
         EventLoop eventLoop = this.eventLoop;
+        if (eventLoop != null) {
+            eventLoop.unpause();
+        }
         this.eventLoop = null;
         if (createdEventLoop && eventLoop != null) {
             eventLoop.close();

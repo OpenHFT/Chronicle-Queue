@@ -59,6 +59,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @Nullable
     @Override
     public File file() {
+        throwExceptionIfClosed();
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;
@@ -67,6 +68,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @NotNull
     @Override
     public MappedBytes bytes() {
+        throwExceptionIfClosed();
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;
@@ -75,6 +77,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @NotNull
     @Override
     public String dump() {
+        throwExceptionIfClosed();
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;
@@ -83,6 +86,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @NotNull
     @Override
     public String shortDump() {
+        throwExceptionIfClosed();
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;
@@ -90,6 +94,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
+        ;
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;

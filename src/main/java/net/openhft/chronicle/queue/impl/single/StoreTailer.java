@@ -81,6 +81,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public boolean readDocument(@NotNull final ReadMarshallable reader) {
+        throwExceptionIfClosed();
         try (@NotNull DocumentContext dc = readingDocument(false)) {
             if (!dc.isPresent())
                 return false;
@@ -92,6 +93,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     @NotNull
     public DocumentContext readingDocument() {
+        throwExceptionIfClosed();
         // trying to create an initial document without a direction should not consume a message
         final long index = index();
         if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
@@ -114,21 +116,25 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public Wire wire() {
+        throwExceptionIfClosed();
         return context.wire();
     }
 
     @Override
     public Wire wireForIndex() {
+        throwExceptionIfClosed();
         return wireForIndex;
     }
 
     @Override
     public long timeoutMS() {
+        throwExceptionIfClosed();
         return queue.timeoutMS;
     }
 
     @Override
     public int sourceId() {
+        throwExceptionIfClosed();
         return queue.sourceId;
     }
 
@@ -145,6 +151,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
+        throwExceptionIfClosed();
         Jvm.optionalSafepoint();
         queue.throwExceptionIfClosed();
 
@@ -211,6 +218,7 @@ class StoreTailer extends AbstractCloseable
     @SuppressWarnings("restriction")
     @Override
     public boolean peekDocument() {
+        throwExceptionIfClosed();
 
         if (address == NO_PAGE || state != FOUND_CYCLE || direction != FORWARD)
             return peekDocument0();
@@ -512,6 +520,7 @@ class StoreTailer extends AbstractCloseable
      */
     @Override
     public long index() {
+        throwExceptionIfClosed();
         return indexValue == null ? this.index : indexValue.getValue();
     }
 
@@ -522,6 +531,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public boolean moveToIndex(final long index) {
+        throwExceptionIfClosed();
 
         if (moveToState.canReuseLastIndexMove(index, state, direction, queue, wire())) {
             return setAddress(true);
@@ -717,6 +727,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public ExcerptTailer toEnd() {
+        throwExceptionIfClosed();
         if (direction.equals(TailerDirection.BACKWARD))
             return originalToEnd();
         return optimizedToEnd();
@@ -724,6 +735,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public ExcerptTailer striding(final boolean striding) {
+        throwExceptionIfClosed();
         this.striding = striding;
         return this;
     }
@@ -783,6 +795,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
 
     public ExcerptTailer originalToEnd() {
+        throwExceptionIfClosed();
         long index = approximateLastIndex();
 
         if (index == Long.MIN_VALUE) {
@@ -837,6 +850,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public ExcerptTailer direction(@NotNull final TailerDirection direction) {
+        throwExceptionIfClosed();
         final TailerDirection oldDirection = this.direction();
         this.direction = direction;
         if (oldDirection == TailerDirection.BACKWARD &&
@@ -855,6 +869,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public Runnable getCloserJob() {
+        throwExceptionIfClosed();
         return this::close;
     }
 
@@ -862,6 +877,7 @@ class StoreTailer extends AbstractCloseable
      * Can be used to manually release resources when this StoreTailer is no longer used.
      */
     public void releaseResources() {
+        throwExceptionIfClosed();
         queue.removeCloseListener(this);
         getCloserJob().run();
     }
@@ -983,11 +999,13 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public void readAfterReplicaAcknowledged(final boolean readAfterReplicaAcknowledged) {
+        throwExceptionIfClosed();
         this.readAfterReplicaAcknowledged = readAfterReplicaAcknowledged;
     }
 
     @Override
     public boolean readAfterReplicaAcknowledged() {
+        throwExceptionIfClosed();
         return readAfterReplicaAcknowledged;
     }
 
@@ -1000,6 +1018,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public ExcerptTailer afterLastWritten(@NotNull final ChronicleQueue queue) {
+        throwExceptionIfClosed();
         if (queue == this.queue)
             throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
         @NotNull final ExcerptTailer tailer = queue.createTailer()
@@ -1055,6 +1074,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     public void setCycle(final int cycle) {
+        throwExceptionIfClosed();
         this.cycle = cycle;
     }
 
@@ -1149,7 +1169,6 @@ class StoreTailer extends AbstractCloseable
 
         @Override
         public void close() {
-
             try {
                 if (rollbackOnClose) {
                     present = false;

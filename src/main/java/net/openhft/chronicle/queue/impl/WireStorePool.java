@@ -66,10 +66,12 @@ public class WireStorePool extends AbstractCloseable {
     }
 
     public int nextCycle(final int currentCycle, @NotNull TailerDirection direction) throws ParseException {
+        throwExceptionIfClosed();
         return supplier.nextCycle(currentCycle, direction);
     }
 
     public void release(ReferenceOwner owner, @NotNull SingleChronicleQueueStore store) {
+        throwExceptionIfClosed();
         store.close();
 
         storeFileListener.onReleased(store.cycle(), store.file());
@@ -83,6 +85,7 @@ public class WireStorePool extends AbstractCloseable {
      * @return an array including these cycles and all the intermediate cycles
      */
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+        throwExceptionIfClosed();
         return supplier.cycles(lowerCycle, upperCycle);
     }
 }

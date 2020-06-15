@@ -186,6 +186,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public String dumpHeader() {
+        throwExceptionIfClosed();
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
             int size = bytes.readInt(0);
             if (!Wires.isReady(size))
@@ -197,12 +198,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public long writePosition() {
+        throwExceptionIfClosed();
         return this.writePosition.getVolatileValue();
     }
 
     @NotNull
     @Override
     public WireStore writePosition(long position) {
+        throwExceptionIfClosed();
         assert singleThreadedAccess();
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
         writePosition.setMaxValue(position);
@@ -219,6 +222,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Nullable
     @Override
     public ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index) {
+        throwExceptionIfClosed();
         try {
             return indexing.moveToIndex(ec, index);
         } catch (@NotNull UnrecoverableTimeoutException e) {
@@ -228,6 +232,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public long moveToEndForRead(@NotNull Wire w) {
+        throwExceptionIfClosed();
         return indexing.moveToEnd(w);
     }
 
@@ -251,17 +256,20 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     @Override
     public MappedBytes bytes() {
+        throwExceptionIfClosed();
         return MappedBytes.mappedBytes(mappedFile);
     }
 
     @Override
     public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws
             UnrecoverableTimeoutException, StreamCorruptedException {
+        throwExceptionIfClosed();
         return indexing.sequenceForPosition(ec, position, inclusive);
     }
 
     @Override
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
+        throwExceptionIfClosed();
         return indexing.lastSequenceNumber(ec);
     }
 
@@ -283,6 +291,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
+        ;
         ValueOut wireOut = wire.write(MetaDataField.writePosition);
         intForBinding(wireOut, writePosition)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
@@ -291,6 +300,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public void initIndex(@NotNull Wire wire) {
+        throwExceptionIfClosed();
         try {
             indexing.initIndex(wire);
         } catch (IOException ex) {
@@ -300,6 +310,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public boolean indexable(long index) {
+        throwExceptionIfClosed();
         return indexing.indexable(index);
     }
 
@@ -307,6 +318,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec, long sequenceNumber,
                                              long position)
             throws UnrecoverableTimeoutException, StreamCorruptedException {
+        throwExceptionIfClosed();
 
         sequence.setSequence(sequenceNumber, position);
 
@@ -320,11 +332,13 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public ScanResult linearScanTo(final long index, final long knownIndex, final ExcerptContext ec, final long knownAddress) {
+        throwExceptionIfClosed();
         return indexing.linearScanTo(index, knownIndex, ec, knownAddress);
     }
 
     @Override
     public boolean writeEOF(@NotNull Wire wire, long timeoutMS) {
+        throwExceptionIfClosed();
         String fileName = mappedFile.file().getAbsolutePath();
 
         // just in case we are about to release this
@@ -358,6 +372,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public int dataVersion() {
+        throwExceptionIfClosed();
         return dataVersion;
     }
 
@@ -377,6 +392,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     public SingleChronicleQueueStore cycle(int cycle) {
+        throwExceptionIfClosed();
         this.cycle = cycle;
         return this;
     }

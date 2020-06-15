@@ -120,6 +120,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     public long toAddress0(long index) {
+        throwExceptionIfClosed();
         long siftedIndex = index >> (indexSpacingBits + indexCountBits);
         long mask = indexCount - 1L;
         // convert to an offset
@@ -160,6 +161,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
+        ;
         wire.write(IndexingFields.indexCount).int64(indexCount)
                 .write(IndexingFields.indexSpacing).int64(indexSpacing)
                 .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
@@ -643,11 +645,13 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     public boolean indexable(long index) {
+        throwExceptionIfClosed();
         return (index & (indexSpacing - 1)) == 0;
     }
 
     public long lastSequenceNumber(@NotNull ExcerptContext ec)
             throws StreamCorruptedException {
+        throwExceptionIfClosed();
 
         Sequence sequence1 = this.sequence;
         if (sequence1 != null) {
