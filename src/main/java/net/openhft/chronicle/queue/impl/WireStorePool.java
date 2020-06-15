@@ -88,4 +88,9 @@ public class WireStorePool extends AbstractCloseable {
         throwExceptionIfClosed();
         return supplier.cycles(lowerCycle, upperCycle);
     }
+
+    @Override
+    protected boolean threadSafetyCheck() {
+        return true;
+    }
 }
