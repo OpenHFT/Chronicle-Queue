@@ -1072,4 +1072,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return dateCache.toLong(file);
         }
     }
+
+    @Override
+    protected boolean threadSafetyCheck() {
+        // component is thread safe
+        return true;
+    }
 }
