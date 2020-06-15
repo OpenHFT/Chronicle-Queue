@@ -46,20 +46,7 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     private Pretoucher pretoucher = null;
     private NativeBytesStore<Void> batchTmp;
-    private final ThreadLocal<Bytes<?>> bufferBytes = ThreadLocal.withInitial(Bytes::allocateElasticDirect);
-    private final ThreadLocal<Wire> bufferWire = new ThreadLocal<Wire>() {
-        @Override
-        protected Wire initialValue() {
-            return queue().wireType().apply(bufferBytes.get());
-        }
-
-        @Override
-        public Wire get() {
-            final Wire wire = super.get();
-            bufferBytes.get().clear();
-            return wire;
-        }
-    };
+    private Wire bufferWire = null;
 
     StoreAppender(@NotNull final SingleChronicleQueue queue,
                   @NotNull final WireStorePool storePool,
@@ -114,34 +101,35 @@ class StoreAppender extends AbstractCloseable
         return true;
     }
 
+    private static void releaseBytesFor(Wire w) {
+        if (w != null) {
+            w.bytes().releaseLast();
+        }
+    }
+
     @Override
     protected void performClose() {
         if (Jvm.isDebugEnabled(getClass()))
             Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
-        final Wire w0 = wireForIndex;
-        wireForIndex = null;
-        if (w0 != null) {
-            @Nullable final Bytes bytesReference = w0.bytes();
-            if (bytesReference != null) {
-                bytesReference.releaseLast();
-            }
-        }
-        final Wire w = wire;
-        wire = null;
-        if (w != null) {
-            @Nullable final Bytes bytesReference = w.bytes();
-            if (bytesReference != null) {
-                bytesReference.releaseLast();
-            }
-        }
+
+        releaseBytesFor(wireForIndex);
+        releaseBytesFor(wire);
+        releaseBytesFor(bufferWire);
+
         if (pretoucher != null)
             pretoucher.close();
 
         if (store != null) {
             storePool.release(this, store);
         }
-        store = null;
+
         storePool.close();
+
+        pretoucher = null;
+        wireForIndex = null;
+        wire = null;
+        bufferWire = null;
+        store = null;
     }
 
     /**
@@ -274,15 +262,13 @@ class StoreAppender extends AbstractCloseable
             Wire oldw = this.wire;
             this.wire = store == null ? null : createWire(wireType);
             assert wire != oldw || wire == null;
-            if (oldw != null)
-                oldw.bytes().releaseLast();
+            releaseBytesFor(oldw);
         }
         {
             Wire old = this.wireForIndex;
             this.wireForIndex = store == null ? null : createWire(wireType);
             assert wire != old || wire == null;
-            if (old != null)
-                old.bytes().releaseLast();
+            releaseBytesFor(old);
         }
     }
 
@@ -340,7 +326,11 @@ class StoreAppender extends AbstractCloseable
             context.isClosed = false;
             context.rollbackOnClose = false;
             context.buffered = true;
-            context.wire = bufferWire.get();
+            if (bufferWire == null) {
+                Bytes bufferBytes = Bytes.allocateElasticDirect();
+                bufferWire = queue().wireType().apply(bufferBytes);
+            }
+            context.wire = bufferWire;
             context.metaData(false);
         } else {
             writeLock.lock();
