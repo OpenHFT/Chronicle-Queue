@@ -30,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -101,7 +102,9 @@ import java.util.Map;
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     private static final boolean PRETOUCH = ! Boolean.getBoolean("no_pretouch");
     private static final boolean SAMPLING = Boolean.getBoolean("sampling");
+    private static final long SAMPLE_THRESHOLD_NS = Long.getLong("sampling_ns", 1_000);
     private static final int ITERATIONS = Integer.getInteger("iterations", 20_000_000);
+    private static final int BLOCK_SIZE = Integer.getInteger("block_size", 128 << 20);
     private static final int WARMUP = 500_000;
     @Nullable
     private final StackSampler sampler = SAMPLING ? new StackSampler() : null;
@@ -118,7 +121,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(tmpDir)
-                .blockSize(128 << 20)
+                .blockSize(BLOCK_SIZE)
                 .build()) {
 
             runTest(queue, args.length > 0 ? Integer.parseInt(args[0]) : 1_200_000);
@@ -143,6 +146,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                     Jvm.pause(500);
                 }
             });
+            pretoucher.setName("pret");
             pretoucher.setDaemon(true);
             pretoucher.start();
         }
@@ -239,7 +243,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                     }
                     long time = System.nanoTime() - start;
                     histogramWr.sample(start - next);
-                    if (SAMPLING && time > 1e3 && i > 0) {
+                    if (SAMPLING && time > SAMPLE_THRESHOLD_NS && i > 0) {
                         StackTraceElement[] stack = sampler.getAndReset();
                         if (stack != null) {
                             if (!stack[0].getClassName().equals(name) &&
@@ -255,6 +259,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)
+                        .sorted(Comparator.comparingInt(Map.Entry::getValue))
                         .forEach(System.out::println);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -265,8 +270,10 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
             }
         });
 
+        tailerThread.setName("tail");
         tailerThread.start();
 
+        appenderThread.setName("appd");
         appenderThread.start();
         appenderThread.join();
 
