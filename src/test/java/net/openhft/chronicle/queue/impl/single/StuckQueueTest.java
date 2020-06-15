@@ -6,7 +6,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -42,11 +41,11 @@ public class StuckQueueTest extends QueueTestCommon {
 
                 int cycle = q.rollCycle().toCycle(0x18406e100000000L);
 
-                SingleChronicleQueueStore wireStore = q.storeForCycle(test, cycle, q.epoch(), false, null);
-                String absolutePath = wireStore.file().getAbsolutePath();
-                System.out.println(absolutePath);
-                Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
-                wireStore.release(test);
+                try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
+                    String absolutePath = wireStore.file().getAbsolutePath();
+                    System.out.println(absolutePath);
+                    Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
+                }
 
                 //   Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
 

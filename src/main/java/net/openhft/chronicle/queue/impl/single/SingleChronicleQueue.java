@@ -69,8 +69,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
-    private static final boolean SHOULD_RELEASE_RESOURCES = Jvm.getBoolean(
-            "chronicle.queue.release.weakRef.resources", true);
     static long lastTimeMapped = 0;
     protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
@@ -115,7 +113,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final QueueLock queueLock;
     @NotNull
     private final WriteLock writeLock;
-    private final boolean strongAppenders;
     private final boolean checkInterrupts;
     @NotNull
     private final RollingResourcesCache dateCache;
@@ -156,7 +153,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // add a 10% random element to make it less likely threads will timeout at the same time.
         timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
         storeFactory = builder.storeFactory();
-        strongAppenders = builder.strongAppenders();
         checkInterrupts = builder.checkInterrupts();
         metaStore = builder.metaStore();
         doubleBuffer = builder.doubleBuffer();
@@ -197,13 +193,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     StoreTailer acquireTailer() {
-        if (SHOULD_RELEASE_RESOURCES) {
-            return ThreadLocalHelper.getTL(tlTailer,
-                    this,
-                    StoreTailer::new,
-                    StoreComponentReferenceHandler.tailerQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, ref.get().getCloserJob()));
-        }
         return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
 
@@ -280,14 +269,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public String dumpLastHeader() {
         StringBuilder sb = new StringBuilder(256);
-        ReferenceOwner dump = ReferenceOwner.temporary("dumpLastHeader");
-        SingleChronicleQueueStore wireStore = storeForCycle(dump, lastCycle(), epoch, false, null);
-        if (wireStore != null) {
-            try {
-                sb.append(wireStore.dumpHeader());
-            } finally {
-                wireStore.release(dump);
-            }
+        try (SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false, null)) {
+            sb.append(wireStore.dumpHeader());
         }
         return sb.toString();
     }
@@ -296,15 +279,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public String dump() {
         StringBuilder sb = new StringBuilder(1024);
-        ReferenceOwner dump = ReferenceOwner.temporary("dump");
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
-            SingleChronicleQueueStore commonStore = storeForCycle(dump, i, epoch, false, null);
-            if (commonStore != null) {
-                try {
+            try (SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false, null)) {
+                if (commonStore != null)
                     sb.append(commonStore.dump());
-                } finally {
-                    commonStore.release(dump);
-                }
             }
         }
         return sb.toString();
@@ -422,11 +400,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         assert !isClosed();
 
-        if (strongAppenders) {
-            ExcerptAppender appender = strongExcerptAppenderThreadLocal.get();
-            if (appender != null)
-                return appender;
-        }
+        ExcerptAppender appender = strongExcerptAppenderThreadLocal.get();
+        if (appender != null)
+            return appender;
 
         return createExcerptAppender();
     }
@@ -434,17 +410,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private ExcerptAppender createExcerptAppender() {
         ExcerptAppender appender;
-        if (strongAppenders) {
-            strongExcerptAppenderThreadLocal.set(appender = newAppender());
-        } else if (SHOULD_RELEASE_RESOURCES) {
-            return ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal,
-                    this,
-                    SingleChronicleQueue::newAppender,
-                    StoreComponentReferenceHandler.appenderQueue(),
-                    (ref) -> StoreComponentReferenceHandler.register(ref, cleanupJob(ref)));
-        } else {
-            appender = ThreadLocalHelper.getTL(weakExcerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
-        }
+        strongExcerptAppenderThreadLocal.set(appender = newAppender());
         return appender;
     }
 
@@ -476,11 +442,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
         final StoreTailer storeTailer = new StoreTailer(this, index);
         directoryListing.refresh();
-        if (SHOULD_RELEASE_RESOURCES) {
-            StoreComponentReferenceHandler.register(
-                    new WeakReference<>(storeTailer, StoreComponentReferenceHandler.tailerQueue()),
-                    storeTailer.getCloserJob());
-        }
         return storeTailer;
     }
 
@@ -492,8 +453,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     @Override
-    public final SingleChronicleQueueStore storeForCycle(ReferenceOwner owner, int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore) {
-        return this.pool.acquire(owner, cycle, epoch, createIfAbsent, oldStore);
+    public final SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore) {
+        return this.pool.acquire(cycle, epoch, createIfAbsent, oldStore);
     }
 
     @Override
@@ -506,7 +467,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             long index = rollCycle.toIndex(cycle, 0);
             if (tailer.moveToIndex(index)) {
-                assert tailer.store != null && tailer.store.refCount() > 0;
                 return tailer.store.lastSequenceNumber(tailer) + 1;
             } else {
                 return -1;
@@ -628,7 +588,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // close it if we created it.
         if (eventLoop instanceof OnDemandEventLoop)
             eventLoop.close();
-        StoreComponentReferenceHandler.processWireQueue();
     }
 
     public final void release(ReferenceOwner owner, @Nullable SingleChronicleQueueStore store) {
@@ -794,12 +753,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             int cycle = cycle();
             int lastCycle = lastCycle();
-            ReferenceOwner cleanup = ReferenceOwner.temporary("cleanupStoreFilesWithNoData");
             while (lastCycle < cycle && lastCycle >= 0) {
-                final SingleChronicleQueueStore store = this.pool.acquire(cleanup, lastCycle, epoch(), false, null);
-                if (store == null)
-                    return;
-                try {
+                try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false, null)) {
                     if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
                         // couldn't delete? Let's try writing EOF
                         // if this blows up we should blow up too so don't catch anything
@@ -808,8 +763,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         continue;
                     }
                     break;
-                } finally {
-                    store.release(cleanup);
                 }
             }
             directoryListing.refresh();
@@ -843,7 +796,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         @SuppressWarnings("resource")
         @Override
-        public SingleChronicleQueueStore acquire(ReferenceOwner owner, int cycle, boolean createIfAbsent) {
+        public SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent) {
 
             SingleChronicleQueue that = SingleChronicleQueue.this;
             @NotNull final RollingResourcesCache.Resource dateValue = that
@@ -924,8 +877,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 //                        System.err.println("wire.bytes.byteStore.refCount="+wire.bytes().bytesStore().refCount());
                     throw e;
                 }
-                wireStore.reserveTransfer(ReferenceOwner.INIT, owner);
-                assert wireStore.reservedBy(owner);
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {

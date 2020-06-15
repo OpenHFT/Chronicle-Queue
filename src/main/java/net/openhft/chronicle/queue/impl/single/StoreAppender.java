@@ -246,7 +246,7 @@ class StoreAppender extends AbstractCloseable
 
         SingleChronicleQueueStore oldStore = this.store;
 
-        SingleChronicleQueueStore newStore = storePool.acquire(this, cycle, queue.epoch(), createIfAbsent, oldStore);
+        SingleChronicleQueueStore newStore = storePool.acquire(cycle, queue.epoch(), createIfAbsent, oldStore);
 
         if (newStore != oldStore) {
             this.store = newStore;
@@ -261,7 +261,6 @@ class StoreAppender extends AbstractCloseable
         if (this.store == null)
             return;
 
-        assert this.store.refCount() > 0;
         assert wire.startUse();
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
@@ -275,17 +274,15 @@ class StoreAppender extends AbstractCloseable
             Wire oldw = this.wire;
             this.wire = store == null ? null : createWire(wireType);
             assert wire != oldw || wire == null;
-            if (oldw != null) {
-                StoreComponentReferenceHandler.queueForRelease(oldw);
-            }
+            if (oldw != null)
+                oldw.bytes().releaseLast();
         }
         {
             Wire old = this.wireForIndex;
             this.wireForIndex = store == null ? null : createWire(wireType);
             assert wire != old || wire == null;
-            if (old != null) {
-                StoreComponentReferenceHandler.queueForRelease(old);
-            }
+            if (old != null)
+                old.bytes().releaseLast();
         }
     }
 

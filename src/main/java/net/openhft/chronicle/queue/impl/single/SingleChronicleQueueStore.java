@@ -22,7 +22,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
@@ -42,7 +42,7 @@ import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class SingleChronicleQueueStore extends AbstractReferenceCounted implements WireStore {
+public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
     }
@@ -61,6 +61,7 @@ public class SingleChronicleQueueStore extends AbstractReferenceCounted implemen
     private final transient Sequence sequence;
 
     private volatile Thread lastAccessedThread;
+    private int cycle;
 
     /**
      * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -231,7 +232,7 @@ public class SingleChronicleQueueStore extends AbstractReferenceCounted implemen
     }
 
     @Override
-    protected void performRelease() {
+    protected void performClose() {
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
 
@@ -271,7 +272,7 @@ public class SingleChronicleQueueStore extends AbstractReferenceCounted implemen
                 "indexing=" + indexing +
                 ", writePosition/seq=" + writePosition.toString() +
                 ", mappedFile=" + mappedFile +
-                ", refCount=" + refCount() +
+                ", isClosed=" + isClosed() +
                 '}';
     }
 
@@ -373,6 +374,15 @@ public class SingleChronicleQueueStore extends AbstractReferenceCounted implemen
             lastAccessedThread = Thread.currentThread();
         }
         return lastAccessedThread == Thread.currentThread();
+    }
+
+    public SingleChronicleQueueStore cycle(int cycle) {
+        this.cycle = cycle;
+        return this;
+    }
+
+    public int cycle() {
+        return cycle;
     }
 }
 

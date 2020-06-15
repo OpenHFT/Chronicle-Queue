@@ -177,14 +177,14 @@ public class RollEOFTest extends QueueTestCommon {
             bytes.readLimit(bytes.capacity());
             bytes.readSkip(4);
             // move past header
-            final SingleChronicleQueueStore qs = loadStore(wire);
-            assertNotNull(qs);
-            long l = qs.writePosition();
-            long len = Wires.lengthOf(bytes.readVolatileInt(l));
-            long eofOffset = l + len + 4L;
-            bytes.writePosition(eofOffset);
-            bytes.writeInt(0);
-            qs.releaseLast();
+            try (final SingleChronicleQueueStore qs = loadStore(wire)) {
+                assertNotNull(qs);
+                long l = qs.writePosition();
+                long len = Wires.lengthOf(bytes.readVolatileInt(l));
+                long eofOffset = l + len + 4L;
+                bytes.writePosition(eofOffset);
+                bytes.writeInt(0);
+            }
         } finally {
             mappedBytes.release(test);
         }

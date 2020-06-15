@@ -71,8 +71,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                                     final boolean manuallyReleaseResources,
                                     final Consumer<ExcerptTailer> refHolder) {
         final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
-        try {
-            final ExcerptTailer tailer = queue.createTailer();
+        try (final ExcerptTailer tailer = queue.createTailer()) {
             while (bytes.isEmpty()) {
                 tailer.toStart().readBytes(bytes);
             }

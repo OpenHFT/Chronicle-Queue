@@ -27,20 +27,20 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
 
     private static void assertExcerptsAreIndexed(final RollingChronicleQueue queue, final long[] indices,
                                                  final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {
-        final SingleChronicleQueueStore wireStore = queue.storeForCycle(test, queue.cycle(), 0L, true, null);
-        final SCQIndexing indexing = wireStore.indexing;
-        for (int i = 0; i < RECORD_COUNT; i++) {
-            final int startLinearScanCount = indexing.linearScanCount;
-            final ScanResult scanResult = indexing.moveToIndex((StoreTailer) queue.createTailer(), indices[i]);
-            assertEquals(expectedScanResult, scanResult);
+        try (final SingleChronicleQueueStore wireStore = queue.storeForCycle(queue.cycle(), 0L, true, null)) {
+            final SCQIndexing indexing = wireStore.indexing;
+            for (int i = 0; i < RECORD_COUNT; i++) {
+                final int startLinearScanCount = indexing.linearScanCount;
+                final ScanResult scanResult = indexing.moveToIndex((StoreTailer) queue.createTailer(), indices[i]);
+                assertEquals(expectedScanResult, scanResult);
 
-            if (shouldBeIndexed.apply(i)) {
-                assertEquals(startLinearScanCount, indexing.linearScanCount);
-            } else {
-                assertEquals(startLinearScanCount + 1, indexing.linearScanCount);
+                if (shouldBeIndexed.apply(i)) {
+                    assertEquals(startLinearScanCount, indexing.linearScanCount);
+                } else {
+                    assertEquals(startLinearScanCount + 1, indexing.linearScanCount);
+                }
             }
         }
-        wireStore.release(test);
     }
 
     private static long[] writeMessagesStoreIndices(final ExcerptAppender appender, final ExcerptTailer tailer) {

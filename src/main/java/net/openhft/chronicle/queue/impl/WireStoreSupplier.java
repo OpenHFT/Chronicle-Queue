@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import org.jetbrains.annotations.Nullable;
@@ -27,7 +26,7 @@ import java.util.NavigableSet;
 
 public interface WireStoreSupplier {
     @Nullable
-    SingleChronicleQueueStore acquire(ReferenceOwner owner, int cycle, boolean createIfAbsent);
+    SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent);
 
     /**
      * the next available cycle, no cycle will be created by this method, typically used by a

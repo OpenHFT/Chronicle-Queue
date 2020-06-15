@@ -157,31 +157,26 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
     private long approximateLastIndex(int cycle, SingleChronicleQueue queue,
                                       StoreTailer tailer) {
-        try {
-            SingleChronicleQueueStore wireStore = queue.storeForCycle(test, cycle, queue.epoch(), false, null);
+        try (SingleChronicleQueueStore wireStore = queue.storeForCycle(cycle, queue.epoch(), false, null)) {
             if (wireStore == null) {
                 return noIndex;
             }
 
-            try {
-                long baseIndex = rollCycle.toIndex(cycle, 0);
+            long baseIndex = rollCycle.toIndex(cycle, 0);
 
-                tailer.moveToIndex(baseIndex);
+            tailer.moveToIndex(baseIndex);
 
-                long seq = wireStore.sequenceForPosition(tailer, Long.MAX_VALUE, false);
-                long sequenceNumber = seq + 1;
-                long index = rollCycle.toIndex(cycle, sequenceNumber);
+            long seq = wireStore.sequenceForPosition(tailer, Long.MAX_VALUE, false);
+            long sequenceNumber = seq + 1;
+            long index = rollCycle.toIndex(cycle, sequenceNumber);
 
-                int cycleOfIndex = rollCycle.toCycle(index);
-                if (cycleOfIndex != cycle) {
-                    throw new IllegalStateException(
-                            "Expected cycle " + cycle + " but got " + cycleOfIndex);
-                }
-
-                return index;
-            } finally {
-                wireStore.release(test);
+            int cycleOfIndex = rollCycle.toCycle(index);
+            if (cycleOfIndex != cycle) {
+                throw new IllegalStateException(
+                        "Expected cycle " + cycle + " but got " + cycleOfIndex);
             }
+
+            return index;
         } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }

@@ -23,9 +23,10 @@ import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.Closeable;
 import java.io.StreamCorruptedException;
 
-public interface WireStore extends CommonStore {
+public interface WireStore extends CommonStore, Closeable {
 
     /**
      * @param position the start of the last written excerpt to this cycle/store

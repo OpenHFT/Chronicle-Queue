@@ -10,7 +10,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -62,7 +61,7 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
             appenderExecutor.shutdown();
             appenderExecutor.awaitTermination(1, TimeUnit.SECONDS);
 
-            final SingleChronicleQueueStore firstCycleStore = queue.storeForCycle(test, startCycle, 0, false, null);
+            final SingleChronicleQueueStore firstCycleStore = queue.storeForCycle(startCycle, 0, false, null);
             assertNull(firstCycleStore);
 //            final long firstCycleWritePosition = firstCycleStore.writePosition();
 //            // assert that no write was completed

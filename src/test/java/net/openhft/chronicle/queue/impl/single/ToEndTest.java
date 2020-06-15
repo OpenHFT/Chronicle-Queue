@@ -54,7 +54,6 @@ public class ToEndTest extends QueueTestCommon {
     @Before
     public void before() {
         threadDump = new ThreadDump();
-        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
         threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
         threadDump.ignore(QueueFileShrinkManager.THREAD_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
@@ -81,7 +80,7 @@ public class ToEndTest extends QueueTestCommon {
         long timeIncMs = 1001;
         timeProvider.currentTimeMillis(now);
 
-        try(final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(timeProvider)
@@ -179,7 +178,7 @@ public class ToEndTest extends QueueTestCommon {
             SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
             // the reference count here is 1, the queue itself
-            assertEquals(1, store2.refCount());
+            assertFalse(store2.isClosed());
         }
     }
 

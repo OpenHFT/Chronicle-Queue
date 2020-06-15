@@ -107,7 +107,7 @@ class StoreTailer extends AbstractCloseable
         context.wire(null);
         final Wire w0 = wireForIndex;
         if (w0 != null)
-            StoreComponentReferenceHandler.queueForRelease(w0);
+            w0.bytes().releaseLast();
         wireForIndex = null;
         releaseStore();
     }
@@ -640,7 +640,7 @@ class StoreTailer extends AbstractCloseable
                 return Long.MIN_VALUE;
 
             final SingleChronicleQueueStore wireStore = queue.storeForCycle(
-                    this, lastCycle, queue.epoch(), false, this.store);
+                    lastCycle, queue.epoch(), false, this.store);
             this.setCycle(lastCycle);
             if (wireStore == null)
                 throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
@@ -701,9 +701,8 @@ class StoreTailer extends AbstractCloseable
         assert !SingleChronicleQueue.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
         assert wire != wireForIndexOld;
 
-        if (wireForIndexOld != null) {
-            StoreComponentReferenceHandler.queueForRelease(wireForIndexOld);
-        }
+        if (wireForIndexOld != null)
+            wireForIndexOld.bytes().releaseLast();
     }
 
     @NotNull
@@ -747,7 +746,7 @@ class StoreTailer extends AbstractCloseable
             }
 
             final SingleChronicleQueueStore wireStore = queue.storeForCycle(
-                    this, lastCycle, queue.epoch(), false, this.store);
+                    lastCycle, queue.epoch(), false, this.store);
             this.setCycle(lastCycle);
             if (wireStore == null)
                 throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? lastCycle=" + lastCycle);
@@ -944,7 +943,7 @@ class StoreTailer extends AbstractCloseable
             return true;
 
         final SingleChronicleQueueStore nextStore = queue.storeForCycle(
-                this, cycle, queue.epoch(), false, this.store);
+                cycle, queue.epoch(), false, this.store);
 
         if (nextStore == null && store == null)
             return false;
@@ -976,7 +975,7 @@ class StoreTailer extends AbstractCloseable
 
     void releaseStore() {
         if (store != null) {
-            store.release(this);
+            store.close();
             store = null;
         }
         state = UNINITIALISED;
@@ -1186,7 +1185,7 @@ class StoreTailer extends AbstractCloseable
             this.wire = wire;
 
             if (oldWire != null)
-                StoreComponentReferenceHandler.queueForRelease(oldWire);
+                oldWire.bytes().releaseLast();
         }
     }
 }

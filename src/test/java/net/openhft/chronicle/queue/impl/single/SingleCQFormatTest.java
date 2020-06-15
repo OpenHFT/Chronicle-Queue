@@ -213,8 +213,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE * 2);
         @NotNull Wire wire = new BinaryWire(bytes);
-        final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4);
-        try {
+        try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
             try (DocumentContext dc = wire.writingDocument(true)) {
 
                 dc.wire().write("header").typedMarshallable(store);
@@ -233,8 +232,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     "  },\n" +
                     "  dataFormat: 1\n" +
                     "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
-        } finally {
-            store.releaseLast();
         }
 
 
@@ -288,7 +285,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
-        threadDump.ignore(StoreComponentReferenceHandler.THREAD_NAME);
         threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
     }
 
