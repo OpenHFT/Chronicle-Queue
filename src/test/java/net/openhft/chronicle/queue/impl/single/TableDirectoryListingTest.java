@@ -51,7 +51,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
     @Test(expected = IllegalStateException.class)
     public void shouldBlowUpIfClosed() {
-        tablestore.close();
+        listing.close();
         listing.getMaxCreatedCycle();
     }
 

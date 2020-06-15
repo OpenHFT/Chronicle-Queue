@@ -1021,18 +1021,18 @@ class StoreTailer extends AbstractCloseable
         throwExceptionIfClosed();
         if (queue == this.queue)
             throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
-        @NotNull final ExcerptTailer tailer = queue.createTailer()
+        try (@NotNull final ExcerptTailer tailer = queue.createTailer()
                 .direction(BACKWARD)
-                .toEnd();
+                .toEnd()) {
 
-        @NotNull final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
+            @NotNull final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
 
-        while (true) {
-            try (DocumentContext context = tailer.readingDocument()) {
-                if (!context.isPresent()) {
-                    toStart();
-                    return this;
-                }
+            while (true) {
+                try (DocumentContext context = tailer.readingDocument()) {
+                    if (!context.isPresent()) {
+                        toStart();
+                        return this;
+                    }
 
                 final MessageHistory veh = SCQTools.readHistory(context, messageHistory);
                 if (veh == null)
@@ -1060,7 +1060,8 @@ class StoreTailer extends AbstractCloseable
                     }
                     // skip this message and go to the next.
                 }
-                return this;
+                    return this;
+                }
             }
         }
     }
