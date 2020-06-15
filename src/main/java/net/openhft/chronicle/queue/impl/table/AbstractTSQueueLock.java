@@ -56,4 +56,10 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         Jvm.warn().on(getClass(), "Forced unlock for the lock file:" + path, new StackTrace());
         lock.setValue(UNLOCKED);
     }
+
+    @Override
+    protected boolean threadSafetyCheck() {
+        // The lock is thread safe.
+        return true;
+    }
 }

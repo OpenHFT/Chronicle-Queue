@@ -1071,6 +1071,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
             return dateCache.toLong(file);
         }
+
+        @Override
+        protected boolean threadSafetyCheck() {
+            // StoreSupplier are thread safe
+            return true;
+        }
     }
 
     @Override

@@ -55,7 +55,6 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     @Override
     public void refresh() {
         throwExceptionIfClosed();
-        closeCheck();
         if (readOnly) {
             return;
         }
@@ -80,7 +79,6 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     @Override
     public void onFileCreated(final File file, final int cycle) {
         throwExceptionIfClosed();
-        closeCheck();
         if (readOnly) {
             LOGGER.warn("DirectoryListing is read-only, not updating listing");
             return;
@@ -97,21 +95,18 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     @Override
     public int getMaxCreatedCycle() {
         throwExceptionIfClosed();
-        closeCheck();
         return getMaxCycleValue();
     }
 
     @Override
     public int getMinCreatedCycle() {
         throwExceptionIfClosed();
-        closeCheck();
         return getMinCycleValue();
     }
 
     @Override
     public long modCount() {
         throwExceptionIfClosed();
-        closeCheck();
         return modCount.getVolatileValue();
     }
 
@@ -124,17 +119,18 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         Closeable.closeQuietly(minCycleValue, maxCycleValue, modCount);
     }
 
-    private void closeCheck() {
-        if (tableStore.isClosed()) {
-            throw new IllegalStateException("Underlying TableStore is already closed - was the Queue closed?");
-        }
-    }
-
     private int getMaxCycleValue() {
         return (int) maxCycleValue.getVolatileValue();
     }
 
     private int getMinCycleValue() {
         return (int) minCycleValue.getVolatileValue();
+    }
+
+
+    @Override
+    protected boolean threadSafetyCheck() {
+        // TDL are thread safe
+        return true;
     }
 }

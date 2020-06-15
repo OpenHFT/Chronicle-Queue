@@ -104,4 +104,10 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     public boolean readOnly() {
         return true;
     }
+
+    @Override
+    protected boolean threadSafetyCheck() {
+        // TableStore are thread safe
+        return true;
+    }
 }
