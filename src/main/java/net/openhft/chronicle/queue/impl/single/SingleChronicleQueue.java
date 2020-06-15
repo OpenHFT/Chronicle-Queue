@@ -461,6 +461,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
         final StoreTailer storeTailer = new StoreTailer(this, index);
         directoryListing.refresh();
+        storeTailer.clearUsedByThread();
         return storeTailer;
     }
 
