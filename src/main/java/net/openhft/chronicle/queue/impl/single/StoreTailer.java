@@ -54,6 +54,7 @@ class StoreTailer extends AbstractCloseable
     private boolean readingDocumentFound = false;
     private long address = NO_PAGE;
     private boolean striding = false;
+    private final Finalizer finalizer;
 
     public StoreTailer(@NotNull final SingleChronicleQueue queue) {
         this(queue, null);
@@ -71,12 +72,15 @@ class StoreTailer extends AbstractCloseable
         } else {
             moveToIndex(indexValue.getVolatileValue());
         }
+        finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        super.warnAndCloseIfNotClosed();
-        super.finalize();
+    private class Finalizer {
+        @Override
+        protected void finalize() throws Throwable {
+            super.finalize();
+            warnAndCloseIfNotClosed();
+        }
     }
 
     @Override

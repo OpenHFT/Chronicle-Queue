@@ -47,6 +47,7 @@ class StoreAppender extends AbstractCloseable
     private Pretoucher pretoucher = null;
     private NativeBytesStore<Void> batchTmp;
     private Wire bufferWire = null;
+    private final Finalizer finalizer;
 
     StoreAppender(@NotNull final SingleChronicleQueue queue,
                   @NotNull final WireStorePool storePool,
@@ -66,12 +67,15 @@ class StoreAppender extends AbstractCloseable
         if (lastCycle != cycle && lastCycle >= 0)
             // ensure that the EOF is written on the last cycle
             setCycle2(lastCycle, false);
+        finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        super.warnAndCloseIfNotClosed();
-        super.finalize();
+    private class Finalizer {
+        @Override
+        protected void finalize() throws Throwable {
+            super.finalize();
+            warnAndCloseIfNotClosed();
+        }
     }
 
     @Deprecated // Should not be providing accessors to reference-counted objects
