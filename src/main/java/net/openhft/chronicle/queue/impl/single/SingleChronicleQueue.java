@@ -211,7 +211,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int sourceId() {
-        throwExceptionIfClosed();
         return sourceId;
     }
 
@@ -269,13 +268,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public String fileAbsolutePath() {
-        throwExceptionIfClosed();
         return fileAbsolutePath;
     }
 
     @Override
     public String dumpLastHeader() {
-        throwExceptionIfClosed();
         StringBuilder sb = new StringBuilder(256);
         try (SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false, null)) {
             sb.append(wireStore.dumpHeader());
@@ -286,7 +283,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public String dump() {
-        throwExceptionIfClosed();
         StringBuilder sb = new StringBuilder(1024);
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
             try (SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false, null)) {
@@ -299,7 +295,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public void dump(@NotNull Writer writer, long fromIndex, long toIndex) {
-        throwExceptionIfClosed();
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
@@ -349,13 +344,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int indexCount() {
-        throwExceptionIfClosed();
         return indexCount;
     }
 
     @Override
     public int indexSpacing() {
-        throwExceptionIfClosed();
         return indexSpacing;
     }
 
@@ -367,13 +360,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public RollCycle rollCycle() {
-        throwExceptionIfClosed();
         return this.rollCycle;
     }
 
     @Override
     public int deltaCheckpointInterval() {
-        throwExceptionIfClosed();
         return deltaCheckpointInterval;
     }
 
@@ -381,13 +372,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the Chronicle Queue using a background thread
      */
     public boolean buffered() {
-        throwExceptionIfClosed();
         return this.isBuffered;
     }
 
     @NotNull
     public EventLoop eventLoop() {
-        throwExceptionIfClosed();
         return this.eventLoop;
     }
 
@@ -443,7 +432,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public QueueLock queueLock() {
-        throwExceptionIfClosed();
         return queueLock;
     }
 
@@ -669,6 +657,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         if (now <= firstAndLastCycleTime) {
             return;
         }
+        throwExceptionIfClosed();
 
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
@@ -678,7 +667,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int firstCycle() {
-        throwExceptionIfClosed();
         setFirstAndLastCycle();
         return firstCycle;
     }
@@ -697,7 +685,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public int lastCycle() {
-        throwExceptionIfClosed();
         setFirstAndLastCycle();
         return lastCycle;
     }
@@ -708,12 +695,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
-        throwExceptionIfClosed();
         return this.onRingBufferStats;
     }
 
     public long blockSize() {
-        throwExceptionIfClosed();
         return this.blockSize;
     }
 
@@ -722,19 +707,16 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     // *************************************************************************
 
     public long overlapSize() {
-        throwExceptionIfClosed();
         return this.overlapSize;
     }
 
     @NotNull
     @Override
     public WireType wireType() {
-        throwExceptionIfClosed();
         return wireType;
     }
 
     public long bufferCapacity() {
-        throwExceptionIfClosed();
         return this.bufferCapacity;
     }
 
