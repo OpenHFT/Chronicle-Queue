@@ -17,9 +17,8 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ReferenceOwner;
+import net.openhft.chronicle.core.io.SimpleCloseable;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import java.text.ParseException;
 import java.util.NavigableSet;
 
-public class WireStorePool extends AbstractCloseable {
+public class WireStorePool extends SimpleCloseable {
     @NotNull
     private final WireStoreSupplier supplier;
     private final StoreFileListener storeFileListener;
@@ -41,11 +40,6 @@ public class WireStorePool extends AbstractCloseable {
     @NotNull
     public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         return new WireStorePool(supplier, storeFileListener);
-    }
-
-    @Override
-    protected void performClose() {
-        Closeable.closeQuietly(supplier);
     }
 
     @Nullable
@@ -87,10 +81,5 @@ public class WireStorePool extends AbstractCloseable {
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
         throwExceptionIfClosed();
         return supplier.cycles(lowerCycle, upperCycle);
-    }
-
-    @Override
-    protected boolean threadSafetyCheck() {
-        return true;
     }
 }
