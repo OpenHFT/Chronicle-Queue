@@ -766,7 +766,7 @@ class StoreAppender extends AbstractCloseable
                         if (lastIndex != Long.MIN_VALUE)
                             writeIndexForPosition(lastIndex, positionOfHeader);
                     }
-                    assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
+
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());

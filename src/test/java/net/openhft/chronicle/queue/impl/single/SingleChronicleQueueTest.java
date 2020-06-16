@@ -2978,7 +2978,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         assertTrue(mappedFile2.file().delete());
     }
 
-    @Test
+    @Test(timeout = 10_000)
     public void testWritingDocumentIsAtomic() {
 
         final int threadCount = 8;
@@ -2986,10 +2986,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 new NamedThreadFactory("test"));
         // remove change of cycle roll in test, cross-cycle atomicity is covered elsewhere
         final AtomicLong fixedClock = new AtomicLong(System.currentTimeMillis());
-        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir()).
-                rollCycle(RollCycles.TEST_SECONDLY).
-                timeoutMS(3_000).timeProvider(fixedClock::get).
-                testBlockSize().build()) {
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeoutMS(3_000)
+                .timeProvider(fixedClock::get)
+                .testBlockSize()
+                .build()) {
             final int iterationsPerThread = Short.MAX_VALUE / 8;
             final int totalIterations = iterationsPerThread * threadCount;
             final int[] nonAtomicCounter = new int[]{0};

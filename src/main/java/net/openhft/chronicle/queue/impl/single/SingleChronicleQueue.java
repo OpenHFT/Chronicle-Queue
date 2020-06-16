@@ -589,12 +589,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @SuppressWarnings("unchecked")
     @Override
     protected void performClose() {
-        closeQuietly(directoryListing, queueLock, writeLock, lastAcknowledgedIndexReplicated, lastIndexReplicated);
-
         synchronized (closers) {
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
         }
+
+        // must be closed after closers.
+        closeQuietly(directoryListing, queueLock, lastAcknowledgedIndexReplicated, lastIndexReplicated, writeLock);
+
         this.pool.close();
         this.storeSupplier.close();
         closeQuietly(metaStore);
