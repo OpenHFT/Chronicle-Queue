@@ -285,7 +285,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
     @Before
     public void threadDump() {
         threadDump = new ThreadDump();
-        threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
     }
 
     @After

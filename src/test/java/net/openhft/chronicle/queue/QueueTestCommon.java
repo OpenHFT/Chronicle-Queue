@@ -4,8 +4,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
-import net.openhft.chronicle.queue.impl.single.QueueFileShrinkManager;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,8 +32,6 @@ public class QueueTestCommon {
     }
 
     public void checkThreadDump() {
-        threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
-        threadDump.ignore(QueueFileShrinkManager.THREAD_NAME);
         threadDump.assertNoNewThreads();
     }
 

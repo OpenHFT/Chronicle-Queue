@@ -110,7 +110,10 @@ public class OrderManagerTest extends QueueTestCommon {
         File queuePath = new File(OS.TARGET, "testWithQueueHistory-" + System.nanoTime());
         File queuePath2 = new File(OS.TARGET, "testWithQueueHistory-down-" + System.nanoTime());
         try {
-            try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
+            try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
+                    .testBlockSize()
+                    .sourceId(1)
+                    .build()) {
                 OrderIdeaListener orderManager = out.acquireAppender()
                         .methodWriterBuilder(OrderIdeaListener.class)
                         .addInterface(MarketDataListener.class)
@@ -133,7 +136,10 @@ public class OrderManagerTest extends QueueTestCommon {
                     .testBlockSize()
                     .sourceId(1)
                     .build();
-                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().build()) {
+                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2)
+                         .testBlockSize()
+                         .sourceId(2)
+                         .build()) {
 
                 OrderListener listener = out.acquireAppender()
                         .methodWriterBuilder(OrderListener.class)

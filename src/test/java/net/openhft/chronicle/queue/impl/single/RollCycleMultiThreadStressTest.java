@@ -495,8 +495,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     @Before
     public void before() {
         threadDump = new ThreadDump();
-        threadDump.ignore(SingleChronicleQueue.DISK_SPACE_CHECKER_NAME);
-        threadDump.ignore(QueueFileShrinkManager.THREAD_NAME);
         exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 

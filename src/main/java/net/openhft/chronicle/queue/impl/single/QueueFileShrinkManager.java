@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 public enum QueueFileShrinkManager {
     ;
-    public static final String THREAD_NAME = "queue-file-shrink-daemon";
+    public static final String THREAD_NAME = "queue~file~shrink~daemon";
     // don't use this with a Pretoucher enabled!
     public static final boolean RUN_SYNCHRONOUSLY = Jvm.getBoolean("chronicle.queue.synchronousFileShrinking");
     public static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Jvm.getBoolean("chronicle.queue.disableFileShrinking");
