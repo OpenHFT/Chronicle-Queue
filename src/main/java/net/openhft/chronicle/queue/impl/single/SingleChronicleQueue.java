@@ -615,6 +615,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             eventLoop.close();
     }
 
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        warnAndCloseIfNotClosed();
+    }
+
     public final void release(ReferenceOwner owner, @Nullable SingleChronicleQueueStore store) {
         if (store != null)
             this.pool.release(owner, store);
