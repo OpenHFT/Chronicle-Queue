@@ -84,10 +84,11 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                 long index = BinarySearch.search(queue, key, comparator);
                 //   assert index != -1 : "i=" + j;
 
-                final ExcerptTailer tailer = queue.createTailer();
-                tailer.moveToIndex(index);
-                try (final DocumentContext documentContext = tailer.readingDocument()) {
-                    Assert.assertTrue(documentContext.toString().contains("some value where the key=" + j));
+                try (final ExcerptTailer tailer = queue.createTailer()) {
+                    tailer.moveToIndex(index);
+                    try (final DocumentContext documentContext = tailer.readingDocument()) {
+                        Assert.assertTrue(documentContext.toString().contains("some value where the key=" + j));
+                    }
                 }
                 key.bytes().releaseLast();
             }
