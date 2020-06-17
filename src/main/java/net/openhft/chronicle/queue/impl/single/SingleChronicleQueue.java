@@ -126,65 +126,70 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private int deltaCheckpointInterval;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
-        rollCycle = builder.rollCycle();
-        cycleCalculator = cycleCalculator(builder.rollTimeZone());
-        epoch = builder.epoch();
-        dateCache = new RollingResourcesCache(rollCycle, epoch, textToFile(builder), fileToText());
+        try {
+            rollCycle = builder.rollCycle();
+            cycleCalculator = cycleCalculator(builder.rollTimeZone());
+            epoch = builder.epoch();
+            dateCache = new RollingResourcesCache(rollCycle, epoch, textToFile(builder), fileToText());
 
-        storeFileListener = builder.storeFileListener();
-        storeSupplier = new StoreSupplier();
-        pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
-        isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
-        path = builder.path();
-        if (!builder.readOnly())
-            //noinspection ResultOfMethodCallIgnored
-            path.mkdirs();
-        fileAbsolutePath = path.getAbsolutePath();
-        wireType = builder.wireType();
-        blockSize = builder.blockSize();
-        overlapSize = Math.max(64 << 10, builder.blockSize() / 4);
-        eventLoop = builder.eventLoop();
-        bufferCapacity = builder.bufferCapacity();
-        onRingBufferStats = builder.onRingBufferStats();
-        indexCount = builder.indexCount();
-        indexSpacing = builder.indexSpacing();
-        time = builder.timeProvider();
-        pauserSupplier = builder.pauserSupplier();
-        // add a 10% random element to make it less likely threads will timeout at the same time.
-        timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
-        storeFactory = builder.storeFactory();
-        checkInterrupts = builder.checkInterrupts();
-        metaStore = builder.metaStore();
-        doubleBuffer = builder.doubleBuffer();
-        if (metaStore.readOnly() && !builder.readOnly()) {
-            LOG.warn("Forcing queue to be readOnly");
-            // need to set this on builder as it is used elsewhere
-            builder.readOnly(metaStore.readOnly());
+            storeFileListener = builder.storeFileListener();
+            storeSupplier = new StoreSupplier();
+            pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
+            isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
+            path = builder.path();
+            if (!builder.readOnly())
+                //noinspection ResultOfMethodCallIgnored
+                path.mkdirs();
+            fileAbsolutePath = path.getAbsolutePath();
+            wireType = builder.wireType();
+            blockSize = builder.blockSize();
+            overlapSize = Math.max(64 << 10, builder.blockSize() / 4);
+            eventLoop = builder.eventLoop();
+            bufferCapacity = builder.bufferCapacity();
+            onRingBufferStats = builder.onRingBufferStats();
+            indexCount = builder.indexCount();
+            indexSpacing = builder.indexSpacing();
+            time = builder.timeProvider();
+            pauserSupplier = builder.pauserSupplier();
+            // add a 10% random element to make it less likely threads will timeout at the same time.
+            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
+            storeFactory = builder.storeFactory();
+            checkInterrupts = builder.checkInterrupts();
+            metaStore = builder.metaStore();
+            doubleBuffer = builder.doubleBuffer();
+            if (metaStore.readOnly() && !builder.readOnly()) {
+                LOG.warn("Forcing queue to be readOnly");
+                // need to set this on builder as it is used elsewhere
+                builder.readOnly(metaStore.readOnly());
+            }
+            readOnly = builder.readOnly();
+
+            if (readOnly) {
+                this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
+            } else {
+                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction(), false);
+                directoryListing.init();
+            }
+
+            this.directoryListing.refresh();
+            this.queueLock = builder.queueLock();
+            this.writeLock = builder.writeLock();
+
+            if (readOnly) {
+                this.lastIndexReplicated = null;
+                this.lastAcknowledgedIndexReplicated = null;
+            } else {
+                this.lastIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastIndexReplicated", -1L));
+                this.lastAcknowledgedIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastAcknowledgedIndexReplicated", -1L));
+            }
+
+            this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
+
+            sourceId = builder.sourceId();
+        } catch (Throwable t) {
+            close();
+            throw Jvm.rethrow(t);
         }
-        readOnly = builder.readOnly();
-
-        if (readOnly) {
-            this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
-        } else {
-            this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction(), false);
-            directoryListing.init();
-        }
-
-        this.directoryListing.refresh();
-        this.queueLock = builder.queueLock();
-        this.writeLock = builder.writeLock();
-
-        if (readOnly) {
-            this.lastIndexReplicated = null;
-            this.lastAcknowledgedIndexReplicated = null;
-        } else {
-            this.lastIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastIndexReplicated", -1L));
-            this.lastAcknowledgedIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastAcknowledgedIndexReplicated", -1L));
-        }
-
-        this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
-
-        sourceId = builder.sourceId();
     }
 
     protected CycleCalculator cycleCalculator(ZoneId zoneId) {
@@ -803,6 +808,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
     }
 
+    @Override
+    protected boolean threadSafetyCheck() {
+        // component is thread safe
+        return true;
+    }
+
     private static final class CachedCycleTree {
         private final long directoryModCount;
         private final NavigableMap<Long, File> cachedCycleTree;
@@ -1074,11 +1085,5 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             // StoreSupplier are thread safe
             return true;
         }
-    }
-
-    @Override
-    protected boolean threadSafetyCheck() {
-        // component is thread safe
-        return true;
     }
 }
