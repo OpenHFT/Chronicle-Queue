@@ -657,7 +657,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
-                long address = writePosition.getVolatileValue();
+                long address = writePosition.getVolatileValue(0);
                 if (address == 0)
                     return -1;
                 long sequence = sequence1.getSequence(address);
@@ -685,7 +685,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
-                long endAddress = writePosition.getVolatileValue();
+                long endAddress = writePosition.getVolatileValue(0);
                 if (endAddress == 0)
                     return -1;
                 long sequence = sequence1.getSequence(endAddress);

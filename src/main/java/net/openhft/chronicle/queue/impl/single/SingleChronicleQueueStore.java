@@ -186,7 +186,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public String dumpHeader() {
-        throwExceptionIfClosed();
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
             int size = bytes.readInt(0);
             if (!Wires.isReady(size))
@@ -198,7 +197,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public long writePosition() {
-        throwExceptionIfClosed();
         return this.writePosition.getVolatileValue();
     }
 

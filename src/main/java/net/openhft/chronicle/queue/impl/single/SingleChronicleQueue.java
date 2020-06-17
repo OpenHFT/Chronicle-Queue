@@ -225,7 +225,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public long lastAcknowledgedIndexReplicated() {
         throwExceptionIfClosed();
-        return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue();
+        return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue(-1);
     }
 
     @Override
@@ -249,7 +249,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public long lastIndexReplicated() {
         throwExceptionIfClosed();
-        return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue();
+        return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue(-1);
     }
 
     @Override

@@ -134,7 +134,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
                         if (Jvm.isDebugEnabled(SingleTableStore.class)) {
                             String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath();
-                            Jvm.debug().on(SingleTableStore.class, message, new StackTrace());
+                            Jvm.debug().on(SingleTableStore.class, "", new StackTrace(message));
                         }
                         warnedOnFailure = true;
                     }

@@ -94,19 +94,16 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public int getMaxCreatedCycle() {
-        throwExceptionIfClosed();
         return getMaxCycleValue();
     }
 
     @Override
     public int getMinCreatedCycle() {
-        throwExceptionIfClosed();
         return getMinCycleValue();
     }
 
     @Override
     public long modCount() {
-        throwExceptionIfClosed();
         return modCount.getVolatileValue();
     }
 
