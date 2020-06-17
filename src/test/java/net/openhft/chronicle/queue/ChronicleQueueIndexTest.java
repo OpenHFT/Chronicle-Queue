@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
-import static net.openhft.chronicle.bytes.Bytes.fromString;
+import static net.openhft.chronicle.bytes.Bytes.from;
 import static org.junit.Assert.*;
 
 public class ChronicleQueueIndexTest extends QueueTestCommon {
@@ -39,7 +39,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     .build()) {
                 InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-                appender.writeBytes(RollCycles.DAILY.toIndex(1, 0L), fromString("Hello World 1"));
+                appender.writeBytes(RollCycles.DAILY.toIndex(1, 0L), from("Hello World 1"));
 
                 // Simulate the end of the day i.e the queue closes the day rolls
                 // (note the change of index from 18264 to 18265)
@@ -60,7 +60,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     .build()) {
                 InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-                appender.writeBytes(RollCycles.DAILY.toIndex(3, 0L), fromString("Hello World 2"));
+                appender.writeBytes(RollCycles.DAILY.toIndex(3, 0L), from("Hello World 2"));
 
                 // Simulate the end of the day i.e the queue closes the day rolls
                 // (note the change of index from 18264 to 18265)
@@ -182,10 +182,10 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .build() ) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-            Bytes<byte[]> hello_world = Bytes.fromString("Hello World 1");
+            Bytes<byte[]> hello_world = Bytes.from("Hello World 1");
             appender.writeBytes(RollCycles.DAILY.toIndex(18264, 0L), hello_world);
             hello_world.releaseLast();
-            hello_world = Bytes.fromString("Hello World 2");
+            hello_world = Bytes.from("Hello World 2");
             appender.writeBytes(RollCycles.DAILY.toIndex(18264, 1L), hello_world);
             hello_world.releaseLast();
 
@@ -199,7 +199,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             // add a message for the new day
-            Bytes<byte[]> hello_world = Bytes.fromString("Hello World 3");
+            Bytes<byte[]> hello_world = Bytes.from("Hello World 3");
             appender.writeBytes(RollCycles.DAILY.toIndex(18265, 0L), hello_world);
             hello_world.releaseLast();
 

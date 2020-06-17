@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-import static net.openhft.chronicle.bytes.Bytes.fromString;
+import static net.openhft.chronicle.bytes.Bytes.from;
 import static org.junit.Assert.*;
 
 public class PeekDocumentTest extends QueueTestCommon {
@@ -123,7 +123,7 @@ public class PeekDocumentTest extends QueueTestCommon {
 
         try {
 
-            Bytes<byte[]> bytes = fromString(EXPECTED_MESSAGE);
+            Bytes<byte[]> bytes = from(EXPECTED_MESSAGE);
 
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
                 ExcerptAppender appender = queue.acquireAppender();
