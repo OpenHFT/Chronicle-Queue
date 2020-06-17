@@ -68,10 +68,10 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
-        PRETOUCH = Boolean.getBoolean("pretouch");
-        READERS_READ_ONLY = Boolean.getBoolean("read_only");
-        DUMP_QUEUE = Boolean.getBoolean("dump_queue");
-        SHARED_WRITE_QUEUE = Boolean.getBoolean("sharedWriteQ");
+        PRETOUCH = Jvm.getBoolean("pretouch");
+        READERS_READ_ONLY = Jvm.getBoolean("read_only");
+        DUMP_QUEUE = Jvm.getBoolean("dump_queue");
+        SHARED_WRITE_QUEUE = Jvm.getBoolean("sharedWriteQ");
         System.setProperty("org.slf4j.simpleLogger.showDateTime", "true");
 
         System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");

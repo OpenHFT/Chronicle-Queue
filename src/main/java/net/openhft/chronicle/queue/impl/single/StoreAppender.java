@@ -101,11 +101,6 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    @Override
-    protected boolean performCloseInBackground() {
-        return true;
-    }
-
     private static void releaseBytesFor(Wire w) {
         if (w != null) {
             w.bytes().releaseLast();

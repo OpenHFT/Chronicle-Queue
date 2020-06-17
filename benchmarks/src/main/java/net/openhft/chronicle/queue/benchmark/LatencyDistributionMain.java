@@ -159,7 +159,7 @@ public class LatencyDistributionMain {
         Thread tailerThread = new Thread(() -> {
             AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableTailerAffinity") || !Boolean.getBoolean("disableAffinity")) {
+                if (Jvm.getBoolean("enableTailerAffinity") || !Jvm.getBoolean("disableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
                 int counter = 0;
@@ -217,7 +217,7 @@ public class LatencyDistributionMain {
         Thread appenderThread = new Thread(() -> {
             AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableAppenderAffinity") || !Boolean.getBoolean("disableAffinity")) {
+                if (Jvm.getBoolean("enableAppenderAffinity") || !Jvm.getBoolean("disableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
 

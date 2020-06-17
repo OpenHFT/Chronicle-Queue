@@ -32,7 +32,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private static final int MSG_THROUGHPUT = Integer.getInteger("throughput", 50_000_000);
     private static final int MSG_LENGTH = Integer.getInteger("length", 1_000_000);
-    private static final boolean MSG_DIRECT = Boolean.getBoolean("direct");
+    private static final boolean MSG_DIRECT = Jvm.getBoolean("direct");
     static byte[] bytesArr = new byte[MSG_LENGTH];
     static Bytes bytesArr2 = Bytes.allocateDirect(MSG_LENGTH);
     private SingleChronicleQueue sourceQueue;

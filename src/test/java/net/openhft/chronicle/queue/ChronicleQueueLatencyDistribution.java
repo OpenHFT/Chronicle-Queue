@@ -100,8 +100,8 @@ import java.util.Map;
  * mvn -DenableAffinity=true exec:java -Dexec.classpathScope="test" -Dexec.mainClass=net.openhft.chronicle.queue.ChronicleQueueLatencyDistribution
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
-    private static final boolean PRETOUCH = ! Boolean.getBoolean("no_pretouch");
-    private static final boolean SAMPLING = Boolean.getBoolean("sampling");
+    private static final boolean PRETOUCH = !Jvm.getBoolean("no_pretouch");
+    private static final boolean SAMPLING = Jvm.getBoolean("sampling");
     private static final long SAMPLE_THRESHOLD_NS = Long.getLong("sampling_ns", 1_000);
     private static final int ITERATIONS = Integer.getInteger("iterations", 20_000_000);
     private static final int BLOCK_SIZE = Integer.getInteger("block_size", 128 << 20);
@@ -158,7 +158,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Thread tailerThread = new Thread(() -> {
             AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableTailerAffinity") || Boolean.getBoolean("enableAffinity")) {
+                if (Jvm.getBoolean("enableTailerAffinity") || Jvm.getBoolean("enableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
                 int counter = 0;
@@ -216,7 +216,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Thread appenderThread = new Thread(() -> {
             AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableAppenderAffinity") || Boolean.getBoolean("enableAffinity")) {
+                if (Jvm.getBoolean("enableAppenderAffinity") || Jvm.getBoolean("enableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
 

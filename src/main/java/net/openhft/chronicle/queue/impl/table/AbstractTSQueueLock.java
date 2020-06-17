@@ -47,8 +47,8 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         Closeable.closeQuietly(lock);
     }
 
-    protected void closeCheck() {
-        throwExceptionIfClosed();
+    public void throwExceptionIfClosed() {
+        super.throwExceptionIfClosed();
         tableStore.throwExceptionIfClosed();
     }
 

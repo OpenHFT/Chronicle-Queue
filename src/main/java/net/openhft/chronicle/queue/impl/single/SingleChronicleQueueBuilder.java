@@ -1040,9 +1040,9 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     public boolean checkInterrupts() {
         if (checkInterrupts == null) {
             if (System.getProperties().contains("chronicle.queue.ignoreInterrupts"))
-                return !Boolean.getBoolean("chronicle.queue.ignoreInterrupts");
+                return !Jvm.getBoolean("chronicle.queue.ignoreInterrupts");
             if (System.getProperties().contains("chronicle.queue.checkInterrupts"))
-                return Boolean.getBoolean("chronicle.queue.checkInterrupts");
+                return Jvm.getBoolean("chronicle.queue.checkInterrupts");
         }
 
         // default is true unless turned off.

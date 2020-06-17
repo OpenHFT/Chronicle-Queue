@@ -52,7 +52,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public void acquireLock() {
         throwExceptionIfClosed();
-        closeCheck();
+
         long tid = Thread.currentThread().getId();
         if (isLockHeldByCurrentThread(tid)) {
             return;
@@ -85,7 +85,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public void waitForLock() {
         throwExceptionIfClosed();
-        closeCheck();
+
         long tid = Thread.currentThread().getId();
         if (isLockHeldByCurrentThread(tid))
             return;
@@ -116,7 +116,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public void unlock() {
         throwExceptionIfClosed();
-        closeCheck();
+
         long tid = Thread.currentThread().getId();
         if (!isLockHeldByCurrentThread(tid)) {
             String absolutePath = "unknown";
