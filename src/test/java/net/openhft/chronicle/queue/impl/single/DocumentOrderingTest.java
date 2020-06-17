@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -33,6 +34,8 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     }
 
+    Thread thread;
+
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
@@ -53,8 +56,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             // move time to beyond the next cycle
             clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
 
-            @SuppressWarnings("unused")
-            final Future<RecordInfo> otherDocumentWriter = attemptToWriteDocument(queue);
+            @SuppressWarnings("unused") final Future<RecordInfo> otherDocumentWriter = attemptToWriteDocument(queue);
 
             firstOpenDocument.close();
             secondDocumentInFirstCycle.get(5L, TimeUnit.SECONDS);
@@ -63,36 +65,11 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             tailer.readingDocument().close();
 
             otherDocumentWriter.get();
-            
+
             // assert that records are committed in order
             expectValue(0, tailer);
             expectValue(1, tailer);
             expectValue(2, tailer);
-            assertFalse(tailer.readingDocument().isPresent());
-        }
-    }
-
-    @Test
-    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
-        // as below, but don't actually close the initial context
-        try (final ChronicleQueue queue =
-                     builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
-
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final Future<RecordInfo> otherDocumentWriter;
-            // begin a record in the first cycle file
-            final DocumentContext documentContext = excerptAppender.writingDocument();
-            documentContext.wire().getValueOut().int32(counter.getAndIncrement());
-
-            // move time to beyond the next cycle
-            clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
-
-            otherDocumentWriter = attemptToWriteDocument(queue);
-
-            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
-
-            final ExcerptTailer tailer = queue.createTailer();
-            expectValue(1, tailer);
             assertFalse(tailer.readingDocument().isPresent());
         }
     }
@@ -146,6 +123,31 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
+    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
+        // as below, but don't actually close the initial context
+        try (final ChronicleQueue queue =
+                     builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
+
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
+            final Future<RecordInfo> otherDocumentWriter;
+            // begin a record in the first cycle file
+            final DocumentContext documentContext = excerptAppender.writingDocument();
+            documentContext.wire().getValueOut().int32(counter.getAndIncrement());
+
+            // move time to beyond the next cycle
+            clock.addAndGet(TimeUnit.SECONDS.toMillis(2L));
+
+            otherDocumentWriter = attemptToWriteDocument(queue);
+
+            expectCounterVaueOne(otherDocumentWriter);
+
+            final ExcerptTailer tailer = queue.createTailer();
+            expectValue(1, tailer);
+            assertFalse(tailer.readingDocument().isPresent());
+        }
+    }
+
+    @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
                      builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
@@ -166,7 +168,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
                 documentContext.wire().getValueOut().int32(counter.getAndIncrement());
             }
 
-            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
+            expectCounterVaueOne(otherDocumentWriter);
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(0, tailer);
@@ -196,14 +198,15 @@ public final class DocumentOrderingTest extends QueueTestCommon {
                 documentContext.wire().getValueOut().int32(counter.getAndIncrement());
             }
 
-            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
+            expectCounterVaueOne(otherDocumentWriter);
 
-            final ExcerptTailer tailer = queue.createTailer();
-            final DocumentContext documentContext = tailer.readingDocument();
-            assertTrue(documentContext.isPresent());
-            documentContext.close();
-            expectValue(0, tailer);
-            expectValue(1, tailer);
+            try (final ExcerptTailer tailer = queue.createTailer()) {
+                try (final DocumentContext documentContext = tailer.readingDocument()) {
+                    assertTrue(documentContext.isPresent());
+                }
+                expectValue(0, tailer);
+                expectValue(1, tailer);
+            }
         }
     }
 
@@ -212,9 +215,19 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         executorService.shutdownNow();
     }
 
+    public void expectCounterVaueOne(Future<RecordInfo> otherDocumentWriter) throws InterruptedException, ExecutionException, TimeoutException {
+        try {
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
+        } catch (TimeoutException e) {
+            StackTrace.forThread(thread).printStackTrace();
+            throw e;
+        }
+    }
+
     private Future<RecordInfo> attemptToWriteDocument(final ChronicleQueue queue) throws InterruptedException {
         final CountDownLatch startedLatch = new CountDownLatch(1);
         final Future<RecordInfo> future = executorService.submit(() -> {
+            thread = Thread.currentThread();
             final int counterValue;
             startedLatch.countDown();
             try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
