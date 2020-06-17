@@ -249,7 +249,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 service2 = Executors.newSingleThreadScheduledExecutor(
                         new NamedThreadFactory("service2"));
                 service2.scheduleAtFixedRate(() -> {
-                    Bytes b = Bytes.elasticHeapByteBuffer(128);
+                    Bytes b = Bytes.allocateElasticOnHeap(128);
                     final ExcerptTailer tailer = queue.createTailer();
                     tailer.readBytes(b);
                     if (b.readRemaining() == 0)
