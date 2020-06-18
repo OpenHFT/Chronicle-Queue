@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue.service;
 
-
 @FunctionalInterface
 public interface HelloReplier {
     void reply(String message);

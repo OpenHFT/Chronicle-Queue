@@ -23,7 +23,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-
 class CountingJDBCResult implements JDBCResult {
     private final AtomicLong queries;
     private final AtomicLong updates;

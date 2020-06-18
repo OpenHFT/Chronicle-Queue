@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue;
 
-
 public enum BufferMode {
     None,    // The default
 

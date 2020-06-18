@@ -45,8 +45,7 @@ public class ContendedWriterTest extends QueueTestCommon {
     private final AtomicBoolean running = new AtomicBoolean(true);
     private ThreadDump threadDump;
 
-
-    @Test
+@Test
     public void oneThread() {
         test("oneThread", new Config(false, 1, 0));
     }

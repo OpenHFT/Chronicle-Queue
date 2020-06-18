@@ -86,6 +86,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public boolean readDocument(@NotNull final ReadMarshallable reader) {
         throwExceptionIfClosed();
+
         try (@NotNull DocumentContext dc = readingDocument(false)) {
             if (!dc.isPresent())
                 return false;
@@ -98,6 +99,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     public DocumentContext readingDocument() {
         throwExceptionIfClosed();
+
         // trying to create an initial document without a direction should not consume a message
         final long index = index();
         if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
@@ -121,24 +123,32 @@ class StoreTailer extends AbstractCloseable
     @Override
     public Wire wire() {
         throwExceptionIfClosed();
+
+        return privateWire();
+    }
+
+    public Wire privateWire() {
         return context.wire();
     }
 
     @Override
     public Wire wireForIndex() {
         throwExceptionIfClosed();
+
         return wireForIndex;
     }
 
     @Override
     public long timeoutMS() {
         throwExceptionIfClosed();
+
         return queue.timeoutMS;
     }
 
     @Override
     public int sourceId() {
         throwExceptionIfClosed();
+
         return queue.sourceId;
     }
 
@@ -156,6 +166,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
         throwExceptionIfClosed();
+
         Jvm.optionalSafepoint();
         queue.throwExceptionIfClosed();
 
@@ -386,7 +397,7 @@ class StoreTailer extends AbstractCloseable
         if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
         Jvm.optionalSafepoint();
 
-        final Wire wire = wire();
+        final Wire wire = privateWire();
         final Bytes<?> bytes = wire.bytes();
         bytes.readLimit(bytes.capacity());
 
@@ -449,7 +460,7 @@ class StoreTailer extends AbstractCloseable
 
     private void inACycleFound(@NotNull final Bytes<?> bytes) {
         context.closeReadLimit(bytes.capacity());
-        wire().readAndSetLength(bytes.readPosition());
+        privateWire().readAndSetLength(bytes.readPosition());
         final long end = bytes.readLimit();
         context.closeReadPosition(end);
         Jvm.optionalSafepoint();
@@ -525,6 +536,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public long index() {
         throwExceptionIfClosed();
+
         return indexValue == null ? this.index : indexValue.getValue();
     }
 
@@ -537,7 +549,7 @@ class StoreTailer extends AbstractCloseable
     public boolean moveToIndex(final long index) {
         throwExceptionIfClosed();
 
-        if (moveToState.canReuseLastIndexMove(index, state, direction, queue, wire())) {
+        if (moveToState.canReuseLastIndexMove(index, state, direction, queue, privateWire())) {
             return setAddress(true);
         } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
             final long knownIndex = moveToState.lastMovedToIndex;
@@ -546,7 +558,7 @@ class StoreTailer extends AbstractCloseable
                             moveToState.readPositionAtLastMove) == ScanResult.FOUND;
             if (found) {
                 index(index);
-                moveToState.onSuccessfulScan(index, direction, wire().bytes().readPosition());
+                moveToState.onSuccessfulScan(index, direction, privateWire().bytes().readPosition());
             }
             return setAddress(found);
         }
@@ -555,7 +567,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean setAddress(final boolean found) {
-        final Wire wire = wire();
+        final Wire wire = privateWire();
         if (wire == null) {
             address = NO_PAGE;
             return false;
@@ -569,9 +581,9 @@ class StoreTailer extends AbstractCloseable
 
         final int cycle = queue.rollCycle().toCycle(index);
         final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-        if (Jvm.isResourceTracing()) {
-            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
-        }
+//        if (Jvm.isResourceTracing()) {
+//            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+//        }
 
         if (cycle != this.cycle || state != FOUND_CYCLE) {
             // moves to the expected cycle
@@ -581,7 +593,7 @@ class StoreTailer extends AbstractCloseable
 
         index(index);
         final ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
-        final Bytes<?> bytes = wire().bytes();
+        final Bytes<?> bytes = privateWire().bytes();
         if (scanResult == FOUND) {
             state = FOUND_CYCLE;
             moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
@@ -624,9 +636,10 @@ class StoreTailer extends AbstractCloseable
         index(queue.rollCycle().toIndex(cycle, 0));
 
         state = FOUND_CYCLE;
-        if (wire() != null) {
-            wire().bytes().readPosition(0);
-            address = wire().bytes().addressForRead(0);
+        Wire wire = privateWire();
+        if (wire != null) {
+            wire.bytes().readPosition(0);
+            address = wire.bytes().addressForRead(0);
         }
         return this;
     }
@@ -732,6 +745,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public ExcerptTailer toEnd() {
         throwExceptionIfClosed();
+
         if (direction.equals(TailerDirection.BACKWARD))
             return originalToEnd();
         return optimizedToEnd();
@@ -740,6 +754,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public ExcerptTailer striding(final boolean striding) {
         throwExceptionIfClosed();
+
         this.striding = striding;
         return this;
     }
@@ -775,7 +790,7 @@ class StoreTailer extends AbstractCloseable
             // give the position of the last entry and
             // flag we want to count it even though we don't know if it will be meta data or not.
 
-            final long sequenceNumber = store.moveToEndForRead(wire());
+            final long sequenceNumber = store.moveToEndForRead(privateWire());
 
             // fixes #378
             if (sequenceNumber == -1L) {
@@ -783,7 +798,7 @@ class StoreTailer extends AbstractCloseable
                 return originalToEnd();
             }
 
-            final Bytes<?> bytes = wire().bytes();
+            final Bytes<?> bytes = privateWire().bytes();
             state = isEndOfFile(bytes.readVolatileInt(bytes.readPosition())) ? END_OF_CYCLE : FOUND_CYCLE;
 
             index(rollCycle.toIndex(lastCycle, sequenceNumber));
@@ -800,6 +815,7 @@ class StoreTailer extends AbstractCloseable
 
     public ExcerptTailer originalToEnd() {
         throwExceptionIfClosed();
+
         long index = approximateLastIndex();
 
         if (index == Long.MIN_VALUE) {
@@ -855,6 +871,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public ExcerptTailer direction(@NotNull final TailerDirection direction) {
         throwExceptionIfClosed();
+
         final TailerDirection oldDirection = this.direction();
         this.direction = direction;
         if (oldDirection == TailerDirection.BACKWARD &&
@@ -874,6 +891,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public Runnable getCloserJob() {
         throwExceptionIfClosed();
+
         return this::close;
     }
 
@@ -882,6 +900,7 @@ class StoreTailer extends AbstractCloseable
      */
     public void releaseResources() {
         throwExceptionIfClosed();
+
         queue.removeCloseListener(this);
         getCloserJob().run();
     }
@@ -987,7 +1006,7 @@ class StoreTailer extends AbstractCloseable
         state = FOUND_CYCLE;
         setCycle(cycle);
         resetWires();
-        final Wire wire = wire();
+        final Wire wire = privateWire();
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
         return true;
@@ -1004,12 +1023,14 @@ class StoreTailer extends AbstractCloseable
     @Override
     public void readAfterReplicaAcknowledged(final boolean readAfterReplicaAcknowledged) {
         throwExceptionIfClosed();
+
         this.readAfterReplicaAcknowledged = readAfterReplicaAcknowledged;
     }
 
     @Override
     public boolean readAfterReplicaAcknowledged() {
         throwExceptionIfClosed();
+
         return readAfterReplicaAcknowledged;
     }
 
@@ -1023,6 +1044,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public ExcerptTailer afterLastWritten(@NotNull final ChronicleQueue queue) {
         throwExceptionIfClosed();
+
         if (queue == this.queue)
             throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
         try (@NotNull final ExcerptTailer tailer = queue.createTailer()
@@ -1080,6 +1102,7 @@ class StoreTailer extends AbstractCloseable
 
     public void setCycle(final int cycle) {
         throwExceptionIfClosed();
+
         this.cycle = cycle;
     }
 

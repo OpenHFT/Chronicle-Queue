@@ -27,18 +27,17 @@ public class PretoucherDontWriteTest extends QueueTestCommon {
         System.setProperty("SingleChronicleQueueExcerpts.dontWrite", "true");
         File dir = tempDir("shouldNotRoll");
 
+try (final SingleChronicleQueue queue = PretoucherTest.createQueue(dir, clock::get);
+     final SingleChronicleQueue pretoucherQueue = PretoucherTest.createQueue(dir, clock::get);
+     final Pretoucher pretoucher = new Pretoucher(pretoucherQueue, chunkListener, capturedCycles::add)) {
 
-        try (final SingleChronicleQueue queue = PretoucherTest.createQueue(dir, clock::get);
-             final SingleChronicleQueue pretoucherQueue = PretoucherTest.createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(pretoucherQueue, chunkListener, capturedCycles::add)) {
-
-            range(0, 10).forEach(i -> {
-                try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
-                    assertEquals(i + 0.5, capturedCycles.size(), 0.5);
-                    ctx.wire().write().int32(i);
-                    ctx.wire().write().bytes(new byte[1024]);
-                }
-                try {
+    range(0, 10).forEach(i -> {
+        try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
+            assertEquals(i + 0.5, capturedCycles.size(), 0.5);
+            ctx.wire().write().int32(i);
+            ctx.wire().write().bytes(new byte[1024]);
+        }
+        try {
                     pretoucher.execute();
                 } catch (InvalidEventHandlerException e) {
                     throw Jvm.rethrow(e);

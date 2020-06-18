@@ -33,7 +33,6 @@ Chronicle Queue allows you to put huge numbers of objects of different sizes ont
 
 An appender is used to write/add data to the queue.
 
- 
 == Getting Started
 In the following example we will:
 

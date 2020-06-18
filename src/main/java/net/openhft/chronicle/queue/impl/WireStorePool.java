@@ -49,6 +49,7 @@ public class WireStorePool extends SimpleCloseable {
             boolean createIfAbsent,
             SingleChronicleQueueStore oldStore) {
         throwExceptionIfClosed();
+
         SingleChronicleQueueStore store = this.supplier.acquire(cycle, createIfAbsent);
         if (store != null) {
             if (store != oldStore) {
@@ -61,11 +62,13 @@ public class WireStorePool extends SimpleCloseable {
 
     public int nextCycle(final int currentCycle, @NotNull TailerDirection direction) throws ParseException {
         throwExceptionIfClosed();
+
         return supplier.nextCycle(currentCycle, direction);
     }
 
     public void release(ReferenceOwner owner, @NotNull SingleChronicleQueueStore store) {
         throwExceptionIfClosed();
+
         store.close();
 
         storeFileListener.onReleased(store.cycle(), store.file());
@@ -80,6 +83,7 @@ public class WireStorePool extends SimpleCloseable {
      */
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
         throwExceptionIfClosed();
+
         return supplier.cycles(lowerCycle, upperCycle);
     }
 }

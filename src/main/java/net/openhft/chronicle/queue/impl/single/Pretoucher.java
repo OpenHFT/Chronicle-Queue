@@ -52,6 +52,7 @@ public final class Pretoucher extends AbstractCloseable {
 
     public void execute() throws InvalidEventHandlerException {
         throwExceptionIfClosed();
+
         assignCurrentCycle();
         try {
             if (currentCycleMappedBytes != null)
@@ -66,6 +67,7 @@ public final class Pretoucher extends AbstractCloseable {
 
     public void shutdown() {
         throwExceptionIfClosed();
+
         queue.close();
     }
 

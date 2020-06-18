@@ -60,6 +60,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @Override
     public File file() {
         throwExceptionIfClosed();
+
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;
@@ -69,6 +70,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @Override
     public MappedBytes bytes() {
         throwExceptionIfClosed();
+
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;
@@ -78,6 +80,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @Override
     public String dump() {
         throwExceptionIfClosed();
+
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;
@@ -87,6 +90,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @Override
     public String shortDump() {
         throwExceptionIfClosed();
+
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;

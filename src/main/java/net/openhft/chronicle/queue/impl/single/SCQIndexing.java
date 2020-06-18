@@ -121,6 +121,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     public long toAddress0(long index) {
         throwExceptionIfClosed();
+
         long siftedIndex = index >> (indexSpacingBits + indexCountBits);
         long mask = indexCount - 1L;
         // convert to an offset
@@ -646,6 +647,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     public boolean indexable(long index) {
         throwExceptionIfClosed();
+
         return (index & (indexSpacing - 1)) == 0;
     }
 

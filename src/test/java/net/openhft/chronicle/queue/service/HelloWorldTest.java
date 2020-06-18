@@ -30,7 +30,6 @@ import java.io.File;
 
 import static org.easymock.EasyMock.*;
 
-
 public class HelloWorldTest extends QueueTestCommon {
     @Test
     public void testViaMock() {

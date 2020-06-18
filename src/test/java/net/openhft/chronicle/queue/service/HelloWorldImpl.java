@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue.service;
 
-
 public class HelloWorldImpl implements HelloWorld {
     private final HelloReplier replier;
 

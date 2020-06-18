@@ -204,6 +204,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public WireStore writePosition(long position) {
         throwExceptionIfClosed();
+
         assert singleThreadedAccess();
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
         writePosition.setMaxValue(position);
@@ -221,6 +222,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index) {
         throwExceptionIfClosed();
+
         try {
             return indexing.moveToIndex(ec, index);
         } catch (@NotNull UnrecoverableTimeoutException e) {
@@ -231,6 +233,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public long moveToEndForRead(@NotNull Wire w) {
         throwExceptionIfClosed();
+
         return indexing.moveToEnd(w);
     }
 
@@ -255,6 +258,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public MappedBytes bytes() {
         throwExceptionIfClosed();
+
         return MappedBytes.mappedBytes(mappedFile);
     }
 
@@ -262,12 +266,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws
             UnrecoverableTimeoutException, StreamCorruptedException {
         throwExceptionIfClosed();
+
         return indexing.sequenceForPosition(ec, position, inclusive);
     }
 
     @Override
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
         throwExceptionIfClosed();
+
         return indexing.lastSequenceNumber(ec);
     }
 
@@ -286,7 +292,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     // Marshalling
     // *************************************************************************
 
-
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         ;
@@ -299,6 +304,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public void initIndex(@NotNull Wire wire) {
         throwExceptionIfClosed();
+
         try {
             indexing.initIndex(wire);
         } catch (IOException ex) {
@@ -309,6 +315,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public boolean indexable(long index) {
         throwExceptionIfClosed();
+
         return indexing.indexable(index);
     }
 
@@ -331,12 +338,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public ScanResult linearScanTo(final long index, final long knownIndex, final ExcerptContext ec, final long knownAddress) {
         throwExceptionIfClosed();
+
         return indexing.linearScanTo(index, knownIndex, ec, knownAddress);
     }
 
     @Override
     public boolean writeEOF(@NotNull Wire wire, long timeoutMS) {
         throwExceptionIfClosed();
+
         String fileName = mappedFile.file().getAbsolutePath();
 
         // just in case we are about to release this
@@ -371,6 +380,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public int dataVersion() {
         throwExceptionIfClosed();
+
         return dataVersion;
     }
 
@@ -391,6 +401,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     public SingleChronicleQueueStore cycle(int cycle) {
         throwExceptionIfClosed();
+
         this.cycle = cycle;
         return this;
     }

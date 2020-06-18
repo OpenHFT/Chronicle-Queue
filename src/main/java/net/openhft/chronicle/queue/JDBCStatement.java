@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue;
 
-
 public interface JDBCStatement {
     void executeQuery(String query, Object... args);
 

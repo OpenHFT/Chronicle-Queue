@@ -47,7 +47,6 @@ image::../images/cq-vs-cqz-java.png[cq-vs-cqz-java.png]
 
 * The tests show the write-to-read latency, from the point just before the data is written to queue zero, to the point the data is available to read from the tailer.
 
-
 '''
 
 <<../ReadMe.adoc#,Back to ReadMe>>

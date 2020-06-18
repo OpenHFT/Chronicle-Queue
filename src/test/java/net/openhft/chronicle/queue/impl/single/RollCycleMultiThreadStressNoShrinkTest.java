@@ -15,10 +15,11 @@ public class RollCycleMultiThreadStressNoShrinkTest extends RollCycleMultiThread
         }
     }*/
 
-    @Test
-    public void stress() throws InterruptedException, IOException {
-        super.stress();
-    }
+//    @Ignore("TODO FIX")
+@Test
+public void stress() throws InterruptedException, IOException {
+    super.stress();
+}
 
     static {
         System.setProperty("chronicle.queue.disableFileShrinking", "true");

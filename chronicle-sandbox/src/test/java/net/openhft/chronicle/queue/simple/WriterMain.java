@@ -18,7 +18,6 @@
 
 package simple;
 
-
 public class WriterMain {
     static final int CHUNK_BITS = 26;
 /*

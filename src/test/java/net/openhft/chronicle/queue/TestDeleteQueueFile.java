@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -27,7 +28,7 @@ public class TestDeleteQueueFile {
 
     @Before
     public void setUp() throws IOException {
-        tempQueueDir = Files.createTempDirectory("unitTestQueueDir");
+        tempQueueDir = IOTools.createTempDirectory("unitTestQueueDir");
     }
 
     @After

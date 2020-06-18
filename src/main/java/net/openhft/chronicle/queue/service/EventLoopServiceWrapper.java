@@ -29,7 +29,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-
 public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler {
     @NotNull
     protected final MethodReader[] serviceIn;

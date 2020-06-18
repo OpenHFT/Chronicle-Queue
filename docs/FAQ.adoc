@@ -309,7 +309,6 @@ For the tailer, either replicated or not replicated, you can assume you are up-t
 
 They are almost the same, except `files directory-listing.cq4t` was in earlier versions of Chronicle Queue, while `metadata.cq4t` is applicable for Chronicle Queue 5.0 onwards.
 
-
 == Performance between Disk and RAM. Should we specify faster RAM or a faster disk to Chronicle improve read/write performance?
 
 Chronicle recommends lots of high-speed RAM. This is because Chronicle uses the page cache and RAM is in effect a cache to the disk. 

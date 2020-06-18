@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.wire.ByteableLongArrayValues;
 import net.openhft.chronicle.wire.Wire;
 
-
 public class WireUtil {
     public static ThreadLocal<ByteableLongArrayValues> newLongArrayValuesPool(Class<? extends Wire> aClass) {
         throw new UnsupportedOperationException();

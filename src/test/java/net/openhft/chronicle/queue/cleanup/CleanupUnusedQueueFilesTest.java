@@ -26,8 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
 
-
-    @Test
+@Test
     public void testTailingWithEmptyCycles() {
         testTailing(p -> {
             try {

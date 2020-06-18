@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue.impl;
 
 import java.io.File;
 
-
 @FunctionalInterface
 public interface StoreFileListener {
     default void onAcquired(int cycle, File file) {

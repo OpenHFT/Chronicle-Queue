@@ -225,12 +225,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public long lastAcknowledgedIndexReplicated() {
         throwExceptionIfClosed();
+
         return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue(-1);
     }
 
     @Override
     public void lastAcknowledgedIndexReplicated(long newValue) {
         throwExceptionIfClosed();
+
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
@@ -238,6 +240,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public void refreshDirectoryListing() {
         throwExceptionIfClosed();
+
         directoryListing.refresh();
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
@@ -249,12 +252,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public long lastIndexReplicated() {
         throwExceptionIfClosed();
+
         return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue(-1);
     }
 
     @Override
     public void lastIndexReplicated(long indexReplicated) {
         throwExceptionIfClosed();
+
         if (lastIndexReplicated != null)
             lastIndexReplicated.setMaxValue(indexReplicated);
     }
@@ -406,6 +411,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public ExcerptAppender acquireAppender() {
         throwExceptionIfClosed();
+
         if (readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
@@ -449,6 +455,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public ExcerptTailer createTailer(String id) {
         throwExceptionIfClosed();
+
         LongValue index = id == null
                 ? null
                 : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
@@ -462,6 +469,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public ExcerptTailer createTailer() {
         throwExceptionIfClosed();
+
         return createTailer(null);
     }
 
@@ -474,11 +482,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public int nextCycle(int cycle, @NotNull TailerDirection direction) throws ParseException {
         throwExceptionIfClosed();
+
         return pool.nextCycle(cycle, direction);
     }
 
     public long exceptsPerCycle(int cycle) {
         throwExceptionIfClosed();
+
         StoreTailer tailer = acquireTailer();
         try {
             long index = rollCycle.toIndex(cycle, 0);
@@ -506,6 +516,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public long countExcerpts(long fromIndex, long toIndex) throws IllegalStateException {
         throwExceptionIfClosed();
+
         if (fromIndex > toIndex) {
             long temp = fromIndex;
             fromIndex = toIndex;
@@ -582,6 +593,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
         throwExceptionIfClosed();
+
         return pool.listCyclesBetween(lowerCycle, upperCycle);
     }
 
@@ -633,6 +645,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public long firstIndex() {
         throwExceptionIfClosed();
+
         // TODO - as discussed, peter is going find another way to do this as this solution
         // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
 
@@ -646,6 +659,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public long entryCount() {
         throwExceptionIfClosed();
+
         final ExcerptTailer tailer = createTailer();
         tailer.toEnd();
         long lastIndex = tailer.index();
@@ -660,7 +674,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private void setFirstAndLastCycle() {
-        long now = time.currentTimeMillis();
+        long now = System.currentTimeMillis();
         if (now <= firstAndLastCycleTime) {
             return;
         }
@@ -775,6 +789,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     public TableStore metaStore() {
         throwExceptionIfClosed();
+
         return metaStore;
     }
 
@@ -1065,6 +1080,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         @Override
         public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) {
             throwExceptionIfClosed();
+
             final NavigableMap<Long, File> tree = cycleTree(false);
             final Long lowerKey = toKey(lowerCycle, "lowerCycle");
             final Long upperKey = toKey(upperCycle, "upperCycle");

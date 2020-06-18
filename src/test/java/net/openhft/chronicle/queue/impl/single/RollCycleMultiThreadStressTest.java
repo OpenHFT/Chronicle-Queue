@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -25,18 +26,24 @@ import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.nio.file.Files;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
+    static {
+        Jvm.disableDebugHandler();
+    }
+
     final long SLEEP_PER_WRITE_NANOS;
     final int TEST_TIME;
     final int ROLL_EVERY_MS;
@@ -50,13 +57,13 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     final boolean READERS_READ_ONLY;
     final boolean DUMP_QUEUE;
     boolean SHARED_WRITE_QUEUE;
-
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
-
-    static {
-        Jvm.disableDebugHandler();
-    }
+    final Logger LOG = LoggerFactory.getLogger(getClass());
+    final SetTimeProvider timeProvider = new SetTimeProvider();
+    private ChronicleQueue sharedWriterQueue;
+    @Rule
+    public RepeatRule repeatRule = new RepeatRule();
 
     public RollCycleMultiThreadStressTest() {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
@@ -78,13 +85,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
     }
 
-    final Logger LOG = LoggerFactory.getLogger(getClass());
-    final SetTimeProvider timeProvider = new SetTimeProvider();
-    private ChronicleQueue sharedWriterQueue;
-
-    @Rule
-    public RepeatRule repeatRule = new RepeatRule();
-
     static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
         boolean allReadersComplete = true;
 
@@ -102,7 +102,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     @Test
     public void stress() throws InterruptedException, IOException {
 
-        File file = Files.createTempDirectory("queue").toFile();
+        File file = IOTools.createTempDirectory("queue").toFile();
         System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
@@ -212,54 +212,70 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 timeToWriteSecs, expectedNumberOfMessages / timeToWriteSecs, (expectedNumberOfMessages / timeToWriteSecs) / numWriters,
                 1_000_000_000 / ((expectedNumberOfMessages / timeToWriteSecs) / numWriters)));
 
-        final long giveUpReadingAt = System.currentTimeMillis() + 60_000L;
-        final long dumpThreadsAt = giveUpReadingAt - 15_000L;
-        while (System.currentTimeMillis() < giveUpReadingAt) {
-            boolean allReadersComplete = areAllReadersComplete(expectedNumberOfMessages, readers);
+        final long giveUpReadingAt = System.currentTimeMillis() + 20_000L;
+        final long dumpThreadsAt = giveUpReadingAt - 5_000L;
 
-            if (allReadersComplete) {
-                break;
-            }
-
-            if (dumpThreadsAt < System.currentTimeMillis()) {
-                Thread.getAllStackTraces().forEach((n, st) -> {
-                    System.out.println("\n\n" + n + "\n\n");
-                    Arrays.stream(st).forEach(System.out::println);
+        try {
+            while (System.currentTimeMillis() < giveUpReadingAt) {
+                results.forEach(f -> {
+                    try {
+                        if (f.isDone()) {
+                            final Throwable exception = f.get();
+                            if (exception != null) {
+                                throw Jvm.rethrow(exception);
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        // ignored
+                    } catch (ExecutionException e) {
+                        throw Jvm.rethrow(e);
+                    }
                 });
-            }
 
-            System.out.printf("Not all readers are complete. Waiting...%n");
-            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(1L));
-        }
-        assertTrue("Readers did not catch up",
-                areAllReadersComplete(expectedNumberOfMessages, readers));
+                boolean allReadersComplete = areAllReadersComplete(expectedNumberOfMessages, readers);
 
-        executorServiceRead.shutdown();
-        executorServiceWrite.shutdown();
-        executorServicePretouch.shutdown();
-
-        if (!executorServiceRead.awaitTermination(1, TimeUnit.SECONDS))
-            executorServiceRead.shutdownNow();
-
-        if (!executorServiceWrite.awaitTermination(1, TimeUnit.SECONDS))
-            executorServiceWrite.shutdownNow();
-
-        if (!executorServicePretouch.awaitTermination(1, TimeUnit.SECONDS))
-            executorServicePretouch.shutdownNow();
-
-        results.forEach(f -> {
-            try {
-                final Throwable exception = f.get();
-                if (exception != null) {
-                    exception.printStackTrace();
+                if (allReadersComplete) {
+                    break;
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
-            }
-        });
 
+                System.out.printf("Not all readers are complete. Waiting...%n");
+                Jvm.pause(2000);
+            }
+            assertTrue("Readers did not catch up",
+                    areAllReadersComplete(expectedNumberOfMessages, readers));
+
+        } finally {
+
+            executorServiceRead.shutdown();
+            executorServiceWrite.shutdown();
+            executorServicePretouch.shutdown();
+
+            if (!executorServiceRead.awaitTermination(1, TimeUnit.SECONDS))
+                executorServiceRead.shutdownNow();
+
+            if (!executorServiceWrite.awaitTermination(1, TimeUnit.SECONDS))
+                executorServiceWrite.shutdownNow();
+
+            if (!executorServicePretouch.awaitTermination(1, TimeUnit.SECONDS))
+                executorServicePretouch.shutdownNow();
+
+            closeQuietly(sharedWriterQueue);
+            results.forEach(f -> {
+                try {
+                    final Throwable exception = f.get(100, TimeUnit.MILLISECONDS);
+                    if (exception != null) {
+                        exception.printStackTrace();
+                    }
+                } catch (InterruptedException | TimeoutException e) {
+                    // ignored
+                } catch (ExecutionException e) {
+                    throw Jvm.rethrow(e);
+                }
+            });
+
+            DirectoryUtils.deleteDir(file);
+        }
         System.out.println("Test complete");
-        DirectoryUtils.deleteDir(file);
     }
 
     @NotNull
@@ -267,6 +283,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         return SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)
+//                .doubleBuffer(true)
                 .rollCycle(RollCycles.TEST_SECONDLY);
     }
 
@@ -278,6 +295,30 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     @NotNull
     private ChronicleQueue writerQueue(File path) {
         return sharedWriterQueue != null ? sharedWriterQueue : createQueue(path);
+    }
+
+    @Before
+    public void multiCPU() {
+        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+    }
+
+    @Before
+    public void before() {
+        threadDump = new ThreadDump();
+        exceptionKeyIntegerMap = Jvm.recordExceptions();
+    }
+
+    @After
+    public void after() {
+        threadDump.assertNoNewThreads();
+        // warnings are often expected
+        exceptionKeyIntegerMap.entrySet().removeIf(entry -> entry.getKey().level.equals(LogLevel.WARN));
+        if (Jvm.hasException(exceptionKeyIntegerMap)) {
+            Jvm.dumpException(exceptionKeyIntegerMap);
+            fail();
+        }
+        Jvm.resetExceptionHandlers();
+        AbstractReferenceCounted.assertReferencesReleased();
     }
 
     public static class RepeatRule implements TestRule {
@@ -345,53 +386,60 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         @Override
         public Throwable call() {
-
             SingleChronicleQueueBuilder builder = queueBuilder(path);
             if (READERS_READ_ONLY)
                 builder.readOnly(true);
-            try (final RollingChronicleQueue queue = builder.build()) {
+            long last = System.currentTimeMillis();
+            try (RollingChronicleQueue queue = builder.build();
+                 ExcerptTailer tailer = queue.createTailer()) {
 
-                final ExcerptTailer tailer = queue.createTailer();
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
                 Jvm.pause(random.nextInt(DELAY_READER_RANDOM_MS));
                 while (lastRead != expectedNumberOfMessages - 1) {
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        if (dc.isPresent()) {
-                            int v = -1;
-
-                            final ValueIn valueIn = dc.wire().getValueIn();
-                            final long documentAcquireTimestamp = valueIn.int64();
-                            if (documentAcquireTimestamp == 0L) {
-                                throw new AssertionError("No timestamp");
+                        if (!dc.isPresent()) {
+                            long now = System.currentTimeMillis();
+                            if (now > last + 2000) {
+                                if (lastRead < 0)
+                                    throw new AssertionError("read nothing after 2 seconds");
+                                System.out.println(Thread.currentThread() + " - Last read: " + lastRead);
+                                last = now;
                             }
-                            for (int i = 0; i < NUMBER_OF_INTS; i++) {
-                                v = valueIn.int32();
-                                if (lastRead + 1 != v) {
-//                                    System.out.println(dc.wire());
-                                    String failureMessage = "Expected: " + (lastRead + 1) +
-                                            ", actual: " + v + ", pos: " + i + ", index: " + Long
-                                            .toHexString(dc.index()) +
-                                            ", cycle: " + tailer.cycle();
-                                    if (lastTailerCycle != -1) {
-                                        failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
-                                                " (current: " + (tailer.cycle()) +
-                                                "), queue cycle at last read: " + lastQueueCycle +
-                                                " (current: " + queue.cycle() + ")";
-                                    }
-                                    if (DUMP_QUEUE)
-                                        DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
-                                    throw new AssertionError(failureMessage);
-                                }
-                            }
-                            lastRead = v;
-                            lastTailerCycle = tailer.cycle();
-                            lastQueueCycle = queue.cycle();
+                            continue;
                         }
+                        int v = -1;
+
+                        final ValueIn valueIn = dc.wire().getValueIn();
+                        final long documentAcquireTimestamp = valueIn.int64();
+                        if (documentAcquireTimestamp == 0L) {
+                            throw new AssertionError("No timestamp");
+                        }
+                        for (int i = 0; i < NUMBER_OF_INTS; i++) {
+                            v = valueIn.int32();
+                            if (lastRead + 1 != v) {
+//                                    System.out.println(dc.wire());
+                                String failureMessage = "Expected: " + (lastRead + 1) +
+                                        ", actual: " + v + ", pos: " + i + ", index: " + Long
+                                        .toHexString(dc.index()) +
+                                        ", cycle: " + tailer.cycle();
+                                if (lastTailerCycle != -1) {
+                                    failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
+                                            " (current: " + (tailer.cycle()) +
+                                            "), queue cycle at last read: " + lastQueueCycle +
+                                            " (current: " + queue.cycle() + ")";
+                                }
+                                if (DUMP_QUEUE)
+                                    DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
+                                throw new AssertionError(failureMessage);
+                            }
+                        }
+                        lastRead = v;
+                        lastTailerCycle = tailer.cycle();
+                        lastQueueCycle = queue.cycle();
                     }
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
                 exception = e;
                 return e;
             }
@@ -416,8 +464,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         @Override
         public Throwable call() {
-            try (final ChronicleQueue queue = writerQueue(path)) {
-                final ExcerptAppender appender = queue.acquireAppender();
+            ChronicleQueue queue = writerQueue(path);
+            try (final ExcerptAppender appender = queue.acquireAppender()) {
                 Jvm.pause(random.nextInt(DELAY_WRITER_RANDOM_MS));
                 final long startTime = System.nanoTime();
                 int loopIteration = 0;
@@ -436,6 +484,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             } catch (Throwable e) {
                 exception = e;
                 return e;
+            } finally {
+                if (queue != sharedWriterQueue)
+                    queue.close();
             }
         }
 
@@ -485,29 +536,5 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             }
             return null;
         }
-    }
-
-    @Before
-    public void multiCPU() {
-        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
-    }
-
-    @Before
-    public void before() {
-        threadDump = new ThreadDump();
-        exceptionKeyIntegerMap = Jvm.recordExceptions();
-    }
-
-    @After
-    public void after() {
-        threadDump.assertNoNewThreads();
-        // warnings are often expected
-        exceptionKeyIntegerMap.entrySet().removeIf(entry -> entry.getKey().level.equals(LogLevel.WARN));
-        if (Jvm.hasException(exceptionKeyIntegerMap)) {
-            Jvm.dumpException(exceptionKeyIntegerMap);
-            fail();
-        }
-        Jvm.resetExceptionHandlers();
-        AbstractReferenceCounted.assertReferencesReleased();
     }
 }

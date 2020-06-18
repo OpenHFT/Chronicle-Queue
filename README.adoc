@@ -662,8 +662,6 @@ to create a uber jar, with the shade plugin from maven:
 
 ----
 
-
-
 === Reading from a Queue using a Tailer
 
 Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
@@ -757,8 +755,6 @@ assertTrue(tailer.readBytes(b -> {
 }));
 
 ----
-
-
 
 ==== Tailers and File Handlers Clean up
 
@@ -1384,7 +1380,6 @@ if you are reading and writing from the same thread then you can set this to NEV
 appender.padToCacheAlign(Padding.NEVER);
 ----
 
-
 the Padding enum is as follows :
 
 [source, Java]
@@ -1403,7 +1398,6 @@ the Padding enum is as follows :
         }
     }
 ----
-
 
 ==== Ensure long Running tasks are not performed with a writingDocument()
 
@@ -1604,10 +1598,7 @@ The 99.9 percentile  and 99.93 percentile are a function of how quickly the syst
 
 image:https://vanilla-java.github.io/images/Latency-from-993.png[]
 
-
-
 === Jitter
-
 
 If you wish to tune your code for ultra-low latency, you could take a similar approach to our `QueueReadJitterMain`
 
@@ -1649,11 +1640,9 @@ It is likely to give you finer granularity than a typical profiler. As it is bas
 
 ----
 
-
 from this, we can see that most of the samples (on this occasion 28 of them ) were captured in `ConcurrentHashMap.putVal()` if we wish to get finer grain granularity,
 
 we will often add a `net.openhft.chronicle.core.Jvm.safepoint` into the code because thread dumps are only reported at safe-points.
-
 
 ==== Summary
 

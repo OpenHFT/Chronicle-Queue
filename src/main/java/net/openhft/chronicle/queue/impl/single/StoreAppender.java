@@ -92,6 +92,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(@NotNull final WriteBytesMarshallable marshallable) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
+
         try (DocumentContext dc = writingDocument()) {
             Bytes<?> bytes = dc.wire().bytes();
             long wp = bytes.writePosition();
@@ -139,6 +140,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void pretouch() {
         throwExceptionIfClosed();
+
         if (queue.isClosed())
             throw new RuntimeException("Queue Closed");
         try {
@@ -206,12 +208,14 @@ class StoreAppender extends AbstractCloseable
     @Override
     public Wire wireForIndex() {
         throwExceptionIfClosed();
+
         return wireForIndex;
     }
 
     @Override
     public long timeoutMS() {
         throwExceptionIfClosed();
+
         return queue.timeoutMS;
     }
 
@@ -222,6 +226,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public boolean recordHistory() {
         throwExceptionIfClosed();
+
         return sourceId() != 0;
     }
 
@@ -320,6 +325,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
+
         return writingDocument(false); // avoid overhead of a default method.
     }
 
@@ -327,14 +333,13 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        queue.throwExceptionIfClosed();
 
         if (queue.doubleBuffer && writeLock.locked() && !metaData) {
             context.isClosed = false;
             context.rollbackOnClose = false;
             context.buffered = true;
             if (bufferWire == null) {
-                Bytes bufferBytes = Bytes.allocateElasticDirect();
+                Bytes bufferBytes = Bytes.allocateElasticOnHeap();
                 bufferWire = queue().wireType().apply(bufferBytes);
             }
             context.wire = bufferWire;
@@ -440,12 +445,14 @@ class StoreAppender extends AbstractCloseable
     @Override
     public int sourceId() {
         throwExceptionIfClosed();
+
         return queue.sourceId;
     }
 
     @Override
     public void writeBytes(@NotNull final BytesStore bytes) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
+
         writeLock.lock();
         try {
             int cycle = queue.cycle();
@@ -569,6 +576,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public int cycle() {
         throwExceptionIfClosed();
+
         if (cycle == Integer.MIN_VALUE) {
             int cycle = this.queue.lastCycle();
             if (cycle < 0)
@@ -588,6 +596,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public Runnable getCloserJob() {
         throwExceptionIfClosed();
+
         return this::close;
     }
 
@@ -689,6 +698,7 @@ class StoreAppender extends AbstractCloseable
         @Override
         public int sourceId() {
             throwExceptionIfClosed();
+
             return StoreAppender.this.sourceId();
         }
 
@@ -705,12 +715,14 @@ class StoreAppender extends AbstractCloseable
         @Override
         public boolean isMetaData() {
             throwExceptionIfClosed();
+
             return metaData;
         }
 
         @Override
         public void metaData(boolean metaData) {
             throwExceptionIfClosed();
+
             this.metaData = metaData;
         }
 
@@ -720,6 +732,7 @@ class StoreAppender extends AbstractCloseable
         @Override
         public void rollbackOnClose() {
             throwExceptionIfClosed();
+
             this.rollbackOnClose = true;
         }
 
@@ -798,6 +811,7 @@ class StoreAppender extends AbstractCloseable
         @Override
         public long index() throws IORuntimeException {
             throwExceptionIfClosed();
+
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));

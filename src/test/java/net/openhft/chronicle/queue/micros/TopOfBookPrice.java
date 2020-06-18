@@ -22,7 +22,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
 
-
 public class TopOfBookPrice extends SelfDescribingMarshallable {
     public static final long TIMESTAMP_LIMIT = TimeUnit.SECONDS.toMillis(1000);
     final String symbol;

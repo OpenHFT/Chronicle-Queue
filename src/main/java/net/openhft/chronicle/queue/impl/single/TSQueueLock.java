@@ -53,7 +53,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     public void acquireLock() {
         throwExceptionIfClosed();
 
-        long tid = Thread.currentThread().getId();
+ long tid = Thread.currentThread().getId();
         if (isLockHeldByCurrentThread(tid)) {
             return;
         }

@@ -49,7 +49,9 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
     public void throwExceptionIfClosed() {
         super.throwExceptionIfClosed();
+
         tableStore.throwExceptionIfClosed();
+
     }
 
     protected void forceUnlock() {

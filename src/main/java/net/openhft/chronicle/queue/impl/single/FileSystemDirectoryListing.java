@@ -18,11 +18,13 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     @Override
     public void onFileCreated(final File file, final int cycle) {
         throwExceptionIfClosed();
+
     }
 
     @Override
     public int getMaxCreatedCycle() {
         throwExceptionIfClosed();
+
         int maxCycle = Integer.MIN_VALUE;
         final File[] files = queueDir.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
         if (files != null) {
@@ -36,6 +38,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     @Override
     public int getMinCreatedCycle() {
         throwExceptionIfClosed();
+
         int minCycle = Integer.MAX_VALUE;
         final File[] files = queueDir.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
         if (files != null) {
@@ -49,6 +52,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     @Override
     public long modCount() {
         throwExceptionIfClosed();
+
         return -1;
     }
 }

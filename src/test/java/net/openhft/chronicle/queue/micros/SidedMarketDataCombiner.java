@@ -22,7 +22,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.TreeMap;
 
-
 public class SidedMarketDataCombiner implements SidedMarketDataListener {
     final MarketDataListener mdListener;
     final Map<String, TopOfBookPrice> priceMap = new TreeMap<>();

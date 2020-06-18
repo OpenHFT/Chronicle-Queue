@@ -136,8 +136,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final AtomicReference<Throwable> readerException = new AtomicReference<>();
         final CountDownLatch executeLatch = new CountDownLatch(1);
 
-
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);

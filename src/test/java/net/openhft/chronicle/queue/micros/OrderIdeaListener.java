@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue.micros;
 
-
 @FunctionalInterface
 public interface OrderIdeaListener {
     void onOrderIdea(OrderIdea orderIdea);

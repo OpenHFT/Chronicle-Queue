@@ -25,7 +25,6 @@ import net.openhft.lang.model.DataValueClasses;
 
 import java.io.IOException;
 
-
 public class ReplayData {
     /*
     On an i7-3970X prints.

@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-
 public enum Compression {
     NONE, SNAPPY, DEFLATOR
 }

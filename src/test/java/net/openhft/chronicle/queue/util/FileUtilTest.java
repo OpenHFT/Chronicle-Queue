@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.util;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -47,7 +48,8 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         AbstractCloseable.disableCloseableTracing();
 
         assumeFalse(OS.isWindows());
-        final Path dir = Files.createTempDirectory("openByAnyProcess");
+        final Path dir = IOTools.createTempDirectory("openByAnyProcess");
+        dir.toFile().mkdir();
         try {
             final File testFile = dir.resolve("tmpFile").toFile();
             Files.write(testFile.toPath(), "A".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);

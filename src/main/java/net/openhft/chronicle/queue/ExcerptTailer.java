@@ -47,8 +47,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
         return readingDocument(false);
     }
 
-
-    /**
+/**
      * Returns the {@link DocumentContext } for this ExcerptTailer.
      * <p>
      * This is equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but without the use of a

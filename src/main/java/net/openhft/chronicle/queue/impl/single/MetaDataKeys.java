@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.wire.WireKey;
 
-
 public enum MetaDataKeys implements WireKey {
     header,
     index2index,

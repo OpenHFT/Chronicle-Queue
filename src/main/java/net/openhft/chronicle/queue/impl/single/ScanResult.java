@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-
 public enum ScanResult {
     FOUND, NOT_REACHED, NOT_FOUND, END_OF_FILE
 }

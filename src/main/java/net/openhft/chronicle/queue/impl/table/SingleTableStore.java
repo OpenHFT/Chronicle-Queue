@@ -119,27 +119,23 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
         final long timeoutAt = tickTime() + timeoutMS;
-        boolean warnedOnFailure = false;
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-
-            while (tickTime() < timeoutAt) {
-                try {
-                    FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, shared);
+            for (int count = 1; tickTime() < timeoutAt; count++) {
+                try (FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, shared)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
                     }
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
-                    if (!warnedOnFailure) {
-
+                    if (count > 9) {
                         if (Jvm.isDebugEnabled(SingleTableStore.class)) {
-                            String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath();
+                            String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath() + ", count=" + count;
                             Jvm.debug().on(SingleTableStore.class, "", new StackTrace(message));
                         }
-                        warnedOnFailure = true;
                     }
                 }
-                sleep(50, MILLISECONDS);
+                int delay = Math.min(250, count * count);
+                sleep(delay, MILLISECONDS);
             }
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
@@ -151,6 +147,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public File file() {
         throwExceptionIfClosed();
+
         return mappedFile.file();
     }
 
@@ -158,6 +155,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public String dump() {
         throwExceptionIfClosed();
+
         return dump(false);
     }
 
@@ -176,6 +174,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public String shortDump() {
         throwExceptionIfClosed();
+
         return dump(true);
     }
 
@@ -192,6 +191,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public MappedBytes bytes() {
         throwExceptionIfClosed();
+
         return MappedBytes.mappedBytes(mappedFile);
     }
 
@@ -278,7 +278,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public T metadata() {
         return metadata;
     }
-
 
     @Override
     protected boolean threadSafetyCheck() {

@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -13,6 +12,7 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -158,13 +158,22 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     private boolean hasEOFAtEndOfFile(final File file) throws IOException {
 
-        Bytes bytes = BytesUtil.readFile(file.getAbsolutePath());
+        Bytes bytes;
+        FileInputStream fis = new FileInputStream(file);
+        fis.skip(131328);
+        byte[] bytes1 = new byte[fis.available()];
+        int read = fis.read(bytes1);
+        if (read != bytes1.length) {
+            throw new AssertionError();
+        }
+        bytes = Bytes.wrapForRead(bytes1);
 
         // to check that "00 00 00 c0") is the EOF you can run net.openhft.chronicle.queue.ChronicleQueueIndexTest.eofAsHex
         //  eofAsHex();
 
         // check that the EOF is in the last few bytes.
-        String lastFewBytes = bytes.toHexString(131328, 128);
+//        String lastFewBytes = bytes.toHexString(131328, 128);
+        String lastFewBytes = bytes.toHexString(0, 128);
         //System.out.println(lastFewBytes);
 
         // 00 00 00 c0 is the EOF
@@ -179,7 +188,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DAILY)
-                .build() ) {
+                .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             Bytes<byte[]> hello_world = Bytes.from("Hello World 1");

@@ -234,11 +234,10 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         }
 
-
-        @NotNull RollingChronicleQueue queue = binary(dir)
-                .testBlockSize()
-                .rollCycle(RollCycles.HOURLY)
-                .build();
+@NotNull RollingChronicleQueue queue = binary(dir)
+        .testBlockSize()
+        .rollCycle(RollCycles.HOURLY)
+        .build();
         testQueue(queue);
         assertEquals(2, queue.firstCycle());
         queue.close();

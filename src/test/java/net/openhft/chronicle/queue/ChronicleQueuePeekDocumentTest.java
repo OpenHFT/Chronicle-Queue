@@ -6,7 +6,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.Assert.assertEquals;
@@ -19,7 +18,7 @@ public class ChronicleQueuePeekDocumentTest extends QueueTestCommon {
     public void testUsingPeekDocument() throws IOException {
         Path tempDir = null;
         try {
-            tempDir = Files.createTempDirectory("ChronicleQueueLoggerTest");
+            tempDir = IOTools.createTempDirectory("ChronicleQueueLoggerTest");
             // Read back the data
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
                 ExcerptTailer tailer = queue.createTailer();

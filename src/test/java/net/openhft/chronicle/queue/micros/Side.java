@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue.micros;
 
-
 public enum Side {
     Buy, Sell
 }

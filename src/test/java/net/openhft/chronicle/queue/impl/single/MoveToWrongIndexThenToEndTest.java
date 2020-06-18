@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -12,7 +13,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,7 +44,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     private Bytes<ByteBuffer> outbound;
 
     public MoveToWrongIndexThenToEndTest() throws IOException {
-        basePath = Files.createTempDirectory("MoveToWrongIndexThenToEndTest");
+        basePath = IOTools.createTempDirectory("MoveToWrongIndexThenToEndTest");
         basePath.toFile().deleteOnExit();
 
         queue = createChronicle(basePath);

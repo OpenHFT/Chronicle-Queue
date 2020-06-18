@@ -11,7 +11,6 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-
 @RequiredForClient
 public class MethodReaderObjectReuseTest extends QueueTestCommon {
     @Test

@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-
 public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     private final List<String> inputPaths = new ArrayList<>();
     private final List<Function<O, Object>> serviceFunctions = new ArrayList<>();

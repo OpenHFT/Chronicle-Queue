@@ -1,13 +1,13 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +36,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
     }
 
     private void runTest(String id, Bytes msg) throws IOException {
-        Path path = Files.createTempDirectory(id);
+        Path path = IOTools.createTempDirectory(id);
         try {
             CountDownLatch steady = new CountDownLatch(2);
             CountDownLatch go = new CountDownLatch(1);

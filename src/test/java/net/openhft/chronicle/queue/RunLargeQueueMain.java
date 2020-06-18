@@ -22,7 +22,6 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 
-
 public enum RunLargeQueueMain {
     ;
 

@@ -24,7 +24,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-
 public interface DirectChronicleQueue extends ChronicleQueue {
 
     /**

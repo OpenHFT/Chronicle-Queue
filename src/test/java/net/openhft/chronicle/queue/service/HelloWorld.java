@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue.service;
 
-
 @FunctionalInterface
 public interface HelloWorld {
     void hello(String name);

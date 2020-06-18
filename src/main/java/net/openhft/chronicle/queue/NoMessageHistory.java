@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.MessageHistory;
 
-
 public enum NoMessageHistory implements MessageHistory {
     INSTANCE;
 
@@ -38,8 +37,7 @@ public enum NoMessageHistory implements MessageHistory {
         return 0;
     }
 
-
-    @Override
+@Override
     public int sourceId(int n) {
         return -1;
     }

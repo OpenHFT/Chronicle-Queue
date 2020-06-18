@@ -3,7 +3,6 @@ package net.openhft.chronicle.engine.client.internal;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 
-
 public class QueueTailerResponse extends QueueAppenderResponse {
     long start;
 

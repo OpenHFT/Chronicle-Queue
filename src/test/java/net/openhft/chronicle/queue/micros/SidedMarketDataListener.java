@@ -17,7 +17,6 @@
 
 package net.openhft.chronicle.queue.micros;
 
-
 @FunctionalInterface
 public interface SidedMarketDataListener {
     void onSidedPrice(SidedPrice sidedPrice);

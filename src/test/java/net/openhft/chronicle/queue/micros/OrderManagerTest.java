@@ -31,7 +31,6 @@ import java.io.File;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
-
 public class OrderManagerTest extends QueueTestCommon {
 
     @Test

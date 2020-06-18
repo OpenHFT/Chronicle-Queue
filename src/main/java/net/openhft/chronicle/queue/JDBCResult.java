@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 
 import java.util.List;
 
-
 public interface JDBCResult {
     void queryResult(List<String> columns, List<List<Object>> rows, String query, Object... args);
 

@@ -33,7 +33,6 @@ import java.util.function.Consumer;
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
 
-
 public class SingleTailer implements ExcerptTailer {
     @NotNull
 

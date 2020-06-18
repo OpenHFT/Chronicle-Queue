@@ -29,7 +29,6 @@ import java.io.File;
 import java.sql.DriverManager;
 import java.util.concurrent.atomic.AtomicLong;
 
-
 public class JDBCServiceTest extends QueueTestCommon {
 
     @Test

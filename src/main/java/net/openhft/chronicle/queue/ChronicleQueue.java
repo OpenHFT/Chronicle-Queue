@@ -285,8 +285,7 @@ public interface ChronicleQueue extends Closeable {
      */
     int sourceId();
 
-
-    /**
+/**
      * Creates and returns a new writer proxy for the given interface {@code tclass} and the given {@code additional }
      * interfaces.
      * <p>

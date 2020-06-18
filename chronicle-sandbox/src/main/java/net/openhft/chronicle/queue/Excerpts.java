@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue;
 
 import org.jetbrains.annotations.NotNull;
 
-
 public enum Excerpts {
     ; // Utility class
 

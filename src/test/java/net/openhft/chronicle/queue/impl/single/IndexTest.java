@@ -71,8 +71,7 @@ public class IndexTest extends ChronicleQueueTestBase {
         threadDump.assertNoNewThreads();
     }
 
-
-    @Test
+@Test
     public void test() throws IOException {
 
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder

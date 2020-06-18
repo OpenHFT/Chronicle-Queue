@@ -295,5 +295,4 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         assertEquals(expectedLong, cache.toLong(resource.path));
     }
 
-
 }
