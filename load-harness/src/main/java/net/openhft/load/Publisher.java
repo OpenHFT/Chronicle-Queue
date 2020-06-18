@@ -70,8 +70,7 @@ public final class Publisher {
 //                        }
 //                    }
                 }
-
-            } catch (Exception e) {
+ } catch (Exception e) {
                 if (!loggedException) {
                     e.printStackTrace();
                     loggedException = true;

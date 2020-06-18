@@ -67,7 +67,6 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
             String read = tailer.readText();
             assertEquals("42", read);
         }
-
-    }
+ }
 
 }

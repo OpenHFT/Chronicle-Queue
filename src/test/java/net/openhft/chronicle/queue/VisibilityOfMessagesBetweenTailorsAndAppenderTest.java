@@ -68,8 +68,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
             e2.shutdownNow();
             e1.shutdownNow();
         }
-
-    }
+ }
 
     @NotNull
     protected File getTmpDir() {

@@ -39,8 +39,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
                         "}\n", who.toString());
             }
         }
-
-    }
+ }
 
     @Test
     public void testDtoAbstractMarshallable() {
@@ -68,7 +67,6 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
                 Assert.assertTrue(yaml.contains(who.toString()));
             }
         }
-
     }
 
     public static class DtoBytesMarshallable extends BytesInBinaryMarshallable {

@@ -138,8 +138,7 @@ public class TestDeleteQueueFile {
                 Assert.assertEquals("test2", excerptTailer2.readText());
             }
         }
-
-    }
+ }
 
     final class QueueStoreFileListener implements StoreFileListener {
 

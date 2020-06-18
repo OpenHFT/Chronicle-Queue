@@ -33,8 +33,7 @@ public class ValueStringArrayTest extends QueueTestCommon {
 //                System.out.println(actual);
                 Assert.assertEquals(EXPECTED, actual.toString());
             }
-
-        }
+ }
 
     }
 

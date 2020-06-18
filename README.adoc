@@ -279,9 +279,9 @@ This makes using Stream Processing attractive for systems which need a high degr
 
 == Using Chronicle Queue
 
-Chronicle Queue is designed to be driven from code. You can easily add an interface which suits your needs.
+Chronicle Queue is designed to be driven from code.You can easily add an interface which suits your needs.
 
-NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations can throw unchecked exceptions. In order to prevent thread death, it might be practical to catch `RuntimeException`s and log/analyze them as appropriate.
+NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations can throw unchecked exceptions.In order to prevent thread death, it might be practical to catch `RuntimeException`s and log/analyze them as appropriate.
 
 === Writing to a Queue
 In Chronicle Queue we refer to the act of writing your data to the Chronicle queue, as storing an excerpt. This data could be made up from any data type, including text, numbers, or serialised blobs. Ultimately, all your data, regardless of what it is, is  stored as a series of bytes.
@@ -523,8 +523,7 @@ public void read5thMessageTest() {
         try (DocumentContext dc = tailer.readingDocument()) {
             System.out.println(dc.wire().read("hello").text());
         }
-
-    }
+ }
 }
 ```
 

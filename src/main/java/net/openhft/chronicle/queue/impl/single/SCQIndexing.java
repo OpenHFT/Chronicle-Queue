@@ -739,6 +739,5 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         protected void performClose() {
             values.close();
         }
-
-    }
+ }
 }

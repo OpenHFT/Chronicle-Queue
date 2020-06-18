@@ -2500,8 +2500,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals(7, queue.countExcerpts(indexs[0] - 1,
                     indexs[6]));
         }
-
-    }
+ }
 
     @Test
     public void testReadingWritingWhenNextCycleIsInSequence() {

@@ -42,8 +42,7 @@ public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
                     Assert.assertArrayEquals(data, dc.wire().read("data").bytes());
                 }
             }
-
-        }
+ }
     }
 
 }

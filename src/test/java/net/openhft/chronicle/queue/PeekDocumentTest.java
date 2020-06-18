@@ -32,8 +32,7 @@ public class PeekDocumentTest extends QueueTestCommon {
                     try (DocumentContext documentContext = appender.writingDocument()) {
                         documentContext.wire().write("value").text("hello" + i);
                     }
-
-                }
+ }
 
                 ExcerptTailer tailer = queue.createTailer();
 
@@ -53,7 +52,6 @@ public class PeekDocumentTest extends QueueTestCommon {
                                 wire.bytes().readPosition(l);
                         }
                     }
-
                 }
 
                 assertFalse(tailer.peekDocument());
@@ -68,7 +66,6 @@ public class PeekDocumentTest extends QueueTestCommon {
         } finally {
             tempDir.deleteOnExit();
         }
-
     }
 
     @Test
@@ -113,7 +110,6 @@ public class PeekDocumentTest extends QueueTestCommon {
         } finally {
             tempDir.deleteOnExit();
         }
-
     }
 
     @Test
@@ -138,7 +134,6 @@ public class PeekDocumentTest extends QueueTestCommon {
         } finally {
             tempDir.deleteOnExit();
         }
-
     }
 
     @Test
@@ -172,7 +167,6 @@ public class PeekDocumentTest extends QueueTestCommon {
         } finally {
             tempDir.deleteOnExit();
         }
-
     }
 
     @Test

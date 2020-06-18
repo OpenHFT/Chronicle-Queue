@@ -52,8 +52,7 @@ public enum QueueFileShrinkManager {
             // See https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise/issues/103
             EXECUTOR.schedule(() -> task(queueFile, writePos), DELAY_S, TimeUnit.SECONDS);
         }
-
-    }
+ }
 
     private static void task(@NotNull final File queueFile, final long writePos) {
         if (LOG.isDebugEnabled())

@@ -36,8 +36,7 @@ public class CheckIndicesTest extends ChronicleQueueTestBase {
                     f2.get();
                 Thread.sleep(500);
             }
-
-        }
+ }
     }
 
     private Callable<Void> checkIndices() {

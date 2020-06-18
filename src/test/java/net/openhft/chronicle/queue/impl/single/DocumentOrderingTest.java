@@ -31,8 +31,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             assertTrue(documentContext.isPresent());
             assertEquals(expectedValue, documentContext.wire().getValueIn().int32());
         }
-
-    }
+ }
 
     Thread thread;
 

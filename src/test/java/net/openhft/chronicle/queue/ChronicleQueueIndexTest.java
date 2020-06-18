@@ -74,8 +74,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         } finally {
             file1.deleteOnExit();
         }
-
-    }
+ }
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
@@ -144,7 +143,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     assertEquals("Hello World 1", tailer.readText());
                     assertEquals("Hello World 2", tailer.readText());
                 }
-
             } catch (Exception e) {
                 e.printStackTrace();
                 fail();
@@ -153,7 +151,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             System.out.println(file1.getAbsolutePath());
             file1.deleteOnExit();
         }
-
     }
 
     private boolean hasEOFAtEndOfFile(final File file) throws IOException {
