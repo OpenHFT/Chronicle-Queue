@@ -32,7 +32,6 @@ import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.core.util.WeakIdentityHashMap;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
@@ -99,7 +98,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final TimeProvider time;
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, SingleChronicleQueueStore> storeFactory;
-    private final Set<Closeable> closers = Collections.newSetFromMap(new WeakIdentityHashMap<>());
+    private final Set<Closeable> closers = Collections.newSetFromMap(new IdentityHashMap<>());
     private final boolean readOnly;
     @NotNull
     private final CycleCalculator cycleCalculator;
@@ -599,6 +598,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     public <T> void addCloseListener(Closeable key) {
         synchronized (closers) {
+            if (!closers.isEmpty())
+                closers.removeIf(Closeable::isClosed);
             closers.add(key);
         }
     }
