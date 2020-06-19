@@ -1010,6 +1010,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     if (cachedTree.compareAndSet(existing, cachedValue)) {
                         break;
                     }
+                    Jvm.nanoPause();
                 }
             }
 

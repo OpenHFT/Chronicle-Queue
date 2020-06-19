@@ -58,8 +58,9 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             return;
         }
         try {
+            int count = 0;
             while (!lock.compareAndSwapValue(UNLOCKED, getLockValueFromTid(tid))) {
-                if (Thread.interrupted())
+                if (count++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }

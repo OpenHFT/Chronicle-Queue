@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
@@ -75,6 +76,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
             minCycleValue.setOrderedValue(min);
             if (maxCycleValue.compareAndSwapValue(currentMax, max))
                 break;
+            Jvm.nanoPause();
         }
     }
 

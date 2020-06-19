@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -49,7 +48,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             int i = 0;
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
-                Jvm.safepoint();
                 if (i++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted for the lock file:" + path);
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
