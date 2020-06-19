@@ -678,7 +678,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         if (now <= firstAndLastCycleTime) {
             return;
         }
-        throwExceptionIfClosed();
 
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
