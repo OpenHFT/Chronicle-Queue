@@ -71,7 +71,7 @@ public class ThroughputMain {
                 } while (start + time * 1e9 > System.nanoTime());
             }
             System.out.println("... All data written, now reading ...");
-            nbs.release();
+            nbs.releaseLast();
             count.addAndGet(count2);
         });
         long time1 = System.nanoTime() - start;
@@ -95,7 +95,7 @@ public class ThroughputMain {
                     }
                 }
             }
-            bytes.release();
+            bytes.releaseLast();
         });
         long end = System.nanoTime();
         long time2 = end - mid;

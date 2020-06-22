@@ -66,7 +66,7 @@ public class MappingReferenceCountTest {
 //            assertEquals(1, mappedFile.getRefCount(3));
             assertEquals("refCount: 4, 0, 1, 1, 2", mappedFile.referenceCounts());
 
-            bytes.release();
+            bytes.releaseLast();
             mappedFile.close();
 
             assertEquals("refCount: 0, 0, 0, 0, 0", mappedFile.referenceCounts());

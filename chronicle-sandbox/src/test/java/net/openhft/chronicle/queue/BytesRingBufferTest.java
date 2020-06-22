@@ -69,7 +69,7 @@ public class BytesRingBufferTest {
 
     @After
     public void after() {
-        outBuffer.release();
+        outBuffer.releaseLast();
     }
 
     @Test

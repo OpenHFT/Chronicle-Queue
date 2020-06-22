@@ -20,7 +20,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.openhft</groupId>
     <artifactId>chronicle-queue-benchmarks</artifactId>
-    <version>5.17.14</version>
+    <version>5.19.40</version>
     <name>OpenHFT/Chronicle-Queue/Benchmarks</name>
     <description>Chronicle-Queue-Benchmarks</description>
 
@@ -42,7 +42,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>2.19.241</version>
+                <version>2.19-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -58,7 +58,6 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.7.25</version>
         </dependency>
     </dependencies>
 

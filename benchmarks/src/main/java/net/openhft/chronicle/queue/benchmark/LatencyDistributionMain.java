@@ -104,6 +104,11 @@ import static net.openhft.chronicle.queue.benchmark.Main.*;
  * <p>
  * I ran with
  * mvn -DenableAffinity=true exec:java -Dexec.classpathScope="test" -Dexec.mainClass=net.openhft.chronicle.queue.ChronicleQueueLatencyDistribution
+ * <p>
+ * Run with 5.19.40, no affinity
+ * wr: 50/90 97/99 99.7/99.9 99.97/99.99 99.997/99.999 99.9997/99.9999 - worst was 0.016 / 0.016  0.017 / 0.017  0.020 / 0.029  80 / 205  907 / 1,290  2,200 / 2,680 - 2,920
+ * in: 50/90 97/99 99.7/99.9 99.97/99.99 99.997/99.999 99.9997/99.9999 - worst was 0.22 / 0.23  0.25 / 0.29  0.33 / 0.52  2.4 / 99  125 / 147  229 / 411 - 2,910
+ * co: 50/90 97/99 99.7/99.9 99.97/99.99 99.997/99.999 99.9997/99.9999 - worst was 0.24 / 0.25  0.27 / 0.30  0.37 / 1.4  101 / 298  907 / 1,290  2,220 / 2,780 - 3,060
  */
 public class LatencyDistributionMain {
     private static final int INTLOG_INTERVAL = 20_000_000;
@@ -143,9 +148,14 @@ public class LatencyDistributionMain {
         Histogram histogramWr = new Histogram();
         Thread pretoucher = new Thread(() -> {
             ExcerptAppender appender = queue.acquireAppender();
-            while (!Thread.currentThread().isInterrupted()) {
-                appender.pretouch();
-                Jvm.pause(500);
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    appender.pretouch();
+                    Jvm.pause(50);
+                }
+            } catch (Exception e) {
+                if (!appender.isClosed())
+                    e.printStackTrace();
             }
         });
         pretoucher.setDaemon(true);
@@ -277,10 +287,14 @@ public class LatencyDistributionMain {
         appenderThread.start();
         appenderThread.join();
 
+        pretoucher.interrupt();
+        pretoucher.join();
+
         //Pause to allow tailer to catch up (if needed)
         Jvm.pause(500);
         tailerThread.interrupt();
         tailerThread.join();
+
 
         System.out.println("wr: " + histogramWr.toLongMicrosFormat());
         System.out.println("in: " + histogramIn.toLongMicrosFormat());

@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.benchmark;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.BufferMode;
 

@@ -12,7 +12,7 @@ public final class Sizer {
             message.writeMarshallable(buffer);
             return (int) buffer.writePosition();
         } finally {
-            buffer.release();
+            buffer.releaseLast();
         }
     }
 }
