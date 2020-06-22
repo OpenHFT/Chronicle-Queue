@@ -116,7 +116,10 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
      */
     @Override
     public void unlock() {
-        throwExceptionIfClosed();
+        if (isClosed()) {
+            Jvm.warn().on(getClass(), "Cannot unlock as already closed");
+            return;
+        }
 
         long tid = Thread.currentThread().getId();
         if (!isLockHeldByCurrentThread(tid)) {
@@ -126,7 +129,6 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             }
             throw new IllegalStateException("Can't unlock when lock is not held by this thread, tableStore.file=" + absolutePath);
         }
-
         if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
             warn().on(getClass(), "Queue lock was unlocked by someone else!");
         }

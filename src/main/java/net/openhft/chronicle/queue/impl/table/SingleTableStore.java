@@ -46,7 +46,6 @@ import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static net.openhft.chronicle.core.util.Time.sleep;
-import static net.openhft.chronicle.core.util.Time.tickTime;
 
 public class SingleTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     public static final String SUFFIX = ".cq4t";
@@ -118,9 +117,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
-        final long timeoutAt = tickTime() + timeoutMS;
+        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-            for (int count = 1; tickTime() < timeoutAt; count++) {
+            for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
                 try (FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, shared)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
