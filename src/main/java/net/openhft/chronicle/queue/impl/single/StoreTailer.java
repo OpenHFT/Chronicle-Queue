@@ -36,6 +36,7 @@ class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
     static final StringBuilderPool SBP = new StringBuilderPool();
+    static final EOFException EOF_EXCEPTION = new EOFException();
     @NotNull
     private final SingleChronicleQueue queue;
     private final LongValue indexValue;
@@ -98,7 +99,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     @NotNull
     public DocumentContext readingDocument() {
-        throwExceptionIfClosed();
+//        throwExceptionIfClosed();
 
         // trying to create an initial document without a direction should not consume a message
         final long index = index();
@@ -166,39 +167,37 @@ class StoreTailer extends AbstractCloseable
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
         throwExceptionIfClosed();
-
-        Jvm.optionalSafepoint();
         queue.throwExceptionIfClosed();
 
         try {
-            Jvm.optionalSafepoint();
+//            Jvm.optionalSafepoint();
             boolean next = false, tryAgain = true;
             if (state == FOUND_CYCLE) {
                 try {
-                    Jvm.optionalSafepoint();
+//                    Jvm.optionalSafepoint();
                     next = inACycle(includeMetaData);
-                    Jvm.optionalSafepoint();
+//                    Jvm.optionalSafepoint();
 
                     tryAgain = false;
                 } catch (EOFException eof) {
                     state = TailerState.END_OF_CYCLE;
                 }
             }
-            Jvm.optionalSafepoint();
+//            Jvm.optionalSafepoint();
 
             if (tryAgain)
                 next = next0(includeMetaData);
 
-            Jvm.optionalSafepoint();
+//            Jvm.optionalSafepoint();
             if (context.present(next)) {
                 Bytes<?> bytes = context.wire().bytes();
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
                 address = bytes.addressForRead(bytes.readPosition(), 4);
-                Jvm.optionalSafepoint();
+//                Jvm.optionalSafepoint();
                 return context;
             }
-            Jvm.optionalSafepoint();
+//            Jvm.optionalSafepoint();
 
             RollCycle rollCycle = queue.rollCycle();
             if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
@@ -275,7 +274,7 @@ class StoreTailer extends AbstractCloseable
 
                 case END_OF_CYCLE:
                     if (endOfCycle()) {
-                        Jvm.optionalSafepoint();
+//                        Jvm.optionalSafepoint();
                         continue;
                     }
 
@@ -325,18 +324,18 @@ class StoreTailer extends AbstractCloseable
     private boolean nextEndOfCycle(final long nextIndex) {
         if (moveToIndexInternal(nextIndex)) {
             state = FOUND_CYCLE;
-            Jvm.optionalSafepoint();
+//            Jvm.optionalSafepoint();
             return true;
         }
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         if (state == END_OF_CYCLE) {
-            Jvm.optionalSafepoint();
+//            Jvm.optionalSafepoint();
             return true;
         }
         if (cycle < queue.lastCycle()) {
             // we have encountered an empty file without an EOF marker
             state = END_OF_CYCLE;
-            Jvm.optionalSafepoint();
+//            Jvm.optionalSafepoint();
             return true;
         }
         // We are here because we are waiting for an entry to be written to this file.
@@ -390,35 +389,41 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean inACycle(final boolean includeMetaData) throws EOFException {
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         if (readAfterReplicaAcknowledged && inACycleCheckRep()) return false;
 
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         if (direction != TailerDirection.FORWARD && !inACycleNotForward()) return false;
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
 
         final Wire wire = privateWire();
         final Bytes<?> bytes = wire.bytes();
+        return inACycle2(includeMetaData, wire, bytes);
+    }
+
+    private boolean inACycle2(boolean includeMetaData, Wire wire, Bytes<?> bytes) throws EOFException {
         bytes.readLimitToCapacity();
 
         switch (wire.readDataHeader(includeMetaData)) {
             case NONE:
-                Jvm.optionalSafepoint();
+//                Jvm.optionalSafepoint();
                 // no more polling - appender will always write (or recover) EOF
                 return false;
             case META_DATA:
-                Jvm.optionalSafepoint();
+//                Jvm.optionalSafepoint();
                 context.metaData(true);
                 break;
             case DATA:
-                Jvm.optionalSafepoint();
+//                Jvm.optionalSafepoint();
                 context.metaData(false);
                 break;
+            case EOF:
+                throw EOF_EXCEPTION;
         }
 
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         inACycleFound(bytes);
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         return true;
     }
 
@@ -429,10 +434,10 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean inACycleNotForward() {
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         if (!moveToIndexInternal(index())) {
             try {
-                Jvm.optionalSafepoint();
+//                Jvm.optionalSafepoint();
                 // after toEnd() call, index is past the end of the queue
                 // so try to go back one (to the last record in the queue)
                 if ((int) queue.rollCycle().toSequenceNumber(index()) < 0) {
@@ -445,16 +450,16 @@ class StoreTailer extends AbstractCloseable
                     return moveToIndexInternal(queue.rollCycle().toIndex(cycle, lastSeqNum));
                 }
                 if (!moveToIndexInternal(index() - 1)) {
-                    Jvm.optionalSafepoint();
+//                    Jvm.optionalSafepoint();
                     return false;
                 }
             } catch (Exception e) {
                 // can happen if index goes negative
-                Jvm.optionalSafepoint();
+//                Jvm.optionalSafepoint();
                 return false;
             }
         }
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         return true;
     }
 
@@ -463,7 +468,7 @@ class StoreTailer extends AbstractCloseable
         privateWire().readAndSetLength(bytes.readPosition());
         final long end = bytes.readLimit();
         context.closeReadPosition(end);
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
     }
 
     private long nextIndexWithNextAvailableCycle(final int cycle) {
@@ -646,9 +651,9 @@ class StoreTailer extends AbstractCloseable
 
     private boolean moveToIndexInternal(final long index) {
         moveToState.indexMoveCount++;
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         final ScanResult scanResult = moveToIndexResult(index);
-        Jvm.optionalSafepoint();
+//        Jvm.optionalSafepoint();
         return scanResult == FOUND;
     }
 

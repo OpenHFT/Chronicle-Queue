@@ -445,13 +445,11 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         }
 
         while (bytes.readPosition() <= toPosition) {
-            WireIn.HeaderType headerType;
-            try {
-                headerType = wire.readDataHeader(true);
-            } catch (EOFException e) {
+            WireIn.HeaderType headerType = wire.readDataHeader(true);
+            if (headerType == WireIn.HeaderType.EOF) {
                 if (toPosition == Long.MAX_VALUE)
                     return i;
-                throw e;
+                throw new EOFException();
             }
 
             if (!inclusive && toPosition == bytes.readPosition())
