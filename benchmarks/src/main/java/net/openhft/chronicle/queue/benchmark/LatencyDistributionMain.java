@@ -22,6 +22,7 @@ import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.StackSampler;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.BufferMode;
@@ -121,8 +122,9 @@ public class LatencyDistributionMain {
     }
 
     public void run(String[] args) throws InterruptedException {
+        File tmpDir = getTmpDir();
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder
-                .fieldlessBinary(getTmpDir())
+                .fieldlessBinary(tmpDir)
                 .blockSize(128 << 20);
         try (ChronicleQueue queue = builder
                 .writeBufferMode(BUFFER_MODE)
@@ -135,6 +137,7 @@ public class LatencyDistributionMain {
 
             runTest(queue, queue2);
         }
+        IOTools.deleteDirWithFiles(tmpDir, 2);
     }
 
     private File getTmpDir() {
@@ -162,7 +165,7 @@ public class LatencyDistributionMain {
         pretoucher.start();
 
         ExcerptAppender appender = queue.acquireAppender();
-        // seperate queue as most like in a different process.
+        // two queues as most like in a different process.
         ExcerptTailer tailer = queue2.createTailer();
 
         String name = getClass().getName();

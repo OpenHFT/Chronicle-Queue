@@ -174,7 +174,7 @@ public class RollEOFTest extends QueueTestCommon {
         try {
             final Wire wire = WireType.BINARY_LIGHT.apply(mappedBytes);
             final Bytes<?> bytes = wire.bytes();
-            bytes.readLimit(bytes.capacity());
+            bytes.readLimitToCapacity();
             bytes.readSkip(4);
             // move past header
             try (final SingleChronicleQueueStore qs = loadStore(wire)) {

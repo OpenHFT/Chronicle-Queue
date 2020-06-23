@@ -630,7 +630,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
         if (secondaryAddress > bytes.capacity())
             throw new IllegalStateException("sa2: " + secondaryAddress);
-        bytes.readLimit(bytes.capacity());
+        bytes.readLimitToCapacity();
         LongArrayValues indexValues = arrayForAddress(wire, secondaryAddress);
         int index3 = (int) ((sequenceNumber >>> indexSpacingBits) & (indexCount - 1));
 

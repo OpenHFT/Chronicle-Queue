@@ -399,7 +399,7 @@ class StoreTailer extends AbstractCloseable
 
         final Wire wire = privateWire();
         final Bytes<?> bytes = wire.bytes();
-        bytes.readLimit(bytes.capacity());
+        bytes.readLimitToCapacity();
 
         switch (wire.readDataHeader(includeMetaData)) {
             case NONE:
@@ -735,7 +735,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     private Wire readAnywhere(@NotNull final Wire wire) {
         final Bytes<?> bytes = wire.bytes();
-        bytes.readLimit(bytes.capacity());
+        bytes.readLimitToCapacity();
         if (store.dataVersion() > 0)
             wire.usePadding(true);
         return wire;
