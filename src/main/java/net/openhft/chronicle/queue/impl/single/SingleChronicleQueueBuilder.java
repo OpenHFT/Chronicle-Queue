@@ -70,11 +70,14 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
-public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
+public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable {
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
+
+    private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
+    private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
 
     static {
         CLASS_ALIASES.addAlias(WireType.class);
@@ -113,14 +116,13 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private HandlerPriority drainerPriority;
     @Nullable
     private EventLoop eventLoop;
-    private WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     /**
      * by default does not log any stats of the ring buffer
      */
     @NotNull
     private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
-    private Supplier<TimingPauser> pauserSupplier = () -> new TimeoutPauser(500_000);
+    private Supplier<TimingPauser> pauserSupplier = TIMING_PAUSER_SUPPLIER;
     private Long timeoutMS; // 10 seconds.
     private Integer sourceId;
     private StoreFileListener storeFileListener;
@@ -129,7 +131,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     private Boolean strongAppenders;
     private Boolean checkInterrupts;
 
-    private TableStore<SCQMeta> metaStore;
+    private transient TableStore<SCQMeta> metaStore;
 
     // enterprise stuff
     private int deltaCheckpointInterval = -1;
@@ -613,7 +615,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     }
 
     /**
-     * @return  - this is the size of a memory mapping chunk, a queue is read/written by using a number of blocks, you should avoid changing this unnecessarily.
+     * @return - this is the size of a memory mapping chunk, a queue is read/written by using a number of blocks, you should avoid changing this unnecessarily.
      */
     public long blockSize() {
 
@@ -787,7 +789,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
     @NotNull
     public EventLoop eventLoop() {
         if (eventLoop == null)
-            eventLoop = new OnDemandEventLoop(
+            return new OnDemandEventLoop(
                     () -> new EventGroup(true, Pauser.balanced(), "none", "none", path.getName(), 4, EnumSet.of(HandlerPriority.MEDIUM, HandlerPriority.REPLICATION)));
         return eventLoop;
     }
@@ -849,6 +851,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     /**
      * Priority for ring buffer's drainer handler
+     *
      * @return drainerPriority
      */
     public HandlerPriority drainerPriority() {
@@ -862,6 +865,7 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     /**
      * Pauser to be used by ring buffer when waiting to write
+     *
      * @return pauser
      */
     public Pauser ringBufferPauser() {
@@ -964,20 +968,20 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     /**
      * <p>
-     *     Enables double-buffered writes on contention.
+     * Enables double-buffered writes on contention.
      * </p><p>
-     *     Normally, all writes to the queue will be serialized based on the write lock acquisition. Each time {@link ExcerptAppender#writingDocument()}
-     *     is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write
-     *     lock is unlocked, and in turn locks the queue for itself.
+     * Normally, all writes to the queue will be serialized based on the write lock acquisition. Each time {@link ExcerptAppender#writingDocument()}
+     * is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write
+     * lock is unlocked, and in turn locks the queue for itself.
      * </p><p>
-     *     When double-buffering is enabled, if appender sees that the write lock is acquired upon {@link ExcerptAppender#writingDocument()} call,
-     *     it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition
-     *     until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block),
-     *     allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
+     * When double-buffering is enabled, if appender sees that the write lock is acquired upon {@link ExcerptAppender#writingDocument()} call,
+     * it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition
+     * until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block),
+     * allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
      * </p><p>
-     *     This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward
-     *     (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a
-     *     heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
+     * This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward
+     * (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a
+     * heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
      * </p>
      */
     public SingleChronicleQueueBuilder doubleBuffer(boolean doubleBuffer) {
@@ -1100,7 +1104,15 @@ public class SingleChronicleQueueBuilder implements Cloneable, Marshallable {
 
     @Override
     public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-        Marshallable.super.readMarshallable(wire);
+        super.readMarshallable(wire);
         assert rollCycle != null;
+    }
+
+    enum DefaultPauserSupplier implements Supplier<TimingPauser> {
+        INSTANCE;
+        @Override
+        public TimingPauser get() {
+            return new TimeoutPauser(500_000);
+        }
     }
 }

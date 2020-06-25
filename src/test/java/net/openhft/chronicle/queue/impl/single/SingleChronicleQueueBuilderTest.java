@@ -1,12 +1,16 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -14,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -62,7 +67,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void readMarshallable() {
+    public void testReadMarshallable() {
         SingleChronicleQueueBuilder builder = Marshallable.fromString("!net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder {\n" +
                 "  writeBufferMode: None,\n" +
                 "  readBufferMode: None,\n" +
@@ -73,5 +78,33 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +
                 "}\n");
         builder.build().close();
+    }
+
+    @Test
+    @Ignore("https://github.com/OpenHFT/Chronicle-Wire/issues/165")
+    public void testWriteMarshallableBinary() {
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single("test").rollCycle(HOURLY);
+
+        builder.build().close();
+        final Wire wire = Wires.acquireBinaryWire();
+        wire.write().typedMarshallable(builder);
+
+        System.err.println(wire.bytes().toHexString());
+
+        SingleChronicleQueueBuilder builder2 = wire.read().typedMarshallable();
+        builder2.build().close();
+    }
+
+    @Test
+    public void testWriteMarshallable() {
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single("test").rollCycle(HOURLY);
+
+        builder.build().close();
+        String val = Marshallable.$toString(builder);
+
+        System.err.println(val);
+
+        SingleChronicleQueueBuilder builder2 = Marshallable.fromString(val);
+        builder2.build().close();
     }
 }
