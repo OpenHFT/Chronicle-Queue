@@ -17,9 +17,8 @@ import java.util.function.Consumer;
 import static org.junit.Assert.assertNull;
 
 /**
- * This test case replicates the assertion error in Chronicle StoreAppender's
- * checkWritePositionHeaderNumber() method.
- * see https://github.com/OpenHFT/Chronicle-Queue/issues/611
+ * This test case replicates the assertion error in Chronicle StoreAppender's checkWritePositionHeaderNumber() method. see
+ * https://github.com/OpenHFT/Chronicle-Queue/issues/611
  */
 public class ChronicleAppenderCycleTest extends QueueTestCommon {
 
@@ -88,8 +87,9 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
             try {
                 SingleChronicleQueueBuilder builder = createBuilder(path);
                 try (SingleChronicleQueue queue = builder.build()) {
-                    ExcerptAppender appender = queue.acquireAppender();
-                    tester.accept(appender);
+                    try (ExcerptAppender appender = queue.acquireAppender()) {
+                        tester.accept(appender);
+                    }
                 }
             } catch (Throwable e) {
                 refThr.set(e);
