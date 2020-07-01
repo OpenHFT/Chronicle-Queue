@@ -323,9 +323,11 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
-        return new VanillaMethodWriterBuilder<T>(tClass,
+        VanillaMethodWriterBuilder<T> builder = new VanillaMethodWriterBuilder<>(tClass,
                 wireType(),
                 () -> new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
+        builder.marshallableOut(acquireAppender());
+        return builder;
     }
 
     /**
