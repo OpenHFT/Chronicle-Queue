@@ -40,10 +40,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
-import net.openhft.chronicle.threads.EventGroup;
-import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.threads.TimeoutPauser;
-import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.threads.*;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -112,7 +109,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Boolean ringBufferReaderCanDrain;
     private Boolean ringBufferForceCreateReader;
     private Boolean ringBufferReopenReader;
-    private Pauser ringBufferPauser = Pauser.busy();
+    private Supplier<Pauser> ringBufferPauserSupplier = Pauser::busy;
     private HandlerPriority drainerPriority;
     @Nullable
     private EventLoop eventLoop;
@@ -678,7 +675,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return ring buffer capacity in bytes [ Chronicle-Ring is an enterprise product ]
      */
     public long bufferCapacity() {
-        return Math.min(blockSize() / 4, bufferCapacity == null ? 2 << 20 : Math.max(4 << 10, bufferCapacity));
+        return Math.min(blockSize() / 4, bufferCapacity == null ? 2 << 20 : bufferCapacity);
     }
 
     /**
@@ -790,7 +787,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public EventLoop eventLoop() {
         if (eventLoop == null)
             return new OnDemandEventLoop(
-                    () -> new EventGroup(true, Pauser.balanced(), "none", "none", path.getName(), 4, EnumSet.of(HandlerPriority.MEDIUM, HandlerPriority.REPLICATION)));
+                    () -> new MediumEventLoop(null, path.getName(), Pauser.busy(), true, "none"));
         return eventLoop;
     }
 
@@ -864,16 +861,19 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Pauser to be used by ring buffer when waiting to write
-     *
-     * @return pauser
+     * Pauser supplier for the pauser to be used by ring buffer when waiting
      */
-    public Pauser ringBufferPauser() {
-        return ringBufferPauser;
+    public Supplier<Pauser> ringBufferPauserSupplier() {
+        return ringBufferPauserSupplier;
     }
 
+    @Deprecated
     public SingleChronicleQueueBuilder ringBufferPauser(Pauser ringBufferPauser) {
-        this.ringBufferPauser = ringBufferPauser;
+        return ringBufferPauserSupplier(() -> ringBufferPauser);
+    }
+
+    public SingleChronicleQueueBuilder ringBufferPauserSupplier(Supplier<Pauser> ringBufferPauserSupplier) {
+        this.ringBufferPauserSupplier = ringBufferPauserSupplier;
         return this;
     }
 
