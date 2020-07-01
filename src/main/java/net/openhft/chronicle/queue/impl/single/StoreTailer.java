@@ -141,15 +141,11 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public long timeoutMS() {
-        throwExceptionIfClosed();
-
         return queue.timeoutMS;
     }
 
     @Override
     public int sourceId() {
-        throwExceptionIfClosed();
-
         return queue.sourceId;
     }
 
@@ -167,7 +163,6 @@ class StoreTailer extends AbstractCloseable
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
         throwExceptionIfClosed();
-        queue.throwExceptionIfClosed();
 
         try {
 //            Jvm.optionalSafepoint();
@@ -540,8 +535,6 @@ class StoreTailer extends AbstractCloseable
      */
     @Override
     public long index() {
-        throwExceptionIfClosed();
-
         return indexValue == null ? this.index : indexValue.getValue();
     }
 
@@ -758,7 +751,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public ExcerptTailer striding(final boolean striding) {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         this.striding = striding;
         return this;
@@ -875,7 +868,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public ExcerptTailer direction(@NotNull final TailerDirection direction) {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         final TailerDirection oldDirection = this.direction();
         this.direction = direction;
@@ -891,23 +884,6 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     public ChronicleQueue queue() {
         return queue;
-    }
-
-    @Override
-    public Runnable getCloserJob() {
-        throwExceptionIfClosed();
-
-        return this::close;
-    }
-
-    /**
-     * Can be used to manually release resources when this StoreTailer is no longer used.
-     */
-    public void releaseResources() {
-        throwExceptionIfClosed();
-
-        queue.removeCloseListener(this);
-        getCloserJob().run();
     }
 
     @PackageLocal
@@ -1106,7 +1082,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     public void setCycle(final int cycle) {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         this.cycle = cycle;
     }

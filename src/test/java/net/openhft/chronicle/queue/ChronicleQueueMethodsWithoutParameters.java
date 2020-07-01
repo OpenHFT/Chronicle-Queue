@@ -23,10 +23,12 @@ public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBa
                 .testBlockSize()
                 .rollCycle(TEST_DAILY).build()) {
 
-            SomeListener someListener = queue.acquireAppender().methodWriter(SomeListener.class);
+            SomeListener someListener = queue.acquireAppender()
+                    .methodWriter(SomeListener.class);
 
             SomeManager someManager = new SomeManager();
-            MethodReader reader = queue.createTailer().methodReader(someManager);
+            MethodReader reader = queue.createTailer()
+                    .methodReader(someManager);
 
             LOG.debug("Writing to queue");
             someListener.methodWithOneParam(1);

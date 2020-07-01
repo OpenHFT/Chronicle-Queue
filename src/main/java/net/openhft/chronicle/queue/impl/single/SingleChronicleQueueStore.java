@@ -60,7 +60,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     private final transient Sequence sequence;
 
-    private volatile Thread lastAccessedThread;
     private int cycle;
 
     /**
@@ -205,7 +204,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public WireStore writePosition(long position) {
         throwExceptionIfClosed();
 
-        assert singleThreadedAccess();
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
         writePosition.setMaxValue(position);
         return this;
@@ -272,7 +270,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         return indexing.lastSequenceNumber(ec);
     }
@@ -303,7 +301,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public void initIndex(@NotNull Wire wire) {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         try {
             indexing.initIndex(wire);
@@ -314,8 +312,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public boolean indexable(long index) {
-        throwExceptionIfClosed();
-
         return indexing.indexable(index);
     }
 
@@ -323,7 +319,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec, long sequenceNumber,
                                              long position)
             throws UnrecoverableTimeoutException, StreamCorruptedException {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         sequence.setSequence(sequenceNumber, position);
 
@@ -379,8 +375,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public int dataVersion() {
-        throwExceptionIfClosed();
-
         return dataVersion;
     }
 
@@ -392,15 +386,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return indexing.indexSpacing();
     }
 
-    private synchronized boolean singleThreadedAccess() {
-        if (lastAccessedThread == null) {
-            lastAccessedThread = Thread.currentThread();
-        }
-        return lastAccessedThread == Thread.currentThread();
-    }
-
     public SingleChronicleQueueStore cycle(int cycle) {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         this.cycle = cycle;
         return this;

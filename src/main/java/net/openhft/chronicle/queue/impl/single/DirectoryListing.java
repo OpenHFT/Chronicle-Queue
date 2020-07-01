@@ -8,14 +8,13 @@ public interface DirectoryListing extends Closeable {
     default void init() {
     }
 
-    default void refresh() {
-    }
+    void refresh(boolean force);
 
     void onFileCreated(File file, int cycle);
 
-    int getMaxCreatedCycle();
-
     int getMinCreatedCycle();
+
+    int getMaxCreatedCycle();
 
     long modCount();
 }

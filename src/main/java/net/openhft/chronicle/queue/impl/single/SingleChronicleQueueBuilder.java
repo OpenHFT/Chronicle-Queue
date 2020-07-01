@@ -40,7 +40,10 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
-import net.openhft.chronicle.threads.*;
+import net.openhft.chronicle.threads.MediumEventLoop;
+import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimeoutPauser;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -54,7 +57,6 @@ import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -95,12 +97,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         }
     }
 
-    public BufferMode writeBufferMode = BufferMode.None;
-    public BufferMode readBufferMode = BufferMode.None;
+    private BufferMode writeBufferMode = BufferMode.None;
+    private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
     private File path;
-    private RollCycle rollCycle = loadDefaultRollCycle();
+    private RollCycle rollCycle;
     private Long epoch; // default is 1970-01-01 00:00:00.000 UTC
     private Long bufferCapacity;
     private Integer indexSpacing;
@@ -109,17 +111,16 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Boolean ringBufferReaderCanDrain;
     private Boolean ringBufferForceCreateReader;
     private Boolean ringBufferReopenReader;
-    private Supplier<Pauser> ringBufferPauserSupplier = Pauser::busy;
+    private Supplier<Pauser> ringBufferPauserSupplier;
     private HandlerPriority drainerPriority;
     @Nullable
     private EventLoop eventLoop;
     /**
      * by default does not log any stats of the ring buffer
      */
-    @NotNull
-    private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
-    private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
-    private Supplier<TimingPauser> pauserSupplier = TIMING_PAUSER_SUPPLIER;
+    private Consumer<BytesRingBufferStats> onRingBufferStats;
+    private TimeProvider timeProvider;
+    private Supplier<TimingPauser> pauserSupplier;
     private Long timeoutMS; // 10 seconds.
     private Integer sourceId;
     private StoreFileListener storeFileListener;
@@ -668,7 +669,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     @NotNull
     public RollCycle rollCycle() {
-        return this.rollCycle;
+        return this.rollCycle == null ? loadDefaultRollCycle() : this.rollCycle;
     }
 
     /**
@@ -864,7 +865,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * Pauser supplier for the pauser to be used by ring buffer when waiting
      */
     public Supplier<Pauser> ringBufferPauserSupplier() {
-        return ringBufferPauserSupplier;
+        return ringBufferPauserSupplier == null ? Pauser::busy : ringBufferPauserSupplier;
     }
 
     @Deprecated
@@ -906,7 +907,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public Supplier<TimingPauser> pauserSupplier() {
-        return pauserSupplier;
+        return pauserSupplier == null ? TIMING_PAUSER_SUPPLIER : pauserSupplier;
     }
 
     public SingleChronicleQueueBuilder pauserSupplier(Supplier<TimingPauser> pauser) {
@@ -1102,14 +1103,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         }
     }
 
-    @Override
-    public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-        super.readMarshallable(wire);
-        assert rollCycle != null;
-    }
-
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {
         INSTANCE;
+
         @Override
         public TimingPauser get() {
             return new TimeoutPauser(500_000);

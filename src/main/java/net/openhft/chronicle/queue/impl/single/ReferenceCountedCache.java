@@ -55,7 +55,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     }
 
     @Override
-    protected boolean threadSafetyCheck() {
+    protected boolean threadSafetyCheck(boolean isUsed) {
         return true;
     }
 }

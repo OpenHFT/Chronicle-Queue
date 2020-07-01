@@ -60,33 +60,34 @@ public class JDBCServiceTest extends QueueTestCommon {
                          .testBlockSize()
                          .build()) {
 
-                JDBCService service = new JDBCService(in, out, () -> DriverManager.getConnection("jdbc:hsqldb:file:" + file.getAbsolutePath(), "SA", ""));
+                try (JDBCService service = new JDBCService(in, out, () -> DriverManager.getConnection("jdbc:hsqldb:file:" + file.getAbsolutePath(), "SA", ""))) {
 
-                JDBCStatement writer = service.createWriter();
-                writer.executeUpdate("CREATE TABLE tableName (\n" +
-                        "name VARCHAR(64) NOT NULL,\n" +
-                        "num INT\n" +
-                        ")\n");
+                    JDBCStatement writer = service.createWriter();
+                    writer.executeUpdate("CREATE TABLE tableName (\n" +
+                            "name VARCHAR(64) NOT NULL,\n" +
+                            "num INT\n" +
+                            ")\n");
 
-                for (int i = 1; i < (long) noUpdates; i++)
-                    writer.executeUpdate("INSERT INTO tableName (name, num)\n" +
-                            "VALUES (?, ?)", "name", i);
+                    for (int i = 1; i < (long) noUpdates; i++)
+                        writer.executeUpdate("INSERT INTO tableName (name, num)\n" +
+                                "VALUES (?, ?)", "name", i);
 
-                written = System.nanoTime() - start;
-                AtomicLong queries = new AtomicLong();
-                AtomicLong updates = new AtomicLong();
-                CountingJDBCResult countingJDBCResult = new CountingJDBCResult(queries, updates);
-                MethodReader methodReader = service.createReader(countingJDBCResult);
-                while (updates.get() < noUpdates) {
-                    if (!methodReader.readOne())
-                        Thread.yield();
+                    written = System.nanoTime() - start;
+                    AtomicLong queries = new AtomicLong();
+                    AtomicLong updates = new AtomicLong();
+                    CountingJDBCResult countingJDBCResult = new CountingJDBCResult(queries, updates);
+                    MethodReader methodReader = service.createReader(countingJDBCResult);
+                    while (updates.get() < noUpdates) {
+                        if (!methodReader.readOne())
+                            Thread.yield();
+                    }
+                    Closeable.closeQuietly(service);
+
+                    long time = System.nanoTime() - start;
+                    System.out.printf("Average time to write each update %.1f us, average time to perform each update %.1f us%n",
+                            written / noUpdates / 1e3,
+                            time / noUpdates / 1e3);
                 }
-                Closeable.closeQuietly(service);
-
-                long time = System.nanoTime() - start;
-                System.out.printf("Average time to write each update %.1f us, average time to perform each update %.1f us%n",
-                        written / noUpdates / 1e3,
-                        time / noUpdates / 1e3);
             } finally {
                 try {
                     IOTools.deleteDirWithFiles(path1, 2);

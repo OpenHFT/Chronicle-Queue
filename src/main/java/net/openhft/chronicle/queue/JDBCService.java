@@ -76,8 +76,6 @@ public class JDBCService extends AbstractCloseable implements Closeable {
 
     @NotNull
     public JDBCStatement createWriter() {
-        throwExceptionIfClosed();
-
         return in.acquireAppender()
                 .methodWriterBuilder(JDBCStatement.class)
                 .recordHistory(true)
@@ -86,8 +84,6 @@ public class JDBCService extends AbstractCloseable implements Closeable {
 
     @NotNull
     public MethodReader createReader(JDBCResult result) {
-        throwExceptionIfClosed();
-
         return out.createTailer().methodReader(result);
     }
 }

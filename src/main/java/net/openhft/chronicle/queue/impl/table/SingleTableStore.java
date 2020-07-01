@@ -145,16 +145,12 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @NotNull
     @Override
     public File file() {
-        throwExceptionIfClosed();
-
         return mappedFile.file();
     }
 
     @NotNull
     @Override
     public String dump() {
-        throwExceptionIfClosed();
-
         return dump(false);
     }
 
@@ -279,7 +275,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     @Override
-    protected boolean threadSafetyCheck() {
+    protected boolean threadSafetyCheck(boolean isUsed) {
         // TableStore are thread safe
         return true;
     }

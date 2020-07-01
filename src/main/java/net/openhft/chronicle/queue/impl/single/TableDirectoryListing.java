@@ -40,7 +40,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public void init() {
-        throwExceptionIfClosed();
+        throwExceptionIfClosedInSetter();
 
         tableStore.doWithExclusiveLock(ts -> {
             maxCycleValue = ts.acquireValueFor(HIGHEST_CREATED_CYCLE);
@@ -55,12 +55,14 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     }
 
     @Override
-    public void refresh() {
-        throwExceptionIfClosed();
+    public void refresh(boolean force) {
 
-        if (readOnly) {
+        if (readOnly || !force) {
             return;
         }
+
+        throwExceptionIfClosed();
+
         while (true) {
             long currentMax = maxCycleValue.getVolatileValue();
             final File[] queueFiles = queuePath.toFile().
@@ -69,8 +71,9 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
             int max = UNSET_MAX_CYCLE;
             if (queueFiles != null) {
                 for (File queueFile : queueFiles) {
-                    min = Math.min(fileToCycleFunction.applyAsInt(queueFile), min);
-                    max = Math.max(fileToCycleFunction.applyAsInt(queueFile), max);
+                    int cycle = fileToCycleFunction.applyAsInt(queueFile);
+                    min = Math.min(cycle, min);
+                    max = Math.max(cycle, max);
                 }
             }
             minCycleValue.setOrderedValue(min);
@@ -82,8 +85,6 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
-        throwExceptionIfClosed();
-
         if (readOnly) {
             LOGGER.warn("DirectoryListing is read-only, not updating listing");
             return;
@@ -130,7 +131,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     }
 
     @Override
-    protected boolean threadSafetyCheck() {
+    protected boolean threadSafetyCheck(boolean isUsed) {
         // TDL are thread safe
         return true;
     }

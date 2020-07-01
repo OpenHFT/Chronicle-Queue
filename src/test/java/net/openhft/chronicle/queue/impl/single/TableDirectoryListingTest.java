@@ -57,7 +57,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
     @Test
     public void shouldTrackMaxValue() {
-        listing.refresh();
+        listing.refresh(true);
 
         listing.onFileCreated(tempFile, 7);
 
@@ -76,7 +76,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         new File(testDirectory, 2 + SingleChronicleQueue.SUFFIX).createNewFile();
         new File(testDirectory, 3 + SingleChronicleQueue.SUFFIX).createNewFile();
 
-        listing.refresh();
+        listing.refresh(true);
 
         assertEquals(3, listing.getMaxCreatedCycle());
         assertEquals(1, listing.getMinCreatedCycle());

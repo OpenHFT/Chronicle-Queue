@@ -79,11 +79,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             assertTrue(Math.signum(bytes.readInt()) >= 0);
 
             if (manuallyReleaseResources) {
-                try {
-                    ((StoreTailer) tailer).releaseResources();
-                } catch (RuntimeException e) {
-                    // ignore
-                }
+                tailer.close();
             }
         } finally {
             bytes.releaseLast();

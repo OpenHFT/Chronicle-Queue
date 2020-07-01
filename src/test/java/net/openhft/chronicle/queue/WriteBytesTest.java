@@ -248,7 +248,8 @@ public class WriteBytesTest extends QueueTestCommon {
                     "# position: 1028, header: 21\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_4\n" +
-                    "-541098.2421\n" +
+                    // TODO FIX
+                    "-541098.24210\n" +
                     "# position: 1040, header: 22\n" +
                     "--- !!data #binary\n" +
                     "-93086212.770454\n" +

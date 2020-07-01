@@ -47,20 +47,13 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         Closeable.closeQuietly(lock);
     }
 
-    public void throwExceptionIfClosed() {
-        super.throwExceptionIfClosed();
-
-        tableStore.throwExceptionIfClosed();
-
-    }
-
     protected void forceUnlock() {
         Jvm.warn().on(getClass(), "Forced unlock for the lock file:" + path, new StackTrace("Forced unlock"));
         lock.setValue(UNLOCKED);
     }
 
     @Override
-    protected boolean threadSafetyCheck() {
+    protected boolean threadSafetyCheck(boolean isUsed) {
         // The lock is thread safe.
         return true;
     }

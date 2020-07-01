@@ -170,7 +170,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 directoryListing.init();
             }
 
-            this.directoryListing.refresh();
+            this.directoryListing.refresh(true);
             this.queueLock = builder.queueLock();
             this.writeLock = builder.writeLock();
 
@@ -240,7 +240,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public void refreshDirectoryListing() {
         throwExceptionIfClosed();
 
-        directoryListing.refresh();
+        directoryListing.refresh(true);
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
     }
@@ -250,15 +250,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long lastIndexReplicated() {
-        throwExceptionIfClosed();
-
         return lastIndexReplicated == null ? -1 : lastIndexReplicated.getVolatileValue(-1);
     }
 
     @Override
     public void lastIndexReplicated(long indexReplicated) {
-        throwExceptionIfClosed();
-
         if (lastIndexReplicated != null)
             lastIndexReplicated.setMaxValue(indexReplicated);
     }
@@ -459,7 +455,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 ? null
                 : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
         final StoreTailer storeTailer = new StoreTailer(this, index);
-        directoryListing.refresh();
+        directoryListing.refresh(true);
         storeTailer.clearUsedByThread();
         return storeTailer;
     }
@@ -645,8 +641,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public long firstIndex() {
-        throwExceptionIfClosed();
-
         // TODO - as discussed, peter is going find another way to do this as this solution
         // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
 
@@ -659,8 +653,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public long entryCount() {
-        throwExceptionIfClosed();
-
         final ExcerptTailer tailer = createTailer();
         tailer.toEnd();
         long lastIndex = tailer.index();
@@ -680,6 +672,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return;
         }
 
+        directoryListing.refresh(now - firstAndLastCycleTime > 60_000);
         firstCycle = directoryListing.getMinCreatedCycle();
         lastCycle = directoryListing.getMaxCreatedCycle();
 
@@ -788,8 +781,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     public TableStore metaStore() {
-        throwExceptionIfClosed();
-
         return metaStore;
     }
 
@@ -816,7 +807,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     break;
                 }
             }
-            directoryListing.refresh();
+            directoryListing.refresh(true);
             firstAndLastCycleTime = 0;
         } finally {
             writeLock.unlock();
@@ -824,7 +815,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     @Override
-    protected boolean threadSafetyCheck() {
+    protected boolean threadSafetyCheck(boolean isUsed) {
         // component is thread safe
         return true;
     }
@@ -863,6 +854,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             try {
                 File path = dateValue.path;
 
+                directoryListing.refresh(false);
                 if (!createIfAbsent &&
                         (cycle > directoryListing.getMaxCreatedCycle()
                                 || cycle < directoryListing.getMinCreatedCycle()
@@ -1027,11 +1019,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             NavigableMap<Long, File> tree = cycleTree(false);
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
+            directoryListing.refresh(false);
             if (currentCycle > directoryListing.getMaxCreatedCycle() ||
                     currentCycle < directoryListing.getMinCreatedCycle()) {
                 boolean fileFound = false;
                 for (int i = 0; i < 20; i++) {
                     Jvm.pause(10);
+                    directoryListing.refresh(i > 1);
                     if ((fileFound = (
                             currentCycle <= directoryListing.getMaxCreatedCycle() &&
                                     currentCycle >= directoryListing.getMinCreatedCycle()))) {
@@ -1041,6 +1035,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 fileFound |= currentCycleFile.exists();
 
                 if (!fileFound) {
+                    directoryListing.refresh(true);
                     throw new IllegalStateException(
                             String.format("Expected file to exist for cycle: %d, file: %s.%nminCycle: %d, maxCycle: %d%n" +
                                             "Available files: %s",
@@ -1098,7 +1093,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
 
         @Override
-        protected boolean threadSafetyCheck() {
+        protected boolean threadSafetyCheck(boolean isUsed) {
             // StoreSupplier are thread safe
             return true;
         }

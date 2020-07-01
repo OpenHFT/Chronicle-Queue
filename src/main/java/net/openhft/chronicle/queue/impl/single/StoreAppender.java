@@ -70,11 +70,9 @@ class StoreAppender extends AbstractCloseable
         finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
-    private class Finalizer {
-        @Override
-        protected void finalize() throws Throwable {
-            super.finalize();
-            warnAndCloseIfNotClosed();
+    private static void releaseBytesFor(Wire w) {
+        if (w != null) {
+            w.bytes().releaseLast();
         }
     }
 
@@ -99,12 +97,6 @@ class StoreAppender extends AbstractCloseable
             marshallable.writeMarshallable(bytes);
             if (wp == bytes.writePosition())
                 dc.rollbackOnClose();
-        }
-    }
-
-    private static void releaseBytesFor(Wire w) {
-        if (w != null) {
-            w.bytes().releaseLast();
         }
     }
 
@@ -141,8 +133,6 @@ class StoreAppender extends AbstractCloseable
     public void pretouch() {
         throwExceptionIfClosed();
 
-        if (queue.isClosed())
-            throw new RuntimeException("Queue Closed");
         try {
             if (pretoucher == null)
                 pretoucher = new Pretoucher(queue());
@@ -207,15 +197,11 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     @Override
     public Wire wireForIndex() {
-        throwExceptionIfClosed();
-
         return wireForIndex;
     }
 
     @Override
     public long timeoutMS() {
-        throwExceptionIfClosed();
-
         return queue.timeoutMS;
     }
 
@@ -225,8 +211,6 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public boolean recordHistory() {
-        throwExceptionIfClosed();
-
         return sourceId() != 0;
     }
 
@@ -324,8 +308,6 @@ class StoreAppender extends AbstractCloseable
     @NotNull
     @Override
     public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
-        throwExceptionIfClosed();
-
         return writingDocument(false); // avoid overhead of a default method.
     }
 
@@ -444,8 +426,6 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public int sourceId() {
-        throwExceptionIfClosed();
-
         return queue.sourceId;
     }
 
@@ -491,8 +471,6 @@ class StoreAppender extends AbstractCloseable
      */
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
         throwExceptionIfClosed();
-
-        queue.throwExceptionIfClosed();
 
         writeLock.lock();
         try {
@@ -554,8 +532,6 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public long lastIndexAppended() {
-        throwExceptionIfClosed();
-
         if (lastIndex != Long.MIN_VALUE)
             return lastIndex;
 
@@ -575,8 +551,6 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public int cycle() {
-        throwExceptionIfClosed();
-
         if (cycle == Integer.MIN_VALUE) {
             int cycle = this.queue.lastCycle();
             if (cycle < 0)
@@ -686,6 +660,14 @@ class StoreAppender extends AbstractCloseable
         wire.bytes().writePosition(startOfMessage);
     }
 
+    private class Finalizer {
+        @Override
+        protected void finalize() throws Throwable {
+            super.finalize();
+            warnAndCloseIfNotClosed();
+        }
+    }
+
     class StoreAppenderContext implements DocumentContext {
 
         boolean isClosed;
@@ -697,8 +679,6 @@ class StoreAppender extends AbstractCloseable
 
         @Override
         public int sourceId() {
-            throwExceptionIfClosed();
-
             return StoreAppender.this.sourceId();
         }
 
@@ -714,15 +694,11 @@ class StoreAppender extends AbstractCloseable
 
         @Override
         public boolean isMetaData() {
-            throwExceptionIfClosed();
-
             return metaData;
         }
 
         @Override
         public void metaData(boolean metaData) {
-            throwExceptionIfClosed();
-
             this.metaData = metaData;
         }
 
@@ -731,8 +707,6 @@ class StoreAppender extends AbstractCloseable
          */
         @Override
         public void rollbackOnClose() {
-            throwExceptionIfClosed();
-
             this.rollbackOnClose = true;
         }
 
@@ -809,8 +783,6 @@ class StoreAppender extends AbstractCloseable
 
         @Override
         public long index() throws IORuntimeException {
-            throwExceptionIfClosed();
-
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
