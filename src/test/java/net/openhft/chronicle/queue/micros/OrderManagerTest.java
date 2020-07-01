@@ -186,6 +186,7 @@ public class OrderManagerTest extends QueueTestCommon {
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_DAILY)
+                    .sourceId(1)
                     .build()) {
                 SidedMarketDataListener combiner = out.acquireAppender()
                         .methodWriterBuilder(SidedMarketDataListener.class)
@@ -210,6 +211,7 @@ public class OrderManagerTest extends QueueTestCommon {
                         .build();
                      ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2)
                              .testBlockSize()
+                             .sourceId(1)
                              .rollCycle(RollCycles.TEST_DAILY)
                              .build()) {
 
@@ -218,10 +220,11 @@ public class OrderManagerTest extends QueueTestCommon {
                             .methodWriterBuilder(MarketDataListener.class)
                             .recordHistory(true)
                             .get();
+
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer()
                             .afterLastWritten(out);
-                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()));
+                    assertEquals("tailer.index()=" + Long.toHexString(tailer.index()), i, in.rollCycle().toSequenceNumber(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 

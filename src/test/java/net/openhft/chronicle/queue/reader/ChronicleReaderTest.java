@@ -56,6 +56,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     public void before() {
         dataDir = DirectoryUtils.tempDir(ChronicleReaderTest.class.getSimpleName()).toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
+                .sourceId(1)
                 .testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
@@ -76,7 +77,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
-                testBlockSize().build()) {
+                testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
             methodWriterBuilder.recordHistory(true);
@@ -99,7 +100,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
-                testBlockSize().build()) {
+                testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
             methodWriterBuilder.recordHistory(true);
