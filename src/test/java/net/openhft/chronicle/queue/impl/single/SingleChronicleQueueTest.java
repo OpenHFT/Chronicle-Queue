@@ -2305,34 +2305,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = binary(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY).timeProvider(timeProvider)
                 .build();
-             final ExcerptAppender appender = queue.acquireAppender();
              final ExcerptTailer tailer = queue.createTailer()) {
+            try (final ExcerptAppender appender = queue.acquireAppender()) {
 
-            final List<String> stringsToPut = Arrays.asList("one", "two", "three");
+                final List<String> stringsToPut = Arrays.asList("one", "two", "three");
 
-            // writes two strings immediately and one string with 2 seconds delay
-            {
-                try (DocumentContext writingContext = appender.writingDocument()) {
-                    writingContext.wire()
-                            .write().bytes(stringsToPut.get(0).getBytes());
+                // writes two strings immediately and one string with 2 seconds delay
+                {
+                    try (DocumentContext writingContext = appender.writingDocument()) {
+                        writingContext.wire()
+                                .write().bytes(stringsToPut.get(0).getBytes());
+                    }
+                    try (DocumentContext writingContext = appender.writingDocument()) {
+                        writingContext.wire()
+                                .write().bytes(stringsToPut.get(1).getBytes());
+                    }
+                    timeProvider.advanceMillis(2100);
+                    try (DocumentContext writingContext = appender.writingDocument()) {
+                        writingContext.wire().write().bytes(stringsToPut.get(2).getBytes());
+                    }
                 }
-                try (DocumentContext writingContext = appender.writingDocument()) {
-                    writingContext.wire()
-                            .write().bytes(stringsToPut.get(1).getBytes());
-                }
-                timeProvider.advanceMillis(2100);
-                try (DocumentContext writingContext = appender.writingDocument()) {
-                    writingContext.wire().write().bytes(stringsToPut.get(2).getBytes());
-                }
-            }
 
-            for (String expected : stringsToPut) {
-                try (DocumentContext readingContext = tailer.readingDocument()) {
-                    if (!readingContext.isPresent())
-                        fail();
-                    String text = readingContext.wire().read().text();
-                    assertEquals(expected, text);
+                for (String expected : stringsToPut) {
+                    try (DocumentContext readingContext = tailer.readingDocument()) {
+                        if (!readingContext.isPresent())
+                            fail();
+                        String text = readingContext.wire().read().text();
+                        assertEquals(expected, text);
 
+                    }
                 }
             }
         }
@@ -2500,7 +2501,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals(7, queue.countExcerpts(indexs[0] - 1,
                     indexs[6]));
         }
- }
+    }
 
     @Test
     public void testReadingWritingWhenNextCycleIsInSequence() {
