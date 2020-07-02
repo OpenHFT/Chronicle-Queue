@@ -853,7 +853,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return drainerPriority
      */
     public HandlerPriority drainerPriority() {
-        return drainerPriority == null ? HandlerPriority.REPLICATION : drainerPriority;
+        return drainerPriority == null ? HandlerPriority.MEDIUM : drainerPriority;
     }
 
     public SingleChronicleQueueBuilder drainerPriority(HandlerPriority drainerPriority) {
