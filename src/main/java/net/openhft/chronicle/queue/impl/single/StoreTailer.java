@@ -1226,7 +1226,7 @@ class StoreTailer extends AbstractCloseable
             this.wire = wire;
 
             if (oldWire != null)
-                oldWire.bytes().releaseLast();
+                oldWire.bytes().release(INIT); // might be held elsewhere if used for another purpose.
         }
     }
 }
