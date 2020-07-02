@@ -56,6 +56,7 @@ class StoreTailer extends AbstractCloseable
     private long address = NO_PAGE;
     private boolean striding = false;
     private final Finalizer finalizer;
+    private boolean disableThreadSafetyCheck;
 
     public StoreTailer(@NotNull final SingleChronicleQueue queue) {
         this(queue, null);
@@ -74,6 +75,18 @@ class StoreTailer extends AbstractCloseable
             moveToIndex(indexValue.getVolatileValue());
         }
         finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+    }
+
+    @Override
+    public ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        this.disableThreadSafetyCheck = disableThreadSafetyCheck;
+        return this;
+    }
+
+    @Override
+    protected boolean threadSafetyCheck(boolean isUsed) {
+        return disableThreadSafetyCheck
+                || super.threadSafetyCheck(isUsed);
     }
 
     private class Finalizer {

@@ -226,4 +226,8 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     TailerState state();
 
+    /**
+     * If true, assume this is used across threads with external synchronisation
+     */
+    ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck);
 }

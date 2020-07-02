@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.service.HelloWorld;
@@ -17,6 +17,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -204,6 +206,32 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
         void addTime(final long duration, final TimeUnit unit) {
             this.currentTimeMillis += unit.toMillis(duration);
+        }
+    }
+
+    @Test
+    public void disableThreadSafety() throws InterruptedException {
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
+            BlockingQueue<ExcerptTailer> tq = new LinkedBlockingQueue<>();
+            Thread t = new Thread(() -> {
+                ExcerptTailer tailer = queue.createTailer();
+                tailer.readText();
+                tq.offer(tailer);
+                Jvm.pause(1000);
+            });
+            t.start();
+            ExcerptTailer tailer = tq.take();
+            try {
+                tailer.readText();
+                fail();
+            } catch (IllegalStateException expected) {
+                //
+            }
+            tailer.disableThreadSafetyCheck(true).readText();
+
+            tailer.close();
+            t.interrupt();
+            t.join(1000);
         }
     }
 }
