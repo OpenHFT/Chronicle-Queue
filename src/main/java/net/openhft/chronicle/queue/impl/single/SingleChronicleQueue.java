@@ -26,7 +26,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
@@ -625,9 +624,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         warnAndCloseIfNotClosed();
     }
 
-    public final void release(ReferenceOwner owner, @Nullable SingleChronicleQueueStore store) {
+    public final void closeStore(@Nullable SingleChronicleQueueStore store) {
         if (store != null)
-            this.pool.release(owner, store);
+            this.pool.closeStore(store);
     }
 
     @Override

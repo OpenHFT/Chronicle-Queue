@@ -113,7 +113,7 @@ class StoreAppender extends AbstractCloseable
             pretoucher.close();
 
         if (store != null) {
-            storePool.release(this, store);
+            storePool.closeStore(store);
         }
 
         storePool.close();
@@ -233,7 +233,7 @@ class StoreAppender extends AbstractCloseable
         if (newStore != oldStore) {
             this.store = newStore;
             if (oldStore != null)
-                storePool.release(this, oldStore);
+                storePool.closeStore(oldStore);
         }
         resetWires(queue);
 

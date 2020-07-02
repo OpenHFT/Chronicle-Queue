@@ -371,7 +371,7 @@ class StoreTailer extends AbstractCloseable
     private boolean nextCycleNotFound() {
         if (index() == Long.MIN_VALUE) {
             if (this.store != null)
-                queue.release(this, this.store);
+                queue.closeStore(this.store);
             this.store = null;
             return false;
         }

@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.io.SimpleCloseable;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
@@ -66,9 +65,7 @@ public class WireStorePool extends SimpleCloseable {
         return supplier.nextCycle(currentCycle, direction);
     }
 
-    public void release(ReferenceOwner owner, @NotNull SingleChronicleQueueStore store) {
-        throwExceptionIfClosed();
-
+    public void closeStore(@NotNull SingleChronicleQueueStore store) {
         store.close();
 
         storeFileListener.onReleased(store.cycle(), store.file());

@@ -119,7 +119,7 @@ public final class Pretoucher extends AbstractCloseable {
 
     private void releaseResources() {
         if (currentCycleWireStore != null) {
-            queue.release(this, currentCycleWireStore);
+            queue.closeStore(currentCycleWireStore);
             currentCycleWireStore = null;
         }
         if (currentCycleMappedBytes != null) {
