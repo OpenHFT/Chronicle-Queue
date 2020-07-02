@@ -226,15 +226,4 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     TailerState state();
 
-    /**
-     * Returns the task that will be run if a WeakReference referring this appender is registered with a clean-up task.
-     * <p>
-     * The task shall de-allocate any internal resources held.
-     *
-     * @return the task that will be run if a WeakReference referring this appender is registered with a clean-up task
-     */
-    default Runnable getCloserJob() {
-        return () -> {
-        };
-    }
 }

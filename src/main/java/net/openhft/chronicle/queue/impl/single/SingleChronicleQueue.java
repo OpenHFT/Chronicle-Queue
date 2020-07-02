@@ -425,15 +425,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return appender;
     }
 
-    private Runnable cleanupJob(final WeakReference<ExcerptAppender> ref) {
-        final ExcerptAppender appender = ref.get();
-        if (appender == null)
-            return () -> {
-                LOG.warn("appender was NULL, If you see this please report this to Chronicle Software");
-            };
-        return appender.getCloserJob();
-    }
-
     @Override
     @NotNull
     public QueueLock queueLock() {

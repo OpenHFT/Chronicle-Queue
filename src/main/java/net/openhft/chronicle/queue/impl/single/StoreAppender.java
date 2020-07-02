@@ -567,13 +567,6 @@ class StoreAppender extends AbstractCloseable
 
     }
 
-    @Override
-    public Runnable getCloserJob() {
-        throwExceptionIfClosed();
-
-        return this::close;
-    }
-
     /*
      * overwritten in delta wire
      */
