@@ -19,6 +19,8 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
+    <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
@@ -26,7 +28,6 @@
         <relativePath/>
     </parent>
 
-    <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle-test</artifactId>
     <version>3.5.3</version>
     <packaging>bundle</packaging>

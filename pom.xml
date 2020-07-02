@@ -17,9 +17,6 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <properties>
-        <additionalparam>-Xdoclint:none</additionalparam>
-    </properties>
 
     <parent>
         <groupId>net.openhft</groupId>
@@ -28,13 +25,17 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
+
     <version>5.19.49-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
 
-    <dependencyManagement>
+    <properties>
+        <additionalparam>-Xdoclint:none</additionalparam>
+    </properties>
 
+    <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>net.openhft</groupId>
