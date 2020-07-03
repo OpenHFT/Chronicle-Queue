@@ -118,7 +118,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         // use CQ dir in current directory, not tmp as that is often tmpfs
         final File tmpDir = new File(this.getClass().getSimpleName() + "_" + System.currentTimeMillis());
         tmpDir.deleteOnExit();
-        System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
+//        System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(tmpDir)
                 .blockSize(BLOCK_SIZE)
@@ -183,7 +183,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                                 long now = System.nanoTime();
                                 histogramCo.sample(now - startCo);
                                 histogramIn.sample(now - startIn);
-                                if (count % 1_000_000 == 0) System.out.println("read  " + count);
+//                                if (count % 1_000_000 == 0) System.out.println("read  " + count);
                             }
                         }
 /*
@@ -255,7 +255,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                         }
                     }
                     next += interval;
-                    if (i % 1_000_000 == 0) System.out.println("wrote " + i);
+//                    if (i % 1_000_000 == 0) System.out.println("wrote " + i);
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)

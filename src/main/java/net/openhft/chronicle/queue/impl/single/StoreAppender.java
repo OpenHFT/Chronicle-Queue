@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -500,7 +499,7 @@ class StoreAppender extends AbstractCloseable
         if (rollbackDontClose) {
             if (index > wire.headerNumber() + 1)
                 throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
-            Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue", new StackTrace());
+            Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
             return;
         }
         writeBytesInternal(bytes, metadata);

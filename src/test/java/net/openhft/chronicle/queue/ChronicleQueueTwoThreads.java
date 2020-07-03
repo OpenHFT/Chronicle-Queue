@@ -21,8 +21,8 @@ import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -69,7 +69,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                 if (rlock != null) {
                     rlock.release();
                 }
-                System.out.printf("Read %,d messages", counter.intValue());
+//                System.out.printf("Read %,d messages", counter.intValue());
             }
         }, "tailer thread");
 

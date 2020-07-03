@@ -160,7 +160,7 @@ public class OrderManagerTest extends QueueTestCommon {
                 MethodReader reader = in.createTailer().methodReader((OrderListener) order -> {
                     MessageHistory x = MessageHistory.get();
                     // Note: this will have one extra timing, the time it was written to the console.
-                    System.out.println(x);
+//                    System.out.println(x);
                     assertEquals(1, x.sourceId(0));
                     assertEquals(2, x.sourceId(1));
                     assertEquals(4, x.timings());

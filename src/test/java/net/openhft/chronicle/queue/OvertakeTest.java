@@ -98,7 +98,7 @@ public class OvertakeTest extends QueueTestCommon {
 
     @Test
     public void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
-        System.out.println("Continue appending");
+//        System.out.println("Continue appending");
         ExecutorService execService = Executors.newFixedThreadPool(2,
                 new NamedThreadFactory("test"));
         SynchronousQueue<Long> sync = new SynchronousQueue<>();

@@ -107,7 +107,7 @@ public class SingleChroniclePerfMain {
         Byteable byteable = (Byteable) f;
         long capacity = byteable.maxSize();
         byteable.bytesStore(NativeBytesStore.nativeStore(capacity), 0, capacity);
-        System.out.println(f);
+//        System.out.println(f);
     }
 
     interface TestWriter<T> {

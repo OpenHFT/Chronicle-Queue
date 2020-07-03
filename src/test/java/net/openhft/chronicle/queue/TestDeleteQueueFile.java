@@ -36,7 +36,7 @@ public class TestDeleteQueueFile {
 
         DirectoryUtils.deleteDir(tempQueueDir.toFile());
         Assert.assertFalse(tempQueueDir.toFile().exists());
-        System.out.println("Deleted " + tempQueueDir.toFile().getAbsolutePath());
+//        System.out.println("Deleted " + tempQueueDir.toFile().getAbsolutePath());
     }
 
     @Test
@@ -56,7 +56,7 @@ public class TestDeleteQueueFile {
 
             ExcerptAppender appender = queue.acquireAppender();
 
-            System.out.println("first index : " + queue.firstIndex());
+//            System.out.println("first index : " + queue.firstIndex());
             Assert.assertEquals(Long.MAX_VALUE, queue.firstIndex());
 
             //write 10 records should go to first day file
@@ -67,7 +67,7 @@ public class TestDeleteQueueFile {
             long firstIndex = queue.firstIndex();
 
             long indexAfter10Records = appender.lastIndexAppended();
-            System.out.println("index after writing 10 records: " + indexAfter10Records);
+//            System.out.println("index after writing 10 records: " + indexAfter10Records);
 
             //roll to next day file
             timeProvider.advanceMillis(24 * 60 * 60 * 1000);
@@ -96,7 +96,7 @@ public class TestDeleteQueueFile {
             Assert.assertNotEquals(firstFile, secondFile);
 
             long indexAfter5Records = appender.lastIndexAppended();
-            System.out.println("index after writing 5 records: " + indexAfter5Records);
+//            System.out.println("index after writing 5 records: " + indexAfter5Records);
 
             //now lets create one reader which will read all content
             ExcerptTailer excerptTailer = queue.createTailer();
@@ -104,17 +104,17 @@ public class TestDeleteQueueFile {
                 Assert.assertEquals("test", excerptTailer.readText());
             }
 
-            System.out.println("index after reading 10 records: " + excerptTailer.index());
+//            System.out.println("index after reading 10 records: " + excerptTailer.index());
             Assert.assertEquals(firstIndex, excerptTailer.index() - 10);
             for (int i = 0; i < 5; i++) {
                 Assert.assertEquals("test2", excerptTailer.readText());
             }
 
-            System.out.println("index after reading 5 records: " + excerptTailer.index());
+//            System.out.println("index after reading 5 records: " + excerptTailer.index());
             Assert.assertEquals(indexAfter5Records, excerptTailer.index() - 1);
 
             //lets delete first file
-            System.out.println("Deleting first release file: " + firstFile);
+//            System.out.println("Deleting first release file: " + firstFile);
 
             Files.delete(Paths.get(firstFile));
 
@@ -125,7 +125,7 @@ public class TestDeleteQueueFile {
             // and create a tailer it should only read
             //data in second file
             ExcerptTailer excerptTailer2 = queue.createTailer();
-            System.out.println("index before reading 5: " + excerptTailer2.index());
+//            System.out.println("index before reading 5: " + excerptTailer2.index());
 
             //AFTER CREATING A BRAND NEW TAILER, BELOW ASSERTION ALSO FAILS
             //WAS EXPECTING THAT TAILER CAN READ FROM START OF QUEUE BUT INDEX IS LONG.MAX
@@ -133,7 +133,7 @@ public class TestDeleteQueueFile {
             Assert.assertEquals(indexAfter5Records - 5, excerptTailer2.index() - 1);
 
             //BELOW THROWS NPE, WAS EXPECTING THAT WE CAN READ FROM SECOND DAILY QUEUE FILE
-            System.out.println("excerptTailer2: " + excerptTailer2.peekDocument());
+//            System.out.println("excerptTailer2: " + excerptTailer2.peekDocument());
             for (int i = 0; i < 5; i++) {
                 Assert.assertEquals("test2", excerptTailer2.readText());
             }
@@ -152,7 +152,7 @@ public class TestDeleteQueueFile {
 
         @Override
         public void onReleased(int cycle, File file) {
-            System.out.println("onReleased called cycle: " + cycle + "file: " + file);
+//            System.out.println("onReleased called cycle: " + cycle + "file: " + file);
 
             List<String> files = queueToRollFilesOnReleaseMap.get(queueName);
             if (files == null) {
@@ -174,7 +174,7 @@ public class TestDeleteQueueFile {
 
         @Override
         public void onAcquired(int cycle, File file) {
-            System.out.println("onAcquired called cycle: " + cycle + "file: " + file);
+//            System.out.println("onAcquired called cycle: " + cycle + "file: " + file);
 
             List<String> files = queueToRollFilesOnAcquireMap.get(queueName);
             if (files == null) {

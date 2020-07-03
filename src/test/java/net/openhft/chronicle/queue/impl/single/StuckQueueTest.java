@@ -43,7 +43,7 @@ public class StuckQueueTest extends QueueTestCommon {
 
                 try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
                     String absolutePath = wireStore.file().getAbsolutePath();
-                    System.out.println(absolutePath);
+//                    System.out.println(absolutePath);
                     Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
                 }
 
@@ -51,7 +51,7 @@ public class StuckQueueTest extends QueueTestCommon {
 
                 try (DocumentContext dc = tailer.readingDocument()) {
 //                Assert.assertTrue(!dc.isPresent());
-                    System.out.println(Long.toHexString(dc.index()));
+//                    System.out.println(Long.toHexString(dc.index()));
                 }
 
                 //  Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
@@ -65,7 +65,7 @@ public class StuckQueueTest extends QueueTestCommon {
                     Assert.assertTrue(dc.isPresent());
                     String actual = dc.wire().read("hello").text();
                     Assert.assertEquals("world", actual);
-                    System.out.println(Long.toHexString(dc.index()));
+//                    System.out.println(Long.toHexString(dc.index()));
                 }
             }
         } finally {

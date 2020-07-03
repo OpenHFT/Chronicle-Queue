@@ -149,12 +149,12 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 
         @Override
         public void onAcquired(int cycle, File file) {
-            System.out.println("Acquiring " + file);
+//            System.out.println("Acquiring " + file);
         }
 
         @Override
         public void onReleased(int cycle, File file) {
-            System.out.println("Releasing " + file);
+//            System.out.println("Releasing " + file);
         }
 
         @Override
@@ -162,7 +162,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 
             try (final DocumentContext dc = tailer.readingDocument()) {
 
-                System.out.println("index=" + Long.toHexString(dc.index()));
+//                System.out.println("index=" + Long.toHexString(dc.index()));
                 if (!dc.isPresent())
                     return documentsRead;
 
@@ -173,7 +173,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                 if (java.util.Objects.equals(readText, "")) {
                     return documentsRead;
                 }
-                System.out.println("Read a document " + readText);
+//                System.out.println("Read a document " + readText);
                 documentsRead++;
 
             }

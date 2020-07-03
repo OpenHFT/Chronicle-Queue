@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +92,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             ++count;
             if (reader.lastRead < expectedNumberOfMessages - 1) {
                 allReadersComplete = false;
-                System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
+//                System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
             }
         }
         return allReadersComplete;
@@ -103,7 +102,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     public void stress() throws InterruptedException, IOException {
 
         File file = IOTools.createTempDirectory("queue").toFile();
-        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
+//        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(
@@ -116,12 +115,12 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         final AtomicInteger wrote = new AtomicInteger();
         final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
 
-        System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
-                numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
-        System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
-                SLEEP_PER_WRITE_NANOS);
-        System.out.printf("Should take ~%dms%n",
-                TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters / 2));
+//        System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
+//                numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
+//        System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
+//                SLEEP_PER_WRITE_NANOS);
+//        System.out.printf("Should take ~%dms%n",
+//                TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters / 2));
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
@@ -175,9 +174,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             }
             if (now > nextCheckTime) {
                 String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
-                System.out.printf("Writer has written %d of %d messages after %dms. Readers at %s. Waiting...%n",
-                        wrote.get() + 1, expectedNumberOfMessages,
-                        i * 10, readersLastRead);
+//                System.out.printf("Writer has written %d of %d messages after %dms. Readers at %s. Waiting...%n",
+//                        wrote.get() + 1, expectedNumberOfMessages,
+//                        i * 10, readersLastRead);
                 readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
                     if (reader.exception != null) {
                         throw new AssertionError("Reader encountered exception, so stopped reading messages",
@@ -208,9 +207,11 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                     reader.exception);
         });
 
+/*
         System.out.println(String.format("All messages written in %,.0fsecs at rate of %,.0f/sec %,.0f/sec per writer (actual writeLatency %,.0fns)",
                 timeToWriteSecs, expectedNumberOfMessages / timeToWriteSecs, (expectedNumberOfMessages / timeToWriteSecs) / numWriters,
                 1_000_000_000 / ((expectedNumberOfMessages / timeToWriteSecs) / numWriters)));
+*/
 
         final long giveUpReadingAt = System.currentTimeMillis() + 20_000L;
         final long dumpThreadsAt = giveUpReadingAt - 5_000L;
@@ -238,7 +239,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                     break;
                 }
 
-                System.out.printf("Not all readers are complete. Waiting...%n");
+//                System.out.printf("Not all readers are complete. Waiting...%n");
                 Jvm.pause(2000);
             }
             assertTrue("Readers did not catch up",
@@ -275,7 +276,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
             DirectoryUtils.deleteDir(file);
         }
-        System.out.println("Test complete");
+//        System.out.println("Test complete");
     }
 
     @NotNull
@@ -403,7 +404,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                             if (now > last + 2000) {
                                 if (lastRead < 0)
                                     throw new AssertionError("read nothing after 2 seconds");
-                                System.out.println(Thread.currentThread() + " - Last read: " + lastRead);
+//                                System.out.println(Thread.currentThread() + " - Last read: " + lastRead);
                                 last = now;
                             }
                             continue;
@@ -523,7 +524,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             try (ChronicleQueue queue = queueBuilder(path).build()) {
                 queue0 = queue;
                 ExcerptAppender appender = queue.acquireAppender();
-                System.out.println("Starting pretoucher");
+//                System.out.println("Starting pretoucher");
                 while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
                     Jvm.pause(50);
                     appender.pretouch();

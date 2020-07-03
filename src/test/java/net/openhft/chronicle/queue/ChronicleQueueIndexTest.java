@@ -148,7 +148,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 fail();
             }
         } finally {
-            System.out.println(file1.getAbsolutePath());
+//            System.out.println(file1.getAbsolutePath());
             file1.deleteOnExit();
         }
     }

@@ -109,7 +109,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                     withTimeUnit(TimeUnit.MICROSECONDS);
             Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
 
-            chronicleHistoryReader.withMessageSink(System.out::println);
+//            chronicleHistoryReader.withMessageSink(System.out::println);
             chronicleHistoryReader.outputData();
 
             if (recordHistoryFirst) {

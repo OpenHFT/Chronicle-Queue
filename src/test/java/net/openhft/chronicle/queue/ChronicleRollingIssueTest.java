@@ -76,9 +76,11 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                     count2++;
                 } else if (index >= 0) {
                     if (RollCycles.TEST_SECONDLY.toCycle(lastIndex) != RollCycles.TEST_SECONDLY.toCycle(index)) {
+/*
                         System.out.println("Wrote: " + count
                                 + " read: " + count2
                                 + " index: " + Long.toHexString(index));
+*/
                         lastIndex = index;
                     }
                 }
