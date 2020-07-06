@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
@@ -68,8 +69,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static long lastTimeMapped = 0;
-    protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
-    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly();
     @NotNull
     protected final EventLoop eventLoop;
     @NotNull
