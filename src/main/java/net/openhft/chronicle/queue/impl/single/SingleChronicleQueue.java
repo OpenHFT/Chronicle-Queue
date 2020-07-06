@@ -80,7 +80,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     final File path;
     final String fileAbsolutePath;
     private final StoreSupplier storeSupplier;
-    private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
+    private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
     @NotNull
     private final WireStorePool pool;
     private final long epoch;

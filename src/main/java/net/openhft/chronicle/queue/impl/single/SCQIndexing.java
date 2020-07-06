@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
@@ -97,8 +98,8 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         this.index2Index = index2Index;
         this.nextEntryToBeIndexed = nextEntryToBeIndexed;
         this.longArraySupplier = longArraySupplier;
-        this.index2indexArray = new ThreadLocal<>();
-        this.indexArray = new ThreadLocal<>();
+        this.index2indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));;
+        this.indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
         this.index2IndexTemplate = w -> w.writeEventName(() -> "index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName(() -> "index").int64array(indexCount);
     }
@@ -737,5 +738,5 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         protected void performClose() {
             values.close();
         }
- }
+    }
 }
