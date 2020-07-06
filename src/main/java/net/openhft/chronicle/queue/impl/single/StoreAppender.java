@@ -101,8 +101,8 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     protected void performClose() {
-        if (Jvm.isDebugEnabled(getClass()))
-            Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
+//        if (Jvm.isDebugEnabled(getClass()))
+//            Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
 
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
@@ -113,6 +113,7 @@ class StoreAppender extends AbstractCloseable
 
         if (store != null) {
             storePool.closeStore(store);
+            store = null;
         }
 
         storePool.close();
@@ -121,7 +122,6 @@ class StoreAppender extends AbstractCloseable
         wireForIndex = null;
         wire = null;
         bufferWire = null;
-        store = null;
     }
 
     /**

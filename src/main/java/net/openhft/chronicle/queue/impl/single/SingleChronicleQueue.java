@@ -68,7 +68,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
-    static long lastTimeMapped = 0;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly();
     @NotNull
     protected final EventLoop eventLoop;
@@ -601,8 +600,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // must be closed after closers.
         closeQuietly(directoryListing, queueLock, lastAcknowledgedIndexReplicated, lastIndexReplicated, writeLock);
 
-        this.pool.close();
-        this.storeSupplier.close();
+        closeQuietly(pool);
+        closeQuietly(storeSupplier);
         closeQuietly(metaStore);
         // close it if we created it.
         if (eventLoop instanceof OnDemandEventLoop)
@@ -820,7 +819,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
     }
 
-    private class StoreSupplier extends AbstractCloseable implements WireStoreSupplier {
+    class StoreSupplier extends AbstractCloseable implements WireStoreSupplier {
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
         private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache;
         private boolean queuePathExists;
@@ -828,8 +827,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         private StoreSupplier() {
             mappedFileCache = new ReferenceCountedCache<>(
                     MappedBytes::mappedBytes,
-                    SingleChronicleQueue.this::mappedFile,
-                    this);
+                    SingleChronicleQueue.this::mappedFile);
         }
 
         @SuppressWarnings("resource")
@@ -867,7 +865,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     mappedBytes = mappedFileCache.get(path);
                 }
 
-                pauseUnderload();
+//                pauseUnderload();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
                     LOG.warn("", new Exception("Creating cycle which is not the current cycle"));
@@ -940,14 +938,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             } catch (IOException ex) {
                 Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
-        }
-
-        private void pauseUnderload() {
-            // when mapping and unmapping sections really fast it appears the OS/CPU gets confused as to whether memory is valid.
-            long now = System.currentTimeMillis();
-            if (now - lastTimeMapped < 5)
-                Jvm.pause(2);
-            lastTimeMapped = now;
         }
 
         private void checkDiskSpace(@NotNull final File filePath) {
