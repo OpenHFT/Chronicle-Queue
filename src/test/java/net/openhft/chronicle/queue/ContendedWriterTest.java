@@ -110,7 +110,7 @@ public class ContendedWriterTest extends QueueTestCommon {
     }
 
     private void test(String name, Config... configs) {
-        System.out.println(name);
+//        System.out.println(name);
         File path = DirectoryUtils.tempDir(name);
         SingleChronicleQueue[] queues = new SingleChronicleQueue[configs.length];
         StartAndMonitor[] startAndMonitors = new StartAndMonitor[configs.length];

@@ -77,7 +77,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             // this is a performance test so should not be run with assertions turned on
             return;
 
-        System.out.println("starting test");
+//        System.out.println("starting test");
         String pathname = OS.getTarget() + "/testRareAppenderLatency-" + System.nanoTime();
         new File(pathname).deleteOnExit();
 
@@ -112,7 +112,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
                     return;
             }
 
-            System.out.println("Wrote heavy " + HEAVY_MSGS + " msgs in " + (System.currentTimeMillis() - start) + " ms");
+//            System.out.println("Wrote heavy " + HEAVY_MSGS + " msgs in " + (System.currentTimeMillis() - start) + " ms");
         });
 
         f.get();

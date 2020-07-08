@@ -53,7 +53,7 @@ public class WriteBytesTest extends QueueTestCommon {
             outgoingBytes.write(outgoingMsgBytes);
             postOneMessage(appender);
             fetchOneMessage(tailer, incomingMsgBytes);
-            System.out.println(new String(incomingMsgBytes));
+//            System.out.println(new String(incomingMsgBytes));
 
             outgoingBytes.clear();
 
@@ -63,7 +63,7 @@ public class WriteBytesTest extends QueueTestCommon {
 
             postOneMessage(appender);
             fetchOneMessage(tailer, incomingMsgBytes);
-            System.out.println(new String(incomingMsgBytes));
+//            System.out.println(new String(incomingMsgBytes));
 
         } finally {
             try {

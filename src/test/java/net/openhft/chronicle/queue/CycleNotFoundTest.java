@@ -118,7 +118,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
         });
         submit.get();
 
-        System.out.println("appender is done.");
+//        System.out.println("appender is done.");
 
         // wait for all the tailer to finish
         for (Future f : tailers) {

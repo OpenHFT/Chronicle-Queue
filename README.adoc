@@ -284,9 +284,9 @@ Chronicle Queue is designed to be driven from code.You can easily add an interfa
 NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations can throw unchecked exceptions.In order to prevent thread death, it might be practical to catch `RuntimeException`s and log/analyze them as appropriate.
 
 === Writing to a Queue
-In Chronicle Queue we refer to the act of writing your data to the Chronicle queue, as storing an excerpt. This data could be made up from any data type, including text, numbers, or serialised blobs. Ultimately, all your data, regardless of what it is, is  stored as a series of bytes.
+In Chronicle Queue we refer to the act of writing your data to the Chronicle queue, as storing an excerpt.This data could be made up from any data type, including text, numbers, or serialised blobs.Ultimately, all your data, regardless of what it is, is stored as a series of bytes.
 
-Just before storing your excerpt, Chronicle Queue reserves a 4-byte header. Chronicle Queue writes the length of your data into this header. This way, when Chronicle Queue comes to read your excerpt, it knows how long each blob of data is. We refer to this 4-byte header, along with your excerpt, as a document. So strictly speaking Chronicle Queue can be used to read and write documents.
+Just before storing your excerpt, Chronicle Queue reserves a 4-byte header.Chronicle Queue writes the length of your data into this header.This way, when Chronicle Queue comes to read your excerpt, it knows how long each blob of data is.We refer to this 4-byte header, along with your excerpt, as a document.So strictly speaking Chronicle Queue can be used to read and write documents.
 
 NOTE:  Within this 4-byte header we also reserve a few bits for a number of internal operations, such as locking, to make Chronicle Queue thread-safe across both processors and threads.
 The important thing to note is that because of this, you can’t strictly convert the 4 bytes to an integer to find the length of your data blob.
@@ -300,7 +300,7 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
 }
 ----
 
-So, Chronicle Queue uses an *Appender* to write to the queue and a *Tailer* to read from the queue. Unlike other java queuing solutions, messages are not lost when they are read with a Tailer. This is covered in more detail in the section below on "Reading from a Queue".
+So, Chronicle Queue uses an *Appender* to write to the queue and a *Tailer* to read from the queue.Unlike other java queuing solutions, messages are not lost when they are read with a Tailer.This is covered in more detail in the section below on "Reading from a Queue".
 
 Chronicle Queue uses the following low-level interface to write the data:
 [source, Java]
@@ -310,7 +310,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The close on the try-with-resources, is the point when the length of the data is written to the header. You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below).  You can later use this index to move-to/look up this excerpt. Each Chronicle Queue excerpt has a unique index.
+The close on the try-with-resources, is the point when the length of the data is written to the header.You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below).You can later use this index to move-to/look up this excerpt.Each Chronicle Queue excerpt has a unique index.
 
 [source, Java]
 ----
@@ -320,7 +320,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing. The actual code of `writeText(CharSequence text)` looks like this:
+The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing.The actual code of `writeText(CharSequence text)` looks like this:
 
 [source, Java]
 ----
@@ -336,7 +336,7 @@ void writeText(CharSequence text) {
 
 So you have a choice of a number of high-level interfaces, down to a low-level API, to raw memory.
 
-This is the highest-level API which hides the fact you are writing to messaging at all. The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
+This is the highest-level API which hides the fact you are writing to messaging at all.The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
 
 [source, Java]
 ----
@@ -346,7 +346,7 @@ final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
 riskMonitor.trade(new TradeDetails(now, "GBPUSD", 1.3095, 10e6, Side.Buy, "peter"));
 ----
 
-You can write a "self-describing message". Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
+You can write a "self-describing message".Such messages can support schema changes.They are also easier to understand when debugging or diagnosing problems.
 
 [source, Java]
 ----
@@ -360,7 +360,7 @@ appender.writeDocument(w -> w.write("trade").marshallable(
                 .write("trader").text("peter")));
 ----
 
-You can write "raw data" which is self-describing. The types will always be correct; position is the only indication as to the meaning of those values.
+You can write "raw data" which is self-describing.The types will always be correct; position is the only indication as to the meaning of those values.
 
 [source, Java]
 ----
@@ -371,7 +371,7 @@ appender.writeDocument(w -> w
         .getValueOut().text("Hello World"));
 ----
 
-You can write "raw data" which is not self-describing. Your reader must know what this data means, and the types that were used.
+You can write "raw data" which is not self-describing.Your reader must know what this data means, and the types that were used.
 
 [source, Java]
 ----
@@ -383,7 +383,7 @@ appender.writeBytes(b -> b
         .writeUtf8("Hello World"));
 ----
 
-Below, the lowest level way to write data is illustrated. You get an address to raw memory and you can write whatever you want.
+Below, the lowest level way to write data is illustrated.You get an address to raw memory and you can write whatever you want.
 
 [source, Java]
 ----
@@ -398,12 +398,12 @@ appender.writeBytes(b -> {
     unsafe.putLong(address, 0x999000999000L);
     address += 8;
     byte[] bytes = "Hello World".getBytes(StandardCharsets.ISO_8859_1);
-    unsafe.copyMemory(bytes, Unsafe.ARRAY_BYTE_BASE_OFFSET, null, address, bytes.length);
+    unsafe.copyMemory(bytes, Jvm.arrayByteBaseOffset(), null, address, bytes.length);
     b.writeSkip(1 + 4 + 8 + bytes.length);
 });
 ----
 
-You can print the contents of the queue. You can see the first two, and last two messages store the same data.
+You can print the contents of the queue.You can see the first two, and last two messages store the same data.
 
 [source, Java]
 ----
@@ -674,7 +674,7 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
 ----
 
 You can turn each message into a method call based on the content of the message, and have Chronicle
-Queue automatically deserialise the method arguments. Calling `reader.readOne()` will automatically
+Queue automatically deserialise the method arguments.Calling `reader.readOne()` will automatically
 skip over (filter out) any messages that do not match your method reader.
 
 [source, Java]
@@ -704,7 +704,7 @@ assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
         })));
 ----
 
-You can read self-describing data values. This will check the types are correct, and convert as required.
+You can read self-describing data values.This will check the types are correct, and convert as required.
 
 [source, Java]
 ----
@@ -747,7 +747,7 @@ assertTrue(tailer.readBytes(b -> {
     int length = unsafe.getByte(address);
     address++;
     byte[] bytes = new byte[length];
-    unsafe.copyMemory(null, address, bytes, Unsafe.ARRAY_BYTE_BASE_OFFSET, bytes.length);
+    unsafe.copyMemory(null, address, bytes, Jvm.arrayByteBaseOffset(), bytes.length);
     String text = new String(bytes, StandardCharsets.UTF_8);
     assertEquals("Hello World", text);
     // do something with values

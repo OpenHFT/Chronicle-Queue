@@ -138,7 +138,7 @@ public class RollCycleTest extends QueueTestCommon {
 
                 String readText = tailer.readText();
                 if (readText != null) {
-                    System.out.println("Read a document " + readText);
+//                    System.out.println("Read a document " + readText);
                     documentsRead++;
                     int docId = Integer.parseInt(readText);
                     assertEquals(docId, lastDocId + 1);
@@ -157,12 +157,12 @@ public class RollCycleTest extends QueueTestCommon {
 
         @Override
         public void onAcquired(int cycle, File file) {
-            System.out.println("Acquiring " + file);
+//            System.out.println("Acquiring " + file);
         }
 
         @Override
         public void onReleased(int cycle, File file) {
-            System.out.println("Releasing " + file);
+//            System.out.println("Releasing " + file);
         }
     }
 }

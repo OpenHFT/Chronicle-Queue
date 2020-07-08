@@ -104,12 +104,13 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
 
-            ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader().
-                    withBasePath(queuePath3.toPath()).
-                    withTimeUnit(TimeUnit.MICROSECONDS);
+            ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
+                    .withBasePath(queuePath3.toPath())
+                    .withTimeUnit(TimeUnit.MICROSECONDS)
+                    .withMessageSink(s -> {
+                    });
             Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
 
-            chronicleHistoryReader.withMessageSink(System.out::println);
             chronicleHistoryReader.outputData();
 
             if (recordHistoryFirst) {

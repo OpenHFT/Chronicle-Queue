@@ -635,7 +635,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public SingleChronicleQueueBuilder testBlockSize() {
         // small size for testing purposes only.
-        return blockSize(64 << 10);
+        return blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize());
     }
 
     @NotNull

@@ -92,7 +92,7 @@ public class PeekDocumentTest extends QueueTestCommon {
 
                 String result = wire.read("value").text();
                 assertEquals("hello", result);
-                System.out.println(result);
+//                System.out.println(result);
 
             }
 
