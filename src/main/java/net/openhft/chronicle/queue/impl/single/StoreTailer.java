@@ -757,9 +757,11 @@ class StoreTailer extends AbstractCloseable
     public ExcerptTailer toEnd() {
         throwExceptionIfClosed();
 
-        if (direction.equals(TailerDirection.BACKWARD))
-            return originalToEnd();
-        return optimizedToEnd();
+        //  if (direction.equals(TailerDirection.BACKWARD))
+        return originalToEnd();
+
+        //  todo fix -see issue https://github.com/OpenHFT/Chronicle-Queue/issues/689
+        // return optimizedToEnd();
     }
 
     @Override
