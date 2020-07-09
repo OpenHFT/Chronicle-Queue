@@ -22,7 +22,6 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -53,7 +52,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     public void acquireLock() {
         throwExceptionIfClosed();
 
- long tid = Thread.currentThread().getId();
+        long tid = Thread.currentThread().getId();
         if (isLockHeldByCurrentThread(tid)) {
             return;
         }
@@ -122,13 +121,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         }
 
         long tid = Thread.currentThread().getId();
-        if (!isLockHeldByCurrentThread(tid)) {
-            String absolutePath = "unknown";
-            if (tableStore != null && tableStore.file() != null) {
-                absolutePath = Objects.requireNonNull(tableStore.file()).getAbsolutePath();
-            }
-            throw new IllegalStateException("Can't unlock when lock is not held by this thread, tableStore.file=" + absolutePath);
-        }
+
         if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
             warn().on(getClass(), "Queue lock was unlocked by someone else!");
         }
