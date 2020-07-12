@@ -66,7 +66,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
             assertEquals(FileState.CLOSED, FileUtil.state(testFile));
 
         } finally {
-            deleteDir(dir.toFile());
+            IOTools.deleteDirWithFiles(dir.toFile());
         }
     }
 
