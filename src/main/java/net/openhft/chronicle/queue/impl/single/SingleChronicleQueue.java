@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
@@ -67,8 +68,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
-    protected final ThreadLocal<WeakReference<ExcerptAppender>> weakExcerptAppenderThreadLocal = new ThreadLocal<>();
-    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = new ThreadLocal<>();
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly();
     @NotNull
     protected final EventLoop eventLoop;
     @NotNull
@@ -79,7 +79,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     final File path;
     final String fileAbsolutePath;
     private final StoreSupplier storeSupplier;
-    private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
+    private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
     @NotNull
     private final WireStorePool pool;
     private final long epoch;
