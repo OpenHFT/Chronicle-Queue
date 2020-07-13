@@ -219,6 +219,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void setCycle2(final int cycle, final boolean createIfAbsent) {
+        queue.throwExceptionIfClosed();
         if (cycle < 0)
             throw new IllegalArgumentException("You can not have a cycle that starts " +
                     "before Epoch. cycle=" + cycle);
