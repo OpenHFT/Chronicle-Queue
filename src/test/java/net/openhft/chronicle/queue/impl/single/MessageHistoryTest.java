@@ -151,7 +151,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
         public void count(final int value) {
             final MessageHistory messageHistory = MessageHistory.get();
             assertNotNull(messageHistory);
-            assertEquals(1, messageHistory.sources());
+            assertEquals(2, messageHistory.sources());
             messageHistoryPresent = true;
         }
 
