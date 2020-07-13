@@ -39,7 +39,9 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     public void before() {
         dataDir = DirectoryUtils.tempDir(ChronicleMethodReaderTest.class.getSimpleName()).toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
-                .testBlockSize().build()) {
+                .sourceId(1)
+                .testBlockSize()
+                .build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<All> methodWriterBuilder = excerptAppender.methodWriterBuilder(All.class);
             methodWriterBuilder.recordHistory(true);

@@ -115,9 +115,10 @@ public final class MessageHistoryTest extends QueueTestCommon {
     }
 
     private ChronicleQueue createQueue(final File queueDir, final int sourceId) {
-        return ChronicleQueue.singleBuilder(queueDir).sourceId(sourceId).
-                timeProvider(clock::get).
-                testBlockSize().build();
+        return ChronicleQueue.singleBuilder(queueDir)
+                .sourceId(sourceId)
+                .timeProvider(clock::get)
+                .testBlockSize().build();
     }
 
     @FunctionalInterface
