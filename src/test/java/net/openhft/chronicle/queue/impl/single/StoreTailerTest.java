@@ -54,7 +54,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
                 timeProvider(timeProvider))) {
 
-            final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
+            final OnEvents events = queue.acquireAppender().methodWriterBuilder(OnEvents.class).build();
             timeProvider.setTime(System.currentTimeMillis());
             events.onEvent("firstEvent");
             timeProvider.addTime(2, TimeUnit.MINUTES);
@@ -86,8 +86,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
              ChronicleQueue outputQueue =
                      createQueue(dataDirectory, RollCycles.TEST_DAILY, 0, "outputQueue")) {
 
-            final StringEvents firstWriter = firstInputQueue.acquireAppender()
-                    .methodWriterBuilder(StringEvents.class)
+            final OnEvents firstWriter = firstInputQueue.acquireAppender()
+                    .methodWriterBuilder(OnEvents.class)
                     .get();
             final HelloWorld secondWriter = secondInputQueue.acquireAppender()
                     .methodWriterBuilder(HelloWorld.class)
@@ -100,8 +100,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
             secondWriter.hello("thirteen");
             secondWriter.hello("thirtyOne");
 
-            final StringEvents eventSink = outputQueue.acquireAppender().
-                    methodWriterBuilder(StringEvents.class).recordHistory(true).get();
+            final OnEvents eventSink = outputQueue.acquireAppender().
+                    methodWriterBuilder(OnEvents.class).get();
 
             final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
             final MethodReader firstMethodReader = firstInputQueue.createTailer().methodReader(outputWriter);
@@ -174,15 +174,10 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         return queue;
     }
 
-    @FunctionalInterface
-    public interface StringEvents {
-        void onEvent(final String event);
-    }
+    private static final class CapturingStringEvents implements OnEvents {
+        private final OnEvents delegate;
 
-    private static final class CapturingStringEvents implements StringEvents {
-        private final StringEvents delegate;
-
-        CapturingStringEvents(final StringEvents delegate) {
+        CapturingStringEvents(final OnEvents delegate) {
             this.delegate = delegate;
         }
 

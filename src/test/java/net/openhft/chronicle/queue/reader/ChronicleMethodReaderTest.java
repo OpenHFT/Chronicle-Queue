@@ -44,7 +44,6 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
                 .build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<All> methodWriterBuilder = excerptAppender.methodWriterBuilder(All.class);
-            methodWriterBuilder.recordHistory(true);
             final All events = methodWriterBuilder.build();
 
             for (int i = 0; i < 24; ) {

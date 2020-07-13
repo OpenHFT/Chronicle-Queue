@@ -59,9 +59,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 .sourceId(1)
                 .testBlockSize().build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            final VanillaMethodWriterBuilder<Say> methodWriterBuilder =
+                    excerptAppender.methodWriterBuilder(Say.class);
             methodWriterBuilder.recordHistory(true);
-            final StringEvents events = methodWriterBuilder.build();
+            final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < 24; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
@@ -79,9 +80,9 @@ public class ChronicleReaderTest extends QueueTestCommon {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
             methodWriterBuilder.recordHistory(true);
-            final StringEvents events = methodWriterBuilder.build();
+            final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < 24; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
@@ -102,9 +103,9 @@ public class ChronicleReaderTest extends QueueTestCommon {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
+            final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
             methodWriterBuilder.recordHistory(true);
-            final StringEvents events = methodWriterBuilder.build();
+            final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < 24; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
@@ -218,7 +219,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         dataDir.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
 
-            final StringEvents events = queue.acquireAppender().methodWriterBuilder(StringEvents.class).build();
+            final Say events = queue.acquireAppender().methodWriterBuilder(Say.class).build();
             events.say("hello");
 
             final long readerCapacity = getCurrentQueueFileLength(dataDir);
@@ -391,11 +392,6 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         } catch (IllegalStateException todoFix) {
             todoFix.printStackTrace();
         }
-    }
-
-    @FunctionalInterface
-    public interface StringEvents {
-        void say(final String msg);
     }
 
     private static final class RecordCounter implements Consumer<String> {

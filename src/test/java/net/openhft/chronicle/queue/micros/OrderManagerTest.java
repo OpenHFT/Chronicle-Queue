@@ -118,7 +118,6 @@ public class OrderManagerTest extends QueueTestCommon {
                 OrderIdeaListener orderManager = out.acquireAppender()
                         .methodWriterBuilder(OrderIdeaListener.class)
                         .addInterface(MarketDataListener.class)
-                        .recordHistory(true)
                         .get();
                 SidedMarketDataCombiner combiner = new SidedMarketDataCombiner((MarketDataListener) orderManager);
 
@@ -144,7 +143,6 @@ public class OrderManagerTest extends QueueTestCommon {
 
                 OrderListener listener = out.acquireAppender()
                         .methodWriterBuilder(OrderListener.class)
-                        .recordHistory(true)
                         .get();
                 // build our scenario
                 OrderManager orderManager = new OrderManager(listener);
@@ -190,7 +188,6 @@ public class OrderManagerTest extends QueueTestCommon {
                     .build()) {
                 SidedMarketDataListener combiner = out.acquireAppender()
                         .methodWriterBuilder(SidedMarketDataListener.class)
-                        .recordHistory(true)
                         .get();
 
                 combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
@@ -218,7 +215,6 @@ public class OrderManagerTest extends QueueTestCommon {
                     ExcerptAppender excerptAppender = out.acquireAppender();
                     MarketDataListener mdListener = excerptAppender
                             .methodWriterBuilder(MarketDataListener.class)
-                            .recordHistory(true)
                             .get();
 
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);

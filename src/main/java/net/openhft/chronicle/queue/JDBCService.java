@@ -54,7 +54,6 @@ public class JDBCService extends AbstractCloseable implements Closeable {
         try {
             JDBCResult result = out.acquireAppender()
                     .methodWriterBuilder(JDBCResult.class)
-                    .recordHistory(true)
                     .get();
             JDBCComponent js = new JDBCComponent(connectionSupplier, result);
             MethodReader reader = in.createTailer().afterLastWritten(out).methodReader(js);
@@ -78,7 +77,6 @@ public class JDBCService extends AbstractCloseable implements Closeable {
     public JDBCStatement createWriter() {
         return in.acquireAppender()
                 .methodWriterBuilder(JDBCStatement.class)
-                .recordHistory(true)
                 .get();
     }
 

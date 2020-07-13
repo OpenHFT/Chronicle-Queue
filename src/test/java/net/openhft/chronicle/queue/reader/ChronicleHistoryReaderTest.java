@@ -70,7 +70,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             }
 
             try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath).testBlockSize().sourceId(1).build();
-                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().build()) {
+                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build()) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
                         .recordHistory(true)
@@ -88,7 +88,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             }
 
             try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build();
-                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath3).testBlockSize().build()) {
+                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath3).testBlockSize().sourceId(3).build()) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
                         .recordHistory(true)

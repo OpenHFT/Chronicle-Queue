@@ -21,9 +21,8 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
             try (ChronicleQueue inQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
 
                 // write some initial data to the inqueue
-                final Msg msg = inQueue.acquireAppender()
-                        .methodWriterBuilder(Msg.class)
-                        .recordHistory(true)
+                final LATMsg msg = inQueue.acquireAppender()
+                        .methodWriterBuilder(LATMsg.class)
                         .get();
 
                 msg.msg("somedata-0");
@@ -35,12 +34,11 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
 
                 // read a message on the in queue and write it to the out queue
                 {
-                    Msg out = outQueue.acquireAppender()
-                            .methodWriterBuilder(Msg.class)
-                            .recordHistory(true)
+                    LATMsg out = outQueue.acquireAppender()
+                            .methodWriterBuilder(LATMsg.class)
                             .get();
                     MethodReader methodReader = inQueue.createTailer()
-                            .methodReader((Msg) out::msg);
+                            .methodReader((LATMsg) out::msg);
 
                     // reads the somedata-0
                     methodReader.readOne();
@@ -64,7 +62,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
                 {
                     ExcerptTailer excerptTailer = inQueue.createTailer().afterLastWritten(outQueue);
-                    MethodReader methodReader = excerptTailer.methodReader((Msg) actualValue::set);
+                    MethodReader methodReader = excerptTailer.methodReader((LATMsg) actualValue::set);
 
                     methodReader.readOne();
                     Assert.assertEquals("somedata-2", actualValue.get());
@@ -87,9 +85,8 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
             try (ChronicleQueue inQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
 
                 // write some initial data to the inqueue
-                final Msg msg = inQueue.acquireAppender()
-                        .methodWriterBuilder(Msg.class)
-                        .recordHistory(true)
+                final LATMsg msg = inQueue.acquireAppender()
+                        .methodWriterBuilder(LATMsg.class)
                         .get();
 
                 msg.msg("somedata-0");
@@ -97,11 +94,10 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
 
                 // read a message on the in queue and write it to the out queue
                 {
-                    Msg out = outQueue.acquireAppender()
-                            .methodWriterBuilder(Msg.class)
-                            .recordHistory(true)
+                    LATMsg out = outQueue.acquireAppender()
+                            .methodWriterBuilder(LATMsg.class)
                             .get();
-                    MethodReader methodReader = inQueue.createTailer().methodReader((Msg) out::msg);
+                    MethodReader methodReader = inQueue.createTailer().methodReader((LATMsg) out::msg);
 
                     // reads the somedata-0
                     methodReader.readOne();
@@ -125,7 +121,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 {
                     ExcerptTailer excerptTailer = inQueue.createTailer().afterLastWritten(outQueue);
 
-                    MethodReader methodReader = excerptTailer.methodReader((Msg) actualValue::set);
+                    MethodReader methodReader = excerptTailer.methodReader((LATMsg) actualValue::set);
 
                     methodReader.readOne();
                     Assert.assertEquals("somedata-2", actualValue.get());
@@ -140,7 +136,4 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
         }
     }
 
-    public interface Msg {
-        void msg(String s);
-    }
 }
