@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -453,28 +454,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testLastWritten() throws InterruptedException {
         // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
+//        AbstractCloseable.disableCloseableTracing();
 
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor(
                 new NamedThreadFactory("test"));
 
+        File outDir = getTmpDir();
+        File inDir = getTmpDir();
         try {
             final SetTimeProvider tp = new SetTimeProvider();
-            try (ChronicleQueue outQueue = builder(getTmpDir(), wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(tp).build()) {
-                File inQueueTmpDir = getTmpDir();
-                try (ChronicleQueue inQueue = builder(inQueueTmpDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(tp).build()) {
+            try (ChronicleQueue outQueue = builder(outDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(tp).build()) {
+                try (ChronicleQueue inQueue = builder(inDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(tp).build()) {
 
                     // write some initial data to the inqueue
                     final SCQMsg msg = inQueue.acquireAppender().methodWriterBuilder(SCQMsg.class).recordHistory(true).get();
 
                     msg.msg("somedata-0");
-                    assertEquals(1, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals(1, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     tp.advanceMillis(1000);
 
                     // write data into the inQueue
                     msg.msg("somedata-1");
-                    assertEquals(2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals(2, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     // read a message on the in queue and write it to the out queue
                     {
@@ -493,18 +495,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         assertFalse(methodReader.readOne());
                     }
 
-                    assertEquals("trying to read should not create a file", 2, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals("trying to read should not create a file", 2, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     // write data into the inQueue
                     msg.msg("somedata-2");
-                    assertEquals(3, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals(3, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     // advance 2 cycles - we will end up with a missing file
                     tp.advanceMillis(2000);
 
                     msg.msg("somedata-3");
                     msg.msg("somedata-4");
-                    assertEquals("Should be a missing cycle file", 4, inQueueTmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+                    assertEquals("Should be a missing cycle file", 4, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
 
                     AtomicReference<String> actualValue = new AtomicReference<>();
 
@@ -530,6 +532,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             executorService.shutdown();
             executorService.awaitTermination(1, TimeUnit.SECONDS);
             executorService.shutdownNow();
+            IOTools.deleteDirWithFiles(inDir);
+            IOTools.deleteDirWithFiles(outDir);
         }
     }
 

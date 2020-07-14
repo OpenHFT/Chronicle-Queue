@@ -27,15 +27,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ChronicleQueueTestBase extends QueueTestCommon {
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
+    private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
+
     static {
         System.setProperty("queue.check.index", "true");
     }
-
-    protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
-    private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
 
     // *************************************************************************
     // JUNIT Rules
@@ -67,18 +67,18 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
     // *************************************************************************
     //
     // *************************************************************************
-
-    @NotNull
-    protected File getTmpDir() {
-        final String methodName = testName.getMethodName();
-        return DirectoryUtils.tempDir(methodName != null ?
-                methodName.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_') : "NULL-" + UUID
-                .randomUUID());
-    }
+    static AtomicLong counter = new AtomicLong();
 
     @BeforeClass
     public static void synchronousFileTruncating() {
         System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
+    }
+
+    @NotNull
+    protected File getTmpDir() {
+        final String methodName = testName.getMethodName();
+        String name = methodName == null ? "unknown" : methodName;
+        return DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
     }
 
 }
