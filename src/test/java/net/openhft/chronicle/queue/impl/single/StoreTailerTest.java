@@ -8,15 +8,12 @@ import net.openhft.chronicle.queue.service.HelloWorld;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -24,16 +21,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 
 public class StoreTailerTest extends ChronicleQueueTestBase {
-    private final Collection<ChronicleQueue> createdQueues = new ArrayList<>();
     private final Path dataDirectory = DirectoryUtils.tempDir(StoreTailerTest.class.getSimpleName()).toPath();
-
-    private static void closeQueues(final ChronicleQueue... queues) {
-        for (ChronicleQueue queue : queues) {
-            if (queue != null) {
-                queue.close();
-            }
-        }
-    }
 
     @Test
     public void testEntryCount() {
@@ -137,17 +125,16 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
             ExcerptAppender append = chronicle2.acquireAppender();
             append.writeDocument(w -> w.write(() -> "test").text("text"));
 
-            assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
+            if (! tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals))) {
+                System.out.println("dump chronicle:\n" + chronicle.dump());
+                System.out.println("dump chronicle2:\n" + chronicle2.dump());
+                fail("readDocument false");
+            }
         }
     }
 
     private SingleChronicleQueueBuilder minutely(@NotNull File file, TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder.builder(file, WireType.BINARY).rollCycle(RollCycles.MINUTELY).testBlockSize().timeProvider(timeProvider);
-    }
-
-    @After
-    public void after() {
-        closeQueues(createdQueues.toArray(new ChronicleQueue[0]));
     }
 
     @NotNull
@@ -169,9 +156,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
     }
 
     private ChronicleQueue build(final SingleChronicleQueueBuilder builder) {
-        final ChronicleQueue queue = builder.build();
-        createdQueues.add(queue);
-        return queue;
+        return builder.build();
     }
 
     private static final class CapturingStringEvents implements OnEvents {
