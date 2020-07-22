@@ -90,7 +90,7 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
 
         // should be able to remove tmp dirs
         tmpDirs.forEach(file -> {
-            if (!IOTools.deleteDirWithFiles(file)) {
+            if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
                 LOGGER.error("Could not delete tmp dir {}. Remaining {}", file, file.list());
             }
         });

@@ -32,15 +32,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
-public class MessageReaderWriterTest extends QueueTestCommon {
+public class MessageReaderWriterTest extends ChronicleQueueTestBase {
 
     @Test
     public void testWriteWhileReading() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class);
 
-        File path1 = DirectoryUtils.tempDir("testWriteWhileReading1");
-        File path2 = DirectoryUtils.tempDir("testWriteWhileReading2");
+        File path1 = getTmpDir();
+        File path2 = getTmpDir();
 
         try (ChronicleQueue queue1 = SingleChronicleQueueBuilder
                 .binary(path1)

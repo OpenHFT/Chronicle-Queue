@@ -30,7 +30,7 @@ import java.util.function.Function;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class ChronicleMethodReaderTest extends QueueTestCommon {
+public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
@@ -66,7 +66,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     @Test
     public void shouldNotFailOnEmptyQueue() {
         expectException("Failback to readonly tablestore");
-        Path path = DirectoryUtils.tempDir("shouldNotFailOnEmptyQueue").toPath();
+        Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         basicReader(path).execute();
         assertTrue(capturedOutput.isEmpty());

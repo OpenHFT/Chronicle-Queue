@@ -33,7 +33,7 @@ import static net.openhft.chronicle.queue.impl.single.GcControls.waitForGcCycle;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class ChronicleReaderTest extends QueueTestCommon {
+public class ChronicleReaderTest extends ChronicleQueueTestBase {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
     private static final String LAST_MESSAGE = "LAST_MESSAGE";
 
@@ -75,7 +75,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         if (OS.isWindows())
             return;
 
-        Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
+        Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().sourceId(1).build()) {
@@ -98,7 +98,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         if (OS.isWindows())
             return;
         expectException("Failback to readonly tablestore");
-        Path path = DirectoryUtils.tempDir("shouldReadQueueWithNonDefaultRollCycle").toPath();
+        Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
                 testBlockSize().sourceId(1).build()) {
@@ -125,7 +125,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         // TODO FIX
 //        AbstractCloseable.disableCloseableTracing();
 
-        Path path = DirectoryUtils.tempDir("shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader").toPath();
+        Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -181,7 +181,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
 
     @Test
     public void shouldNotFailOnEmptyQueue() {
-        Path path = DirectoryUtils.tempDir("shouldNotFailOnEmptyQueue").toPath();
+        Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         expectException("Failback to readonly tablestore");
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();

@@ -31,14 +31,14 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
-public class ThreadedQueueTest extends QueueTestCommon {
+public class ThreadedQueueTest extends ChronicleQueueTestBase {
 
     public static final int REQUIRED_COUNT = 10;
 
     @Test(timeout = 10000)
     public void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
-        final File path = DirectoryUtils.tempDir("testMultipleThreads");
+        final File path = getTmpDir();
 
         final AtomicInteger counter = new AtomicInteger();
 
@@ -97,7 +97,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
 
     @Test
     public void testTailerReadingEmptyQueue() {
-        final File path = DirectoryUtils.tempDir("testTailerReadingEmptyQueue");
+        final File path = getTmpDir();
 
         try (final ChronicleQueue rqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)
                 .testBlockSize()

@@ -10,10 +10,10 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class MarshallableTest extends QueueTestCommon {
+public class MarshallableTest extends ChronicleQueueTestBase {
     @Test
     public void testWriteText() {
-        File dir = DirectoryUtils.tempDir("testWriteText");
+        File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .build()) {

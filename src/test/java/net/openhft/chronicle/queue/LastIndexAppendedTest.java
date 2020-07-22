@@ -31,7 +31,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.*;
 
 @RequiredForClient
-public class LastIndexAppendedTest extends QueueTestCommon {
+public class LastIndexAppendedTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastIndexAppendedAcrossRestarts() {
@@ -62,7 +62,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
 
     @Test
     public void testTwoAppenders() {
-        File path = DirectoryUtils.tempDir("testTwoAppenders");
+        File path = getTmpDir();
         long a_index;
 
         try (

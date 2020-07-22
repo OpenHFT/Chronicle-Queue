@@ -2,7 +2,10 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -27,7 +30,7 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
 
         final AtomicLong time = new AtomicLong();
 
-        File name = DirectoryUtils.tempDir("testCountExcerptsWhenTheCycleIsRolled");
+        File name = getTmpDir();
         try (final RollingChronicleQueue q = binary(name)
                 .testBlockSize()
                 .timeProvider(time::get)

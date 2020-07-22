@@ -20,9 +20,8 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -37,7 +36,7 @@ import java.util.concurrent.Future;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
-public class MultiThreadedRollTest extends QueueTestCommon {
+public class MultiThreadedRollTest extends ChronicleQueueTestBase {
 
     final ExecutorService reader = Executors.newSingleThreadExecutor(
             new NamedThreadFactory("reader"));
@@ -52,7 +51,7 @@ public class MultiThreadedRollTest extends QueueTestCommon {
 
         final SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(1000);
-        final File path = DirectoryUtils.tempDir("MultiThreadedRollTest");
+        final File path = getTmpDir();
 
         try (final ChronicleQueue wqueue = binary(path)
                 .testBlockSize()

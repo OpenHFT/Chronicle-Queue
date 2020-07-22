@@ -20,7 +20,7 @@ import java.util.concurrent.*;
 import static net.openhft.chronicle.queue.RollCycles.DAILY;
 import static org.junit.Assert.assertEquals;
 
-public class RollCycleMultiThreadTest extends QueueTestCommon {
+public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
 
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {
@@ -65,7 +65,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
     @SuppressWarnings("unchecked")
     @Test
     public void testRead2() throws ExecutionException, InterruptedException {
-        File path = DirectoryUtils.tempDir("testRead2");
+        File path = getTmpDir();
         TestTimeProvider timeProvider = new TestTimeProvider();
 
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder

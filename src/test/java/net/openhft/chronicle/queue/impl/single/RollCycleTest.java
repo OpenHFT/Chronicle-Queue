@@ -17,10 +17,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
-public class RollCycleTest extends QueueTestCommon {
+public class RollCycleTest extends ChronicleQueueTestBase {
     @Test
     public void newRollCycleIgnored() throws InterruptedException {
-        File path = DirectoryUtils.tempDir("newRollCycleIgnored");
+        File path = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
@@ -57,7 +57,7 @@ public class RollCycleTest extends QueueTestCommon {
 
     @Test
     public void newRollCycleIgnored2() throws InterruptedException {
-        File path = DirectoryUtils.tempDir("newRollCycleIgnored2");
+        File path = getTmpDir();
 
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());

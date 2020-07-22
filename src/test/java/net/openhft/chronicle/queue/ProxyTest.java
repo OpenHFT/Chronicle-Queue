@@ -14,12 +14,12 @@ import java.io.File;
  * <p>
  * Created by Rob Austin
  */
-public class ProxyTest extends QueueTestCommon {
+public class ProxyTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadWrite() {
 
-        File tempDir = DirectoryUtils.tempDir("to-be-deleted");
+        File tempDir = getTmpDir();
         StringBuilder result = new StringBuilder();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
 

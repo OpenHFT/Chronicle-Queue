@@ -544,7 +544,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             return;
         }
 
-        final File dir = DirectoryUtils.tempDir("to-be-deleted");
+        final File dir = getTmpDir();
         try (final ChronicleQueue queue =
                      builder(dir, wireType).
                              testBlockSize().build()) {
@@ -1555,7 +1555,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         assert assertsEnabled = true;
         //noinspection ConstantConditions
         assumeTrue(assertsEnabled);
-        File tmpDir = DirectoryUtils.tempDir("testReentrant");
+        File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -2769,7 +2769,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void tailerRollBackTest() {
-        final File source = DirectoryUtils.tempDir("testCopyQueue-source");
+        final File source = getTmpDir();
         try (final ChronicleQueue q = binary(source).build()) {
 
             try (DocumentContext dc = q.acquireAppender().writingDocument()) {
@@ -2784,8 +2784,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCopyQueue() {
-        final File source = DirectoryUtils.tempDir("testCopyQueue-source");
-        final File target = DirectoryUtils.tempDir("testCopyQueue-target");
+        final File source = getTmpDir();
+        final File target = getTmpDir();
         {
 
             try (final ChronicleQueue q =
@@ -3102,7 +3102,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void writeBytesAndIndexFiveTimesWithOverwriteTest() {
         try (final ChronicleQueue sourceQueue =
-                     builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
+                     builder(getTmpDir(), wireType).
                              testBlockSize().build()) {
 
             for (int i = 0; i < 5; i++) {
@@ -3114,7 +3114,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (ExcerptTailer tailer = sourceQueue.createTailer();
                  ChronicleQueue queue =
-                         builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
+                         builder(getTmpDir(), wireType).testBlockSize().build()) {
 
                 ExcerptAppender appender0 = queue.acquireAppender();
 
@@ -3177,7 +3177,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void writeBytesAndIndexFiveTimesTest() {
         try (final ChronicleQueue sourceQueue =
-                     builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).
+                     builder(getTmpDir(), wireType).
                              testBlockSize().build()) {
 
             for (int i = 0; i < 5; i++) {
@@ -3190,7 +3190,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             String before = sourceQueue.dump();
             try (ExcerptTailer tailer = sourceQueue.createTailer();
                  ChronicleQueue queue =
-                         builder(DirectoryUtils.tempDir("to-be-deleted"), wireType).testBlockSize().build()) {
+                         builder(getTmpDir(), wireType).testBlockSize().build()) {
 
                 ExcerptAppender appender = queue.acquireAppender();
 
@@ -3227,7 +3227,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void rollbackTest() {
 
-        File file = DirectoryUtils.tempDir("to-be-deleted");
+        File file = getTmpDir();
         try (final ChronicleQueue sourceQueue =
                      builder(file, wireType).
                              testBlockSize().build();
@@ -3349,7 +3349,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         String time = Instant.ofEpochMilli(clock.get()).toString();
 
         final Random random = new Random(0xDEADBEEF);
-        final File queueFolder = DirectoryUtils.tempDir("mappedSegmentsShouldBeUnmappedAsCycleRolls");
+        final File queueFolder = getTmpDir();
         try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(queueFolder).
                 timeProvider(clock::get).
                 testBlockSize().rollCycle(RollCycles.HOURLY).

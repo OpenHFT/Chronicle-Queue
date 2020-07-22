@@ -34,14 +34,14 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class WriteBytesTest extends QueueTestCommon {
+public class WriteBytesTest extends ChronicleQueueTestBase {
     final Bytes<?> outgoingBytes = Bytes.elasticByteBuffer();
     private final byte[] incomingMsgBytes = new byte[100];
     private final byte[] outgoingMsgBytes = new byte[100];
 
     @Test
     public void testWriteBytes() {
-        File dir = DirectoryUtils.tempDir("WriteBytesTest");
+        File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .build()) {
@@ -76,7 +76,7 @@ public class WriteBytesTest extends QueueTestCommon {
 
     @Test
     public void testWriteBytesAndDump() {
-        File dir = DirectoryUtils.tempDir("WriteBytesTestAndDump");
+        File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .rollCycle(TEST4_DAILY)

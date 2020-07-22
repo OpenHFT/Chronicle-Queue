@@ -22,7 +22,7 @@ import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.bytes.Bytes.from;
 import static org.junit.Assert.*;
 
-public class ChronicleQueueIndexTest extends QueueTestCommon {
+public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFile() {
@@ -30,7 +30,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         SetTimeProvider tp = new SetTimeProvider(System.nanoTime());
         File firstCQFile = null;
 
-        File file1 = DirectoryUtils.tempDir("indexQueueTest2");
+        File file1 = getTmpDir();
         try {
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                     .path(file1)
@@ -82,7 +82,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         SetTimeProvider tp = new SetTimeProvider(1);
         File firstCQFile = null;
 
-        File file1 = DirectoryUtils.tempDir("indexQueueTest2");
+        File file1 = getTmpDir();
         try {
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                     .path(file1)
@@ -180,7 +180,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     @Test
     public void testIndexQueue() {
 
-        File file1 = DirectoryUtils.tempDir("indexQueueTest2");
+        File file1 = getTmpDir();
         file1.deleteOnExit();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)

@@ -18,7 +18,7 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.*;
 
-public final class DocumentOrderingTest extends QueueTestCommon {
+public final class DocumentOrderingTest extends ChronicleQueueTestBase {
     private static final RollCycles ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private final ExecutorService executorService = Executors.newCachedThreadPool(
             new NamedThreadFactory("test"));
@@ -38,7 +38,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
-                     builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
+                     builder(getTmpDir(), 1_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             // write initial document
@@ -75,7 +75,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     @Test
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
-        final File dir = DirectoryUtils.tempDir("document-ordering");
+        final File dir = getTmpDir();
         // must be different instances of queue to work around synchronization on acquireStore()
         try (final ChronicleQueue queue =
                      builder(dir, 5_000L).build();
@@ -125,7 +125,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
         // as below, but don't actually close the initial context
         try (final ChronicleQueue queue =
-                     builder(DirectoryUtils.tempDir("document-ordering"), 1_000L).build()) {
+                     builder(getTmpDir(), 1_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final Future<RecordInfo> otherDocumentWriter;
@@ -149,7 +149,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
-                     builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
+                     builder(getTmpDir(), 3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final Future<RecordInfo> otherDocumentWriter;
@@ -178,7 +178,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
-                     builder(DirectoryUtils.tempDir("document-ordering"), 3_000L).build()) {
+                     builder(getTmpDir(), 3_000L).build()) {
 
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             excerptAppender.writeDocument("foo", ValueOut::text);

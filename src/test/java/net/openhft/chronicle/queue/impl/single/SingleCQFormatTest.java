@@ -23,7 +23,10 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.ThreadDump;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -41,7 +44,7 @@ import java.util.concurrent.TimeoutException;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
 
-public class SingleCQFormatTest extends QueueTestCommon {
+public class SingleCQFormatTest extends ChronicleQueueTestBase {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
@@ -123,7 +126,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
 
     @Test(expected = TimeoutException.class)
     public void testDeadHeader() throws IOException {
-        @NotNull File dir = DirectoryUtils.tempDir("testDeadHeader");
+        @NotNull File dir = getTmpDir();
 
         dir.mkdirs();
         File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
@@ -157,7 +160,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         // too many hacks are required to make the (artificial) code below release resources correctly
         AbstractCloseable.disableCloseableTracing();
 
-        @NotNull File dir = DirectoryUtils.tempDir("testCompleteHeader");
+        @NotNull File dir = getTmpDir();
         dir.mkdirs();
 
         File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);

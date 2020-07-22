@@ -12,12 +12,12 @@ import org.junit.Test;
 import java.io.File;
 
 @RequiredForClient
-public class DtoBytesMarshallableTest extends QueueTestCommon {
+public class DtoBytesMarshallableTest extends ChronicleQueueTestBase {
 
     @Test
     public void testDtoBytesMarshallable() {
 
-        File tmp = DirectoryUtils.tempDir("abstractBytesMarshalTest");
+        File tmp = getTmpDir();
 
         DtoBytesMarshallable dto = new DtoBytesMarshallable();
 
@@ -44,7 +44,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
     @Test
     public void testDtoAbstractMarshallable() {
 
-        File tmp = DirectoryUtils.tempDir("abstractBytesMarshalTest");
+        File tmp = getTmpDir();
 
         DtoAbstractMarshallable dto = new DtoAbstractMarshallable();
 

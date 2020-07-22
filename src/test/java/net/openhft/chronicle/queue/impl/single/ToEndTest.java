@@ -38,7 +38,7 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 
-public class ToEndTest extends QueueTestCommon {
+public class ToEndTest extends ChronicleQueueTestBase {
     private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
     private ThreadDump threadDump;
@@ -182,7 +182,7 @@ public class ToEndTest extends QueueTestCommon {
 
     @Test
     public void toEndTest() {
-        File baseDir = DirectoryUtils.tempDir("toEndTest");
+        File baseDir = getTmpDir();
 
         List<Integer> results = new ArrayList<>();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
@@ -225,7 +225,7 @@ public class ToEndTest extends QueueTestCommon {
 
     @Test
     public void toEndBeforeWriteTest() {
-        File baseDir = DirectoryUtils.tempDir("toEndBeforeWriteTest");
+        File baseDir = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
@@ -261,7 +261,7 @@ public class ToEndTest extends QueueTestCommon {
 
     @Test
     public void toEndAfterWriteTest() {
-        File file = DirectoryUtils.tempDir("toEndAfterWriteTest");
+        File file = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(file);
 
         final SetTimeProvider stp = new SetTimeProvider();

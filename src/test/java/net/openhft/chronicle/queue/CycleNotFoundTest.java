@@ -43,7 +43,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 50_000L)
     public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
-        File path = DirectoryUtils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make
+        File path = getTmpDir();  // added nano time just to make
 
         ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG,
                 new NamedThreadFactory("tailerCycleNotFoundTest"));

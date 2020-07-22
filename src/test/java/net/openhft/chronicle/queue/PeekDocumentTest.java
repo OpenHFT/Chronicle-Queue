@@ -14,14 +14,14 @@ import java.io.File;
 import static net.openhft.chronicle.bytes.Bytes.from;
 import static org.junit.Assert.*;
 
-public class PeekDocumentTest extends QueueTestCommon {
+public class PeekDocumentTest extends ChronicleQueueTestBase {
 
     private static final String EXPECTED_MESSAGE = "hello world";
 
     @Test
     public void testReadWrite10() {
 
-        File tempDir = DirectoryUtils.tempDir("to-be-deleted");
+        File tempDir = getTmpDir();
 
         try {
 
@@ -71,7 +71,7 @@ public class PeekDocumentTest extends QueueTestCommon {
     @Test
     public void testReadWrite10Backwards() {
 
-        File tempDir = DirectoryUtils.tempDir("to-be-deleted");
+        File tempDir = getTmpDir();
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
 
@@ -115,7 +115,7 @@ public class PeekDocumentTest extends QueueTestCommon {
     @Test
     public void testReadWrite() {
 
-        File tempDir = DirectoryUtils.tempDir("to-be-deleted");
+        File tempDir = getTmpDir();
 
         try {
 
@@ -139,7 +139,7 @@ public class PeekDocumentTest extends QueueTestCommon {
     @Test
     public void test2() {
 
-        File tempDir = DirectoryUtils.tempDir("to-be-deleted");
+        File tempDir = getTmpDir();
 
         try {
 
@@ -171,7 +171,7 @@ public class PeekDocumentTest extends QueueTestCommon {
 
     @Test
     public void testWhenNoDocument() {
-        File tempDir = DirectoryUtils.tempDir("to-be-deleted");
+        File tempDir = getTmpDir();
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(tempDir).build()) {
 

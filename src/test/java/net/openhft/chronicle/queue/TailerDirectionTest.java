@@ -165,7 +165,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTailerBackwardsReadBeyondCycle() {
-        File basePath = DirectoryUtils.tempDir("tailerForwardBackwardBeyondCycle");
+        File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
         ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
                 .testBlockSize()

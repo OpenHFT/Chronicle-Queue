@@ -3,8 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
@@ -20,7 +19,7 @@ import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
+public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
 
     @Test
@@ -70,7 +69,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 "  writeBufferMode: None,\n" +
                 "  readBufferMode: None,\n" +
                 "  wireType: BINARY_LIGHT,\n" +
-                "  path: " + DirectoryUtils.tempDir("marshallable") +
+                "  path: " + getTmpDir() +
                 "  rollCycle: !net.openhft.chronicle.queue.RollCycles DAILY,\n" +
                 "  onRingBufferStats: !net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder$NoBytesRingBufferStats NONE,\n" +
                 "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +

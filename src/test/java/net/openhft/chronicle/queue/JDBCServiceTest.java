@@ -29,7 +29,7 @@ import java.io.File;
 import java.sql.DriverManager;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class JDBCServiceTest extends QueueTestCommon {
+public class JDBCServiceTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCreateTable() {
@@ -46,8 +46,8 @@ public class JDBCServiceTest extends QueueTestCommon {
     private void doCreateTable(int repeats, int noUpdates) {
         for (int t = 0; t < repeats; t++) {
             long start = System.nanoTime(), written;
-            File path1 = DirectoryUtils.tempDir("createTable1");
-            File path2 = DirectoryUtils.tempDir("createTable2");
+            File path1 = getTmpDir();
+            File path2 = getTmpDir();
             File file = new File(OS.TARGET, "hsqldb-" + System.nanoTime());
             file.deleteOnExit();
 
