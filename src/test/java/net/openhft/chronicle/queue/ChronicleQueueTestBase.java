@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.IOTools;
 import org.jetbrains.annotations.NotNull;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -27,11 +28,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ChronicleQueueTestBase extends QueueTestCommon {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
+    private List<File> tmpDirs = new ArrayList<>();
 
     static {
         System.setProperty("queue.check.index", "true");
@@ -43,9 +47,6 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
 
     @Rule
     public final TestName testName = new TestName();
-
-    @Rule
-    public final TemporaryFolder folder = new TemporaryFolder(new File(System.getProperty("java.io.tmpdir")));
 
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
@@ -78,7 +79,20 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
     protected File getTmpDir() {
         final String methodName = testName.getMethodName();
         String name = methodName == null ? "unknown" : methodName;
-        return DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
+        final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
+        tmpDirs.add(tmpDir);
+        return tmpDir;
     }
 
+    @Override
+    public void afterChecks() {
+        super.afterChecks();
+
+        // should be able to remove tmp dirs
+        tmpDirs.forEach(file -> {
+            if (!IOTools.deleteDirWithFiles(file)) {
+                LOGGER.error("Could not delete tmp dir {}. Remaining {}", file, file.list());
+            }
+        });
+    }
 }

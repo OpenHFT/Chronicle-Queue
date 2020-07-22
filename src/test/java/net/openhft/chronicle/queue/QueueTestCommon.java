@@ -56,10 +56,6 @@ public class QueueTestCommon {
     }
 
     public void checkExceptions() {
-        // find any discarded resources.
-        System.gc();
-        Jvm.pause(10);
-
         for (Map.Entry<Predicate<ExceptionKey>, String> expectedException : expectedExceptions.entrySet()) {
             if (!exceptions.keySet().removeIf(expectedException.getKey()))
                 Slf4jExceptionHandler.WARN.on(getClass(), "No error for " + expectedException.getValue());
@@ -73,6 +69,10 @@ public class QueueTestCommon {
 
     @After
     public void afterChecks() {
+        // find any discarded resources.
+        System.gc();
+        Jvm.pause(10);
+
         assertReferencesReleased();
         checkThreadDump();
         checkExceptions();
