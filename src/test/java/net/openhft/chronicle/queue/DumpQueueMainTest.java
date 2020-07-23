@@ -13,14 +13,14 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class DumpQueueMainTest extends QueueTestCommon {
+public class DumpQueueMainTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldBeAbleToDumpReadOnlyQueueFile() throws IOException {
         if (OS.isWindows())
             return;
 
-        final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
+        final File dataDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
                 build()) {
@@ -44,7 +44,7 @@ public class DumpQueueMainTest extends QueueTestCommon {
 
     @Test
     public void shouldDumpDirectoryListing() {
-        final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
+        final File dataDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
                 build()) {

@@ -10,10 +10,10 @@ import java.io.File;
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
-public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
+public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends ChronicleQueueTestBase {
     @Test
     public void shouldNotSkipMessageAtStartOfQueue() {
-        final File tmpDir = DirectoryUtils.tempDir(ExcerptsSkippedWhenTailerDirectionNoneTest.class.getSimpleName());
+        final File tmpDir = getTmpDir();
         try (final ChronicleQueue writeQueue =
                      ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()

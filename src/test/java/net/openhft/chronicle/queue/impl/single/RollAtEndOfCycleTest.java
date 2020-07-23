@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public final class RollAtEndOfCycleTest extends QueueTestCommon {
+public final class RollAtEndOfCycleTest extends ChronicleQueueTestBase {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
     private static void assertQueueFileCount(final Path path, final long expectedCount) throws IOException {
@@ -101,7 +101,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
 
     private SingleChronicleQueue createQueue() {
         return SingleChronicleQueueBuilder.
-                binary(DirectoryUtils.tempDir(RollAtEndOfCycleTest.class.getName())).
+                binary(getTmpDir()).
                 rollCycle(RollCycles.TEST_SECONDLY).testBlockSize().
                 timeProvider(clock::get).
                 build();

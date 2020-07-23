@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -12,11 +12,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.stream.IntStream.range;
-import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class PretoucherEarlyCycleTest extends QueueTestCommon {
+public class PretoucherEarlyCycleTest extends ChronicleQueueTestBase {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final List<Integer> capturedCycles = new ArrayList<>();
     private final PretoucherTest.CapturingChunkListener chunkListener = new PretoucherTest.CapturingChunkListener();
@@ -29,7 +28,7 @@ public class PretoucherEarlyCycleTest extends QueueTestCommon {
     }
 
     private void cycleRollByPretoucher(int earlyMillis) {
-        File dir = tempDir("shouldHandleEarlyCycleRoll");
+        File dir = getTmpDir();
         clock.set(100);
 
         try (final SingleChronicleQueue queue = PretoucherTest.createQueue(dir, clock::get);

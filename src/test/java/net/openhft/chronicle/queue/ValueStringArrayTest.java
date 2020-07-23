@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-public class ValueStringArrayTest extends QueueTestCommon {
+public class ValueStringArrayTest extends ChronicleQueueTestBase {
 
     private static final String EXPECTED = "hello world";
     private final ValueStringArray using = new ValueStringArray();
@@ -19,7 +19,7 @@ public class ValueStringArrayTest extends QueueTestCommon {
         value.setCsArrItem(1, EXPECTED);
 
         // this is the directory the queue is written to
-        final File dataDir = DirectoryUtils.tempDir(DumpQueueMainTest.class.getSimpleName());
+        final File dataDir = getTmpDir();
 
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build()) {
 

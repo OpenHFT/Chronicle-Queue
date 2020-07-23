@@ -37,7 +37,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
     @Before
     public void before() {
-        dataDir = DirectoryUtils.tempDir(ChronicleMethodReaderTest.class.getSimpleName()).toPath();
+        dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
                 .testBlockSize()

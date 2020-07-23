@@ -19,9 +19,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,8 +33,8 @@ import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertFalse;
 
-public class TestEmptyFile {
-    Path tmpDir = DirectoryUtils.tempDir(TestEmptyFile.class.getSimpleName()).toPath();
+public class TestEmptyFile extends ChronicleQueueTestBase {
+    Path tmpDir = getTmpDir().toPath();
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Before
@@ -43,11 +42,6 @@ public class TestEmptyFile {
         tmpDir.toFile().mkdirs();
         File file = tmpDir.resolve("20170320.cq4").toFile();
         new FileOutputStream(file).close();
-    }
-
-    @After
-    public void cleanup() {
-        DirectoryUtils.deleteDir(tmpDir.toFile());
     }
 
     @Test(expected = TimeoutException.class)

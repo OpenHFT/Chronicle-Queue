@@ -1,13 +1,10 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -22,22 +19,9 @@ import java.util.Map;
 
 import static org.junit.Assume.assumeFalse;
 
-public class TestDeleteQueueFile {
+public class TestDeleteQueueFile extends ChronicleQueueTestBase {
 
-    private Path tempQueueDir;
-
-    @Before
-    public void setUp() throws IOException {
-        tempQueueDir = IOTools.createTempDirectory("unitTestQueueDir");
-    }
-
-    @After
-    public void tearDown() {
-
-        DirectoryUtils.deleteDir(tempQueueDir.toFile());
-        Assert.assertFalse(tempQueueDir.toFile().exists());
-//        System.out.println("Deleted " + tempQueueDir.toFile().getAbsolutePath());
-    }
+    private Path tempQueueDir = getTmpDir().toPath();
 
     @Test
     public void testQueueFileDeletionWhileInUse() throws IOException {

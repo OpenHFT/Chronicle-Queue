@@ -51,7 +51,7 @@ import java.util.stream.Stream;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static org.junit.Assert.*;
 
-public class RollEOFTest extends QueueTestCommon {
+public class RollEOFTest extends ChronicleQueueTestBase {
 
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
@@ -73,7 +73,7 @@ public class RollEOFTest extends QueueTestCommon {
 
     @Test(timeout = 5000L)
     public void testRollWritesEOF() throws IOException {
-        final File path = DirectoryUtils.tempDir(getClass().getName());
+        final File path = getTmpDir();
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -99,7 +99,7 @@ public class RollEOFTest extends QueueTestCommon {
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOFDoesntBlowup() throws IOException {
-        final File path = DirectoryUtils.tempDir(getClass().getName());
+        final File path = getTmpDir();
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -133,7 +133,7 @@ public class RollEOFTest extends QueueTestCommon {
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOF() throws IOException {
-        final File path = DirectoryUtils.tempDir(getClass().getName());
+        final File path = getTmpDir();
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();

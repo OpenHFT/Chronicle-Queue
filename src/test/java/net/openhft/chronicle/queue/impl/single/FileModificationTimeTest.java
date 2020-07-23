@@ -1,8 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import org.junit.Test;
 
 import java.io.File;
@@ -14,7 +13,7 @@ import java.util.function.LongSupplier;
 
 import static org.junit.Assert.fail;
 
-public final class FileModificationTimeTest extends QueueTestCommon {
+public final class FileModificationTimeTest extends ChronicleQueueTestBase {
     private final AtomicInteger fileCount = new AtomicInteger();
 
     private static void waitForDiff(final long a, final LongSupplier b) {
@@ -31,7 +30,7 @@ public final class FileModificationTimeTest extends QueueTestCommon {
 
     @Test
     public void shouldUpdateDirectoryModificationTime() {
-        final File dir = DirectoryUtils.tempDir(FileModificationTimeTest.class.getSimpleName());
+        final File dir = getTmpDir();
         dir.mkdirs();
 
         final long startModTime = dir.lastModified();

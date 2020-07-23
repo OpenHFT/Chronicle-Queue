@@ -1,7 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.junit.Before;
@@ -15,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 
-public final class MessageHistoryTest extends QueueTestCommon {
+public final class MessageHistoryTest extends ChronicleQueueTestBase {
     @Rule
     public final TestName testName = new TestName();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -25,9 +28,9 @@ public final class MessageHistoryTest extends QueueTestCommon {
 
     @Before
     public void setUp() {
-        inputQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
-        middleQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
-        outputQueueDir = DirectoryUtils.tempDir(testName.getMethodName());
+        inputQueueDir = getTmpDir();
+        middleQueueDir = getTmpDir();
+        outputQueueDir = getTmpDir();
         final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
         messageHistory.addSourceDetails(true);
         MessageHistory.set(messageHistory);

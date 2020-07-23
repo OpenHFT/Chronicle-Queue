@@ -24,7 +24,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
 
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {
-        File path = DirectoryUtils.tempDir(getClass().getSimpleName());
+        File path = getTmpDir();
         TestTimeProvider timeProvider = new TestTimeProvider();
 
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder

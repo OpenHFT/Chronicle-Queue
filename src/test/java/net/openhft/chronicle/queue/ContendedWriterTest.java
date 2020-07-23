@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 @Ignore("long running")
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RequiredForClient
-public class ContendedWriterTest extends QueueTestCommon {
+public class ContendedWriterTest extends ChronicleQueueTestBase {
     private static final long NUMBER_OF_LONGS = 3;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private ThreadDump threadDump;
@@ -111,7 +111,7 @@ public class ContendedWriterTest extends QueueTestCommon {
 
     private void test(String name, Config... configs) {
 //        System.out.println(name);
-        File path = DirectoryUtils.tempDir(name);
+        File path = getTmpDir();
         SingleChronicleQueue[] queues = new SingleChronicleQueue[configs.length];
         StartAndMonitor[] startAndMonitors = new StartAndMonitor[configs.length];
 

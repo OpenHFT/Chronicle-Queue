@@ -102,7 +102,7 @@ public class SingleChroniclePerfMain {
     }
 
     @Test
-    public void testFacarde() {
+    public void testFacade() {
         IFacade f = Values.newNativeReference(IFacade.class);
         Byteable byteable = (Byteable) f;
         long capacity = byteable.maxSize();

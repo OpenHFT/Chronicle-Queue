@@ -21,8 +21,8 @@ import static java.util.stream.IntStream.range;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public final class TailerIndexingQueueTest extends QueueTestCommon {
-    private final File path = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName() + "-" + System.nanoTime());
+public final class TailerIndexingQueueTest extends ChronicleQueueTestBase {
+    private final File path = getTmpDir();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
     private static void deleteFile(final Path path) {
@@ -80,10 +80,5 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
             tailer.toEnd();
             assertTrue(tailer.readingDocument().isPresent());
         }
-    }
-
-    @After
-    public void deleteDir() {
-        DirectoryUtils.deleteDir(path);
     }
 }

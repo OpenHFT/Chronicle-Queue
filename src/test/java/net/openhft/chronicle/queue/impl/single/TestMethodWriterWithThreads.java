@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
@@ -31,7 +30,7 @@ import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
  * check that method writes are thread safe when used with queue.methodWriter
  */
 @RunWith(Parameterized.class)
-public class TestMethodWriterWithThreads {
+public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
 
     private static final int AMEND = 1;
     private static final int CREATE = 2;
@@ -113,14 +112,6 @@ public class TestMethodWriterWithThreads {
 
     private void creates() {
         methodWriter.create(createTL.get().type(CREATE));
-    }
-
-    @NotNull
-    protected File getTmpDir() {
-        final String methodName = testName.getMethodName();
-        return DirectoryUtils.tempDir(methodName != null ?
-                methodName.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_') : "NULL-" + UUID
-                .randomUUID());
     }
 
     @NotNull

@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.DirectoryUtils;
-import net.openhft.chronicle.queue.QueueTestCommon;
+
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
@@ -16,15 +16,15 @@ import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 
-public class TableDirectoryListingTest extends QueueTestCommon {
+public class TableDirectoryListingTest extends ChronicleQueueTestBase {
     private TableDirectoryListing listing;
     private TableStore<Metadata.NoMeta> tablestore;
     private File testDirectory;
     private File tempFile;
 
     @NotNull
-    private static File testDirectory() {
-        return DirectoryUtils.tempDir(TableDirectoryListingTest.class.getSimpleName());
+    private File testDirectory() {
+        return getTmpDir();
     }
 
     @Before

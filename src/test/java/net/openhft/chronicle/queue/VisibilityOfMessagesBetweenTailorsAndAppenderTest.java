@@ -4,19 +4,13 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.jetbrains.annotations.NotNull;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 
-import java.io.File;
-import java.util.UUID;
 import java.util.concurrent.*;
 
 @RequiredForClient
-public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
-    @Rule
-    public final TestName testName = new TestName();
+public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends ChronicleQueueTestBase {
+
     volatile long lastWrittenIndex = Long.MIN_VALUE;
 
     /**
@@ -68,13 +62,5 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
             e2.shutdownNow();
             e1.shutdownNow();
         }
- }
-
-    @NotNull
-    protected File getTmpDir() {
-        final String methodName = testName.getMethodName();
-        return DirectoryUtils.tempDir(methodName != null ?
-                methodName.replaceAll("[\\[\\]\\s]+", "_") : "NULL-" + UUID.randomUUID());
     }
-
 }

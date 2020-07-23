@@ -1,7 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -15,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
+public final class TailerSequenceRaceConditionTest extends ChronicleQueueTestBase {
     private final AtomicBoolean failedToMoveToEnd = new AtomicBoolean(false);
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8,
             new NamedThreadFactory("test"));
@@ -72,7 +75,7 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
 
     private ChronicleQueue createNewQueue() {
         return SingleChronicleQueueBuilder.
-                binary(DirectoryUtils.tempDir(TailerSequenceRaceConditionTest.class.getSimpleName()))
+                binary(getTmpDir())
                 .rollCycle(RollCycles.HOURLY)
                 .build();
     }

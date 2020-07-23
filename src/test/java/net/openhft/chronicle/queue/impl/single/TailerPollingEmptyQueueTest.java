@@ -1,15 +1,14 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
+public final class TailerPollingEmptyQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldNotGenerateExcessGarbage() {
@@ -35,7 +34,7 @@ public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
     private SingleChronicleQueue createQueue() {
         return ChronicleQueue.singleBuilder(
-                DirectoryUtils.tempDir(TailerPollingEmptyQueueTest.class.getName())).
+                getTmpDir()).
                 testBlockSize().
                 build();
     }

@@ -4,7 +4,7 @@ import net.openhft.chronicle.bytes.NewChunkListener;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -18,10 +18,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.stream.IntStream.range;
-import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.Assert.assertEquals;
 
-public class PretoucherTest extends QueueTestCommon {
+public class PretoucherTest extends ChronicleQueueTestBase {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final List<Integer> capturedCycles = new ArrayList<>();
     private final CapturingChunkListener chunkListener = new CapturingChunkListener();
@@ -38,7 +37,7 @@ public class PretoucherTest extends QueueTestCommon {
 
     @Test
     public void shouldHandleCycleRoll() {
-        File dir = tempDir("shouldHandleCycleRoll");
+        File dir = getTmpDir();
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
              SingleChronicleQueue queue2 = createQueue(dir, clock::get);
              final Pretoucher pretoucher = new Pretoucher(queue2, chunkListener, capturedCycles::add)) {
@@ -74,7 +73,7 @@ public class PretoucherTest extends QueueTestCommon {
     }
 
     private void cycleRollByPretoucher(int earlyMillis) {
-        File dir = tempDir("shouldHandleEarlyCycleRoll");
+        File dir = getTmpDir();
         clock.set(100);
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
              final SingleChronicleQueue queue2 = createQueue(dir, clock::get);

@@ -13,7 +13,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public final class DuplicateMessageReadTest extends QueueTestCommon {
+public final class DuplicateMessageReadTest extends ChronicleQueueTestBase {
     private static final RollCycles QUEUE_CYCLE = RollCycles.DAILY;
 
     private static void write(final ExcerptAppender appender, final Data data) throws IOException {
@@ -36,7 +36,7 @@ public final class DuplicateMessageReadTest extends QueueTestCommon {
 
     @Test
     public void shouldNotReceiveDuplicateMessages() throws IOException {
-        final File location = DirectoryUtils.tempDir(DuplicateMessageReadTest.class.getSimpleName());
+        final File location = getTmpDir();
 
         try (final ChronicleQueue chronicleQueue = SingleChronicleQueueBuilder
                 .binary(location)

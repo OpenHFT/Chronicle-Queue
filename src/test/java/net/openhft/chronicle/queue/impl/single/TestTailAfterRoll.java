@@ -2,33 +2,20 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 
 import java.io.File;
-import java.util.UUID;
 
-public class TestTailAfterRoll {
+public class TestTailAfterRoll extends ChronicleQueueTestBase {
 
     private static final String EXPECTED = "hello world  3";
-    @Rule
-    public final TestName testName = new TestName();
-
-    @NotNull
-    protected File getTmpDir() {
-
-        final String methodName = testName.getMethodName();
-        return net.openhft.chronicle.queue.DirectoryUtils.tempDir(methodName != null ?
-                methodName.replaceAll("[\\[\\]\\s]+", "_") : "NULL-" + UUID.randomUUID());
-    }
 
     /**
      * the following steps

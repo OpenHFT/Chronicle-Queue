@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 
 public class StoreTailerTest extends ChronicleQueueTestBase {
-    private final Path dataDirectory = DirectoryUtils.tempDir(StoreTailerTest.class.getSimpleName()).toPath();
+    private final Path dataDirectory = getTmpDir().toPath();
 
     @Test
     public void testEntryCount() {

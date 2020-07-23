@@ -37,7 +37,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
 import static org.junit.Assume.assumeTrue;
 
-public final class AppenderFileHandleLeakTest extends QueueTestCommon {
+public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
@@ -93,7 +93,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Before
     public void setUp() {
-        queuePath = DirectoryUtils.tempDir(AppenderFileHandleLeakTest.class.getSimpleName());
+        queuePath = getTmpDir();
     }
 
     @Test
