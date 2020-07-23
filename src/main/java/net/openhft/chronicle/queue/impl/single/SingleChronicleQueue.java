@@ -51,7 +51,6 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
@@ -917,7 +916,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
                 return wireStore;
 
-            } catch (@NotNull TimeoutException | IOException e) {
+            } catch (IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
             }
