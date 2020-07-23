@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -38,7 +37,7 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class RollCycleMultiThreadStressTest extends QueueTestCommon {
+public class RollCycleMultiThreadStressTest extends ChronicleQueueTestBase {
     static {
         Jvm.disableDebugHandler();
     }
@@ -101,7 +100,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     @Test
     public void stress() throws InterruptedException, IOException {
 
-        File file = IOTools.createTempDirectory("queue").toFile();
+        File file = getTmpDir();
 //        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
@@ -273,8 +272,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                     throw Jvm.rethrow(e);
                 }
             });
-
-            DirectoryUtils.deleteDir(file);
         }
 //        System.out.println("Test complete");
     }

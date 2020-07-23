@@ -1,8 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -10,7 +8,6 @@ import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -28,7 +25,7 @@ import static org.junit.Assert.assertTrue;
  * The ChronicleQueueIT class implements a test that causes Chronicle Queue to
  * fail with a BufferUnderflowException whilst executing a tailer.toEnd() call.
  */
-public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
+public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
 
     private static final int msgSize = 64;
 
@@ -37,15 +34,13 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     private static final long noIndex = 0;
 
     private static final RollCycle rollCycle = DAILY;
-    private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     private final Path basePath;
     private final SingleChronicleQueue queue;
     private final ExcerptAppender appender;
     private Bytes<ByteBuffer> outbound;
 
-    public MoveToWrongIndexThenToEndTest() throws IOException {
-        basePath = IOTools.createTempDirectory("MoveToWrongIndexThenToEndTest");
-        basePath.toFile().deleteOnExit();
+    public MoveToWrongIndexThenToEndTest() {
+        basePath = getTmpDir().toPath();
 
         queue = createChronicle(basePath);
         appender = queue.acquireAppender();
@@ -56,7 +51,6 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     public void after() {
         outbound.releaseLast();
         queue.close();
-        DirectoryUtils.deleteDir(basePath.toFile());
     }
 
     private void waitFor(Semaphore semaphore, String message)

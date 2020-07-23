@@ -29,7 +29,7 @@ public class DirectoryUtils {
      * See OS.TARGET
      */
     @NotNull
-    public static File tempDir(String name) {
+    static File tempDir(String name) {
         String replacedName = name.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_');
         final File tmpDir = new File(OS.TARGET, replacedName + "-" + Long.toString(TIMESTAMPER.getAndIncrement(), 36));
         DeleteStatic.INSTANCE.add(tmpDir);
@@ -43,11 +43,7 @@ public class DirectoryUtils {
     }
 
     public static void deleteDir(@NotNull File dir) {
-        try {
-            IOTools.deleteDirWithFiles(dir, 20);
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
+        IOTools.deleteDirWithFiles(dir);
     }
 
     enum DeleteStatic {
@@ -55,6 +51,7 @@ public class DirectoryUtils {
         final Set<File> toDeleteList = Collections.synchronizedSet(new LinkedHashSet<>());
 
         {
+            // TODO: should not need to do this now
             Runtime.getRuntime().addShutdownHook(new Thread(
                     () -> toDeleteList.forEach(DirectoryUtils::deleteDir)
             ));
