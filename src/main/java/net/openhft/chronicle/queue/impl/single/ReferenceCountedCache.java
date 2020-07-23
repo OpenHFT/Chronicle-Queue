@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Thread-safe, self-cleaning cache for ReferenceCounted objects
+ * Thread-safe, self-cleaning cache for ReferenceCounted (& Closeable) objects
  */
 public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V, E extends Throwable>
         extends AbstractCloseable {
@@ -30,40 +30,41 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     }
 
     @NotNull V get(@NotNull final K key) throws E {
+        throwExceptionIfClosed();
 
-        @Nullable T value;
+        final V rv;
         synchronized (cache) {
-            throwExceptionIfClosed();
+            @Nullable T value = cache.get(key);
 
-            value = cache.get(key);
-
-            if (value != null && value.refCount() == 0)
-                value.close();
-
-            // another thread may have reduced refCount since removeIf above
-            if (value == null || value.isClosed()) {
-                // worst case is that 2 threads create at 'same' time
+            if (value == null) {
                 value = creator.apply(key);
                 value.reserveTransfer(INIT, this);
-//                System.err.println("Reserved " + value.toString() + " by " + this);
+                //System.err.println("Reserved " + value.toString() + " by " + this);
                 cache.put(key, value);
             }
+
+            // this will add to the ref count and so needs to be done inside of sync block
+            rv = transformer.apply(value);
         }
+
         BackgroundResourceReleaser.run(bgCleanup);
 
-        return transformer.apply(value);
+        return rv;
     }
 
     @Override
     protected void performClose() {
-//        System.err.println("performClose on " + this);
-        synchronized (cache) {
-            for (T value : cache.values()) {
-                try {
-                    value.release(this);
-//                    System.err.println("Released " + value + " by " + this);
-                } catch (Exception e) {
-                    Jvm.debug().on(getClass(), e);
+        bgCleanup();
+        if (! cache.isEmpty()) {
+            Jvm.warn().on(getClass(), "Cache should have been cleaned");
+            synchronized (cache) {
+                for (T value : cache.values()) {
+                    try {
+                        value.release(this);
+//                    System.err.println("Released (performClose) " + value + " by " + this);
+                    } catch (Exception e) {
+                        Jvm.debug().on(getClass(), e);
+                    }
                 }
             }
         }
@@ -76,8 +77,17 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
 
     void bgCleanup() {
         synchronized (cache) {
-            // remove all which have been dereferenced. Garbagey but rare
-            cache.entrySet().removeIf(entry -> entry.getValue().refCount() == 0);
+            // remove all which have been dereferenced by other than me. Garbagey but rare
+            cache.entrySet().removeIf(entry -> {
+                T value = entry.getValue();
+                boolean noOtherReferencers = value.refCount() == 1;
+                if (noOtherReferencers) {
+                    //System.err.println("Removing " + value.toString() + " by " + this);
+                    value.release(this);
+                    value.close();
+                }
+                return noOtherReferencers;
+            });
         }
     }
 }
