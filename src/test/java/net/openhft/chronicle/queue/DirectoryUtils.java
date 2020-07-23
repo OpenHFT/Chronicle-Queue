@@ -29,7 +29,7 @@ public class DirectoryUtils {
      * See OS.TARGET
      */
     @NotNull
-    static File tempDir(String name) {
+    public static File tempDir(String name) {
         String replacedName = name.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_');
         final File tmpDir = new File(OS.TARGET, replacedName + "-" + Long.toString(TIMESTAMPER.getAndIncrement(), 36));
         DeleteStatic.INSTANCE.add(tmpDir);
