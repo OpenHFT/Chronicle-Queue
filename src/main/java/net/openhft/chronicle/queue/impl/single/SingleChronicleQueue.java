@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.lang.ref.WeakReference;
 import java.nio.channels.FileLock;
+import java.nio.channels.NonWritableChannelException;
 import java.text.ParseException;
 import java.time.ZoneId;
 import java.util.*;
@@ -926,44 +927,51 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
                 return wireStore;
 
-            } catch (@NotNull IOException e) {
+            } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
             }
         }
 
-        private synchronized void headerRecovery(final SingleChronicleQueue that, final MappedBytes mappedBytes, final AbstractWire wire, final Bytes<?> bytes, final int cycle) throws IOException {
+        private synchronized void headerRecovery(final SingleChronicleQueue that, final MappedBytes mappedBytes, final AbstractWire wire, final Bytes<?> bytes, final int cycle) throws IOException, TimeoutException {
 
-            final RandomAccessFile raf = mappedBytes.mappedFile().raf();
-            final FileLock fileLock = raf.getChannel().tryLock();
             try {
+                final RandomAccessFile raf = mappedBytes.mappedFile().raf();
+                final FileLock fileLock = raf.getChannel().tryLock();
+                try {
 
-                final int header = bytes.readVolatileInt(0);
-                if (isReady(header))
-                    return;
+                    final int header = bytes.readVolatileInt(0);
+                    if (isReady(header))
+                        return;
 
-                // we hold the file lock so are going to force recovery
-                if (!bytes.compareAndSwapInt(0, header, 0)) {
-                    LOG.warn("failed to recover.");
-                    throw new StreamCorruptedException("failed to recover.˚");
+                    // we hold the file lock so are going to force recovery
+                    if (!bytes.compareAndSwapInt(0, header, 0)) {
+                        LOG.warn("failed to recover.");
+                        throw new StreamCorruptedException("failed to recover.˚");
+                    }
+
+                    if (!wire.writeFirstHeader()) {
+                        LOG.warn("failed to recover.");
+                        throw new StreamCorruptedException("failed to recover.˚");
+                    }
+
+                    try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
+                        wire.updateFirstHeader();
+                        if (wireStore.dataVersion() > 0)
+                            wire.usePadding(true);
+                        wireStore.initIndex(wire);
+                        directoryListing.onFileCreated(path, cycle);
+                        firstAndLastCycleTime = 0;
+                    }
+                } finally {
+                    fileLock.release();
                 }
 
-                if (!wire.writeFirstHeader()) {
-                    LOG.warn("failed to recover.");
-                    throw new StreamCorruptedException("failed to recover.˚");
-                }
-
-                try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
-                    wire.updateFirstHeader();
-                    if (wireStore.dataVersion() > 0)
-                        wire.usePadding(true);
-                    wireStore.initIndex(wire);
-                    directoryListing.onFileCreated(path, cycle);
-                    firstAndLastCycleTime = 0;
-                }
-            } finally {
-                fileLock.release();
+            } catch (NonWritableChannelException e) {
+                // this can occur if the queue is in a read only mode
+                throw new TimeoutException();
             }
+
         }
 
         @Override
