@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.lang.ref.WeakReference;
+import java.nio.channels.FileLock;
 import java.text.ParseException;
 import java.time.ZoneId;
 import java.util.*;
@@ -57,6 +58,7 @@ import java.util.function.*;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
@@ -309,7 +311,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     return;
                 }
             }
-            Bytes bytes = Wires.acquireBytes();
+            Bytes bytes = acquireBytes();
             TextWire text = new TextWire(bytes);
             while (true) {
                 try (DocumentContext dc = tailer.readingDocument()) {
@@ -877,6 +879,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
 
                 SingleChronicleQueueStore wireStore;
+                Bytes<?> bytes = wire.bytes();
                 try {
                     if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
@@ -891,9 +894,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         // allow directoryListing to pick up the file immediately
                         firstAndLastCycleTime = 0;
                     } else {
-                        wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+                        try {
+                            wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException e) {
 
-                        StringBuilder name = Wires.acquireStringBuilder();
+                            headerRecovery(that, mappedBytes, wire, bytes, cycle);
+                            return acquire(cycle, createIfAbsent);
+                        }
+
+                        StringBuilder name = acquireStringBuilder();
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
                             wireStore = valueIn.typedMarshallable();
@@ -903,7 +912,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         }
                     }
                 } catch (InternalError e) {
-                    long pos = Objects.requireNonNull(wire.bytes().bytesStore()).addressForRead(0);
+                    long pos = Objects.requireNonNull(bytes.bytesStore()).addressForRead(0);
                     String s = Long.toHexString(pos);
                     System.err.println("pos=" + s);
                     try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
@@ -917,9 +926,43 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
                 return wireStore;
 
-            } catch (@NotNull TimeoutException | IOException e) {
+            } catch (@NotNull IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            }
+        }
+
+        private synchronized void headerRecovery(final SingleChronicleQueue that, final MappedBytes mappedBytes, final AbstractWire wire, final Bytes<?> bytes, final int cycle) throws IOException {
+
+            final RandomAccessFile raf = mappedBytes.mappedFile().raf();
+            final FileLock fileLock = raf.getChannel().tryLock();
+            try {
+
+                final int header = bytes.readVolatileInt(0);
+                if (isReady(header))
+                    return;
+
+                // we hold the file lock so are going to force recovery
+                if (!bytes.compareAndSwapInt(0, header, 0)) {
+                    LOG.warn("failed to recover.");
+                    throw new StreamCorruptedException("failed to recover.˚");
+                }
+
+                if (!wire.writeFirstHeader()) {
+                    LOG.warn("failed to recover.");
+                    throw new StreamCorruptedException("failed to recover.˚");
+                }
+
+                try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
+                    wire.updateFirstHeader();
+                    if (wireStore.dataVersion() > 0)
+                        wire.usePadding(true);
+                    wireStore.initIndex(wire);
+                    directoryListing.onFileCreated(path, cycle);
+                    firstAndLastCycleTime = 0;
+                }
+            } finally {
+                fileLock.release();
             }
         }
 

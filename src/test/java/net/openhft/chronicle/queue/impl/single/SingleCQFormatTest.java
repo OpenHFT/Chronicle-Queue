@@ -39,7 +39,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.*;
@@ -96,7 +95,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = TimeoutException.class)
+    @Test
     public void testNoHeader() throws IOException {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
@@ -124,7 +123,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = TimeoutException.class)
+    @Test
     public void testDeadHeader() throws IOException {
         @NotNull File dir = getTmpDir();
 
