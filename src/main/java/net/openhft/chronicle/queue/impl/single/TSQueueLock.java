@@ -64,8 +64,10 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
         } catch (TimeoutException e) {
+            final long lockedByPID = lock.getVolatileValue();
+            final String lockedBy = lockedByPID == PID ? "me" : Long.toString(lockedByPID);
             warn().on(getClass(), "Couldn't acquire lock after " + timeout + "ms for the lock file:"
-                    + path + ", overriding the lock. Lock was held by PID " + lock.getVolatileValue());
+                    + path + ", overriding the lock. Lock was held by PID " + lockedBy);
             forceUnlock();
             acquireLock();
         } finally {
