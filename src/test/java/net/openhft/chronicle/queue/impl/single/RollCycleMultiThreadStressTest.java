@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -37,7 +38,7 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class RollCycleMultiThreadStressTest extends ChronicleQueueTestBase {
+public class RollCycleMultiThreadStressTest {
     static {
         Jvm.disableDebugHandler();
     }
@@ -81,6 +82,13 @@ public class RollCycleMultiThreadStressTest extends ChronicleQueueTestBase {
 
         System.setProperty("org.slf4j.simpleLogger.dateTimeFormat", "HH:mm:ss.SSS");
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
+
+        if (TEST_TIME > 2) {
+            AbstractReferenceCounted.disableReferenceTracing();
+            if (Jvm.isResourceTracing()) {
+                throw new IllegalStateException("This test will run out of memory - change your system properties");
+            }
+        }
     }
 
     static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
@@ -100,7 +108,7 @@ public class RollCycleMultiThreadStressTest extends ChronicleQueueTestBase {
     @Test
     public void stress() throws InterruptedException, IOException {
 
-        File file = getTmpDir();
+        File file = DirectoryUtils.tempDir("stress");
 //        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
@@ -273,6 +281,8 @@ public class RollCycleMultiThreadStressTest extends ChronicleQueueTestBase {
                 }
             });
         }
+
+        IOTools.deleteDirWithFiles("stress");
 //        System.out.println("Test complete");
     }
 
