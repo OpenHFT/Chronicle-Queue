@@ -498,4 +498,8 @@ public class RollCycleMultiThreadStressTest {
             return null;
         }
     }
+
+    public static void main(String[] args) throws IOException, InterruptedException {
+        new RollCycleMultiThreadStressTest().stress();
+    }
 }

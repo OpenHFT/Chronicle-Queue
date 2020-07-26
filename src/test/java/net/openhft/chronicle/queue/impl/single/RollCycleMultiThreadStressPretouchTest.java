@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -14,5 +13,9 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
 
     static {
         System.setProperty("pretouch", "true");
+    }
+
+    public static void main(String[] args) throws IOException, InterruptedException {
+        new RollCycleMultiThreadStressPretouchTest().stress();
     }
 }

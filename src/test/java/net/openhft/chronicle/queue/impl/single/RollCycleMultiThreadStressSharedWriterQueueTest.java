@@ -2,24 +2,12 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
 public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMultiThreadStressTest {
 
-    /*@Ignore("run manually")
-    @Test
-    public void repeatStress() throws InterruptedException {
-        Jvm.setExceptionHandlers(null, null, null);
-        for (int i = 0; i < 100; i++) {
-            stress();
-        }
-    }*/
-
-    //    @Ignore("flaky test")
     @Test
     public void stress() throws InterruptedException, IOException {
         try {
@@ -29,13 +17,11 @@ public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMu
         }
     }
 
-    @Before
-    public void sharedWriteQ() {
-        SHARED_WRITE_QUEUE = true;
+    static {
+        System.setProperty("sharedWriteQ", "true");
     }
 
-    @After
-    public void rm_sharedWriteQ() {
-        SHARED_WRITE_QUEUE = false;
+    public static void main(String[] args) throws IOException, InterruptedException {
+        new RollCycleMultiThreadStressSharedWriterQueueTest().stress();
     }
 }

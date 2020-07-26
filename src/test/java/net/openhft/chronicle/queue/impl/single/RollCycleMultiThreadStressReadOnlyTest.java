@@ -26,4 +26,8 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
     static {
         System.setProperty("read_only", "true");
     }
+
+    public static void main(String[] args) throws IOException, InterruptedException {
+        new RollCycleMultiThreadStressReadOnlyTest().stress();
+    }
 }
