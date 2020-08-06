@@ -59,6 +59,7 @@ public final class ChronicleReader {
     private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
     private boolean displayIndex = true;
     private Class<?> methodReaderInterface;
+    private volatile boolean running = true;
 
     private static boolean checkForMatches(final List<Pattern> patterns, final String text,
                                            final boolean shouldBePresent) {
@@ -128,6 +129,8 @@ public final class ChronicleReader {
                     }
                     queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex, queue);
                     retryLastOperation = false;
+                    if (! running)
+                        return;
                 } while (tailInputSource || queueHasBeenModified);
             } catch (final RuntimeException e) {
                 if (e.getCause() != null && e.getCause() instanceof DateTimeParseException) {
@@ -279,5 +282,9 @@ public final class ChronicleReader {
                 messageSink.accept(text);
             }
         }
+    }
+
+    public void stop() {
+        running = false;
     }
 }
