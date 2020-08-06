@@ -27,7 +27,7 @@
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.19.77-SNAPSHOT</version>
+    <version>2.20.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
