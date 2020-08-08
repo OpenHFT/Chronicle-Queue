@@ -33,7 +33,7 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
             for (int i = 0; i <= numberOfRecords; i++) {
 //                System.out.println("Writing " + i);
                 try (final DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write(() -> "msg").text("Hello World!");
+                    dc.wire().write("msg").text("Hello World!");
 //                    System.out.println("your data was store to index=" + dc.index());
                 } catch (Exception e) {
                     System.err.println("Unable to store value to chronicle");

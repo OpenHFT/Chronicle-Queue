@@ -255,7 +255,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
         buffer.zeroOut(0, size);
 
         final Wire wire = WireUtil.createWire(this.builder.wireType(), buffer);
-        wire.write(() -> "index").int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
+        wire.write("index").int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
         buffer.flip();
 
         return appendMetaDataReturnAddress(buffer);

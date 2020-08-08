@@ -80,16 +80,16 @@ public class SingleChronicleQueueTest {
             final ChronicleQueue chronicle = createQueue(file);
 
             final ExcerptAppender appender = chronicle.acquireAppender();
-            appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve"));
-            appender.writeDocument(wire -> wire.write(() -> "Surname").text("Jobs"));
+            appender.writeDocument(wire -> wire.write("FirstName").text("Steve"));
+            appender.writeDocument(wire -> wire.write("Surname").text("Jobs"));
 
             StringBuilder first = new StringBuilder();
             StringBuilder surname = new StringBuilder();
 
             final ExcerptTailer tailer = chronicle.createTailer();
 
-            tailer.readDocument(wire -> wire.read(() -> "FirstName").text(first));
-            tailer.readDocument(wire -> wire.read(() -> "Surname").text(surname));
+            tailer.readDocument(wire -> wire.read("FirstName").text(first));
+            tailer.readDocument(wire -> wire.read("Surname").text(surname));
 
             Assert.assertEquals("Steve Jobs", first + " " + surname);
         } finally {
@@ -108,7 +108,7 @@ public class SingleChronicleQueueTest {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             }
 
             final ExcerptTailer tailer = chronicle.createTailer();
@@ -116,7 +116,7 @@ public class SingleChronicleQueueTest {
             final StringBuilder sb = new StringBuilder();
             for (int j = 0; j < chronicle.lastIndex(); j++) {
                 sb.setLength(0);
-                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+                tailer.readDocument(wire -> wire.read("key").text(sb));
 
                 Assert.assertEquals("value=" + j, sb.toString());
             }
@@ -133,7 +133,7 @@ public class SingleChronicleQueueTest {
             final ChronicleQueue chronicle = createQueue(file);
             final ExcerptAppender appender = chronicle.acquireAppender();
 
-            appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
+            appender.writeDocument(wire -> wire.write("key").text("test"));
             Assert.assertEquals(0, appender.lastWrittenIndex());
         } finally {
             file.delete();
@@ -159,7 +159,7 @@ public class SingleChronicleQueueTest {
             final DirectChronicleQueue chronicle = createQueue(file);
             final ExcerptAppender appender = chronicle.acquireAppender();
 
-            appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
+            appender.writeDocument(wire -> wire.write("key").text("test"));
             Assert.assertEquals(0, chronicle.lastIndex());
         } finally {
             file.delete();
@@ -187,14 +187,14 @@ public class SingleChronicleQueueTest {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             }
 
             final ExcerptTailer tailer = chronicle.createTailer();
             tailer.index(5);
 
             StringBuilder sb = new StringBuilder();
-            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+            tailer.readDocument(wire -> wire.read("key").text(sb));
 
             Assert.assertEquals("value=5", sb.toString());
         } finally {
@@ -212,7 +212,7 @@ public class SingleChronicleQueueTest {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             }
 
             final ExcerptTailer tailer = chronicle.createTailer();
@@ -221,7 +221,7 @@ public class SingleChronicleQueueTest {
                 tailer.index(i);
 
                 sb.setLength(0);
-                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+                tailer.readDocument(wire -> wire.read("key").text(sb));
 
                 Assert.assertEquals("value=" + i, sb.toString());
             }
@@ -240,7 +240,7 @@ public class SingleChronicleQueueTest {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             }
 
             // creates the indexes
@@ -250,7 +250,7 @@ public class SingleChronicleQueueTest {
             tailer.index(67);
 
             StringBuilder sb = new StringBuilder();
-            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+            tailer.readDocument(wire -> wire.read("key").text(sb));
 
             Assert.assertEquals("value=67", sb.toString());
         } finally {
@@ -268,7 +268,7 @@ public class SingleChronicleQueueTest {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             }
 
             new Indexer(chronicle).index();
@@ -278,7 +278,7 @@ public class SingleChronicleQueueTest {
             tailer.index(index);
 
             StringBuilder sb = new StringBuilder();
-            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+            tailer.readDocument(wire -> wire.read("key").text(sb));
 
             Assert.assertEquals("value=" + index, sb.toString());
         } finally {
@@ -296,7 +296,7 @@ public class SingleChronicleQueueTest {
             // create 100 documents
             for (int i = 0; i < 65; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             }
 
             // creates the indexes - index's 1 and 2 are created by the indexer
@@ -305,7 +305,7 @@ public class SingleChronicleQueueTest {
             // create 100 documents
             for (long i = chronicle.lastIndex() + 1; i < 200; i++) {
                 final long j = i;
-                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             }
 
             final ExcerptTailer tailer = chronicle.createTailer();
@@ -314,7 +314,7 @@ public class SingleChronicleQueueTest {
                 tailer.index(expected);
 
                 StringBuilder sb = new StringBuilder();
-                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+                tailer.readDocument(wire -> wire.read("key").text(sb));
 
                 Assert.assertEquals("value=" + expected, sb.toString());
             }
@@ -325,7 +325,7 @@ public class SingleChronicleQueueTest {
                 tailer.index(expected);
 
                 StringBuilder sb = new StringBuilder();
-                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+                tailer.readDocument(wire -> wire.read("key").text(sb));
 
                 Assert.assertEquals("value=" + expected, sb.toString());
             }

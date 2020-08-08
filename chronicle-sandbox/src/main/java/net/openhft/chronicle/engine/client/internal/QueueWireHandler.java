@@ -140,7 +140,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                         } else if (EventId.hasNext.contentEquals(eventName)) {
                             ExcerptTailer tailer = queueToTailer.get(queue);
                             vin.marshallable((ReadMarshallable) rm -> {
-                                long index = rm.read(() -> "index").int64();
+                                long index = rm.read("index").int64();
 
                                 sendBackMessage(tailer, index);
                             });

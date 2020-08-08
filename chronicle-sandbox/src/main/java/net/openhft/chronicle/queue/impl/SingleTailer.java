@@ -189,7 +189,7 @@ public class SingleTailer implements ExcerptTailer {
             chronicle.bytes().position(offset);
             chronicle.wire.readDocument(wireIn -> {
 
-                wireIn.read(() -> "index").int64array(values, v -> values = v);
+                wireIn.read("index").int64array(values, v -> values = v);
                 result[0] = values.getVolatileValueAt(index);
             }, null);
 

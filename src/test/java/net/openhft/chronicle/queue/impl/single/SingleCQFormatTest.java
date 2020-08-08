@@ -166,12 +166,12 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         try (@NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE * 2)) {
             @NotNull Wire wire = new BinaryWire(bytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
-                dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
-                    w.write(() -> "wireType").object(WireType.BINARY);
-                    w.write(() -> "writePosition").int64forBinding(0);
-                    w.write(() -> "roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0, null, null));
-                    w.write(() -> "indexing").typedMarshallable(new SCQIndexing(WireType.BINARY, 32, 4));
-                    w.write(() -> "lastAcknowledgedIndexReplicated").int64forBinding(0);
+                dc.wire().writeEventName("header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
+                    w.write("wireType").object(WireType.BINARY);
+                    w.write("writePosition").int64forBinding(0);
+                    w.write("roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0, null, null));
+                    w.write("indexing").typedMarshallable(new SCQIndexing(WireType.BINARY, 32, 4));
+                    w.write("lastAcknowledgedIndexReplicated").int64forBinding(0);
                 });
             }
 
@@ -258,9 +258,9 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
-            dc.wire().writeEventName(() -> "header")
+            dc.wire().writeEventName("header")
                     .typePrefix(SingleChronicleQueueStore.class).marshallable(
-                    w -> w.write(() -> "wireType").object(WireType.BINARY));
+                    w -> w.write("wireType").object(WireType.BINARY));
         }
 
         bytes.releaseLast();

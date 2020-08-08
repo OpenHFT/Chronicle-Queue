@@ -162,15 +162,15 @@ You can write using a lambda which describes the message:
 
 [source,java]
 ----
-appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve")
-                                   .write(() -> "Surname").text("Jobs"));
+appender.writeDocument(wire -> wire.write("FirstName").text("Steve")
+                                   .write("Surname").text("Jobs"));
 ----
 
-For example. you may want to write different types of messages to a Chronicle queue, and process messages in consumers depending on their types. Chronicle Queue provides low level building blocks so that you can write any kind of message; it is up to you to choose the right data structure.
+For example. you may want to write different types of messages to a Chronicle queue, and process messages in consumers depending on their types.Chronicle Queue provides low level building blocks so that you can write any kind of message; it is up to you to choose the right data structure.
 
-For example, you can prefix the data that you write to a Chronicle queue with a small header, and some meta-data. You can then use it as a discriminator for data processing.
+For example, you can prefix the data that you write to a Chronicle queue with a small header, and some meta-data.You can then use it as a discriminator for data processing.
 
-You can also write/read a generic object. This will be slightly slower than using your own schema, but is it a simple way to always read the type you wrote.
+You can also write/read a generic object.This will be slightly slower than using your own schema, but is it a simple way to always read the type you wrote.
 
 == How does reading work?
 
@@ -180,7 +180,7 @@ When you read an excerpt, it first checks that the index entry is there; the las
 ----
 try (DocumentContext context = tailer.readingDocument()) {
     if (context.isPresent()) {
-        Type t = tailer.read(() -> "message").object(Type.class);
+        Type t = tailer.read("message").object(Type.class);
         process(t);
     }
 }

@@ -52,7 +52,7 @@ class Header implements Marshallable {
         Header h = new Header();
         h.init(Compression.NONE);
         TextWire tw = new TextWire(NativeBytes.nativeBytes());
-        tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
+        tw.writeDocument(true, w -> w.write("header").marshallable(h));
         System.out.println(tw.bytes().flip().toString());
     }
 

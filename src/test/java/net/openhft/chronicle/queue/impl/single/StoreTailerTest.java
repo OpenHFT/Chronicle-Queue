@@ -115,7 +115,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
              ChronicleQueue chronicle2 = minutely(dir, timeProvider).build()) {
 
             //ExcerptAppender append = chronicle2.acquireAppender();
-            //append.writeDocument(w -> w.write(() -> "test").text("before text"));
+            //append.writeDocument(w -> w.write("test").text("before text"));
 
             ExcerptTailer tailer = chronicle.createTailer();
             //tailer.toEnd();
@@ -123,9 +123,9 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
             timeProvider.addTime(10, TimeUnit.MINUTES);
 
             ExcerptAppender append = chronicle2.acquireAppender();
-            append.writeDocument(w -> w.write(() -> "test").text("text"));
+            append.writeDocument(w -> w.write("test").text("text"));
 
-            if (! tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals))) {
+            if (!tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals))) {
                 System.out.println("dump chronicle:\n" + chronicle.dump());
                 System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");

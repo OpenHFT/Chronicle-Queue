@@ -98,10 +98,11 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         this.index2Index = index2Index;
         this.nextEntryToBeIndexed = nextEntryToBeIndexed;
         this.longArraySupplier = longArraySupplier;
-        this.index2indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));;
+        this.index2indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
+        ;
         this.indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
-        this.index2IndexTemplate = w -> w.writeEventName(() -> "index2index").int64array(indexCount);
-        this.indexTemplate = w -> w.writeEventName(() -> "index").int64array(indexCount);
+        this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
+        this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
     }
 
     private LongArrayValuesHolder newLogArrayValuesHolder(Supplier<LongArrayValues> las) {

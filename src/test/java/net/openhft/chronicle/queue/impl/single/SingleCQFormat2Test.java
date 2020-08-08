@@ -649,12 +649,12 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         @NotNull ExcerptAppender appender = queue.acquireAppender();
         switch (appendMode) {
             case 1:
-                appender.writeDocument(w -> w.write(() -> "msg").text(msg));
+                appender.writeDocument(w -> w.write("msg").text(msg));
                 break;
 
             case 2:
                 Bytes bytes = Bytes.elasticByteBuffer();
-                new BinaryWire(bytes).write(() -> "msg").text(msg);
+                new BinaryWire(bytes).write("msg").text(msg);
                 appender.writeBytes(bytes);
                 bytes.releaseLast();
 
@@ -663,7 +663,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             default:
                 try (DocumentContext dc = appender.writingDocument()) {
                     Wire wire = dc.wire();
-                    wire.write(() -> "msg").text(msg);
+                    wire.write("msg").text(msg);
                 }
                 break;
         }

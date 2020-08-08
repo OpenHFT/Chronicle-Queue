@@ -25,7 +25,10 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -210,7 +213,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
             ExcerptAppender excerptAppender = queue.acquireAppender();
 
             try (DocumentContext dc = excerptAppender.writingDocument(false)) {
-                dc.wire().write(() -> "test").int64(0);
+                dc.wire().write("test").int64(0);
             }
         }
     }

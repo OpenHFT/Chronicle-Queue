@@ -38,7 +38,7 @@ public class ReadmeTest extends QueueTestCommon {
             ExcerptAppender appender = queue.acquireAppender();
 
             // write - {msg: TestMessage}
-            appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
+            appender.writeDocument(w -> w.write("msg").text("TestMessage"));
 
 //            System.out.println(queue.dump());
             // write - TestMessage
@@ -46,7 +46,7 @@ public class ReadmeTest extends QueueTestCommon {
 
             ExcerptTailer tailer = queue.createTailer();
 
-            tailer.readDocument(w -> System.out.println("msg: " + w.read(() -> "msg").text()));
+            tailer.readDocument(w -> System.out.println("msg: " + w.read("msg").text()));
 
             assertEquals("TestMessage", tailer.readText());
         }

@@ -93,8 +93,8 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
         for (int i = 0; i < RARE_MSGS; i++) {
             try (DocumentContext ctx = rareAppender.writingDocument()) {
                 ctx.wire()
-                        .write(() -> "ts").int64(System.currentTimeMillis())
-                        .write(() -> "msg").text(text);
+                        .write("ts").int64(System.currentTimeMillis())
+                        .write("msg").text(text);
             }
         }
 
@@ -105,8 +105,8 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             for (int i = 0; i < HEAVY_MSGS; i++) {
                 try (DocumentContext ctx = appender.writingDocument()) {
                     ctx.wire()
-                            .write(() -> "ts").int64(System.currentTimeMillis())
-                            .write(() -> "msg").text(text);
+                            .write("ts").int64(System.currentTimeMillis())
+                            .write("msg").text(text);
                 }
                 if (appenderES.isShutdown())
                     return;
@@ -122,8 +122,8 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
         long now = System.currentTimeMillis();
         try (DocumentContext ctx = rareAppender.writingDocument()) {
             ctx.wire()
-                    .write(() -> "ts").int64(System.currentTimeMillis())
-                    .write(() -> "msg").text(text);
+                    .write("ts").int64(System.currentTimeMillis())
+                    .write("msg").text(text);
         }
         long l = System.currentTimeMillis() - now;
 
@@ -131,8 +131,8 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
         now = System.currentTimeMillis();
         try (DocumentContext ctx = rareAppender.writingDocument()) {
             ctx.wire()
-                    .write(() -> "ts").int64(System.currentTimeMillis())
-                    .write(() -> "msg").text(text);
+                    .write("ts").int64(System.currentTimeMillis())
+                    .write("msg").text(text);
         }
         System.out.println("Wrote first rare one in " + l + " ms");
         System.out.println("Wrote another rare one in " + (System.currentTimeMillis() - now) + " ms");

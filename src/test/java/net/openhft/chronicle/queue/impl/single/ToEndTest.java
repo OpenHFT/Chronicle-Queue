@@ -86,27 +86,27 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
             final ExcerptAppender appender = queue.acquireAppender();
 
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
+            appender.writeDocument(wire -> wire.write("msg").int32(1));
 
             // roll
             timeProvider.currentTimeMillis(now += timeIncMs);
 
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(2));
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(3));
+            appender.writeDocument(wire -> wire.write("msg").int32(2));
+            appender.writeDocument(wire -> wire.write("msg").int32(3));
 
             final ExcerptTailer tailer = queue.createTailer().toEnd();
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (dc.isPresent()) {
-                    fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read(() -> "msg").int32());
+                    fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read("msg").int32());
                 }
             }
 
             // append same cycle.
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(4));
+            appender.writeDocument(wire -> wire.write("msg").int32(4));
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
-                int i = dc.wire().read(() -> "msg").int32();
+                int i = dc.wire().read("msg").int32();
                 assertEquals("Should've read 4, instead we read: " + i, 4, i);
             }
 
@@ -116,26 +116,26 @@ public class ToEndTest extends ChronicleQueueTestBase {
             for (int j = 1; j <= 4; j++) {
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
-                    int i = dc.wire().read(() -> "msg").int32();
+                    int i = dc.wire().read("msg").int32();
                     assertEquals(j, i);
                 }
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (dc.isPresent()) {
-                    fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()));
+                    fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read("msg").int32()));
                 }
             }
 
             // write another
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(5));
+            appender.writeDocument(wire -> wire.write("msg").int32(5));
 
             // roll 5 cycles
             timeProvider.currentTimeMillis(now += timeIncMs * 5);
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
-                assertEquals(5, dc.wire().read(() -> "msg").int32());
+                assertEquals(5, dc.wire().read("msg").int32());
             }
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertFalse(dc.isPresent());
@@ -164,7 +164,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
             SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
 //            System.out.println(store1);
 
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
+            appender.writeDocument(wire -> wire.write("msg").int32(1));
 
             final StoreTailer tailer = (StoreTailer) queue.createTailer();
 //            System.out.println(tailer);
@@ -198,7 +198,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
             for (int i = 0; i < 10; i++) {
                 final int j = i;
-                appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
+                appender.writeDocument(wire -> wire.write("msg").int32(j));
             }
 
             checkOneFile(baseDir);
@@ -254,7 +254,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         /*for (int i = 0; i < 10; i++) {
             final int j = i;
-            appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
+            appender.writeDocument(wire -> wire.write("msg").int32(j));
         }*/
         pathsToDelete.add(baseDir);
     }
@@ -328,7 +328,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
             try (DocumentContext documentContext = tailer.readingDocument()) {
                 if (!documentContext.isPresent())
                     break;
-                results.add(documentContext.wire().read(() -> "msg").int32());
+                results.add(documentContext.wire().read("msg").int32());
             }
         }
         return results;
