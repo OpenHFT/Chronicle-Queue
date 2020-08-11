@@ -118,7 +118,12 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public void unlock() {
         if (isClosed()) {
-            Jvm.warn().on(getClass(), "Cannot unlock as already closed");
+            try {
+                throwExceptionIfClosed();
+            } catch (IllegalStateException e) {
+                Jvm.warn().on(getClass(), new IllegalStateException("Cannot unlock as already closed", e));
+            }
+
             return;
         }
 
