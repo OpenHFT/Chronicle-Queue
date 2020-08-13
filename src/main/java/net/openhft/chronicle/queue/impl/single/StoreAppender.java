@@ -28,7 +28,7 @@ class StoreAppender extends AbstractCloseable
     @NotNull
     private final WriteLock writeLock;
     @NotNull
-    private final StoreAppenderContext context;
+    private final StoreAppenderContext writeContext;
     private final WireStorePool storePool;
     private final boolean checkInterrupts;
     @Nullable
@@ -55,7 +55,7 @@ class StoreAppender extends AbstractCloseable
         this.storePool = storePool;
         this.checkInterrupts = checkInterrupts;
         this.writeLock = queue.writeLock();
-        this.context = new StoreAppenderContext();
+        this.writeContext = new StoreAppenderContext();
 
         // always put references to "this" last.
         queue.addCloseListener(this);
@@ -317,15 +317,15 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
 
         if (queue.doubleBuffer && writeLock.locked() && !metaData) {
-            context.isClosed = false;
-            context.rollbackOnClose = false;
-            context.buffered = true;
+            writeContext.isClosed = false;
+            writeContext.rollbackOnClose = false;
+            writeContext.buffered = true;
             if (bufferWire == null) {
                 Bytes bufferBytes = Bytes.allocateElasticOnHeap();
                 bufferWire = queue().wireType().apply(bufferBytes);
             }
-            context.wire = bufferWire;
-            context.metaData(false);
+            writeContext.wire = bufferWire;
+            writeContext.metaData(false);
         } else {
             writeLock.lock();
             int cycle = queue.cycle();
@@ -343,7 +343,17 @@ class StoreAppender extends AbstractCloseable
             // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);
         }
-        return context;
+        // there is nothing to read.
+        wire.bytes().readPosition(wire.bytes().writePosition());
+        return writeContext;
+    }
+
+
+    @Override
+    public DocumentContext acquireWritingDocument(boolean metaData) {
+        if (writeContext.isOpen() && wire != null)
+            return writeContext;
+        return writingDocument(metaData);
     }
 
     private void setWireIfNull(final int cycle) {
@@ -390,11 +400,11 @@ class StoreAppender extends AbstractCloseable
     private void openContext(final boolean metaData, final int safeLength) {
         assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
-        context.isClosed = false;
-        context.rollbackOnClose = false;
-        context.buffered = false;
-        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
-        context.metaData(metaData);
+        writeContext.isClosed = false;
+        writeContext.rollbackOnClose = false;
+        writeContext.buffered = false;
+        writeContext.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+        writeContext.metaData(metaData);
     }
 
     boolean checkWritePositionHeaderNumber() {
@@ -513,12 +523,12 @@ class StoreAppender extends AbstractCloseable
             openContext(metadata, safeLength);
 
             try {
-                context.wire().bytes().write(bytes);
+                writeContext.wire().bytes().write(bytes);
             } finally {
-                context.close(false);
+                writeContext.close(false);
             }
         } finally {
-            context.isClosed = true;
+            writeContext.isClosed = true;
         }
     }
 
@@ -741,12 +751,12 @@ class StoreAppender extends AbstractCloseable
                         if (lastIndex != Long.MIN_VALUE)
                             writeIndexForPosition(lastIndex, positionOfHeader);
                     }
+
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
                         unlock = false;
                     } else {
-                        isClosed = true;
                         writeBytesInternal(wire.bytes(), metaData);
                         wire = StoreAppender.this.wire;
                     }
@@ -754,6 +764,7 @@ class StoreAppender extends AbstractCloseable
             } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
+                isClosed = true;
                 if (unlock)
                     try {
                         writeLock.unlock();
@@ -791,8 +802,13 @@ class StoreAppender extends AbstractCloseable
         }
 
         @Override
+        public boolean isOpen() {
+            return !isClosed;
+        }
+
+        @Override
         public boolean isNotComplete() {
-            throw new UnsupportedOperationException();
+            return !isClosed;
         }
     }
 }
