@@ -758,7 +758,15 @@ class StoreTailer extends AbstractCloseable
         throwExceptionIfClosed();
 
         //  if (direction.equals(TailerDirection.BACKWARD))
-        return originalToEnd();
+
+        try{
+            return originalToEnd();
+        }   catch (NotReachedException e) {
+            // due to a race condition, where the queue rolls as we are processing toEnd()
+            // we may get a NotReachedException  ( see https://github.com/OpenHFT/Chronicle-Queue/issues/702 )
+            // hence are are just going to retry.
+            return originalToEnd();
+        }
 
         //  todo fix -see issue https://github.com/OpenHFT/Chronicle-Queue/issues/689
         // return optimizedToEnd();
@@ -848,7 +856,7 @@ class StoreTailer extends AbstractCloseable
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
-                            throw new IllegalStateException("NOT_REACHED after FOUND");
+                            throw new NotReachedException("NOT_REACHED after FOUND");
                         case FOUND:
                             // the end moved!!
                         case NOT_FOUND:
@@ -863,7 +871,7 @@ class StoreTailer extends AbstractCloseable
                 }
                 break;
             case NOT_REACHED:
-                throw new IllegalStateException("NOT_REACHED index: " + Long.toHexString(index));
+                throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(index));
             case END_OF_FILE:
                 state = END_OF_CYCLE;
                 break;
