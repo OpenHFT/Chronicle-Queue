@@ -26,6 +26,6 @@ public final class GcControls {
         return ManagementFactory.getGarbageCollectorMXBeans().stream().
                 reduce(0L,
                         (count, gcBean) -> count + gcBean.getCollectionCount(),
-                        (a, b) -> a + b);
+                        Long::sum);
     }
 }
