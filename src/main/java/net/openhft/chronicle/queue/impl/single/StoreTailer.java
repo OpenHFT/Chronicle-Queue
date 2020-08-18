@@ -1204,7 +1204,7 @@ class StoreTailer extends AbstractCloseable
             try {
                 if (rollbackOnClose) {
                     present = false;
-                    if (start != -1)
+                    if (start > -1)
                         wire.bytes().readPosition(start).readLimit(readLimit);
                     start = -1;
                     return;
