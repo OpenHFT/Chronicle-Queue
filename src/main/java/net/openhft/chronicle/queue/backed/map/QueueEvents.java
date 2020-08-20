@@ -4,10 +4,12 @@
 
 package net.openhft.chronicle.queue.backed.map;
 
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MethodWriterWithContext;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 
 // TODO add queue names and only read the ones for it.
-public interface QueueEvents<K, V> extends MethodWriterWithContext {
+public interface QueueEvents<K, V> {
     /**
      * @param key       to put
      * @param value     to put

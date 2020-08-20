@@ -20,11 +20,6 @@ public class QueueBackedMaps implements QueueEvents {
     }
 
     @Override
-    public DocumentContext writingDocument() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void $put(String name, Object key, Object value, long timestamp) {
         maps.computeIfPresent(name, (k, map) -> {
             map.$put(name, key, value, timestamp);
