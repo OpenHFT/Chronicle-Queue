@@ -99,8 +99,13 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
             }
         } catch (TimeoutException e) {
-            warn().on(getClass(), "Queue lock is still held after " + timeout + "ms for the lock file:"
-                    + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
+            long value = lock.getVolatileValue();
+            warn().on(getClass(), "" +
+                    "Queue lock is still held after " + timeout + "ms for " +
+                    "the lock file:" + path + ". Lock is held by " +
+                    "PID: " + (int) value + ", " +
+                    "TID: " + (int) (value >>> 32) + "." +
+                    " Unlocking forcibly");
             forceUnlock();
         } catch (NullPointerException ex) {
             if (!tableStore.isClosed())
