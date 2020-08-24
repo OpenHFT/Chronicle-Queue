@@ -65,9 +65,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             }
         } catch (TimeoutException e) {
             final long lockedByPID = lock.getVolatileValue();
-            final String lockedBy = lockedByPID == PID ? "me" : Long.toString(lockedByPID);
-            warn().on(getClass(), "Couldn't acquire lock after " + timeout + "ms for the lock file:"
-                    + path + ", overriding the lock. Lock was held by PID " + lockedBy);
+            warnLock("Overriding the lock. Couldn't acquire lock", lockedByPID);
             forceUnlock();
             acquireLock();
         } finally {
@@ -100,12 +98,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             }
         } catch (TimeoutException e) {
             long value = lock.getVolatileValue();
-            warn().on(getClass(), "" +
-                    "Queue lock is still held after " + timeout + "ms for " +
-                    "the lock file:" + path + ". Lock is held by " +
-                    "PID: " + (int) value + ", " +
-                    "TID: " + (int) (value >>> 32) + "." +
-                    " Unlocking forcibly");
+            warnLock("Queue lock is still held", value);
             forceUnlock();
         } catch (NullPointerException ex) {
             if (!tableStore.isClosed())
@@ -114,6 +107,16 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         } finally {
             pauser.reset();
         }
+    }
+
+    private void warnLock(String msg, long value) {
+        String pid = ((int) value == PID) ? "me" : Integer.toString(PID);
+        warn().on(getClass(), "" +
+                msg + " after " + timeout + "ms for " +
+                "the lock file:" + path + ". Lock is held by " +
+                "PID: " + pid + ", " +
+                "TID: " + (int) (value >>> 32) + "." +
+                " Unlocking forcibly");
     }
 
     /**
@@ -142,5 +145,4 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     private boolean isLockHeldByCurrentThread(long tid) {
         return lock.getVolatileValue() == getLockValueFromTid(tid);
     }
-
 }
