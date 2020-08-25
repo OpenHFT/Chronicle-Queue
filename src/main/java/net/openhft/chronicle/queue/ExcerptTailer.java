@@ -99,9 +99,13 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     int cycle();
 
     /**
-     * Moves the index for this Trailer to the provided {@code index}.
+     * Tries to move the index for this Trailer to the provided {@code index}.
      * <p>
      * The index contains both the cycle number and sequence number within the cycle.
+     * <p>
+     * In order for the operation to succeed, the roll file, corresponding to
+     * the cycle number in the index, must be present and the roll file must
+     * contain the sequence number contained in the index.
      * <p>
      * If the index is not a valid index, the operation is undefined.
      *
