@@ -158,7 +158,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     boolean striding();
 
     /**
-     * Returns the direction of this Tailer.
+     * Sets the direction of this ExcerptTailer.
      * <p>
      * The direction determines the direction of movement upon reading an excerpt.
      *
@@ -171,16 +171,16 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer direction(@NotNull TailerDirection direction);
 
     /**
-     * Returns the direction of this Tailer.
+     * Returns the direction of this ExcerptTailer.
      * <p>
      * The direction determines the direction of movement upon reading an excerpt.
      *
-     * @return the direction of this Tailer
+     * @return the direction of this ExcerptTailer
      */
     TailerDirection direction();
 
     /**
-     * Winds this Tailer to after the last entry which wrote an entry to the queue.
+     * Winds this ExcerptTailer to after the last entry which wrote an entry to the queue.
      *
      * @param queue which was written to.
      * @return this ExcerptTailer
@@ -211,7 +211,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
      * This will block forever if no sinks acknowledge receipt.
      *
-     * @return
+     * @return the Read After Replica Acknowledged property of this Trailer
      */
     default boolean readAfterReplicaAcknowledged() {
         return false;
