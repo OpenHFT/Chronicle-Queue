@@ -37,7 +37,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     private static final int PID = Jvm.getProcessId();
     private final long timeout;
 
-    public TSQueueLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
+    public TSQueueLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, long timeoutMs) {
         super(LOCK_KEY, tableStore, pauser);
         timeout = timeoutMs;
     }
@@ -56,21 +56,22 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         if (isLockHeldByCurrentThread(tid)) {
             return;
         }
+        int count = 0;
+        long lockValueFromTid = getLockValueFromTid(tid);
+        long value = lock.getVolatileValue();
         try {
-            int count = 0;
-            while (!lock.compareAndSwapValue(UNLOCKED, getLockValueFromTid(tid))) {
+            while (!lock.compareAndSwapValue(UNLOCKED, lockValueFromTid)) {
                 if (count++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
-            final long lockedByPID = lock.getVolatileValue();
-            warnLock("Overriding the lock. Couldn't acquire lock", lockedByPID);
-            forceUnlock();
+            warnLock("Overriding the lock. Couldn't acquire lock", value);
+            forceUnlock(value);
             acquireLock();
         } finally {
             pauser.reset();
-
         }
     }
 
@@ -79,9 +80,10 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     /**
-     * checks if current thread holds lock. If not, it will wait for <code>chronicle.queue.lock.timeoutMS</code> millis for the lock to be released,
-     * and if it is not after timeout, throws {@link IllegalStateException}.
+     * checks if current thread holds lock. If not, it will wait for four times <code>chronicle.queue.lock.timeoutMS</code> millis
+     * for the lock to be released, and if it is not after timeout, throws {@link IllegalStateException}.
      */
+    // TODO combine logic for acquireLock with this method so recovery is consistent.
     @Override
     public void waitForLock() {
         throwExceptionIfClosed();
@@ -90,16 +92,20 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         if (isLockHeldByCurrentThread(tid))
             return;
 
+        long value = lock.getVolatileValue();
         try {
-            while (lock.getVolatileValue() != UNLOCKED) {
+            while (value != UNLOCKED) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
-            long value = lock.getVolatileValue();
             warnLock("Queue lock is still held", value);
-            forceUnlock();
+            forceUnlock(value);
+            // try again.
+            waitForLock();
+
         } catch (NullPointerException ex) {
             if (!tableStore.isClosed())
                 throw ex;

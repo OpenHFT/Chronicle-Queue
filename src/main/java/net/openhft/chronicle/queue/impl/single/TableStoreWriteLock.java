@@ -44,13 +44,16 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         throwExceptionIfClosed();
 
         assert checkNotAlreadyLocked();
+        long value = 0;
         try {
             int i = 0;
+            value = lock.getVolatileValue();
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
                 if (i++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted for the lock file:" + path);
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                value = lock.getVolatileValue();
             }
 
             //noinspection ConstantConditions,AssertWithSideEffects
@@ -58,14 +61,14 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
             // success
         } catch (TimeoutException e) {
-            final long lockedByPID = lock.getVolatileValue(Long.MIN_VALUE);
+            final long lockedByPID = value;
             final String lockedBy =
                     lockedByPID == Long.MIN_VALUE ? "unknown" :
                             lockedByPID == PID ? "me"
-                                    : Long.toString(lockedByPID);
+                                    : Long.toString((int) lockedByPID);
             warn().on(getClass(), "Couldn't acquire write lock after " + timeout
                     + "ms for the lock file:" + path + ", overriding the lock. Lock was held by " + lockedBy);
-            forceUnlock();
+            forceUnlock(value);
             // we should reset the pauser after a timeout exception
             pauser.reset();
             lock();

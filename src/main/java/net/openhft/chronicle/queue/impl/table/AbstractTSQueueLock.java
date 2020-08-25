@@ -47,9 +47,13 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         Closeable.closeQuietly(lock);
     }
 
-    protected void forceUnlock() {
-        Jvm.warn().on(getClass(), "Forced unlock for the lock file:" + path, new StackTrace("Forced unlock"));
-        lock.setValue(UNLOCKED);
+    protected void forceUnlock(long value) {
+        boolean unlocked = lock.compareAndSwapValue(value, UNLOCKED);
+        Jvm.warn().on(getClass(), "" +
+                        "Forced unlock for the " +
+                        "lock file:" + path + ", " +
+                        "unlocked: " + unlocked,
+                new StackTrace("Forced unlock"));
     }
 
     @Override
