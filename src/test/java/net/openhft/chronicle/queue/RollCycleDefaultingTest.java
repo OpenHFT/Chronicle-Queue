@@ -31,7 +31,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         String configuredCycle = "foobarblah";
         System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
-        Assert.assertEquals(RollCycles.DAILY, builder.rollCycle());
+        Assert.assertEquals(RollCycles.DEFAULT, builder.rollCycle());
 
     }
 
@@ -40,7 +40,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         String configuredCycle = String.class.getName();
         System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
-        Assert.assertEquals(RollCycles.DAILY, builder.rollCycle());
+        Assert.assertEquals(RollCycles.DEFAULT, builder.rollCycle());
     }
 
     public static class MyRollcycle implements RollCycle {
@@ -52,8 +52,8 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         }
 
         @Override
-        public int length() {
-            return delegate.length();
+        public int lengthInMillis() {
+            return delegate.lengthInMillis();
         }
 
         @Override

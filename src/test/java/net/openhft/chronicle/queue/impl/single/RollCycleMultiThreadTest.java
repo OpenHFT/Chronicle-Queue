@@ -3,7 +3,10 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.StopCharTesters;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -17,7 +20,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.*;
 
-import static net.openhft.chronicle.queue.RollCycles.DAILY;
+import static net.openhft.chronicle.queue.RollCycles.DEFAULT;
 import static org.junit.Assert.assertEquals;
 
 public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
@@ -30,7 +33,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder
                 .fieldlessBinary(path)
                 .testBlockSize()
-                .rollCycle(DAILY)
+                .rollCycle(DEFAULT)
                 .timeProvider(timeProvider).build()) {
 
             ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
@@ -41,7 +44,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
             try (ChronicleQueue queue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
                     .testBlockSize()
-                    .rollCycle(DAILY)
+                    .rollCycle(DEFAULT)
                     .timeProvider(timeProvider)
                     .build()) {
                 ExcerptAppender appender = queue.acquireAppender();
@@ -71,7 +74,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder
                 .fieldlessBinary(path)
                 .testBlockSize()
-                .rollCycle(DAILY)
+                .rollCycle(DEFAULT)
                 .timeProvider(timeProvider)
                 .build()) {
 
@@ -83,7 +86,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
             try (ChronicleQueue queue = SingleChronicleQueueBuilder
                     .fieldlessBinary(path)
                     .testBlockSize()
-                    .rollCycle(DAILY)
+                    .rollCycle(DEFAULT)
                     .timeProvider(timeProvider)
                     .build()) {
 

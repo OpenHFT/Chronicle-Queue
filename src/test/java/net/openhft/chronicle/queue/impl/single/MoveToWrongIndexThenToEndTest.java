@@ -1,7 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.WireType;
@@ -17,7 +20,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static net.openhft.chronicle.queue.RollCycles.DAILY;
+import static net.openhft.chronicle.queue.RollCycles.DEFAULT;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -33,7 +36,7 @@ public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
 
     private static final long noIndex = 0;
 
-    private static final RollCycle rollCycle = DAILY;
+    private static final RollCycle rollCycle = DEFAULT;
     private final Path basePath;
     private final SingleChronicleQueue queue;
     private final ExcerptAppender appender;

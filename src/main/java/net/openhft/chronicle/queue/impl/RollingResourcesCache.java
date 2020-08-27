@@ -56,7 +56,7 @@ public class RollingResourcesCache {
     public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
                                  @NotNull Function<String, File> nameToFile,
                                  @NotNull Function<File, String> fileToName) {
-        this(cycle.length(), cycle.format(), epoch, nameToFile, fileToName);
+        this(cycle.lengthInMillis(), cycle.format(), epoch, nameToFile, fileToName);
     }
 
     private RollingResourcesCache(final int length,

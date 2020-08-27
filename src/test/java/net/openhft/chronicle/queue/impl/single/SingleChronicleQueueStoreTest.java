@@ -19,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final int INDEX_SPACING = 4;
     private static final int RECORD_COUNT = INDEX_SPACING * 10;
-    private static final RollCycles ROLL_CYCLE = RollCycles.DAILY;
+    private static final RollCycles ROLL_CYCLE = RollCycles.DEFAULT;
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     @Rule

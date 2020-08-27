@@ -267,7 +267,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     private static RollCycle loadDefaultRollCycle() {
         if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
-            return RollCycles.DAILY;
+            return RollCycles.DEFAULT;
         }
 
         String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
@@ -301,7 +301,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             }
         }
 
-        return RollCycles.DAILY;
+        return RollCycles.DEFAULT;
     }
 
     public WireStoreFactory storeFactory() {

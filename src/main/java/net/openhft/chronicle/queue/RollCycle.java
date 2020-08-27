@@ -32,7 +32,7 @@ public interface RollCycle {
      * </ul>
      *
      * @return the format that is to be applied when file names
-     *         are calculated for a new roll cycle
+     * are calculated for a new roll cycle
      */
     String format();
 
@@ -47,7 +47,12 @@ public interface RollCycle {
      *
      * @return the length in milliseconds (i.e. the maximum duration) for a roll cycle
      */
-    int length();
+    int lengthInMillis();
+
+    @Deprecated
+    default int length() {
+        return lengthInMillis();
+    }
 
     /**
      * @return the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
@@ -66,6 +71,7 @@ public interface RollCycle {
      *     <li>16 (MINUTELY)</li>
      *     <li>64 (DAILY)</li>
      * </ul>
+     *
      * @return the space between excerpts that are explicitly indexed
      */
     int defaultIndexSpacing();
@@ -82,7 +88,7 @@ public interface RollCycle {
      * An index is comprised of both a cycle and a sequence number but
      * the way the index is composed of said properties may vary.
      *
-     * @param cycle to be composed into an index
+     * @param cycle          to be composed into an index
      * @param sequenceNumber to be composed into an index
      * @return the index for the given {@code cycle} and {@code sequenceNumber}
      */

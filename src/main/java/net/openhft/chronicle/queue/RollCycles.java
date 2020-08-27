@@ -29,51 +29,61 @@ import java.util.Arrays;
  */
 public enum RollCycles implements RollCycle {
     /**
-     * 64 million entries per minute, indexing every 64th entry
-     */
-    MINUTELY(/*--------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16),
-    /**
      * 1 billion entries per 5 minutes, indexing every 64th entry
      */
-    FIVE_MINUTELY(/*------*/"yyyyMMdd-HHmm'V'", 5 * 60 * 1000, 4 << 10, 64),
+    FIVE_MINUTELY(/*------*/"yyyyMMdd-HHmm'V'", 5 * 60 * 1000, 2 << 10, 256),
     /**
      * 1 billion entries per 10 minutes, indexing every 64th entry
      */
-    TEN_MINUTELY(/*------*/"yyyyMMdd-HHmm'X'", 10 * 60 * 1000, 4 << 10, 64),
+    TEN_MINUTELY(/*------*/"yyyyMMdd-HHmm'X'", 10 * 60 * 1000, 2 << 10, 256),
     /**
      * 1 billion entries per 20 minutes, indexing every 64th entry
      */
-    TWENTY_MINUTELY(/*------*/"yyyyMMdd-HHmm'XX'", 20 * 60 * 1000, 4 << 10, 64),
+    TWENTY_MINUTELY(/*------*/"yyyyMMdd-HHmm'XX'", 20 * 60 * 1000, 2 << 10, 256),
     /**
      * 1 billion entries per half hour, indexing every 64th entry
      */
-    HALF_HOURLY(/*------*/"yyyyMMdd-HHmm'H'", 30 * 60 * 1000, 4 << 10, 64),
+    HALF_HOURLY(/*------*/"yyyyMMdd-HHmm'H'", 30 * 60 * 1000, 2 << 10, 256),
     /**
-     * 256 million entries per hour, indexing every 16th entry
+     * 1 billion entries per hour, indexing every 16th entry, leave as 4K and 16 for historical reasons.
      */
-    HOURLY(/*----------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16),
-    /**
-     * 4 billion entries per hour, indexing every 64th entry
-     */
-    LARGE_HOURLY(/*----*/"yyyyMMdd-HH'L'", 60 * 60 * 1000, 8 << 10, 64),
+    FAST_HOURLY(/*----------*/"yyyyMMdd-HH'F'", 60 * 60 * 1000, 4 << 10, 256),
     /**
      * 4 billion entries per 2 hours, indexing every 64th entry
      */
-    TWO_HOURLY(/*----*/"yyyyMMdd-HH'II'", 2 * 60 * 60 * 1000, 8 << 10, 64),
+    TWO_HOURLY(/*----*/"yyyyMMdd-HH'II'", 2 * 60 * 60 * 1000, 4 << 10, 256),
     /**
      * 4 billion entries per four hours, indexing every 64th entry
      */
-    FOUR_HOURLY(/*----*/"yyyyMMdd-HH'IV'", 4 * 60 * 60 * 1000, 8 << 10, 64),
+    FOUR_HOURLY(/*----*/"yyyyMMdd-HH'IV'", 4 * 60 * 60 * 1000, 4 << 10, 256),
     /**
      * 4 billion entries per six hours, indexing every 64th entry
      */
-    SIX_HOURLY(/*----*/"yyyyMMdd-HH'VI'", 6 * 60 * 60 * 1000, 8 << 10, 64),
+    SIX_HOURLY(/*----*/"yyyyMMdd-HH'VI'", 6 * 60 * 60 * 1000, 4 << 10, 256),
     /**
-     * 4 billion entries per day, indexing every 64th entry
+     * 4 billion entries per day, indexing every 64th entry, leave as 8K and 64 for historical reasons.
+     */
+    FAST_DAILY(/*-----------*/"yyyyMMdd'F'", 24 * 60 * 60 * 1000, 4 << 10, 256),
+
+    // these are kept for historical reasons
+    /**
+     * 64 million entries per minute, indexing every 16th entry
+     */
+    MINUTELY(/*--------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16),
+    /**
+     * 256 million entries per hour, indexing every 16th entry, leave as 4K and 16 for historical reasons.
+     */
+    HOURLY(/*----------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16),
+    /**
+     * 4 billion entries per day, indexing every 64th entry, leave as 8K and 64 for historical reasons.
      */
     DAILY(/*-----------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64),
 
     // these are used to minimise rolls but do create very large files, possibly too large.
+    /**
+     * 4 billion entries per hour, indexing every 64th entry
+     */
+    LARGE_HOURLY(/*----*/"yyyyMMdd-HH'L'", 60 * 60 * 1000, 8 << 10, 64),
     /**
      * 128 billion entries per day, indexing every 128th entry
      */
@@ -135,20 +145,21 @@ public enum RollCycles implements RollCycle {
      */
     TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8),
     ;
+    public static final RollCycles DEFAULT = FAST_DAILY;
 
     // don't alter this or you will confuse yourself.
     private static final Iterable<RollCycles> VALUES = Arrays.asList(values());
 
     private final String format;
-    private final int length;
+    private final int lengthInMillis;
     private final int cycleShift;
     private final int indexCount;
     private final int indexSpacing;
     private final long sequenceMask;
 
-    RollCycles(String format, int length, int indexCount, int indexSpacing) {
+    RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this.format = format;
-        this.length = length;
+        this.lengthInMillis = lengthInMillis;
         this.indexCount = Maths.nextPower2(indexCount, 8);
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
         cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
@@ -165,8 +176,8 @@ public enum RollCycles implements RollCycle {
     }
 
     @Override
-    public int length() {
-        return this.length;
+    public int lengthInMillis() {
+        return this.lengthInMillis;
     }
 
     /**
@@ -184,7 +195,7 @@ public enum RollCycles implements RollCycle {
 
     @Override
     public int current(@NotNull TimeProvider time, long epoch) {
-        return (int) ((time.currentTimeMillis() - epoch) / length());
+        return (int) ((time.currentTimeMillis() - epoch) / lengthInMillis());
     }
 
     @Override
