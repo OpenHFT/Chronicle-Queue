@@ -29,49 +29,49 @@ import java.util.Arrays;
  */
 public enum RollCycles implements RollCycle {
     /**
-     * 1 billion entries per 5 minutes, indexing every 64th entry
+     * 4 billion entries per 5 minutes, indexing every 256th entry
      */
     FIVE_MINUTELY(/*------*/"yyyyMMdd-HHmm'V'", 5 * 60 * 1000, 2 << 10, 256),
     /**
-     * 1 billion entries per 10 minutes, indexing every 64th entry
+     * 4 billion entries per 10 minutes, indexing every 256th entry
      */
     TEN_MINUTELY(/*------*/"yyyyMMdd-HHmm'X'", 10 * 60 * 1000, 2 << 10, 256),
     /**
-     * 1 billion entries per 20 minutes, indexing every 64th entry
+     * 4 billion entries per 20 minutes, indexing every 256th entry
      */
     TWENTY_MINUTELY(/*------*/"yyyyMMdd-HHmm'XX'", 20 * 60 * 1000, 2 << 10, 256),
     /**
-     * 1 billion entries per half hour, indexing every 64th entry
+     * 4 billion entries per half hour, indexing every 256th entry
      */
     HALF_HOURLY(/*------*/"yyyyMMdd-HHmm'H'", 30 * 60 * 1000, 2 << 10, 256),
     /**
-     * 1 billion entries per hour, indexing every 16th entry, leave as 4K and 16 for historical reasons.
+     * 4 billion entries per hour, indexing every 256th entry, leave as 4K and 256 for historical reasons.
      */
     FAST_HOURLY(/*----------*/"yyyyMMdd-HH'F'", 60 * 60 * 1000, 4 << 10, 256),
     /**
-     * 4 billion entries per 2 hours, indexing every 64th entry
+     * 4 billion entries per 2 hours, indexing every 256th entry
      */
     TWO_HOURLY(/*----*/"yyyyMMdd-HH'II'", 2 * 60 * 60 * 1000, 4 << 10, 256),
     /**
-     * 4 billion entries per four hours, indexing every 64th entry
+     * 4 billion entries per four hours, indexing every 256th entry
      */
     FOUR_HOURLY(/*----*/"yyyyMMdd-HH'IV'", 4 * 60 * 60 * 1000, 4 << 10, 256),
     /**
-     * 4 billion entries per six hours, indexing every 64th entry
+     * 4 billion entries per six hours, indexing every 256th entry
      */
     SIX_HOURLY(/*----*/"yyyyMMdd-HH'VI'", 6 * 60 * 60 * 1000, 4 << 10, 256),
     /**
-     * 4 billion entries per day, indexing every 64th entry, leave as 8K and 64 for historical reasons.
+     * 4 billion entries per day, indexing every 256th entry, leave as 4K and 256 for historical reasons.
      */
     FAST_DAILY(/*-----------*/"yyyyMMdd'F'", 24 * 60 * 60 * 1000, 4 << 10, 256),
 
     // these are kept for historical reasons
     /**
-     * 64 million entries per minute, indexing every 16th entry
+     * 4 billion entries per minute, indexing every 16th entry
      */
     MINUTELY(/*--------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16),
     /**
-     * 256 million entries per hour, indexing every 16th entry, leave as 4K and 16 for historical reasons.
+     * 4 billion entries per hour, indexing every 16th entry, leave as 4K and 16 for historical reasons.
      */
     HOURLY(/*----------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16),
     /**
@@ -99,7 +99,7 @@ public enum RollCycles implements RollCycle {
 
     // these are largely used for testing and benchmarks to almost turn off indexing.
     /**
-     * 512 million entries per day
+     * 4 billion entries per day, indexing every 8th entry
      */
     SMALL_DAILY(/*-----*/"yyyyMMdd'S'", 24 * 60 * 60 * 1000, 8 << 10, 8),
     /**
@@ -107,7 +107,7 @@ public enum RollCycles implements RollCycle {
      */
     LARGE_HOURLY_SPARSE("yyyyMMdd-HH'LS'", 60 * 60 * 1000, 4 << 10, 1024),
     /**
-     * 16 billion entries per hour with super-sparse indexing (every (2^20)th entry)
+     * 4 trillion entries per hour with super-sparse indexing (every (2^20)th entry)
      */
     LARGE_HOURLY_XSPARSE("yyyyMMdd-HH'LX'", 60 * 60 * 1000, 2 << 10, 1 << 20),
     /**
