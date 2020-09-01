@@ -40,8 +40,16 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
      * ExcerptCommon is attached to.
      *
      * @return the backing ChronicleQueue to which this
-     *         ExcerptCommon is attached to
+     * ExcerptCommon is attached to
      */
     @NotNull
     ChronicleQueue queue();
+
+    /**
+     * When set to true this Appender or Tailer can be shared between thread provided you ensure they used in a thread safe manner.
+     *
+     * @param disableThreadSafetyCheck true to turn off the thread safety check
+     * @return this.
+     */
+    E disableThreadSafetyCheck(boolean disableThreadSafetyCheck);
 }

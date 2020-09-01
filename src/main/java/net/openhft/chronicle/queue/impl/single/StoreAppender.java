@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -46,7 +47,9 @@ class StoreAppender extends AbstractCloseable
     private Pretoucher pretoucher = null;
     private NativeBytesStore<Void> batchTmp;
     private Wire bufferWire = null;
+    @UsedViaReflection
     private final Finalizer finalizer;
+    private boolean disableThreadSafetyCheck;
 
     StoreAppender(@NotNull final SingleChronicleQueue queue,
                   @NotNull final WireStorePool storePool,
@@ -810,5 +813,17 @@ class StoreAppender extends AbstractCloseable
         public boolean isNotComplete() {
             return !isClosed;
         }
+    }
+
+    @Override
+    public ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        this.disableThreadSafetyCheck = disableThreadSafetyCheck;
+        return this;
+    }
+
+    @Override
+    protected boolean threadSafetyCheck(boolean isUsed) {
+        return disableThreadSafetyCheck
+                || super.threadSafetyCheck(isUsed);
     }
 }

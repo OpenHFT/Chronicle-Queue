@@ -1239,4 +1239,5 @@ class StoreTailer extends AbstractCloseable
                 oldWire.bytes().release(INIT); // might be held elsewhere if used for another purpose.
         }
     }
+
 }
