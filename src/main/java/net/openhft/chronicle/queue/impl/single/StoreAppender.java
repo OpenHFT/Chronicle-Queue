@@ -494,7 +494,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Appends bytes withut write lock. Should only be used if write lock is acquired externally. Never use without
+     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without
      * write locking as it WILL corrupt the queue file and cause data loss
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
@@ -506,15 +506,20 @@ class StoreAppender extends AbstractCloseable
 
         if (wire == null)
             setCycle2(cycle, true);
-        else if (this.cycle < cycle)
+        else if (this.cycle != cycle)
             rollCycleTo(cycle);
 
-        boolean rollbackDontClose = index != wire.headerNumber() + 1;
-        if (rollbackDontClose) {
-            if (index > wire.headerNumber() + 1)
-                throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
-            Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
-            return;
+        boolean isNextIndex = index == wire.headerNumber() + 1;
+        if (!isNextIndex) {
+            // in case our cached headerNumber is incorrect.
+            resetPosition();
+            isNextIndex = index == wire.headerNumber() + 1;
+            if (!isNextIndex) {
+                if (index > wire.headerNumber() + 1)
+                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
+                Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+                return;
+            }
         }
         writeBytesInternal(bytes, metadata);
     }
@@ -666,6 +671,18 @@ class StoreAppender extends AbstractCloseable
         wire.bytes().writePosition(startOfMessage);
     }
 
+    @Override
+    public ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        this.disableThreadSafetyCheck = disableThreadSafetyCheck;
+        return this;
+    }
+
+    @Override
+    protected boolean threadSafetyCheck(boolean isUsed) {
+        return disableThreadSafetyCheck
+                || super.threadSafetyCheck(isUsed);
+    }
+
     private class Finalizer {
         @Override
         protected void finalize() throws Throwable {
@@ -813,17 +830,5 @@ class StoreAppender extends AbstractCloseable
         public boolean isNotComplete() {
             return !isClosed;
         }
-    }
-
-    @Override
-    public ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        this.disableThreadSafetyCheck = disableThreadSafetyCheck;
-        return this;
-    }
-
-    @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
-        return disableThreadSafetyCheck
-                || super.threadSafetyCheck(isUsed);
     }
 }
