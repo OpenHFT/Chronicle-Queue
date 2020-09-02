@@ -230,4 +230,8 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     TailerState state();
 
+    @Override
+    default ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        return this;
+    }
 }
