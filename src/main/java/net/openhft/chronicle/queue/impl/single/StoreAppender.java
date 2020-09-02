@@ -693,7 +693,7 @@ class StoreAppender extends AbstractCloseable
 
     class StoreAppenderContext implements DocumentContext {
 
-        boolean isClosed;
+        boolean isClosed = true;
         private boolean metaData = false;
         private boolean rollbackOnClose = false;
         private boolean buffered = false;
