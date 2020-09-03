@@ -743,13 +743,13 @@ class StoreAppender extends AbstractCloseable
 
         public void close(boolean unlock) {
             if (isClosed) {
-                Jvm.warn().on(getClass(), "Already Closed, close was called twice.", closedHere);
+                Jvm.warn().on(getClass(), "Already Closed, close was called twice.", new StackTrace("Second close", closedHere));
                 alreadyClosedFound = true;
                 return;
             }
 
             if (alreadyClosedFound) {
-                closedHere = new StackTrace("Closed here by " + Thread.currentThread());
+                closedHere = new StackTrace("Closed here");
             }
 
             try {
