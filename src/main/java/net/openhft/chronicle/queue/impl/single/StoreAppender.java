@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
@@ -699,6 +700,8 @@ class StoreAppender extends AbstractCloseable
         private boolean buffered = false;
         @Nullable
         private Wire wire;
+        private boolean alreadyClosedFound;
+        private StackTrace closedHere;
 
         @Override
         public int sourceId() {
@@ -739,10 +742,14 @@ class StoreAppender extends AbstractCloseable
         }
 
         public void close(boolean unlock) {
-
             if (isClosed) {
-                Jvm.warn().on(getClass(), "Already Closed, close was called twice.");
+                Jvm.warn().on(getClass(), "Already Closed, close was called twice.", closedHere);
+                alreadyClosedFound = true;
                 return;
+            }
+
+            if (alreadyClosedFound) {
+                closedHere = new StackTrace("Closed here by " + Thread.currentThread());
             }
 
             try {
