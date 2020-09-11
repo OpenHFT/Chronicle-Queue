@@ -45,7 +45,7 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
 
     @Test
     public void testReadBackwardsAfterWriteJustOneMessage() {
-        RollCycles rollingCycle = RollCycles.DAILY;
+        RollCycles rollingCycle = RollCycles.DEFAULT;
         // Write a message to the queue
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)
                 .timeProvider(timeProvider)

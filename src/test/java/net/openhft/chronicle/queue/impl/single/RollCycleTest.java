@@ -27,7 +27,7 @@ public class RollCycleTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.DAILY)
+                .rollCycle(RollCycles.DEFAULT)
                 .timeProvider(timeProvider)
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
@@ -65,7 +65,7 @@ public class RollCycleTest extends ChronicleQueueTestBase {
         int cyclesToWrite = 100;
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.DAILY)
+                .rollCycle(RollCycles.DEFAULT)
                 .timeProvider(timeProvider)
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
@@ -117,7 +117,7 @@ public class RollCycleTest extends ChronicleQueueTestBase {
         public ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
             queue = SingleChronicleQueueBuilder.fieldlessBinary(path.toFile())
                     .testBlockSize()
-                    .rollCycle(RollCycles.DAILY)
+                    .rollCycle(RollCycles.DEFAULT)
                     .timeProvider(timeProvider)
                     .storeFileListener(this)
                     .build();

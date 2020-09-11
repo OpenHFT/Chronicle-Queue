@@ -297,7 +297,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(DAILY).build()) {
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(DEFAULT).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
                 documentContext.wire().write("somekey").text("somevalue");
             }
@@ -307,7 +307,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // match the first RollCycles with the same format string, which may not
         // be the RollCycles it was written with
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-            assertEquals(DAILY, ignored.rollCycle());
+            assertEquals(DEFAULT, ignored.rollCycle());
         }
     }
 
@@ -751,7 +751,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (DocumentContext dc = tailer.readingDocument()) {
                     long index = tailer.index();
                     assertEquals(appender.cycle(), tailer.cycle());
-                    assertEquals(cycle + i, DAILY.toCycle(index));
+                    assertEquals(cycle + i, DEFAULT.toCycle(index));
                 }
                 stp.currentTimeMillis(stp.currentTimeMillis() + 86400_000L);
 
@@ -1238,7 +1238,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void shouldBeAbleToReadFromQueueWithNonZeroEpoch() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
-                .rollCycle(RollCycles.DAILY)
+                .rollCycle(RollCycles.DEFAULT)
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -1255,7 +1255,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
                 .epoch(1284739200000L)
-                .rollCycle(DAILY)
+                .rollCycle(DEFAULT)
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -1925,7 +1925,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             for (int i = 0; i < entries; i++) {
                 try (DocumentContext documentContext = forwardTailer.readingDocument()) {
                     assertTrue(documentContext.isPresent());
-                    assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
+                    assertEquals(i, RollCycles.DEFAULT.toSequenceNumber(documentContext.index()));
                     StringBuilder sb = Wires.acquireStringBuilder();
                     ValueIn valueIn = documentContext.wire().readEventName(sb);
                     assertTrue("hello".contentEquals(sb));
@@ -1949,7 +1949,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertTrue(documentContext.isPresent());
                 final long index = documentContext.index();
                 assertEquals("index: " + index, i, (int) index);
-                assertEquals(i, RollCycles.DAILY.toSequenceNumber(index));
+                assertEquals(i, RollCycles.DEFAULT.toSequenceNumber(index));
                 assertTrue(documentContext.isPresent());
                 StringBuilder sb = Wires.acquireStringBuilder();
                 ValueIn valueIn = documentContext.wire().readEventName(sb);

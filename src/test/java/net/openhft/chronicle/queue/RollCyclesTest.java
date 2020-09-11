@@ -50,6 +50,14 @@ public class RollCyclesTest extends QueueTestCommon {
     }
 
     @Test
+    public void shouldBe32bitShifted() {
+        long factor = (long) cycle.defaultIndexCount() * cycle.defaultIndexCount() * cycle.defaultIndexSpacing();
+        if (factor < 1L << 32)
+            factor = 1L << 32;
+        assertEquals(factor, cycle.toIndex(1, 0));
+    }
+
+    @Test
     public void shouldDetermineCurrentCycle() {
         assertCycleRollTimes(NO_EPOCH_OFFSET, withDelta(timeProvider, NO_EPOCH_OFFSET));
     }
@@ -72,18 +80,18 @@ public class RollCyclesTest extends QueueTestCommon {
 
     private void assertCycleRollTimes(final long epochOffset, final TimeProvider timeProvider) {
         final long currentTime = System.currentTimeMillis();
-        final long currentTimeAtStartOfCycle = currentTime - (currentTime % cycle.length());
+        final long currentTimeAtStartOfCycle = currentTime - (currentTime % cycle.lengthInMillis());
         clock.set(currentTimeAtStartOfCycle);
 
         final int startCycle = cycle.current(timeProvider, epochOffset);
 
-        clock.addAndGet(cycle.length());
+        clock.addAndGet(cycle.lengthInMillis());
 
         assertEquals(startCycle + 1, cycle.current(timeProvider, epochOffset));
         assertEquals(startCycle + 1, cycle.current(plusOneMillisecond(timeProvider), epochOffset));
         assertEquals(startCycle, cycle.current(minusOneMillisecond(timeProvider), epochOffset));
 
-        clock.addAndGet(cycle.length());
+        clock.addAndGet(cycle.lengthInMillis());
 
         assertEquals(startCycle + 2, cycle.current(timeProvider, epochOffset));
         assertEquals(startCycle + 2, cycle.current(plusOneMillisecond(timeProvider), epochOffset));

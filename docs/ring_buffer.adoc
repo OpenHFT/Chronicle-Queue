@@ -119,36 +119,44 @@ loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue
 If you don't need access across processes, then no need to set `bufferBytesStoreCreator`. The default bufferBytesStoreCreator
 will create an in-memory `ByteStore`.
 
-NOTE: This example won't work on Windows as it refers to /tmp - if you want to test your code on Windows then you may want to copy/paste RB_BYTES_STORE_CREATOR_MAPPED_FILE and create
- your own implementation.  If you are conducting performance tests on Windows and using a memory mapped file then you will gain no benefit -
+NOTE: This example won't work on Windows as it refers to tmpfs - if you want to test your code on Windows then you may want to adapt accordingly. If you are conducting performance tests on Windows and using a memory mapped file then you will gain no benefit -
  the only benefit to be gained with a memory mapped file is if it mapped to a fast filesystem like tmpfs on unix.
 
-```
-    // process 1
+[source,Java]
+----
+    // Common
+    final File path = new File("/dev/shm/example");
+    final File ring = new File("/dev/shm/example.rb");
+    final int TAILERS = 5;
+
+    // persist the ring buffer to (mapped) file for sharing across processes
+    final ThrowingBiFunction<Long, Integer, BytesStore, Exception> mappedBytesCreator 
+        = (size, readers) -> ChronicleRingBuffer.mappedBytes(ring, ChronicleRingBuffer.sizeFor(size, readers));
+
+    // Appender process
     SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
     try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
+            .maxTailers(TAILERS)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
-            // RB_BYTES_STORE_CREATOR_MAPPED_FILE is an *example* implementation of a bufferBytesStoreCreator
-            // which creates a memory-mapped file located in a fast filesystem (tmpfs) and has same name as
-            // underlying queue, thus allowing its contents to be mapped and shared between processes.
-            .bufferBytesStoreCreator(builder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
+            .bufferBytesStoreCreator(mappedBytesCreator)
             .build()) {
         ExcerptAppender appender = queue.acquireAppender();
         ...
     }
 
-    // process 2
+    // Tailer processes - 1..TAILERS 
     SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path); // same path as process 1
     try (@NotNull ChronicleQueue queue = builder.bufferCapacity(1 << 20)
+            .maxTailers(TAILERS)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
-            .bufferBytesStoreCreator(builder.RB_BYTES_STORE_CREATOR_MAPPED_FILE)
+            .bufferBytesStoreCreator(mappedBytesCreator)
             .build()) {
         ExcerptTailer tailer = queue.createTailer();
         ...
     }
-```
+----
 
 ===== Drainer thread
 When the queue's event loop is closed, the drainer thread will wait up to 5 seconds to finish draining

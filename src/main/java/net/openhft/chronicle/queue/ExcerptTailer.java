@@ -99,9 +99,13 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     int cycle();
 
     /**
-     * Moves the index for this Trailer to the provided {@code index}.
+     * Tries to move the index for this Trailer to the provided {@code index}.
      * <p>
      * The index contains both the cycle number and sequence number within the cycle.
+     * <p>
+     * In order for the operation to succeed, the roll file, corresponding to
+     * the cycle number in the index, must be present and the roll file must
+     * contain the sequence number contained in the index.
      * <p>
      * If the index is not a valid index, the operation is undefined.
      *
@@ -158,7 +162,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     boolean striding();
 
     /**
-     * Returns the direction of this Tailer.
+     * Sets the direction of this ExcerptTailer.
      * <p>
      * The direction determines the direction of movement upon reading an excerpt.
      *
@@ -171,16 +175,16 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer direction(@NotNull TailerDirection direction);
 
     /**
-     * Returns the direction of this Tailer.
+     * Returns the direction of this ExcerptTailer.
      * <p>
      * The direction determines the direction of movement upon reading an excerpt.
      *
-     * @return the direction of this Tailer
+     * @return the direction of this ExcerptTailer
      */
     TailerDirection direction();
 
     /**
-     * Winds this Tailer to after the last entry which wrote an entry to the queue.
+     * Winds this ExcerptTailer to after the last entry which wrote an entry to the queue.
      *
      * @param queue which was written to.
      * @return this ExcerptTailer
@@ -211,7 +215,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
      * This will block forever if no sinks acknowledge receipt.
      *
-     * @return
+     * @return the Read After Replica Acknowledged property of this Trailer
      */
     default boolean readAfterReplicaAcknowledged() {
         return false;
@@ -226,8 +230,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     TailerState state();
 
-    /**
-     * If true, assume this is used across threads with external synchronisation
-     */
-    ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck);
+    // Need to add this here until we can release Ring. https://github.com/ChronicleEnterprise/Chronicle-Ring/issues/12
+    @Override
+    default ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        return this;
+    }
 }

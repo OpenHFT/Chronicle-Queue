@@ -95,7 +95,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     .indexSpacing(1)
                     .build()) {
 
-                long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
+                long start = RollCycles.DEFAULT.toIndex(queue.cycle(), 0);
                 appendMessage(queue, start, "Hello World");
                 @NotNull String expectedEager = "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
@@ -246,7 +246,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     .indexSpacing(spacing)
                     .build()) {
 
-                long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
+                long start = RollCycles.DEFAULT.toIndex(queue.cycle(), 0);
                 @NotNull ExcerptTailer tailer = queue.createTailer();
                 assertFalse(tailer.moveToIndex(start));
 

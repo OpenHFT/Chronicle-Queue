@@ -33,6 +33,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 {RollCycles.DAILY},
+                {RollCycles.DEFAULT},
                 {RollCycles.HOURLY},
                 {RollCycles.MINUTELY},
                 {RollCycles.HUGE_DAILY}

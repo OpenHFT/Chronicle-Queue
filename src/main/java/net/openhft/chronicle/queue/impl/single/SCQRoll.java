@@ -60,7 +60,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
             long epoch,
             @Nullable LocalTime rollTime,
             @Nullable ZoneId rollTimeZone) {
-        this.length = rollCycle.length();
+        this.length = rollCycle.lengthInMillis();
         this.format = rollCycle.format();
         this.epoch = epoch;
         this.rollTime = rollTime;

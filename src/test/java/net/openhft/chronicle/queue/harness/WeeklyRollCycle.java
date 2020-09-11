@@ -49,7 +49,7 @@ public class WeeklyRollCycle implements RollCycle {
     }
 
     @Override
-    public int length() {
+    public int lengthInMillis() {
         return this.length;
     }
 
@@ -65,7 +65,7 @@ public class WeeklyRollCycle implements RollCycle {
 
     @Override
     public int current(@NotNull TimeProvider time, long epoch) {
-        return (int) ((time.currentTimeMillis() - epoch) / length());
+        return (int) ((time.currentTimeMillis() - epoch) / lengthInMillis());
     }
 
     @Override

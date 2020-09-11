@@ -2,6 +2,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.StackTrace;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -46,7 +48,9 @@ class StoreAppender extends AbstractCloseable
     private Pretoucher pretoucher = null;
     private NativeBytesStore<Void> batchTmp;
     private Wire bufferWire = null;
+    @UsedViaReflection
     private final Finalizer finalizer;
+    private boolean disableThreadSafetyCheck;
 
     StoreAppender(@NotNull final SingleChronicleQueue queue,
                   @NotNull final WireStorePool storePool,
@@ -351,6 +355,8 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
+        if (!CHECK_THREAD_SAFETY)
+            this.threadSafetyCheck(true);
         if (writeContext.isOpen() && wire != null)
             return writeContext;
         return writingDocument(metaData);
@@ -491,7 +497,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Appends bytes withut write lock. Should only be used if write lock is acquired externally. Never use without
+     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without
      * write locking as it WILL corrupt the queue file and cause data loss
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
@@ -503,15 +509,20 @@ class StoreAppender extends AbstractCloseable
 
         if (wire == null)
             setCycle2(cycle, true);
-        else if (this.cycle < cycle)
+        else if (this.cycle != cycle)
             rollCycleTo(cycle);
 
-        boolean rollbackDontClose = index != wire.headerNumber() + 1;
-        if (rollbackDontClose) {
-            if (index > wire.headerNumber() + 1)
-                throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
-            Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
-            return;
+        boolean isNextIndex = index == wire.headerNumber() + 1;
+        if (!isNextIndex) {
+            // in case our cached headerNumber is incorrect.
+            resetPosition();
+            isNextIndex = index == wire.headerNumber() + 1;
+            if (!isNextIndex) {
+                if (index > wire.headerNumber() + 1)
+                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
+                Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+                return;
+            }
         }
         writeBytesInternal(bytes, metadata);
     }
@@ -663,6 +674,18 @@ class StoreAppender extends AbstractCloseable
         wire.bytes().writePosition(startOfMessage);
     }
 
+    @Override
+    public ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        this.disableThreadSafetyCheck = disableThreadSafetyCheck;
+        return this;
+    }
+
+    @Override
+    protected boolean threadSafetyCheck(boolean isUsed) {
+        return disableThreadSafetyCheck
+                || super.threadSafetyCheck(isUsed);
+    }
+
     private class Finalizer {
         @Override
         protected void finalize() throws Throwable {
@@ -673,12 +696,14 @@ class StoreAppender extends AbstractCloseable
 
     class StoreAppenderContext implements DocumentContext {
 
-        boolean isClosed;
+        boolean isClosed = true;
         private boolean metaData = false;
         private boolean rollbackOnClose = false;
         private boolean buffered = false;
         @Nullable
         private Wire wire;
+        private boolean alreadyClosedFound;
+        private StackTrace closedHere;
 
         @Override
         public int sourceId() {
@@ -719,10 +744,14 @@ class StoreAppender extends AbstractCloseable
         }
 
         public void close(boolean unlock) {
-
             if (isClosed) {
-                Jvm.warn().on(getClass(), "Already Closed, close was called twice.");
+                Jvm.warn().on(getClass(), "Already Closed, close was called twice.", new StackTrace("Second close", closedHere));
+                alreadyClosedFound = true;
                 return;
+            }
+
+            if (alreadyClosedFound) {
+                closedHere = new StackTrace("Closed here");
             }
 
             try {

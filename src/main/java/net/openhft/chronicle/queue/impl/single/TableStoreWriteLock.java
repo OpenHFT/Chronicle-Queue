@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -44,13 +45,16 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         throwExceptionIfClosed();
 
         assert checkNotAlreadyLocked();
+        long value = 0;
         try {
             int i = 0;
+            value = lock.getVolatileValue();
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
                 if (i++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted for the lock file:" + path);
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                value = lock.getVolatileValue();
             }
 
             //noinspection ConstantConditions,AssertWithSideEffects
@@ -58,14 +62,12 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
             // success
         } catch (TimeoutException e) {
-            final long lockedByPID = lock.getVolatileValue(Long.MIN_VALUE);
-            final String lockedBy =
-                    lockedByPID == Long.MIN_VALUE ? "unknown" :
-                            lockedByPID == PID ? "me"
-                                    : Long.toString(lockedByPID);
-            warn().on(getClass(), "Couldn't acquire write lock after " + timeout
-                    + "ms for the lock file:" + path + ", overriding the lock. Lock was held by " + lockedBy);
-            forceUnlock();
+            final String lockedBy = getLockedBy(value);
+            warn().on(getClass(), "Couldn't acquire write lock " +
+                    "after " + timeout + " ms " +
+                    "for the lock file:" + path + ", overriding the lock. " +
+                    "Lock was held by " + lockedBy);
+            forceUnlock(value);
             // we should reset the pauser after a timeout exception
             pauser.reset();
             lock();
@@ -73,6 +75,15 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             pauser.reset();
 
         }
+    }
+
+    @NotNull
+    protected String getLockedBy(long value) {
+        final String lockedBy =
+                value == Long.MIN_VALUE ? "unknown" :
+                        value == PID ? "me"
+                                : Long.toString((int) value);
+        return lockedBy;
     }
 
     private boolean checkNotAlreadyLocked() {
@@ -86,7 +97,14 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     @Override
     public void unlock() {
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
-            warn().on(getClass(), "Write lock was unlocked by someone else! For the lock file:" + path);
+            long value = lock.getValue();
+            if (value == UNLOCKED)
+                warn().on(getClass(), "Write lock was unlocked by someone else! For the " +
+                        "lock file:" + path);
+            else
+                warn().on(getClass(), "Write lock was locked by someone else! For the " +
+                        "lock file:" + path + " " +
+                        "by PID: " + getLockedBy(value));
         }
         //noinspection ConstantConditions,AssertWithSideEffects
         assert (lockedByThread = null) == null;

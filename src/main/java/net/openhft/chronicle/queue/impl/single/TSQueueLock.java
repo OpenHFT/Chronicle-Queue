@@ -37,7 +37,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     private static final int PID = Jvm.getProcessId();
     private final long timeout;
 
-    public TSQueueLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
+    public TSQueueLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, long timeoutMs) {
         super(LOCK_KEY, tableStore, pauser);
         timeout = timeoutMs;
     }
@@ -56,23 +56,22 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         if (isLockHeldByCurrentThread(tid)) {
             return;
         }
+        int count = 0;
+        long lockValueFromTid = getLockValueFromTid(tid);
+        long value = lock.getVolatileValue();
         try {
-            int count = 0;
-            while (!lock.compareAndSwapValue(UNLOCKED, getLockValueFromTid(tid))) {
+            while (!lock.compareAndSwapValue(UNLOCKED, lockValueFromTid)) {
                 if (count++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
-            final long lockedByPID = lock.getVolatileValue();
-            final String lockedBy = lockedByPID == PID ? "me" : Long.toString(lockedByPID);
-            warn().on(getClass(), "Couldn't acquire lock after " + timeout + "ms for the lock file:"
-                    + path + ", overriding the lock. Lock was held by PID " + lockedBy);
-            forceUnlock();
+            warnLock("Overriding the lock. Couldn't acquire lock", value);
+            forceUnlock(value);
             acquireLock();
         } finally {
             pauser.reset();
-
         }
     }
 
@@ -81,9 +80,10 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     /**
-     * checks if current thread holds lock. If not, it will wait for <code>chronicle.queue.lock.timeoutMS</code> millis for the lock to be released,
-     * and if it is not after timeout, throws {@link IllegalStateException}.
+     * checks if current thread holds lock. If not, it will wait for four times <code>chronicle.queue.lock.timeoutMS</code> millis
+     * for the lock to be released, and if it is not after timeout, throws {@link IllegalStateException}.
      */
+    // TODO combine logic for acquireLock with this method so recovery is consistent.
     @Override
     public void waitForLock() {
         throwExceptionIfClosed();
@@ -92,16 +92,20 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         if (isLockHeldByCurrentThread(tid))
             return;
 
+        long value = lock.getVolatileValue();
         try {
-            while (lock.getVolatileValue() != UNLOCKED) {
+            while (value != UNLOCKED) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
-            warn().on(getClass(), "Queue lock is still held after " + timeout + "ms for the lock file:"
-                    + path + ". Lock is held by PID " + lock.getVolatileValue() + ". Unlocking forcibly");
-            forceUnlock();
+            warnLock("Queue lock is still held", value);
+            forceUnlock(value);
+            // try again.
+            waitForLock();
+
         } catch (NullPointerException ex) {
             if (!tableStore.isClosed())
                 throw ex;
@@ -109,6 +113,16 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         } finally {
             pauser.reset();
         }
+    }
+
+    private void warnLock(String msg, long value) {
+        String pid = ((int) value == PID) ? "me" : Integer.toString((int) value);
+        warn().on(getClass(), "" +
+                msg + " after " + timeout + "ms for " +
+                "the lock file:" + path + ". Lock is held by " +
+                "PID: " + pid + ", " +
+                "TID: " + (int) (value >>> 32) + "." +
+                " Unlocking forcibly");
     }
 
     /**
@@ -137,5 +151,4 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     private boolean isLockHeldByCurrentThread(long tid) {
         return lock.getVolatileValue() == getLockValueFromTid(tid);
     }
-
 }
