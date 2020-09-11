@@ -3427,4 +3427,33 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             bytes.releaseLast();
         }
     }
+
+    /**
+     * relates to https://github.com/OpenHFT/Chronicle-Queue/issues/699
+     */
+    @Test
+    public void testReadUsingReadOnly() {
+        File tmpDir = getTmpDir();
+        String expected = "hello world";
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(tmpDir)
+                .build()) {
+            try (DocumentContext dc = out.acquireAppender().writingDocument()) {
+                dc.wire().getValueOut().text(expected);
+            }
+        }
+
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(tmpDir)
+                .readOnly(false)
+                .build()) {
+            StringBuilder sb = new StringBuilder();
+            try (DocumentContext dc = out.createTailer().readingDocument()) {
+                dc.wire().getValueIn().text(sb);
+            }
+
+            Assert.assertEquals(expected, sb.toString());
+        }
+    }
+
 }
