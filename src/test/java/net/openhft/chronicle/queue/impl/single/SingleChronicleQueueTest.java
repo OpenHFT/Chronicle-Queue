@@ -3445,7 +3445,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(tmpDir)
-                .readOnly(false)
+                .readOnly(true)
                 .build()) {
             StringBuilder sb = new StringBuilder();
             try (DocumentContext dc = out.createTailer().readingDocument()) {
