@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class RollCycleMultiThreadStressNoShrinkTest extends RollCycleMultiThreadStressTest {
+public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiThreadStressTest {
 
     @Test
     public void stress() throws InterruptedException, IOException {
@@ -12,7 +12,7 @@ public class RollCycleMultiThreadStressNoShrinkTest extends RollCycleMultiThread
     }
 
     static {
-        System.setProperty("chronicle.queue.disableFileShrinking", "true");
+        System.setProperty("stress.double_buffer", "true");
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {

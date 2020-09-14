@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +49,8 @@ public class RollCycleMultiThreadStressTest {
     final boolean PRETOUCH;
     final boolean READERS_READ_ONLY;
     final boolean DUMP_QUEUE;
-    boolean SHARED_WRITE_QUEUE;
+    final boolean SHARED_WRITE_QUEUE;
+    final boolean DOUBLE_BUFFER;
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
     final Logger LOG = LoggerFactory.getLogger(getClass());
@@ -71,6 +71,7 @@ public class RollCycleMultiThreadStressTest {
         READERS_READ_ONLY = Jvm.getBoolean("read_only");
         DUMP_QUEUE = Jvm.getBoolean("dump_queue");
         SHARED_WRITE_QUEUE = Jvm.getBoolean("sharedWriteQ");
+        DOUBLE_BUFFER = Jvm.getBoolean("double_buffer");
 
         if (TEST_TIME > 2) {
             AbstractReferenceCounted.disableReferenceTracing();
@@ -96,6 +97,7 @@ public class RollCycleMultiThreadStressTest {
 
     @Test
     public void stress() throws InterruptedException, IOException {
+        assert warnIfAssertsAreOn();
 
         File file = DirectoryUtils.tempDir("stress");
 //        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
@@ -275,12 +277,17 @@ public class RollCycleMultiThreadStressTest {
 //        System.out.println("Test complete");
     }
 
+    private boolean warnIfAssertsAreOn() {
+        Jvm.warn().on(getClass(), "Reminder: asserts are on");
+        return true;
+    }
+
     @NotNull
     SingleChronicleQueueBuilder queueBuilder(File path) {
         return SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)
-//                .doubleBuffer(true)
+                .doubleBuffer(DOUBLE_BUFFER)
                 .rollCycle(RollCycles.TEST_SECONDLY);
     }
 

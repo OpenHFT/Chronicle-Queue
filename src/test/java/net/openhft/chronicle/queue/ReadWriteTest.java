@@ -69,10 +69,12 @@ public class ReadWriteTest extends QueueTestCommon {
 
     @Test
     public void testReadFromReadOnlyChronicle() {
+        assumeFalse(OS.isWindows());
+
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
-                .readOnly(!OS.isWindows())
+                .readOnly(true)
                 .build()) {
             // check dump
             assertTrue(out.dump().length() > 1);

@@ -71,7 +71,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
-    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly();
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
     protected final EventLoop eventLoop;
     @NotNull
@@ -407,24 +407,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public ExcerptAppender acquireAppender() {
         throwExceptionIfClosed();
-
         if (readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
-        assert !isClosed();
-
-        ExcerptAppender appender = strongExcerptAppenderThreadLocal.get();
-        if (appender != null)
-            return appender;
-
-        return createExcerptAppender();
-    }
-
-    @NotNull
-    private ExcerptAppender createExcerptAppender() {
-        ExcerptAppender appender;
-        strongExcerptAppenderThreadLocal.set(appender = newAppender());
-        return appender;
+        return strongExcerptAppenderThreadLocal.get();
     }
 
     @Override
