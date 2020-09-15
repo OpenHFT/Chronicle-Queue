@@ -69,7 +69,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     @SuppressWarnings("unused")
     @UsedViaReflection
-    private SingleTableStore(@NotNull WireIn wire) {
+    private SingleTableStore(@NotNull final WireIn wire) {
         assert wire.startUse();
         try {
             this.wireType = Objects.requireNonNull(wire.read(MetaDataField.wireType).object(WireType.class));
@@ -95,8 +95,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * @param mappedBytes used to mapped the data store file
      */
     SingleTableStore(@NotNull final WireType wireType,
-                     @NotNull MappedBytes mappedBytes,
-                     @NotNull T metadata) {
+                     @NotNull final MappedBytes mappedBytes,
+                     @NotNull final T metadata) {
         this.wireType = wireType;
         this.metadata = metadata;
         this.mappedBytes = mappedBytes;
@@ -104,16 +104,23 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedWire = wireType.apply(mappedBytes);
     }
 
-    public static <T, R> R doWithSharedLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
+    public static <T, R> R doWithSharedLock(@NotNull final File file,
+                                            @NotNull final Function<T, ? extends R> code,
+                                            @NotNull final Supplier<T> target) {
         return doWithLock(file, code, target, true);
     }
 
-    public static <T, R> R doWithExclusiveLock(File file, Function<T, ? extends R> code, Supplier<T> target) {
+    public static <T, R> R doWithExclusiveLock(@NotNull final File file,
+                                               @NotNull final Function<T, ? extends R> code,
+                                               @NotNull final Supplier<T> target) {
         return doWithLock(file, code, target, false);
     }
 
     // shared vs exclusive - see https://docs.oracle.com/javase/7/docs/api/java/nio/channels/FileChannel.html
-    private static <T, R> R doWithLock(File file, Function<T, ? extends R> code, Supplier<T> target, boolean shared) {
+    private static <T, R> R doWithLock(@NotNull final File file,
+                                       @NotNull final Function<T, ? extends R> code,
+                                       @NotNull final Supplier<T> target,
+                                       final boolean shared) {
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
@@ -156,9 +163,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         return dump(false);
     }
 
-    private String dump(boolean abbrev) {
+    private String dump(final boolean abbrev) {
 
-        MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
+        final MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
         try {
             bytes.readLimit(bytes.realCapacity());
             return Wires.fromSizePrefixedBlobs(bytes, abbrev);
@@ -210,8 +217,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     @Override
-    public void writeMarshallable(@NotNull WireOut wire) {
-        ;
+    public void writeMarshallable(@NotNull final WireOut wire) {
 
         wire.write(MetaDataField.wireType).object(wireType);
 
@@ -226,30 +232,30 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * {@inheritDoc}
      */
     @Override
-    public synchronized LongValue acquireValueFor(CharSequence key, long defaultValue) { // TODO Change to ThreadLocal values if performance is a problem.
-        StringBuilder sb = Wires.acquireStringBuilder();
+    public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) { // TODO Change to ThreadLocal values if performance is a problem.
+        final StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve(this);
         try {
             mappedBytes.readPosition(0);
             mappedBytes.readLimit(mappedBytes.realCapacity());
             while (mappedWire.readDataHeader()) {
-                int header = mappedBytes.readVolatileInt();
+                final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
                     break;
-                long readPosition = mappedBytes.readPosition();
-                int length = Wires.lengthOf(header);
-                ValueIn valueIn = mappedWire.readEventName(sb);
+                final long readPosition = mappedBytes.readPosition();
+                final int length = Wires.lengthOf(header);
+                final ValueIn valueIn = mappedWire.readEventName(sb);
                 if (StringUtils.equalsCaseIgnore(key, sb)) {
                     return valueIn.int64ForBinding(null);
                 }
                 mappedBytes.readPosition(readPosition + length);
             }
             // not found
-            int safeLength = Maths.toUInt31(mappedBytes.realCapacity() - mappedBytes.readPosition());
+            final int safeLength = Maths.toUInt31(mappedBytes.realCapacity() - mappedBytes.readPosition());
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             mappedBytes.writePosition(mappedBytes.readPosition());
-            long pos = mappedWire.enterHeader(safeLength);
-            LongValue longValue = wireType.newLongReference().get();
+            final long pos = mappedWire.enterHeader(safeLength);
+            final LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
             mappedWire.writeAlignTo(Integer.BYTES, 0);
             mappedWire.updateHeader(pos, false, 0);
@@ -267,7 +273,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * {@inheritDoc}
      */
     @Override
-    public <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code) {
+    public <R> R doWithExclusiveLock(@NotNull final Function<TableStore<T>, ? extends R> code) {
         return doWithExclusiveLock(file(), code, () -> this);
     }
 
@@ -277,9 +283,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
+    protected boolean threadSafetyCheck(final boolean isUsed) {
         // TableStore are thread safe
         return true;
     }
 }
-
