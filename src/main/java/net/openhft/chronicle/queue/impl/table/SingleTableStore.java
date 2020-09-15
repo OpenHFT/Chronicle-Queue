@@ -118,6 +118,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
         final long timeoutAt = System.currentTimeMillis() + timeoutMS;
+        final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
             for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
                 try (FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, shared)) {
@@ -128,7 +129,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     // failed to acquire the lock, wait until other operation completes
                     if (count > 9) {
                         if (Jvm.isDebugEnabled(SingleTableStore.class)) {
-                            String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath() + ", count=" + count;
+                            final long elapsedMs = System.currentTimeMillis() - startMs;
+                            final String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath() + ", count=" + count + ", elapsed=" + elapsedMs + " ms";
                             Jvm.debug().on(SingleTableStore.class, "", new StackTrace(message));
                         }
                     }
