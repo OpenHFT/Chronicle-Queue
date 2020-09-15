@@ -14,22 +14,24 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Thread-safe, self-cleaning cache for ReferenceCounted (& Closeable) objects
+ * Thread-safe, self-cleaning cache for ReferenceCounted (and Closeable) objects
  */
 public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V, E extends Throwable>
         extends AbstractCloseable {
+
     private final Map<K, T> cache = new LinkedHashMap<>();
     private final Function<T, V> transformer;
     private final ThrowingFunction<K, T, E> creator;
     private final Runnable bgCleanup = this::bgCleanup;
 
-    public ReferenceCountedCache(Function<T, V> transformer,
-                                 ThrowingFunction<K, T, E> creator) {
+    public ReferenceCountedCache(final Function<T, V> transformer,
+                                 final ThrowingFunction<K, T, E> creator) {
         this.transformer = transformer;
         this.creator = creator;
     }
 
-    @NotNull V get(@NotNull final K key) throws E {
+    @NotNull
+    V get(@NotNull final K key) throws E {
         throwExceptionIfClosed();
 
         final V rv;
@@ -71,16 +73,16 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
+    protected boolean threadSafetyCheck(final boolean isUsed) {
         return true;
     }
 
     void bgCleanup() {
         synchronized (cache) {
-            // remove all which have been dereferenced by other than me. Garbagey but rare
+            // remove all which have been de-referenced by other than me. Garbagey but rare
             cache.entrySet().removeIf(entry -> {
                 T value = entry.getValue();
-                boolean noOtherReferencers = value.refCount() == 1;
+                final boolean noOtherReferencers = value.refCount() == 1;
                 if (noOtherReferencers) {
                     //System.err.println("Removing " + value.toString() + " by " + this);
                     value.release(this);
