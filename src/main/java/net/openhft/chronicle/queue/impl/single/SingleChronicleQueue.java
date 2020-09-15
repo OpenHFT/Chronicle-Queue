@@ -71,7 +71,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
-    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
     protected final EventLoop eventLoop;
     @NotNull
@@ -121,6 +120,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     protected final boolean doubleBuffer;
     private StoreFileListener storeFileListener;
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
     private RollCycle rollCycle;
     private int deltaCheckpointInterval;
@@ -892,13 +892,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         StringBuilder name = acquireStringBuilder();
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                            boolean error = true;
                             try {
                                 wireStore = valueIn.typedMarshallable();
-                                error = false;
-                            } finally {
-                                if (error)
-                                    mappedBytes.close();
+                            } catch (Throwable t) {
+                                mappedBytes.close();
+                                throw t;
                             }
 
                         } else {
