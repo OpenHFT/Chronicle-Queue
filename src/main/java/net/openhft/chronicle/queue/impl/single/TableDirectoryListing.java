@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.function.ToIntFunction;
 
 final class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(TableDirectoryListing.class);
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
@@ -29,7 +30,8 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     private volatile LongValue modCount;
 
     TableDirectoryListing(
-            @NotNull TableStore<?> tableStore, final Path queuePath,
+            final @NotNull TableStore<?> tableStore,
+            final Path queuePath,
             final ToIntFunction<File> fileToCycleFunction,
             final boolean readOnly) {
         this.tableStore = tableStore;
@@ -55,7 +57,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     }
 
     @Override
-    public void refresh(boolean force) {
+    public void refresh(final boolean force) {
 
         if (readOnly || !force) {
             return;
@@ -64,7 +66,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         throwExceptionIfClosed();
 
         while (true) {
-            long currentMax = maxCycleValue.getVolatileValue();
+            final long currentMax = maxCycleValue.getVolatileValue();
             final File[] queueFiles = queuePath.toFile().
                     listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
             int min = UNSET_MIN_CYCLE;
@@ -131,7 +133,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
+    protected boolean threadSafetyCheck(final boolean isUsed) {
         // TDL are thread safe
         return true;
     }
