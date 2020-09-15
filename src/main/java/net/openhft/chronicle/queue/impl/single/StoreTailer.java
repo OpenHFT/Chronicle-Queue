@@ -63,18 +63,25 @@ class StoreTailer extends AbstractCloseable
     }
 
     public StoreTailer(@NotNull final SingleChronicleQueue queue, final LongValue indexValue) {
-        this.queue = queue;
-        this.indexValue = indexValue;
-        this.setCycle(Integer.MIN_VALUE);
-        this.index = 0;
-        queue.addCloseListener(this);
+        boolean error = true;
+        try {
+            this.queue = queue;
+            this.indexValue = indexValue;
+            this.setCycle(Integer.MIN_VALUE);
+            this.index = 0;
+            queue.addCloseListener(this);
 
-        if (indexValue == null) {
-            toStart();
-        } else {
-            moveToIndex(indexValue.getVolatileValue());
+            if (indexValue == null) {
+                toStart();
+            } else {
+                moveToIndex(indexValue.getVolatileValue());
+            }
+            finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+            error = false;
+        } finally {
+            if (error)
+                close();
         }
-        finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
     @Override

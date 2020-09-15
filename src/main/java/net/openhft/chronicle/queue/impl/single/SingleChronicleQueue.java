@@ -892,7 +892,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         StringBuilder name = acquireStringBuilder();
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                            wireStore = valueIn.typedMarshallable();
+                            boolean error = true;
+                            try {
+                                wireStore = valueIn.typedMarshallable();
+                                error = false;
+                            } finally {
+                                if (error)
+                                    mappedBytes.close();
+                            }
 
                         } else {
                             throw new StreamCorruptedException("The first message should be the header, was " + name);
