@@ -133,7 +133,14 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                         .peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
-        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("hello")));
+        // "hello"
+        assertTrue(capturedOutput.stream()
+                .anyMatch(msg -> msg.contains("  5,\n" +
+                        "  104,\n" +
+                        "  101,\n" +
+                        "  108,\n" +
+                        "  108,\n" +
+                        "  111,")));
     }
 
     @Test
@@ -171,7 +178,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
                         .filter(s -> !s.contains("history:"))
-                        .peek(System.out::println)
+//                        .peek(System.out::println)
                         .count();
         assertEquals(12, msgCount);
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
