@@ -68,7 +68,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             }
         } catch (TimeoutException e) {
             warnLock("Overriding the lock. Couldn't acquire lock", value);
-            forceUnlock(value);
+            forceUnlockIfProcessIsDead(value);
             acquireLock();
         } finally {
             pauser.reset();
@@ -102,7 +102,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             }
         } catch (TimeoutException e) {
             warnLock("Queue lock is still held", value);
-            forceUnlock(value);
+            forceUnlockIfProcessIsDead(value);
             // try again.
             waitForLock();
 
