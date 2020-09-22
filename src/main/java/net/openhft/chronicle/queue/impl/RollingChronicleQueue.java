@@ -113,4 +113,5 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     int deltaCheckpointInterval();
 
     QueueLock queueLock();
+
 }

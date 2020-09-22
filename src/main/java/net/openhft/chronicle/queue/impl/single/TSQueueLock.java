@@ -80,8 +80,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     /**
-     * checks if current thread holds lock. If not, it will wait for four times <code>chronicle.queue.lock.timeoutMS</code> millis
-     * for the lock to be released, and if it is not after timeout, throws {@link IllegalStateException}.
+     * checks if current thread holds lock. If not, it will wait for four times <code>chronicle.queue.lock.timeoutMS</code> millis for the lock to be
+     * released, and if it is not after timeout, throws {@link IllegalStateException}.
      */
     // TODO combine logic for acquireLock with this method so recovery is consistent.
     @Override
@@ -146,6 +146,22 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
             warn().on(getClass(), "Queue lock was unlocked by someone else!");
         }
+    }
+
+    public void quietUnlock() {
+        if (isClosed()) {
+            try {
+                throwExceptionIfClosed();
+            } catch (IllegalStateException e) {
+                Jvm.warn().on(getClass(), new IllegalStateException("Cannot unlock as already closed", e));
+            }
+
+            return;
+        }
+
+        long tid = Thread.currentThread().getId();
+
+        lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED);
     }
 
     private boolean isLockHeldByCurrentThread(long tid) {

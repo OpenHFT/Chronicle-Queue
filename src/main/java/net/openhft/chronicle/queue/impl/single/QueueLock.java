@@ -26,4 +26,9 @@ public interface QueueLock extends Closeable {
     void acquireLock();
 
     void unlock();
+
+    /**
+     * wont report if it was unable to unlock, useful when closing, and you are not sure if you hold the lock in the first place.
+     */
+    void quietUnlock();
 }
