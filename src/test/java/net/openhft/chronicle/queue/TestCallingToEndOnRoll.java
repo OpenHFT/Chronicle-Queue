@@ -1,15 +1,7 @@
-package net.openhft.chronicle;
+package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Marshallable;
-import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
