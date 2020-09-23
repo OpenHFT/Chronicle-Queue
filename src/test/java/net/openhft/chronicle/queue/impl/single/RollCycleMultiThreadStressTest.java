@@ -14,7 +14,10 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,7 +128,9 @@ public class RollCycleMultiThreadStressTest {
         final List<Writer> writers = new ArrayList<>();
 
         if (READERS_READ_ONLY)
-            createQueue(file);
+            try (ChronicleQueue roq = createQueue(file)) {
+
+            }
 
         if (SHARED_WRITE_QUEUE)
             sharedWriterQueue = createQueue(file);
