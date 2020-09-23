@@ -198,7 +198,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     StoreTailer acquireTailer() {
-        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
+        return ThreadLocalHelper.getTL(tlTailer, this, q -> new StoreTailer(q, q.pool));
     }
 
     @NotNull
@@ -432,7 +432,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         LongValue index = id == null
                 ? null
                 : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
-        final StoreTailer storeTailer = new StoreTailer(this, index);
+        final StoreTailer storeTailer = new StoreTailer(this, pool, index);
         directoryListing.refresh(true);
         storeTailer.clearUsedByThread();
         return storeTailer;

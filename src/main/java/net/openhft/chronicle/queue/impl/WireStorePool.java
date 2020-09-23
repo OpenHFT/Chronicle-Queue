@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.SimpleCloseable;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
@@ -66,7 +67,7 @@ public class WireStorePool extends SimpleCloseable {
     }
 
     public void closeStore(@NotNull SingleChronicleQueueStore store) {
-        store.close();
+        Closeable.closeQuietly(store);
 
         storeFileListener.onReleased(store.cycle(), store.file());
     }

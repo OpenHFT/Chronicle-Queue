@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,6 +41,7 @@ class StoreTailer extends AbstractCloseable
     static final EOFException EOF_EXCEPTION = new EOFException();
     @NotNull
     private final SingleChronicleQueue queue;
+    private final WireStorePool storePool;
     private final LongValue indexValue;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
@@ -59,14 +61,15 @@ class StoreTailer extends AbstractCloseable
     private final Finalizer finalizer;
     private boolean disableThreadSafetyCheck;
 
-    public StoreTailer(@NotNull final SingleChronicleQueue queue) {
-        this(queue, null);
+    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool) {
+        this(queue, storePool, null);
     }
 
-    public StoreTailer(@NotNull final SingleChronicleQueue queue, final LongValue indexValue) {
+    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, final LongValue indexValue) {
         boolean error = true;
         try {
             this.queue = queue;
+            this.storePool = storePool;
             this.indexValue = indexValue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
@@ -1029,7 +1032,7 @@ class StoreTailer extends AbstractCloseable
 
     void releaseStore() {
         if (store != null) {
-            store.close();
+            storePool.closeStore(store);
             store = null;
         }
         state = UNINITIALISED;
