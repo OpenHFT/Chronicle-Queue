@@ -39,7 +39,6 @@ import java.io.StreamCorruptedException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Optional;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
@@ -244,7 +243,10 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
      */
     @NotNull
     ScanResult moveToIndex(@NotNull final ExcerptContext ec, final long index) {
-        return Optional.ofNullable(moveToIndex0(ec, index)).orElseGet(() -> moveToIndexFromTheStart(ec, index));
+        ScanResult value = moveToIndex0(ec, index);
+        if (value == null)
+            return moveToIndexFromTheStart(ec, index);
+        return value;
     }
 
     @NotNull

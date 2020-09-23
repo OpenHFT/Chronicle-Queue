@@ -691,32 +691,46 @@ class StoreTailer extends AbstractCloseable
             if (lastCycle == Integer.MIN_VALUE)
                 return Long.MIN_VALUE;
 
-            final SingleChronicleQueueStore wireStore = queue.storeForCycle(
-                    lastCycle, queue.epoch(), false, this.store);
-            this.setCycle(lastCycle);
-            if (wireStore == null)
-                throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
-
-            if (this.store != wireStore) {
-                releaseStore();
-                this.store = wireStore;
-                resetWires();
-            }
-            // give the position of the last entry and
-            // flag we want to count it even though we don't know if it will be meta data or not.
-
-            final long sequenceNumber = this.store.lastSequenceNumber(this);
-
-            // fixes #378
-            if (sequenceNumber == -1L) {
-                // nothing has been written yet, so point to start of cycle
-                return rollCycle.toIndex(lastCycle, 0L);
-            }
-            return rollCycle.toIndex(lastCycle, sequenceNumber);
+            return approximateLastCycle2(lastCycle);
 
         } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException {
+        RollCycle rollCycle = queue.rollCycle();
+        final SingleChronicleQueueStore wireStore = queue.storeForCycle(
+                lastCycle, queue.epoch(), false, this.store);
+        this.setCycle(lastCycle);
+        if (wireStore == null)
+            throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
+
+        if (this.store != wireStore) {
+            releaseStore();
+            this.store = wireStore;
+            resetWires();
+        }
+        // give the position of the last entry and
+        // flag we want to count it even though we don't know if it will be meta data or not.
+
+        final long sequenceNumber = this.store.lastSequenceNumber(this);
+
+        // fixes #378
+        if (sequenceNumber == -1L) {
+            // nothing has been written yet, so point to start of cycle
+            long prevCycle = queue.firstCycle;
+            while (prevCycle < lastCycle) {
+                lastCycle--;
+                try {
+                    return approximateLastCycle2(lastCycle);
+                } catch (IllegalStateException e) {
+                    // try again.
+                }
+            }
+            return rollCycle.toIndex(lastCycle, 0L);
+        }
+        return rollCycle.toIndex(lastCycle, sequenceNumber);
     }
 
     private boolean headerNumberCheck(@NotNull final AbstractWire wire) {
@@ -858,7 +872,7 @@ class StoreTailer extends AbstractCloseable
                 state = UNINITIALISED;
             return this;
         }
-        final ScanResult scanResult = moveToIndexResult(index);
+        ScanResult scanResult = moveToIndexResult(index);
         switch (scanResult) {
             case NOT_FOUND:
                 if (moveToIndexResult(index - 1) == FOUND)
