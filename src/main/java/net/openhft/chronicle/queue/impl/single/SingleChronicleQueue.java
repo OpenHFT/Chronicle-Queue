@@ -71,7 +71,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
-    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
     protected final EventLoop eventLoop;
     @NotNull
@@ -84,7 +83,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final StoreSupplier storeSupplier;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
     @NotNull
-    private final WireStorePool pool;
+    protected final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
     @NotNull
@@ -121,6 +120,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     protected final boolean doubleBuffer;
     private StoreFileListener storeFileListener;
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
     private RollCycle rollCycle;
     private int deltaCheckpointInterval;
@@ -198,7 +198,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     StoreTailer acquireTailer() {
-        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
+        return ThreadLocalHelper.getTL(tlTailer, this, q -> new StoreTailer(q, q.pool));
     }
 
     @NotNull
@@ -432,7 +432,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         LongValue index = id == null
                 ? null
                 : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
-        final StoreTailer storeTailer = new StoreTailer(this, index);
+        final StoreTailer storeTailer = new StoreTailer(this, pool, index);
         directoryListing.refresh(true);
         storeTailer.clearUsedByThread();
         return storeTailer;
@@ -892,7 +892,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         StringBuilder name = acquireStringBuilder();
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                            wireStore = valueIn.typedMarshallable();
+                            try {
+                                wireStore = valueIn.typedMarshallable();
+                            } catch (Throwable t) {
+                                mappedBytes.close();
+                                throw t;
+                            }
 
                         } else {
                             throw new StreamCorruptedException("The first message should be the header, was " + name);

@@ -42,12 +42,8 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/700")
     @Test
     public void state() throws IOException {
-        // TODO FIX
-        AbstractCloseable.disableCloseableTracing();
-
         assumeFalse(OS.isWindows());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
         dir.toFile().mkdir();

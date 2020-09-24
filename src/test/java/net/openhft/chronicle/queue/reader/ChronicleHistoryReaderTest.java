@@ -44,12 +44,6 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         doTest(true);
     }
 
-    @Test
-    public void testWithQueueHistory() {
-        Assume.assumeFalse(OS.isWindows());
-        doTest(false);
-    }
-
     private void doTest(boolean recordHistoryFirst) {
         VanillaMessageHistory veh = new VanillaMessageHistory();
         veh.addSourceDetails(true);
@@ -64,7 +58,6 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath).testBlockSize().sourceId(1).build()) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
-                        .recordHistory(recordHistoryFirst)
                         .get();
                 writer.say("hello");
             }
@@ -132,7 +125,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @FunctionalInterface
-    private interface DummyListener {
+    interface DummyListener {
         void say(String what);
     }
 }

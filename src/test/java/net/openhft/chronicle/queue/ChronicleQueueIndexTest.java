@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.bytes.Bytes.from;
+import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
 import static org.junit.Assert.*;
 
 public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
@@ -212,5 +214,60 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     @After
     public void checkRegisteredBytes() {
         AbstractReferenceCounted.assertReferencesReleased();
+    }
+
+    @Test
+    public void read5thMessageTest() throws InterruptedException {
+        SetTimeProvider stp = new SetTimeProvider();
+        stp.currentTimeMillis(CLOCK.currentTimeMillis());
+        try (final ChronicleQueue queue = ChronicleQueue
+                .singleBuilder(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(stp)
+                .build()) {
+
+            final ExcerptAppender appender = queue.acquireAppender();
+
+            int i = 0;
+            String msg = "world ";
+            for (int j = 0; j < 8; j++) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("hello").text(msg + (i++));
+//                    long indexWritten = dc.index();
+                }
+                stp.advanceMillis(1500);
+            }
+
+            // get the current cycle
+            int cycle;
+            final ExcerptTailer tailer = queue.createTailer();
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                long index = documentContext.index();
+                cycle = queue.rollCycle().toCycle(index);
+            }
+
+            long index = queue.rollCycle().toIndex(cycle, 5);
+            assertFalse(tailer.moveToIndex(index));
+            try (DocumentContext dc = tailer.readingDocument()) {
+                // there is no 5th message in that cycle.
+                assertFalse(dc.isPresent());
+            }
+
+            // wind to start
+            long index0 = queue.rollCycle().toIndex(cycle, 0);
+            assertTrue(tailer.moveToIndex(index0));
+
+            // skip four messages
+            for (int j = 0; j < 4; j++)
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent());
+                }
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
+                String s5 = dc.wire().read("hello").text();
+                System.out.println(s5);
+                assertEquals(msg + 4, s5);
+            }
+        }
     }
 }

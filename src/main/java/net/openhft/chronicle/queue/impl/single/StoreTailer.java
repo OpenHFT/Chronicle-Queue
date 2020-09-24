@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -24,7 +25,8 @@ import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
 import static net.openhft.chronicle.core.UnsafeMemory.UNSAFE;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 import static net.openhft.chronicle.wire.Wires.END_OF_DATA;
 import static net.openhft.chronicle.wire.Wires.isEndOfFile;
@@ -39,6 +41,7 @@ class StoreTailer extends AbstractCloseable
     static final EOFException EOF_EXCEPTION = new EOFException();
     @NotNull
     private final SingleChronicleQueue queue;
+    private final WireStorePool storePool;
     private final LongValue indexValue;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
@@ -58,23 +61,31 @@ class StoreTailer extends AbstractCloseable
     private final Finalizer finalizer;
     private boolean disableThreadSafetyCheck;
 
-    public StoreTailer(@NotNull final SingleChronicleQueue queue) {
-        this(queue, null);
+    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool) {
+        this(queue, storePool, null);
     }
 
-    public StoreTailer(@NotNull final SingleChronicleQueue queue, final LongValue indexValue) {
-        this.queue = queue;
-        this.indexValue = indexValue;
-        this.setCycle(Integer.MIN_VALUE);
-        this.index = 0;
-        queue.addCloseListener(this);
+    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, final LongValue indexValue) {
+        boolean error = true;
+        try {
+            this.queue = queue;
+            this.storePool = storePool;
+            this.indexValue = indexValue;
+            this.setCycle(Integer.MIN_VALUE);
+            this.index = 0;
+            queue.addCloseListener(this);
 
-        if (indexValue == null) {
-            toStart();
-        } else {
-            moveToIndex(indexValue.getVolatileValue());
+            if (indexValue == null) {
+                toStart();
+            } else {
+                moveToIndex(indexValue.getVolatileValue());
+            }
+            finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+            error = false;
+        } finally {
+            if (error)
+                close();
         }
-        finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
     @Override
@@ -87,14 +98,6 @@ class StoreTailer extends AbstractCloseable
     protected boolean threadSafetyCheck(boolean isUsed) {
         return disableThreadSafetyCheck
                 || super.threadSafetyCheck(isUsed);
-    }
-
-    private class Finalizer {
-        @Override
-        protected void finalize() throws Throwable {
-            super.finalize();
-            warnAndCloseIfNotClosed();
-        }
     }
 
     @Override
@@ -270,6 +273,10 @@ class StoreTailer extends AbstractCloseable
                     if (!moveToIndexInternal(firstIndex))
                         return false;
                     break;
+
+                case NOT_REACHED:
+                    boolean found = moveToIndexInternal(index);
+                    return found;
 
                 case FOUND_CYCLE: {
                     try {
@@ -605,20 +612,27 @@ class StoreTailer extends AbstractCloseable
         index(index);
         final ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
         final Bytes<?> bytes = privateWire().bytes();
-        if (scanResult == FOUND) {
-            state = FOUND_CYCLE;
-            moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
-            return scanResult;
-        } else if (scanResult == END_OF_FILE) {
-            state = END_OF_CYCLE;
-            return scanResult;
-        } else if (scanResult == NOT_FOUND && this.cycle < this.queue.lastCycle) {
-            state = END_OF_CYCLE;
-            return END_OF_FILE;
+        switch (scanResult) {
+            case FOUND:
+                state = FOUND_CYCLE;
+                moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
+                break;
+
+            case NOT_REACHED:
+                state = NOT_REACHED;
+                break;
+            case NOT_FOUND:
+                if (this.cycle < this.queue.lastCycle) {
+                    state = END_OF_CYCLE;
+                    return END_OF_FILE;
+                }
+                break;
+            case END_OF_FILE:
+                state = END_OF_CYCLE;
+                break;
         }
 
         return scanResult;
-
     }
 
     ScanResult moveToIndexResult(final long index) {
@@ -658,8 +672,8 @@ class StoreTailer extends AbstractCloseable
     private boolean moveToIndexInternal(final long index) {
         moveToState.indexMoveCount++;
 //        Jvm.optionalSafepoint();
-        final ScanResult scanResult = moveToIndexResult(index);
-//        Jvm.optionalSafepoint();
+        final ScanResult scanResult = moveToIndexResult0(index);
+        setAddress(scanResult == FOUND);
         return scanResult == FOUND;
     }
 
@@ -677,32 +691,46 @@ class StoreTailer extends AbstractCloseable
             if (lastCycle == Integer.MIN_VALUE)
                 return Long.MIN_VALUE;
 
-            final SingleChronicleQueueStore wireStore = queue.storeForCycle(
-                    lastCycle, queue.epoch(), false, this.store);
-            this.setCycle(lastCycle);
-            if (wireStore == null)
-                throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
-
-            if (this.store != wireStore) {
-                releaseStore();
-                this.store = wireStore;
-                resetWires();
-            }
-            // give the position of the last entry and
-            // flag we want to count it even though we don't know if it will be meta data or not.
-
-            final long sequenceNumber = this.store.lastSequenceNumber(this);
-
-            // fixes #378
-            if (sequenceNumber == -1L) {
-                // nothing has been written yet, so point to start of cycle
-                return rollCycle.toIndex(lastCycle, 0L);
-            }
-            return rollCycle.toIndex(lastCycle, sequenceNumber);
+            return approximateLastCycle2(lastCycle);
 
         } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException {
+        RollCycle rollCycle = queue.rollCycle();
+        final SingleChronicleQueueStore wireStore = queue.storeForCycle(
+                lastCycle, queue.epoch(), false, this.store);
+        this.setCycle(lastCycle);
+        if (wireStore == null)
+            throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
+
+        if (this.store != wireStore) {
+            releaseStore();
+            this.store = wireStore;
+            resetWires();
+        }
+        // give the position of the last entry and
+        // flag we want to count it even though we don't know if it will be meta data or not.
+
+        final long sequenceNumber = this.store.lastSequenceNumber(this);
+
+        // fixes #378
+        if (sequenceNumber == -1L) {
+            // nothing has been written yet, so point to start of cycle
+            long prevCycle = queue.firstCycle;
+            while (prevCycle < lastCycle) {
+                lastCycle--;
+                try {
+                    return approximateLastCycle2(lastCycle);
+                } catch (IllegalStateException e) {
+                    // try again.
+                }
+            }
+            return rollCycle.toIndex(lastCycle, 0L);
+        }
+        return rollCycle.toIndex(lastCycle, sequenceNumber);
     }
 
     private boolean headerNumberCheck(@NotNull final AbstractWire wire) {
@@ -759,9 +787,9 @@ class StoreTailer extends AbstractCloseable
 
         //  if (direction.equals(TailerDirection.BACKWARD))
 
-        try{
+        try {
             return originalToEnd();
-        }   catch (NotReachedException e) {
+        } catch (NotReachedException e) {
             // due to a race condition, where the queue rolls as we are processing toEnd()
             // we may get a NotReachedException  ( see https://github.com/OpenHFT/Chronicle-Queue/issues/702 )
             // hence are are just going to retry.
@@ -844,7 +872,7 @@ class StoreTailer extends AbstractCloseable
                 state = UNINITIALISED;
             return this;
         }
-        final ScanResult scanResult = moveToIndexResult(index);
+        ScanResult scanResult = moveToIndexResult(index);
         switch (scanResult) {
             case NOT_FOUND:
                 if (moveToIndexResult(index - 1) == FOUND)
@@ -1018,7 +1046,7 @@ class StoreTailer extends AbstractCloseable
 
     void releaseStore() {
         if (store != null) {
-            store.close();
+            storePool.closeStore(store);
             store = null;
         }
         state = UNINITIALISED;
@@ -1064,32 +1092,32 @@ class StoreTailer extends AbstractCloseable
                         return this;
                     }
 
-                final MessageHistory veh = SCQTools.readHistory(context, messageHistory);
-                if (veh == null)
-                    continue;
+                    final MessageHistory veh = SCQTools.readHistory(context, messageHistory);
+                    if (veh == null)
+                        continue;
 
-                int i = veh.sources() - 1;
-                if (i < 0)
-                    continue;
-                if (veh.sourceId(i) != this.sourceId())
-                    continue;
+                    int i = veh.sources() - 1;
+                    if (i < 0)
+                        continue;
+                    if (veh.sourceId(i) != this.sourceId())
+                        continue;
 
-                final long sourceIndex = veh.sourceIndex(i);
-                if (!moveToIndexInternal(sourceIndex)) {
-                    final String errorMessage = String.format(
-                            "Unable to move to sourceIndex %s in queue %s",
-                            Long.toHexString(sourceIndex), this.queue.fileAbsolutePath());
-                    throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
-                }
-                try (DocumentContext content = readingDocument()) {
-                    if (!content.isPresent()) {
+                    final long sourceIndex = veh.sourceIndex(i);
+                    if (!moveToIndexInternal(sourceIndex)) {
                         final String errorMessage = String.format(
-                                "No readable document found at sourceIndex %s in queue %s",
-                                Long.toHexString(sourceIndex + 1), this.queue.fileAbsolutePath());
+                                "Unable to move to sourceIndex %s in queue %s",
+                                Long.toHexString(sourceIndex), this.queue.fileAbsolutePath());
                         throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                     }
-                    // skip this message and go to the next.
-                }
+                    try (DocumentContext content = readingDocument()) {
+                        if (!content.isPresent()) {
+                            final String errorMessage = String.format(
+                                    "No readable document found at sourceIndex %s in queue %s",
+                                    Long.toHexString(sourceIndex + 1), this.queue.fileAbsolutePath());
+                            throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
+                        }
+                        // skip this message and go to the next.
+                    }
                     return this;
                 }
             }
@@ -1173,6 +1201,14 @@ class StoreTailer extends AbstractCloseable
                     index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
                     direction == directionAtLastMoveTo &&
                     queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
+        }
+    }
+
+    private class Finalizer {
+        @Override
+        protected void finalize() throws Throwable {
+            super.finalize();
+            warnAndCloseIfNotClosed();
         }
     }
 

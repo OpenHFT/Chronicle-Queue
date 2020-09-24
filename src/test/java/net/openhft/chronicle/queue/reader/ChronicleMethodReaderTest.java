@@ -2,7 +2,10 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.MethodId;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
@@ -27,7 +30,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.*;
 
 public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
@@ -119,13 +123,24 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         basicReader().execute();
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldConvertEntriesToText() {
         basicReader().execute();
-
-        assertEquals(48, capturedOutput.size());
-        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("hello")));
+        long msgCount =
+                capturedOutput.stream()
+                        .filter(msg -> !msg.startsWith("0x"))
+                        .filter(s -> !s.contains("history:"))
+                        .peek(System.out::println)
+                        .count();
+        assertEquals(24, msgCount);
+        // "hello"
+        assertTrue(capturedOutput.stream()
+                .anyMatch(msg -> msg.contains("  5,\n" +
+                        "  104,\n" +
+                        "  101,\n" +
+                        "  108,\n" +
+                        "  108,\n" +
+                        "  111,")));
     }
 
     @Test
@@ -133,8 +148,9 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         basicReader().withInclusionRegex(".*good.*").execute();
 
         assertEquals(24, capturedOutput.size());
-        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertThat(msg, containsString("goodbye")));
+        capturedOutput.stream()
+                .filter(msg -> !msg.startsWith("0x"))
+                .forEach(msg -> assertThat(msg, containsString("goodbye")));
     }
 
     @Ignore("TODO FIX")
@@ -154,12 +170,17 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
-        assertEquals(24, capturedOutput.size());
+        long msgCount =
+                capturedOutput.stream()
+                        .filter(msg -> !msg.startsWith("0x"))
+                        .filter(s -> !s.contains("history:"))
+//                        .peek(System.out::println)
+                        .count();
+        assertEquals(12, msgCount);
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
@@ -171,13 +192,14 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReader().historyRecords(5).execute();
 
-        assertThat(capturedOutput.stream().
-                filter(msg -> !msg.startsWith("0x")).count(), is(5L));
+        assertEquals(5,
+                capturedOutput.stream()
+                        .filter(s -> !s.contains("history:"))
+                        .filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -185,13 +207,15 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         basicReader().withStartIndex(1L).execute();
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/660")
     @Test
     public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
-        assertThat(capturedOutput.stream().
-                filter(msg -> !msg.startsWith("0x")).count(), is(24L));
+        assertEquals(24,
+                capturedOutput.stream()
+                        .filter(s -> !s.contains("history:"))
+                        .filter(msg -> !msg.startsWith("0x"))
+                        .count());
     }
 
     private ChronicleReader basicReader() {

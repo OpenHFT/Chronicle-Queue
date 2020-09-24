@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -30,7 +29,6 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -257,16 +255,13 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         final File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
-        final MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
-        try {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE)) {
             final Wire wire = new BinaryWire(bytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName("header")
                         .typePrefix(SingleChronicleQueueStore.class).marshallable(
                         w -> w.write("wireType").object(WireType.BINARY));
             }
-        } finally {
-            bytes.releaseLast();
         }
 
         try (ChronicleQueue queue = binary(dir)

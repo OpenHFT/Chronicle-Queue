@@ -69,7 +69,7 @@ public class QueueUnlockMain {
 
     private static void forceUnlock(AbstractTSQueueLock lock) {
         try {
-            Method forceUnlock = AbstractTSQueueLock.class.getDeclaredMethod("forceUnlock");
+            Method forceUnlock = AbstractTSQueueLock.class.getDeclaredMethod("forceUnlockIfProcessIsDead");
             Jvm.setAccessible(forceUnlock);
             forceUnlock.invoke(lock);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {

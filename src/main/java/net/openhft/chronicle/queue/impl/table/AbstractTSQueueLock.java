@@ -47,7 +47,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         Closeable.closeQuietly(lock);
     }
 
-    protected void forceUnlock(long value) {
+    protected void forceUnlockIfProcessIsDead(long value) {
         boolean unlocked = lock.compareAndSwapValue(value, UNLOCKED);
         Jvm.warn().on(getClass(), "" +
                         "Forced unlock for the " +
@@ -56,9 +56,26 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 new StackTrace("Forced unlock"));
     }
 
+    /**
+     * forces the unlock only if the process that currently holds the table store lock is no-longer running.
+     */
+    public void forceUnlockIfProcessIsDead() {
+        for (; ; ) {
+            long pid = this.lock.getValue();
+            if (Jvm.isProcessAlive(pid) || pid == -9223372036854775808L)
+                return;
+
+            Jvm.debug().on(this.getClass(), "Forced unlock for the lock file:" + this.path + ", unlocked: " + pid, new StackTrace("Forced unlock"));
+            if (lock.compareAndSwapValue(pid, UNLOCKED))
+                return;
+        }
+
+    }
+
     @Override
     protected boolean threadSafetyCheck(boolean isUsed) {
         // The lock is thread safe.
         return true;
     }
+
 }
