@@ -16,7 +16,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     @Test
     public void testOneOne() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(OS.TARGET + "/MethodReaderObjectReuseTest-" + System.nanoTime()).build()) {
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(OS.getTarget() + "/MethodReaderObjectReuseTest-" + System.nanoTime()).build()) {
             PingDTO.constructionExpected++;
             PingDTO pdtio = new PingDTO();
             PingDTO.constructionExpected++;

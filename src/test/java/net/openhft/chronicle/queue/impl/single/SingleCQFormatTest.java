@@ -50,7 +50,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testEmptyDirectory() {
-        final File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
         try (RollingChronicleQueue queue = binary(dir).testBlockSize().build()) {
             assertEquals(Integer.MAX_VALUE, queue.firstCycle());
@@ -63,7 +63,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testInvalidFile() throws FileNotFoundException {
-        final File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        final File dir = new File(OS.getTarget() + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
         try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), 64 << 10)) {
@@ -95,7 +95,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testNoHeader() throws IOException {
-        final File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        final File dir = new File(OS.getTarget() + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
         final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
@@ -209,7 +209,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCompleteHeader2() throws FileNotFoundException {
-        final File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         final MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE * 2);
@@ -252,7 +252,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testIncompleteHeader() throws FileNotFoundException {
-        final File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE)) {

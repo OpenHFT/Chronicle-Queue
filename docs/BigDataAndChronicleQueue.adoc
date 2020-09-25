@@ -122,7 +122,7 @@ If you cannot extend this class, you can implement the `Marshallable` interface.
 .Dump of a queue in a unit test
 [source, java]
 ----
-File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+File dir = new File(OS.getTarget() + "/deleteme-" + System.nanoTime());
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
     ExcerptAppender appender = queue.acquireAppender();
     appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6)); // <1>

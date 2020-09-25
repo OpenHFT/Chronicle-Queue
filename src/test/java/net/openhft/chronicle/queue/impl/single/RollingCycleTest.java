@@ -50,7 +50,7 @@ public class RollingCycleTest extends QueueTestCommon {
         long start = System.currentTimeMillis() - 3 * 86_400_000;
         stp.currentTimeMillis(start);
 
-        String basePath = OS.TARGET + "/testRollCycle" + System.nanoTime();
+        String basePath = OS.getTarget() + "/testRollCycle" + System.nanoTime();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .timeoutMS(5)

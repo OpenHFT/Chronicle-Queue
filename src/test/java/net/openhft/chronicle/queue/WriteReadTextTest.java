@@ -71,7 +71,7 @@ public class WriteReadTextTest extends QueueTestCommon {
 
     private void doTest(@NotNull String... problematic) {
 
-        String myPath = OS.TARGET + "/writeReadText-" + System.nanoTime();
+        String myPath = OS.getTarget() + "/writeReadText-" + System.nanoTime();
 
         try (ChronicleQueue theQueue = SingleChronicleQueueBuilder
                 .single(myPath)

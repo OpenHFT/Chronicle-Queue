@@ -48,7 +48,7 @@ public class JDBCServiceTest extends ChronicleQueueTestBase {
             long start = System.nanoTime(), written;
             File path1 = getTmpDir();
             File path2 = getTmpDir();
-            File file = new File(OS.TARGET, "hsqldb-" + System.nanoTime());
+            File file = new File(OS.getTarget(), "hsqldb-" + System.nanoTime());
             file.deleteOnExit();
 
             try (ChronicleQueue in = SingleChronicleQueueBuilder

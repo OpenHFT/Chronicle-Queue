@@ -40,7 +40,7 @@ public class LongRunTestMain {
         output.setMarshallable(entry);
 
         final ChronicleQueue queue = ChronicleQueue.singleBuilder(
-                OS.TARGET + "/test-" + System.nanoTime())
+                OS.getTarget() + "/test-" + System.nanoTime())
                 .rollCycle(RollCycles.HOURLY)
                 .build();
         final ExcerptAppender appender = queue.acquireAppender();

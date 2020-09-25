@@ -17,7 +17,7 @@ import static org.junit.Assert.assertNotNull;
 public class OnReleaseTest {
     @Test
     public void onRelease() {
-        String path = OS.TARGET + "/onRelease-" + System.nanoTime();
+        String path = OS.getTarget() + "/onRelease-" + System.nanoTime();
         SetTimeProvider stp = new SetTimeProvider();
         AtomicInteger writeRoll = new AtomicInteger();
         AtomicInteger readRoll = new AtomicInteger();

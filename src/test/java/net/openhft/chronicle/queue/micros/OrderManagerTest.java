@@ -60,7 +60,7 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testWithQueue() {
-        File queuePath = new File(OS.TARGET, "testWithQueue-" + System.nanoTime());
+        File queuePath = new File(OS.getTarget(), "testWithQueue-" + System.nanoTime());
         try {
             try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
                 OrderIdeaListener orderManager = queue.acquireAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
@@ -109,8 +109,8 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     public void testWithQueueHistory0() {
-        File queuePath = new File(OS.TARGET, "testWithQueueHistory-" + System.nanoTime());
-        File queuePath2 = new File(OS.TARGET, "testWithQueueHistory-down-" + System.nanoTime());
+        File queuePath = new File(OS.getTarget(), "testWithQueueHistory-" + System.nanoTime());
+        File queuePath2 = new File(OS.getTarget(), "testWithQueueHistory-down-" + System.nanoTime());
         try {
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
@@ -178,8 +178,8 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testRestartingAService() throws FileNotFoundException {
-        File queuePath = new File(OS.TARGET, "testRestartingAService-" + System.nanoTime());
-        File queuePath2 = new File(OS.TARGET, "testRestartingAService-down-" + System.nanoTime());
+        File queuePath = new File(OS.getTarget(), "testRestartingAService-" + System.nanoTime());
+        File queuePath2 = new File(OS.getTarget(), "testRestartingAService-down-" + System.nanoTime());
         try {
 
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)

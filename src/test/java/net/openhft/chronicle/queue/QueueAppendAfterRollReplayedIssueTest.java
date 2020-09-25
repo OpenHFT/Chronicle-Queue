@@ -23,7 +23,7 @@ public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
     public void test() {
         int messages = 10;
 
-        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final ChronicleQueue writeQueue = ChronicleQueue
                 .singleBuilder(path)

@@ -70,7 +70,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void missingCyclesToEndTest() {
-        String path = OS.TARGET + "/missingCyclesToEndTest-" + System.nanoTime();
+        String path = OS.getTarget() + "/missingCyclesToEndTest-" + System.nanoTime();
         IOTools.shallowDeleteDirWithFiles(path);
 
         final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -145,7 +145,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
-        String path = OS.TARGET + "/toEndIncRefCount-" + System.nanoTime();
+        String path = OS.getTarget() + "/toEndIncRefCount-" + System.nanoTime();
         IOTools.shallowDeleteDirWithFiles(path);
 
         SetTimeProvider time = new SetTimeProvider();

@@ -50,8 +50,8 @@ public class HelloWorldTest extends QueueTestCommon {
         // acts as three processes in one test
         // process A writes to the HelloWorld interface.
         // process B read fromt he HelloWorld interface and writes to the
-        String input = OS.TARGET + "/input-" + System.nanoTime();
-        String output = OS.TARGET + "/output-" + System.nanoTime();
+        String input = OS.getTarget() + "/input-" + System.nanoTime();
+        String output = OS.getTarget() + "/output-" + System.nanoTime();
 
         HelloReplier replier = createMock(HelloReplier.class);
         replier.reply("Hello April");

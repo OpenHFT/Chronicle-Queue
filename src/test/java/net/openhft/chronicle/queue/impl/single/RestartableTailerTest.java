@@ -12,7 +12,7 @@ import static org.junit.Assert.assertNull;
 public class RestartableTailerTest extends QueueTestCommon {
     @Test
     public void restartable() {
-        String tmp = OS.TARGET + "/restartable-" + System.nanoTime();
+        String tmp = OS.getTarget() + "/restartable-" + System.nanoTime();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
             for (int i = 0; i < 7; i++)
                 cq.acquireAppender().writeText("test " + i);

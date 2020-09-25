@@ -16,7 +16,7 @@ import java.io.FileNotFoundException;
 public class MultiQueueStressMain {
     static final int queueCount = Integer.getInteger("queues", 25);
     static final int throughput = Integer.getInteger("throughput", 50); // MB/s
-    static final String target = System.getProperty("target", OS.TARGET);
+    static final String target = System.getProperty("target", OS.getTarget());
     static final int runs = Integer.getInteger("runs", 10);
 
     public static void main(String[] args) throws FileNotFoundException {

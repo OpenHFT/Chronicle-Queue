@@ -26,12 +26,12 @@ public class DirectoryUtils {
      * Beware, this can give different results depending on whether you are
      * a) running inside maven
      * b) are running in a clean directory (without a "target" dir)
-     * See OS.TARGET
+     * See OS.getTarget()
      */
     @NotNull
     public static File tempDir(String name) {
         String replacedName = name.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_');
-        final File tmpDir = new File(OS.TARGET, replacedName + "-" + Long.toString(TIMESTAMPER.getAndIncrement(), 36));
+        final File tmpDir = new File(OS.getTarget(), replacedName + "-" + Long.toString(TIMESTAMPER.getAndIncrement(), 36));
         DeleteStatic.INSTANCE.add(tmpDir);
 
         // Log the temporary directory in OSX as it is quite obscure

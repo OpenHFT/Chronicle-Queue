@@ -38,7 +38,7 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
 
     @Test
     public void test() {
-        String basePath = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         final SingleChronicleQueueBuilder myBuilder = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .timeProvider(System::currentTimeMillis)

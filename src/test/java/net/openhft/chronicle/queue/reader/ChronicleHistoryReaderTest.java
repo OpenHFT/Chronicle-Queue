@@ -51,9 +51,9 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
         int extraTiming = recordHistoryFirst ? 1 : 0;
         long nanoTime = System.nanoTime();
-        File queuePath = new File(OS.TARGET, "testWithQueueHistory-" + nanoTime);
-        File queuePath2 = new File(OS.TARGET, "testWithQueueHistory2-" + nanoTime);
-        File queuePath3 = new File(OS.TARGET, "testWithQueueHistory3-" + nanoTime);
+        File queuePath = new File(OS.getTarget(), "testWithQueueHistory-" + nanoTime);
+        File queuePath2 = new File(OS.getTarget(), "testWithQueueHistory2-" + nanoTime);
+        File queuePath3 = new File(OS.getTarget(), "testWithQueueHistory3-" + nanoTime);
         try {
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath).testBlockSize().sourceId(1).build()) {
                 DummyListener writer = out.acquireAppender()

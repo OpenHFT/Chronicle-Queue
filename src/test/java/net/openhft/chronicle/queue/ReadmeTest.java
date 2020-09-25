@@ -29,7 +29,7 @@ public class ReadmeTest extends QueueTestCommon {
 
     @Test
     public void createAQueue() {
-        final String basePath = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        final String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)

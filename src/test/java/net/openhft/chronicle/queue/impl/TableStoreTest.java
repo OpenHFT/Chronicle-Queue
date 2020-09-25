@@ -16,7 +16,7 @@ import static org.junit.Assert.assertTrue;
 public class TableStoreTest extends QueueTestCommon {
     @Test
     public void acquireValueFor() {
-        String file = OS.TARGET + "/table-" + System.nanoTime() + ".cq4t";
+        String file = OS.getTarget() + "/table-" + System.nanoTime() + ".cq4t";
         new File(file).deleteOnExit();
         try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
 

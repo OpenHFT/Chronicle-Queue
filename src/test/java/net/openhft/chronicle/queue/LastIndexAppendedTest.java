@@ -35,7 +35,7 @@ public class LastIndexAppendedTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastIndexAppendedAcrossRestarts() {
-        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
 
         for (int i = 0; i < 5; i++) {
             try (ChronicleQueue queue = single(path)

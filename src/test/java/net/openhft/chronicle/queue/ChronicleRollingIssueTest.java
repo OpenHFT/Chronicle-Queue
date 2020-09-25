@@ -123,7 +123,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
         int threads = Math.min(64, Runtime.getRuntime().availableProcessors() * 4) - 1;
         int messages = 100;
 
-        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         AtomicInteger count = new AtomicInteger();
         StoreFileListener storeFileListener = (cycle, file) -> {
         };

@@ -52,7 +52,7 @@ public class OvertakeTest extends QueueTestCommon {
 
     @Before
     public void before() {
-        path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (ChronicleQueue appender_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .writeBufferMode(BufferMode.None)

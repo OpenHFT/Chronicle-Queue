@@ -42,7 +42,7 @@ public class ReadWriteTest extends QueueTestCommon {
 
     @Before
     public void setup() {
-        chroniclePath = new File(OS.TARGET, "read_only_" + System.currentTimeMillis());
+        chroniclePath = new File(OS.getTarget(), "read_only_" + System.currentTimeMillis());
         try (ChronicleQueue readWrite = ChronicleQueue.singleBuilder(chroniclePath)
                 .readOnly(false)
                 .testBlockSize()
