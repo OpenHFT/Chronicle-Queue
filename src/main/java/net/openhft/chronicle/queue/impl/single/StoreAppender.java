@@ -589,8 +589,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     /*
-     * overwritten in delta wire
+     * overridden in delta wire
      */
+    @SuppressWarnings("unused")
     void beforeAppend(final Wire wire, final long index) {
     }
 
@@ -607,7 +608,7 @@ class StoreAppender extends AbstractCloseable
 
         int lastCycle = queue.lastCycle();
 
-        if (lastCycle < cycle && lastCycle != this.cycle) {
+        if (lastCycle < cycle && lastCycle != this.cycle && lastCycle >= 0) {
             setCycle2(lastCycle, false);
             rollCycleTo(cycle);
         } else {
