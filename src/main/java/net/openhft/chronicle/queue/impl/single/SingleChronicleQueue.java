@@ -278,7 +278,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     @Override
-    public String dumpLastHeader() {
+    public @NotNull String dumpLastHeader() {
         StringBuilder sb = new StringBuilder(256);
         try (SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false, null)) {
             sb.append(wireStore.dumpHeader());
