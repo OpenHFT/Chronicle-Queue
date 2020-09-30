@@ -1563,12 +1563,6 @@ Kafka uses an intermediate broker to use the operating system's file system and 
 
 http://kafka.apache.org/documentation.html[Kafka Documentation]
 
-== Replication
-
-Chronicle Queue Enterprise supports TCP and UDP replication.
-
-image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/images/queue-replication.png[]
-
 ==  Support
 
 * https://github.com/OpenHFT/Chronicle-Queue/blob/master/docs/FAQ.adoc[Chronicle FAQ]
@@ -1576,7 +1570,15 @@ image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/ima
 * https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle[Chronicle support on Google Groups]
 * https://higherfrequencytrading.atlassian.net/browse/CHRON[Development Tasks - JIRA]
 
-== Latency Test for Chronicle Queue replication
+== Replication
+
+Chronicle Queue Enterprise supports TCP and UDP replication.
+
+Replication between hosts ensures real-time backup of all your queue data. For more information see <<docs/replication.adoc#, Replication>>, the <<docs/queue-replication-message-protocol-overview.adoc#, protocol is covered here.>>
+
+image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/images/queue-replication.png[]
+
+=== Latency Test for Chronicle Queue replication
 
 The following charts show how long it takes to:
 

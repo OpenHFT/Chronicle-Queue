@@ -18,9 +18,9 @@ See link:queue-replication-message-protocol-overview.adoc[Replication Protocol O
 
 The queue that we write to is known as the `source` queue. The copy(ies) is the `sink` queue.
 
-IMPORTANT: Chronicle requires exclusive write access to the `sink`. The `sink` should be treated as read-only, and never written to manually.
+IMPORTANT: Chronicle requires exclusive write access to the `sink`, and in fact locks it so that nothing else can write to it.
 
-If we allowed messages to be written to the sink, it is easy to imagine a case where different messages are written to a `source` and `sink` at the same time. The messages on the `source` queue and `sink` queue could now be in a very different order. Because of this situation we do not allow messages to be written to the `sync` queue, Queues must maintain message ordering, and ensure that the `source` queue and `sink` queue are identical. 
+If we allowed messages to be written to the sink, it is easy to imagine a case where different messages are written to a `source` and `sink` at the same time. The messages on the `source` queue and `sink` queue could now be in a very different order. Because of this situation we do not allow messages to be written to the `sink` queue, Queues must maintain message ordering, and ensure that the `source` queue and `sink` queue are identical.
 
 One of the reasons that we enforce this is that, in a microservices architecture, in order that you can get true 'replay-ability', you should be able to guarantee the consistency, and ordering, of the messages in queues. Therefore, any service that is running on the `source` machine must receive the same events, and in the same order, as the service running on the `sink` machine.
 
@@ -160,7 +160,7 @@ and setting this to true on a source queue ensures that the tailer will not read
 the sinks has acknowledged receipt of the excerpt. This will block forever if no sinks acknowledge receipt.
 
 ==== Appender doesn't return until a replica has acknowledged it has been received.
-This can be acheived after committing a write (e.g. closing `DocumentContext`) by this loop
+This can be achieved after committing a write (e.g. closing `DocumentContext`) by this loop
 ```
 while (appender.lastIndexAppended() < appender.queue().lastAcknowledgedIndexReplicated())
     ;
