@@ -695,7 +695,7 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    class StoreAppenderContext implements DocumentContext {
+    class StoreAppenderContext implements WriteDocumentContext {
 
         boolean isClosed = true;
         private boolean metaData = false;
@@ -705,6 +705,7 @@ class StoreAppender extends AbstractCloseable
         private Wire wire;
         private boolean alreadyClosedFound;
         private StackTrace closedHere;
+        private boolean chainedElement;
 
         @Override
         public int sourceId() {
@@ -724,11 +725,6 @@ class StoreAppender extends AbstractCloseable
         @Override
         public boolean isMetaData() {
             return metaData;
-        }
-
-        @Override
-        public void metaData(boolean metaData) {
-            this.metaData = metaData;
         }
 
         /**
@@ -839,6 +835,25 @@ class StoreAppender extends AbstractCloseable
         @Override
         public boolean isNotComplete() {
             return !isClosed;
+        }
+
+        @Override
+        public void start(boolean metaData) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void metaData(boolean metaData) {
+            this.metaData = metaData;
+        }
+
+        @Override
+        public boolean chainedElement() {
+            return chainedElement;
+        }
+
+        @Override
+        public void chainedElement(boolean chainedElement) {
+            this.chainedElement = chainedElement;
         }
     }
 }

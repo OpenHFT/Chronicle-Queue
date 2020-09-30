@@ -1274,6 +1274,10 @@ class StoreTailer extends AbstractCloseable
             if (oldWire != null)
                 oldWire.bytes().release(INIT); // might be held elsewhere if used for another purpose.
         }
+
+        public void metaData(boolean metaData) {
+            this.metaData = metaData;
+        }
     }
 
 }
