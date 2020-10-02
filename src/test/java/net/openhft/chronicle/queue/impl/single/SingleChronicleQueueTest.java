@@ -1562,6 +1562,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (DocumentContext dc2 = appender.writingDocument()) {
                     dc2.wire().write("some2").text("other");
                 }
+                assertTrue(dc.isOpen());
             }
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
