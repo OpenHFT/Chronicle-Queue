@@ -58,7 +58,6 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
@@ -1547,14 +1546,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = AssertionError.class)
+    @Test
     public void testReentrant() {
 
-        boolean assertsEnabled = false;
-        //noinspection ConstantConditions
-        assert assertsEnabled = true;
-        //noinspection ConstantConditions
-        assumeTrue(assertsEnabled);
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
@@ -1569,6 +1563,40 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     dc2.wire().write("some2").text("other");
                 }
             }
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  writePosition: [\n" +
+                    "    392,\n" +
+                    "    1683627180032\n" +
+                    "  ],\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 196,\n" +
+                    "    lastIndex: 1\n" +
+                    "  },\n" +
+                    "  dataFormat: 1\n" +
+                    "}\n" +
+                    "# position: 196, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  296,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 296, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  392,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 392, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "some: data\n" +
+                    "some2: other\n" +
+                    "...\n" +
+                    "# 130648 bytes remaining\n", queue.dump());
         }
     }
 
