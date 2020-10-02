@@ -51,6 +51,7 @@ class StoreAppender extends AbstractCloseable
     @UsedViaReflection
     private final Finalizer finalizer;
     private boolean disableThreadSafetyCheck;
+    private int count = 0;
 
     StoreAppender(@NotNull final SingleChronicleQueue queue,
                   @NotNull final WireStorePool storePool,
@@ -319,6 +320,11 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
+        count++;
+        if (count > 1) {
+            assert metaData == writeContext.metaData;
+            return writeContext;
+        }
 
         if (queue.doubleBuffer && writeLock.locked() && !metaData) {
             writeContext.isClosed = false;
@@ -357,7 +363,7 @@ class StoreAppender extends AbstractCloseable
     public DocumentContext acquireWritingDocument(boolean metaData) {
         if (!CHECK_THREAD_SAFETY)
             this.threadSafetyCheck(true);
-        if (writeContext.isOpen() && wire != null)
+        if (wire != null && writeContext.isOpen() && writeContext.chainedElement())
             return writeContext;
         return writingDocument(metaData);
     }
@@ -741,11 +747,16 @@ class StoreAppender extends AbstractCloseable
         }
 
         public void close(boolean unlock) {
+            if (chainedElement)
+                return;
             if (isClosed) {
                 Jvm.warn().on(getClass(), "Already Closed, close was called twice.", new StackTrace("Second close", closedHere));
                 alreadyClosedFound = true;
                 return;
             }
+            count--;
+            if (count > 0)
+                return;
 
             if (alreadyClosedFound) {
                 closedHere = new StackTrace("Closed here");
