@@ -701,7 +701,7 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    class StoreAppenderContext implements WriteDocumentContext {
+    final class StoreAppenderContext implements DocumentContext {
 
         boolean isClosed = true;
         private boolean metaData = false;
