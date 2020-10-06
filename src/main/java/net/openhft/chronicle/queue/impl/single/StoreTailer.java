@@ -1213,16 +1213,8 @@ class StoreTailer extends AbstractCloseable
     }
 
     class StoreTailerContext extends BinaryReadDocumentContext {
-
-        boolean rollbackOnClose = false;
-
         StoreTailerContext() {
             super(null);
-        }
-
-        @Override
-        public void rollbackOnClose() {
-            rollbackOnClose = true;
         }
 
         @Override
@@ -1237,27 +1229,17 @@ class StoreTailer extends AbstractCloseable
 
         @Override
         public void close() {
-            try {
-                if (rollbackOnClose) {
-                    present = false;
-                    if (start > -1)
-                        wire.bytes().readPosition(start).readLimit(readLimit);
-                    start = -1;
-                    return;
-                }
+            if (rollbackIfNeeded())
+                return;
 
-                if (isPresent() && !isMetaData())
-                    incrementIndex();
+            if (isPresent() && !isMetaData())
+                incrementIndex();
 
-                super.close();
-                if (direction == FORWARD)
-                    setAddress(context.wire() != null);
-                else if (direction == BACKWARD)
-                    setAddress(false);
-
-            } finally {
-                rollbackOnClose = false;
-            }
+            super.close();
+            if (direction == FORWARD)
+                setAddress(context.wire() != null);
+            else if (direction == BACKWARD)
+                setAddress(false);
         }
 
         boolean present(final boolean present) {
