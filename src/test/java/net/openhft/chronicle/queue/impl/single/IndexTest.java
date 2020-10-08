@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -26,8 +25,6 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,7 +41,6 @@ public class IndexTest extends ChronicleQueueTestBase {
 
     @NotNull
     private final WireType wireType;
-    private ThreadDump threadDump;
 
     /**
      * @param wireType the type of the wire
@@ -61,17 +57,7 @@ public class IndexTest extends ChronicleQueueTestBase {
         });
     }
 
-    @Before
-    public void threadDump() {
-        threadDump = new ThreadDump();
-    }
-
-    @After
-    public void checkThreadDump() {
-        threadDump.assertNoNewThreads();
-    }
-
-@Test
+    @Test
     public void test() throws IOException {
 
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder

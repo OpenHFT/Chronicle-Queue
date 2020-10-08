@@ -19,14 +19,12 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,7 +44,6 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
     }
 
     private int appendMode;
-    private ThreadDump threadDump;
 
     private static void assertHexEquals(long a, long b) {
         if (a != b)
@@ -628,16 +625,6 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 checkFileContents(getFirstQueueFile(dir), expected);
             }
         }
-    }
-
-    @Before
-    public void threadDump() {
-        threadDump = new ThreadDump();
-    }
-
-    @After
-    public void checkThreadDump() {
-        threadDump.assertNoNewThreads();
     }
 
     @Before

@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
+import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.After;
@@ -69,6 +70,8 @@ public class QueueTestCommon {
 
     @After
     public void afterChecks() {
+        CleaningThread.performCleanup(Thread.currentThread());
+
         // find any discarded resources.
         System.gc();
         Jvm.pause(10);

@@ -225,7 +225,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * Returns the {@link TailerState} of this Trailer.
      *
      * @return the {@link TailerState} of this Trailer
-     * @see TailerState
      */
     @NotNull
     TailerState state();

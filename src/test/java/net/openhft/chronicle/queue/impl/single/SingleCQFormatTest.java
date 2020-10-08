@@ -21,7 +21,6 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -45,8 +44,6 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
-
-    private ThreadDump threadDump;
 
     @Test
     public void testEmptyDirectory() {
@@ -282,16 +279,6 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
             e.printStackTrace();
         }
 
-    }
-
-    @Before
-    public void threadDump() {
-        threadDump = new ThreadDump();
-    }
-
-    @After
-    public void checkThreadDump() {
-        threadDump.assertNoNewThreads();
     }
 
     @Before

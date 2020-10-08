@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
-import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -41,7 +40,6 @@ import static org.junit.Assert.*;
 public class ToEndTest extends ChronicleQueueTestBase {
     private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
-    private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
     @AfterClass
@@ -49,23 +47,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
         for (File file : pathsToDelete) {
             IOTools.shallowDeleteDirWithFiles(file);
         }
-    }
-
-    @Before
-    public void before() {
-        threadDump = new ThreadDump();
-        exceptionKeyIntegerMap = Jvm.recordExceptions();
-    }
-
-    @After
-    public void after() {
-        threadDump.assertNoNewThreads();
-
-        if (Jvm.hasException(exceptionKeyIntegerMap)) {
-            Jvm.dumpException(exceptionKeyIntegerMap);
-            fail();
-        }
-        Jvm.resetExceptionHandlers();
     }
 
     @Test

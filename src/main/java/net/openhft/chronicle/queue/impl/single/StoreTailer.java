@@ -183,7 +183,7 @@ class StoreTailer extends AbstractCloseable
         try {
 //            Jvm.optionalSafepoint();
             boolean next = false, tryAgain = true;
-            if (state == FOUND_CYCLE) {
+            if (state == FOUND_IN_CYCLE) {
                 try {
 //                    Jvm.optionalSafepoint();
                     next = inACycle(includeMetaData);
@@ -245,7 +245,7 @@ class StoreTailer extends AbstractCloseable
     public boolean peekDocument() {
         throwExceptionIfClosed();
 
-        if (address == NO_PAGE || state != FOUND_CYCLE || direction != FORWARD)
+        if (address == NO_PAGE || state != FOUND_IN_CYCLE || direction != FORWARD)
             return peekDocument0();
 
         final int header = UNSAFE.getIntVolatile(null, address);
@@ -274,11 +274,11 @@ class StoreTailer extends AbstractCloseable
                         return false;
                     break;
 
-                case NOT_REACHED:
+                case NOT_REACHED_IN_CYCLE:
                     boolean found = moveToIndexInternal(index);
                     return found;
 
-                case FOUND_CYCLE: {
+                case FOUND_IN_CYCLE: {
                     try {
                         return inACycle(includeMetaData);
                     } catch (EOFException eof) {
@@ -338,7 +338,7 @@ class StoreTailer extends AbstractCloseable
 
     private boolean nextEndOfCycle(final long nextIndex) {
         if (moveToIndexInternal(nextIndex)) {
-            state = FOUND_CYCLE;
+            state = FOUND_IN_CYCLE;
 //            Jvm.optionalSafepoint();
             return true;
         }
@@ -371,7 +371,7 @@ class StoreTailer extends AbstractCloseable
             final long lastSequenceNumberInThisCycle = store().sequenceForPosition(this, Long.MAX_VALUE, false);
             final long nextIndex = queue.rollCycle().toIndex(this.cycle, lastSequenceNumberInThisCycle);
             moveToIndexInternal(nextIndex);
-            state = FOUND_CYCLE;
+            state = FOUND_IN_CYCLE;
             return true;
         }
 
@@ -380,7 +380,7 @@ class StoreTailer extends AbstractCloseable
 
         if (nextIndex != Long.MIN_VALUE) {
             moveToIndexInternal(nextIndex);
-            state = FOUND_CYCLE;
+            state = FOUND_IN_CYCLE;
             return true;
         }
 
@@ -397,7 +397,7 @@ class StoreTailer extends AbstractCloseable
         }
 
         if (moveToIndexInternal(index())) {
-            state = FOUND_CYCLE;
+            state = FOUND_IN_CYCLE;
             return true;
         }
         return false;
@@ -533,7 +533,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private long nextIndexWithinFoundCycle(final int nextCycle) {
-        state = FOUND_CYCLE;
+        state = FOUND_IN_CYCLE;
         if (direction == FORWARD)
             return queue.rollCycle().toIndex(nextCycle, 0);
 
@@ -603,23 +603,21 @@ class StoreTailer extends AbstractCloseable
 //            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
 //        }
 
-        if (cycle != this.cycle || state != FOUND_CYCLE) {
-            // moves to the expected cycle
-            if (!cycle(cycle))
-                return ScanResult.NOT_REACHED;
-        }
+        // moves to the expected cycle
+        if (!cycle(cycle))
+            return ScanResult.NOT_REACHED;
 
         index(index);
         final ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
         final Bytes<?> bytes = privateWire().bytes();
         switch (scanResult) {
             case FOUND:
-                state = FOUND_CYCLE;
+                state = FOUND_IN_CYCLE;
                 moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
                 break;
 
             case NOT_REACHED:
-                state = NOT_REACHED;
+                state = NOT_REACHED_IN_CYCLE;
                 break;
             case NOT_FOUND:
                 if (this.cycle < this.queue.lastCycle) {
@@ -656,11 +654,11 @@ class StoreTailer extends AbstractCloseable
             final boolean found = cycle(firstCycle);
             assert found || store == null;
             if (found)
-                state = FOUND_CYCLE;
+                state = FOUND_IN_CYCLE;
         }
         index(queue.rollCycle().toIndex(cycle, 0));
 
-        state = FOUND_CYCLE;
+        state = FOUND_IN_CYCLE;
         Wire wire = privateWire();
         if (wire != null) {
             wire.bytes().readPosition(0);
@@ -821,7 +819,7 @@ class StoreTailer extends AbstractCloseable
             if (lastCycle == Integer.MIN_VALUE) {
                 if (state() == TailerState.CYCLE_NOT_FOUND)
                     state = UNINITIALISED;
-                setAddress(state == FOUND_CYCLE);
+                setAddress(state == FOUND_IN_CYCLE);
                 return this;
             }
 
@@ -848,11 +846,11 @@ class StoreTailer extends AbstractCloseable
             }
 
             final Bytes<?> bytes = privateWire().bytes();
-            state = isEndOfFile(bytes.readVolatileInt(bytes.readPosition())) ? END_OF_CYCLE : FOUND_CYCLE;
+            state = isEndOfFile(bytes.readVolatileInt(bytes.readPosition())) ? END_OF_CYCLE : FOUND_IN_CYCLE;
 
             index(rollCycle.toIndex(lastCycle, sequenceNumber));
 
-            setAddress(state == FOUND_CYCLE);
+            setAddress(state == FOUND_IN_CYCLE);
         } catch (@NotNull UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }
@@ -876,7 +874,7 @@ class StoreTailer extends AbstractCloseable
         switch (scanResult) {
             case NOT_FOUND:
                 if (moveToIndexResult(index - 1) == FOUND)
-                    state = FOUND_CYCLE;
+                    state = FOUND_IN_CYCLE;
                 break;
 
             case FOUND:
@@ -888,7 +886,7 @@ class StoreTailer extends AbstractCloseable
                         case FOUND:
                             // the end moved!!
                         case NOT_FOUND:
-                            state = FOUND_CYCLE;
+                            state = FOUND_IN_CYCLE;
                             break;
                         case END_OF_FILE:
                             state = END_OF_CYCLE;
@@ -987,7 +985,7 @@ class StoreTailer extends AbstractCloseable
             return false;
         final RollCycle rollCycle = queue.rollCycle();
         moveToIndexInternal(rollCycle.toIndex(cycle, count - 1));
-        this.state = FOUND_CYCLE;
+        this.state = FOUND_IN_CYCLE;
         return true;
     }
 
@@ -1010,7 +1008,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean cycle(final int cycle) {
-        if (this.cycle == cycle && state == FOUND_CYCLE)
+        if (this.cycle == cycle && (state == FOUND_IN_CYCLE || state == NOT_REACHED_IN_CYCLE))
             return true;
 
         final SingleChronicleQueueStore nextStore = queue.storeForCycle(
@@ -1035,7 +1033,7 @@ class StoreTailer extends AbstractCloseable
 
         context.wire(null);
         store = nextStore;
-        state = FOUND_CYCLE;
+        state = FOUND_IN_CYCLE;
         setCycle(cycle);
         resetWires();
         final Wire wire = privateWire();
@@ -1185,7 +1183,7 @@ class StoreTailer extends AbstractCloseable
                                                               final ChronicleQueue queue) {
             return lastMovedToIndex != Long.MIN_VALUE &&
                     index - lastMovedToIndex < INDEXING_LINEAR_SCAN_THRESHOLD &&
-                    state == FOUND_CYCLE &&
+                    state == FOUND_IN_CYCLE &&
                     direction == directionAtLastMoveTo &&
                     queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex) &&
                     index > lastMovedToIndex;
@@ -1198,7 +1196,7 @@ class StoreTailer extends AbstractCloseable
                                               final Wire wire) {
 
             return ((wire == null) || wire.bytes().readPosition() == readPositionAtLastMove) &&
-                    index == this.lastMovedToIndex && index != 0 && state == FOUND_CYCLE &&
+                    index == this.lastMovedToIndex && index != 0 && state == FOUND_IN_CYCLE &&
                     direction == directionAtLastMoveTo &&
                     queue.rollCycle().toCycle(index) == queue.rollCycle().toCycle(lastMovedToIndex);
         }
