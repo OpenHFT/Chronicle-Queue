@@ -7,10 +7,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -216,6 +213,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
+    @Ignore("see https://github.com/OpenHFT/Chronicle-Queue/issues/734")
     @Test
     public void read5thMessageTest() throws InterruptedException {
         SetTimeProvider stp = new SetTimeProvider();
