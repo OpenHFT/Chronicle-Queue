@@ -597,7 +597,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     @NotNull
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
-        return this.onRingBufferStats == null ? NoBytesRingBufferStats.NONE : onRingBufferStats;
+        return this.onRingBufferStats;
     }
 
     @NotNull
@@ -1104,14 +1104,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         }
         return this;
-    }
-
-    enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
-        NONE;
-
-        @Override
-        public void accept(BytesRingBufferStats bytesRingBufferStats) {
-        }
     }
 
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {
