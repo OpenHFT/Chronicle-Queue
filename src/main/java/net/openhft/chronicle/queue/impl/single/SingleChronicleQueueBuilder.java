@@ -113,6 +113,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Boolean ringBufferReopenReader;
     private Supplier<Pauser> ringBufferPauserSupplier;
     private HandlerPriority drainerPriority;
+    private int drainerTimeoutMS = -1;
+
     @Nullable
     private EventLoop eventLoop;
     /**
@@ -858,6 +860,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public SingleChronicleQueueBuilder drainerPriority(HandlerPriority drainerPriority) {
         this.drainerPriority = drainerPriority;
+        return this;
+    }
+
+    public int drainerTimeoutMS() {
+        return drainerTimeoutMS <= 0 ? 10_000 : drainerTimeoutMS;
+    }
+
+    public SingleChronicleQueueBuilder drainerTimeoutMS(int timeout) {
+        drainerTimeoutMS = timeout;
         return this;
     }
 
