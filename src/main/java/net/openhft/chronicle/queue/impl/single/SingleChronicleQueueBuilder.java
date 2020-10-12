@@ -595,7 +595,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    @NotNull
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
     }
