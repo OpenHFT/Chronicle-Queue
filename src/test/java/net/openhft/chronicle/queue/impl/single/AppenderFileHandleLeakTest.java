@@ -12,12 +12,8 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -48,24 +44,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
     private File queuePath;
-
-    private static Matcher<Integer> withinDelta(final int expected, final int delta) {
-        return new TypeSafeMatcher<Integer>() {
-            private int actual;
-
-            @Override
-            protected boolean matchesSafely(final Integer actual) {
-                this.actual = actual;
-                return Math.abs(actual - expected) < delta;
-            }
-
-            @Override
-            public void describeTo(final Description description) {
-                description.appendText(String.format("actual %d was not within %d of %d",
-                        actual, delta, expected));
-            }
-        };
-    }
 
     private static void readMessage(final ChronicleQueue queue,
                                     final boolean manuallyReleaseResources,
@@ -98,7 +76,11 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, IOException, TimeoutException, ExecutionException {
+    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws Exception {
+        FlakyTestRunner.run(this::appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection0);
+    }
+
+    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection0() throws InterruptedException, IOException, TimeoutException, ExecutionException {
         assumeThat(OS.isLinux(), is(true));
 
         // this might help the test be more stable when there is multiple tests.
@@ -135,7 +117,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("Flaky")
+//    @Ignore("Flaky")
     public void tailerResourcesCanBeReleasedManually() throws Exception {
         FlakyTestRunner.run(this::tailerResourcesCanBeReleasedManually0);
     }
