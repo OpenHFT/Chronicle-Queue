@@ -71,7 +71,6 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
                 "  wireType: BINARY_LIGHT,\n" +
                 "  path: " + getTmpDir() +
                 "  rollCycle: !net.openhft.chronicle.queue.RollCycles DAILY,\n" +
-                "  onRingBufferStats: !net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder$NoBytesRingBufferStats NONE,\n" +
                 "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +
                 "}\n");
         builder.build().close();

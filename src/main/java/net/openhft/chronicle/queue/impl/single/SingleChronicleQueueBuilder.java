@@ -113,6 +113,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Boolean ringBufferReopenReader;
     private Supplier<Pauser> ringBufferPauserSupplier;
     private HandlerPriority drainerPriority;
+    private int drainerTimeoutMS = -1;
+
     @Nullable
     private EventLoop eventLoop;
     /**
@@ -593,9 +595,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    @NotNull
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
-        return this.onRingBufferStats == null ? NoBytesRingBufferStats.NONE : onRingBufferStats;
+        return this.onRingBufferStats;
     }
 
     @NotNull
@@ -861,6 +862,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
+    public int drainerTimeoutMS() {
+        return drainerTimeoutMS <= 0 ? 10_000 : drainerTimeoutMS;
+    }
+
+    public SingleChronicleQueueBuilder drainerTimeoutMS(int timeout) {
+        drainerTimeoutMS = timeout;
+        return this;
+    }
+
     /**
      * Pauser supplier for the pauser to be used by ring buffer when waiting
      */
@@ -1093,14 +1103,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         }
         return this;
-    }
-
-    enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
-        NONE;
-
-        @Override
-        public void accept(BytesRingBufferStats bytesRingBufferStats) {
-        }
     }
 
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {
