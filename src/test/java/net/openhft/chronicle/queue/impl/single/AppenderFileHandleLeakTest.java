@@ -12,16 +12,15 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,9 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeThat;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
@@ -48,24 +45,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
     private File queuePath;
-
-    private static Matcher<Integer> withinDelta(final int expected, final int delta) {
-        return new TypeSafeMatcher<Integer>() {
-            private int actual;
-
-            @Override
-            protected boolean matchesSafely(final Integer actual) {
-                this.actual = actual;
-                return Math.abs(actual - expected) < delta;
-            }
-
-            @Override
-            public void describeTo(final Description description) {
-                description.appendText(String.format("actual %d was not within %d of %d",
-                        actual, delta, expected));
-            }
-        };
-    }
 
     private static void readMessage(final ChronicleQueue queue,
                                     final boolean manuallyReleaseResources,
@@ -99,15 +78,19 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
     @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, IOException, TimeoutException, ExecutionException {
-        assumeThat(OS.isLinux(), is(true));
 
-        // this might help the test be more stable when there is multiple tests.
-        GcControls.requestGcCycle();
-        Thread.sleep(100);
-        final List<ExcerptTailer> gcGuard = new LinkedList<>();
-        long openFileHandleCount = countFileHandlesOfCurrentProcess();
-        List<String> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
+        File file;
+
+        assumeTrue(OS.isLinux() || OS.isMacOSX());
+
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
+
+            file = queue.file();
+
+            GcControls.requestGcCycle();
+            Thread.sleep(100);
+            final List<ExcerptTailer> gcGuard = new LinkedList<>();
+
             final List<Future<Boolean>> futures = new LinkedList<>();
 
             for (int i = 0; i < THREAD_COUNT; i++) {
@@ -131,23 +114,24 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         GcControls.waitForGcCycle();
         GcControls.waitForGcCycle();
 
-        waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);
+        Assert.assertTrue(isFileHandleClosed(file));
     }
 
     @Test
-    @Ignore("Flaky")
     public void tailerResourcesCanBeReleasedManually() throws Exception {
         FlakyTestRunner.run(this::tailerResourcesCanBeReleasedManually0);
     }
 
     public void tailerResourcesCanBeReleasedManually0() throws IOException, InterruptedException, TimeoutException, ExecutionException {
-        assumeTrue(OS.isLinux());
+
+        File file;
+
+        assumeTrue(OS.isLinux() || OS.isMacOSX());
 
         GcControls.requestGcCycle();
         Thread.sleep(100);
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
-            final long openFileHandleCount = countFileHandlesOfCurrentProcess();
-            final List<String> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
+            file = queue.file();
             final List<Future<Boolean>> futures = new LinkedList<>();
             final List<ExcerptTailer> gcGuard = new LinkedList<>();
 
@@ -165,21 +149,24 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
                 assertTrue(future.get(1, TimeUnit.MINUTES));
             }
 
-            waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);
-
             assertFalse(gcGuard.isEmpty());
         }
+
+        Assert.assertTrue(isFileHandleClosed(file));
+
     }
 
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        assumeThat(OS.isLinux(), is(true));
+        assumeTrue(OS.isLinux() || OS.isMacOSX());
+
+        File file;
+
         System.gc();
         Thread.sleep(100);
         final int messagesPerThread = 10;
         try (ChronicleQueue queue = createQueue(currentTime::get)) {
-
-            final long openFileHandleCount = countFileHandlesOfCurrentProcess();
+            file = queue.file();
             final List<String> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
 
             for (int j = 0; j < messagesPerThread; j++) {
@@ -187,10 +174,8 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
                 currentTime.addAndGet(500);
             }
 
-            waitForFileHandleCountToDrop(openFileHandleCount, fileHandlesAtStart);
-
             fileHandlesAtStart.clear();
-            final long tailerOpenFileHandleCount = countFileHandlesOfCurrentProcess();
+          
             int acquiredBefore = storeFileListener.acquiredCounts.size();
             storeFileListener.reset();
 
@@ -216,13 +201,12 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
             // tailers do not call StoreFileListener correctly - see
             // https://github.com/OpenHFT/Chronicle-Queue/issues/694
             LOGGER.info("storeFileListener {}", storeFileListener);
-//            MatcherAssert.assertThat(storeFileListener.toString(),
-//                    storeFileListener.releasedCounts.size(),
-//                    is(withinDelta(storeFileListener.acquiredCounts.size(), 2)));
+
             assertEquals(acquiredBefore, storeFileListener.acquiredCounts.size());
 
-            waitForFileHandleCountToDrop(tailerOpenFileHandleCount - 1, fileHandlesAtStart);
         }
+
+        Assert.assertTrue(isFileHandleClosed(file));
     }
 
     @After
@@ -232,43 +216,31 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
-    private void waitForFileHandleCountToDrop(
-            final long startFileHandleCount,
-            final List<String> fileHandlesAtStart) throws IOException {
-        final long failAt = System.currentTimeMillis() + 10_000L;
-        while (System.currentTimeMillis() < failAt) {
-            System.gc();
-            BackgroundResourceReleaser.releasePendingResources();
-            if (countFileHandlesOfCurrentProcess() <= startFileHandleCount + 2) {
-                return;
-            }
-            Thread.yield();
-        }
 
-        final List<String> fileHandlesAtEnd = new ArrayList<>(lastFileHandles);
-        fileHandlesAtEnd.removeAll(fileHandlesAtStart);
 
-        fail("File handle count did not drop for queue in directory " + queuePath.getAbsolutePath() +
-                ", remaining handles:\n" + fileHandlesAtEnd);
-    }
 
-    private long countFileHandlesOfCurrentProcess() throws IOException {
-        lastFileHandles.clear();
-        try (final Stream<Path> fileHandles = Files.list(Paths.get("/proc/self/fd"))) {
-            fileHandles.map(p -> {
-                try {
-                    return p.toRealPath();
-                } catch (IOException e) {
-                    return p;
+
+    private static boolean isFileHandleClosed(File file) throws IOException {
+        Process plsof = null;
+        try {
+            plsof = new ProcessBuilder("lsof", "|", "grep", file.getAbsolutePath()).start();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    //     System.out.println(line);
+                    if (line.contains(file.getAbsolutePath())) {
+                        reader.close();
+                        plsof.destroy();
+                        return false;
+                    }
                 }
-            })
-                    .filter(p -> p.toString().contains(queuePath.getName()))
-                    .map(p -> p.toFile().getName())
-                    .forEach(lastFileHandles::add);
+            }
+        } finally {
+            if (plsof != null)
+                plsof.destroy();
         }
-        try (final Stream<Path> fileHandles = Files.list(Paths.get("/proc/self/fd"))) {
-            return fileHandles.count();
-        }
+
+        return true;
     }
 
     private ChronicleQueue createQueue(final TimeProvider timeProvider) {
