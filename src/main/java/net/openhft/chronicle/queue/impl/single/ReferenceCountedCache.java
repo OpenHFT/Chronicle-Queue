@@ -1,10 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.ReferenceCounted;
+import net.openhft.chronicle.core.io.*;
 import net.openhft.chronicle.core.util.ThrowingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -85,8 +82,12 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
                 final boolean noOtherReferencers = value.refCount() == 1;
                 if (noOtherReferencers) {
                     //System.err.println("Removing " + value.toString() + " by " + this);
-                    value.release(this);
-                    value.close();
+                    try {
+                        value.release(this);
+                        value.close();
+                    } catch (ClosedIllegalStateException e) {
+                        // could be closed in the foreground
+                    }
                 }
                 return noOtherReferencers;
             });
