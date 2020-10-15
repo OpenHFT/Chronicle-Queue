@@ -674,6 +674,11 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
     }
 
+    @Override
+    protected boolean threadSafetyCheck(boolean isUsed) {
+        return true;
+    }
+
     int indexCount() {
         return indexCount;
     }
