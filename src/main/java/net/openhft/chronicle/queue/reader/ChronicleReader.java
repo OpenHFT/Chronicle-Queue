@@ -41,6 +41,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
+
 public final class ChronicleReader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
@@ -280,7 +282,7 @@ public final class ChronicleReader {
         return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .readOnly(readOnly)
-                //.storeFileListener(NO_OP)
+                .storeFileListener(NO_OP)
                 .build();
     }
 
