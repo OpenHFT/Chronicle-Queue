@@ -21,6 +21,13 @@ import java.io.File;
 
 @FunctionalInterface
 public interface StoreFileListener {
+
+    public StoreFileListener
+            NO_OP = (
+            int cycle, File
+            file) -> {
+    };
+
     default void onAcquired(int cycle, File file) {
 
     }
