@@ -229,6 +229,12 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @Override
+    protected boolean threadSafetyCheck(boolean isUsed) {
+        // disable thread safety check
+        return true;
+    }
+
+    @Override
     public long moveToEndForRead(@NotNull Wire w) {
         throwExceptionIfClosed();
 
