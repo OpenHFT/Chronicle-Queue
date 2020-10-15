@@ -664,8 +664,8 @@ class StoreTailer extends AbstractCloseable
     }
 
     /**
-     * gives approximately the last index, can not be relied on as the last index may have changed just after this was called. For this reason,
-     * this code is not in queue as it should only be an internal method
+     * gives approximately the last index, can not be relied on as the last index may have changed just after this was called. For this reason, this
+     * code is not in queue as it should only be an internal method
      *
      * @return the last index at the time this method was called, or Long.MIN_VALUE if none.
      */
@@ -686,7 +686,8 @@ class StoreTailer extends AbstractCloseable
 
     private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException {
         RollCycle rollCycle = queue.rollCycle();
-        final SingleChronicleQueueStore wireStore = queue.storeForCycle(
+
+        final SingleChronicleQueueStore wireStore = (cycle == lastCycle) ? this.store : queue.storeForCycle(
                 lastCycle, queue.epoch(), false, this.store);
         this.setCycle(lastCycle);
         if (wireStore == null)

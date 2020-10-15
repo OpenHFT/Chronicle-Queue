@@ -41,8 +41,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
-
 public final class ChronicleReader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
@@ -77,6 +75,8 @@ public final class ChronicleReader {
         return configValue != UNSET_VALUE;
     }
 
+    private ThreadLocal<ExcerptTailer> tlTailer;
+
     public void execute() {
         long lastObservedTailIndex;
         long highestReachedIndex = 0L;
@@ -87,6 +87,8 @@ public final class ChronicleReader {
             try (final ChronicleQueue queue = createQueue();
                  final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
                 final ExcerptTailer tailer = queue.createTailer();
+
+                tlTailer = ThreadLocal.withInitial(queue::createTailer);
 
                 do {
                     if (highestReachedIndex != 0L) {
@@ -234,7 +236,7 @@ public final class ChronicleReader {
     }
 
     private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex, ChronicleQueue queue) {
-        long currentTailIndex = getCurrentTailIndex(queue);
+        long currentTailIndex = indexOfEnd(queue);
         return currentTailIndex > lastObservedTailIndex;
     }
 
@@ -259,10 +261,15 @@ public final class ChronicleReader {
         }
     }
 
-    private long getCurrentTailIndex(ChronicleQueue queue) {
-        try (ExcerptTailer tailer = queue.createTailer()) {
-            return tailer.toEnd().index();
+    private long indexOfEnd(ChronicleQueue queue) {
+        final ExcerptTailer excerptTailer = tlTailer.get();
+        long index = excerptTailer.index();
+        try {
+            return excerptTailer.toEnd().index();
+        } finally {
+            excerptTailer.moveToIndex(index);
         }
+
     }
 
     @NotNull
@@ -273,7 +280,7 @@ public final class ChronicleReader {
         return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .readOnly(readOnly)
-                .storeFileListener(NO_OP)
+                //.storeFileListener(NO_OP)
                 .build();
     }
 

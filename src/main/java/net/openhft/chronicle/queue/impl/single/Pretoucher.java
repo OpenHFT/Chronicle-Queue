@@ -12,13 +12,13 @@ import java.util.function.IntConsumer;
 /**
  * A class designed to be called from a long-lived thread.
  * <p>
- * Upon invocation of the {@code execute()} method, this object will pre-touch pages in the supplied queue's underlying store file,
- * attempting to keep ahead of any appenders to the queue.
+ * Upon invocation of the {@code execute()} method, this object will pre-touch pages in the supplied queue's underlying store file, attempting to keep
+ * ahead of any appenders to the queue.
  * <p>
  * Resources held by this object will be released when the underlying queue is closed.
  * <p>
- * Alternatively, the {@code shutdown()} method can be called to close the supplied queue and release any other resources.
- * Invocation of the {@code execute()} method after {@code shutdown()} has been called with cause an {@code IllegalStateException} to be thrown.
+ * Alternatively, the {@code shutdown()} method can be called to close the supplied queue and release any other resources. Invocation of the {@code
+ * execute()} method after {@code shutdown()} has been called with cause an {@code IllegalStateException} to be thrown.
  */
 public final class Pretoucher extends AbstractCloseable {
     static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
@@ -90,7 +90,7 @@ public final class Pretoucher extends AbstractCloseable {
                         Jvm.warn().on(getClass(), "unable to write the EOF file=" + currentCycleMappedBytes.mappedFile().file(), ex);
                     }
                 SingleChronicleQueueStore oldStore = currentCycleWireStore;
-                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), CAN_WRITE, currentCycleWireStore);
+                    currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), CAN_WRITE, currentCycleWireStore);
                 if (oldStore != null && oldStore != currentCycleWireStore)
                     oldStore.close();
             } finally {
