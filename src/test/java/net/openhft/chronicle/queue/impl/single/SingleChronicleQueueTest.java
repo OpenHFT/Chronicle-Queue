@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -2813,6 +2814,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLongLivingTailerAppenderReAcquiredEachSecond() {
+        FlakyTestRunner.run(OS.isWindows(), this::testLongLivingTailerAppenderReAcquiredEachSecond0);
+    }
+
+    public void testLongLivingTailerAppenderReAcquiredEachSecond0() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         final File dir = getTmpDir();
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
@@ -2839,8 +2844,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     }
 
                     try (final DocumentContext dc = tailer.readingDocument()) {
+                        assertTrue(dc.isPresent());
                         assertEquals(i, dc.wire().read("some").int32());
                     }
+                    Jvm.pause(1);
                 }
             }
         }
