@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.table.Metadata;
+import net.openhft.chronicle.queue.impl.table.TableStoreIterator;
 
 import java.util.function.Function;
 
@@ -30,6 +31,8 @@ public interface TableStore<T extends Metadata> extends CommonStore, Closeable {
     }
 
     LongValue acquireValueFor(CharSequence key, long defaultValue);
+
+    <A> void forEachKey(A accumulator, TableStoreIterator<A> tsIterator);
 
     /**
      * Acquires file-system level lock on the underlying file, to prevent concurrent access from multiple processes.

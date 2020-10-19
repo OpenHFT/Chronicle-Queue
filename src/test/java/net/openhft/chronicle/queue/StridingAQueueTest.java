@@ -19,10 +19,6 @@ import java.io.StringWriter;
 import static org.junit.Assert.assertEquals;
 
 public class StridingAQueueTest extends ChronicleQueueTestBase {
-    interface SAQMessage {
-        void hi(int j, int i);
-    }
-
     @Before
     public void disableFileShrinking() {
         System.setProperty("chronicle.queue.disableFileShrinking", "true");
@@ -77,6 +73,35 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
     @NotNull
     private String getExpected() {
         return "--- !!meta-data #binary\n" +
+                "header: !STStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  metadata: !SCQMeta {\n" +
+                "    roll: !SCQSRoll { length: !short 1000, format: yyyyMMdd-HHmmss'T4', epoch: 0 },\n" +
+                "    deltaCheckpointInterval: 64,\n" +
+                "    sourceId: 0\n" +
+                "  }\n" +
+                "}\n" +
+                "# position: 180, header: 0\n" +
+                "--- !!data #binary\n" +
+                "listing.highestCycle: 1567498756\n" +
+                "# position: 216, header: 1\n" +
+                "--- !!data #binary\n" +
+                "listing.lowestCycle: 1567498753\n" +
+                "# position: 256, header: 2\n" +
+                "--- !!data #binary\n" +
+                "listing.modCount: 3\n" +
+                "# position: 288, header: 3\n" +
+                "--- !!data #binary\n" +
+                "chronicle.write.lock: -9223372036854775808\n" +
+                "# position: 328, header: 4\n" +
+                "--- !!data #binary\n" +
+                "chronicle.lastIndexReplicated: -1\n" +
+                "# position: 376, header: 5\n" +
+                "--- !!data #binary\n" +
+                "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                "...\n" +
+                "# 65100 bytes remaining\n" +
+                "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
                 "    1112,\n" +
@@ -380,7 +405,10 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  !int 9\n" +
                 "]\n" +
                 "...\n" +
-                "# 130052 bytes remaining\n"
-                ;
+                "# 130052 bytes remaining\n";
+    }
+
+    interface SAQMessage {
+        void hi(int j, int i);
     }
 }
