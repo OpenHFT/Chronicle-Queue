@@ -102,4 +102,16 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "# 130660 bytes remaining\n", cq.dump());
         }
     }
+
+    @Test
+    public void manyEntries() {
+        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(OS.getTarget() + "/manyEntries-" + System.nanoTime())
+                .rollCycle(RollCycles.TEST_DAILY)
+                .testBlockSize()
+                .build()) {
+            for (int i = 0; i < 10000; i++) {
+                cq.tableStorePut("=hello" + i, i);
+            }
+        }
+    }
 }
