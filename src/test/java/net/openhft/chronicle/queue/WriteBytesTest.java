@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -80,6 +81,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .rollCycle(TEST4_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();

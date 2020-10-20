@@ -1554,6 +1554,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
 
@@ -1792,6 +1793,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testMetaData6() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -2459,6 +2461,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testMultipleAppenders() {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build();
              ExcerptAppender syncA = syncQ.acquireAppender();
              ExcerptAppender syncB = syncQ.acquireAppender();

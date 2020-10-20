@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.micros.Order;
@@ -670,6 +671,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .rollCycle(RollCycles.TEST_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
             appender.writeMap(map);
@@ -767,6 +769,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
             @NotNull ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
@@ -856,6 +859,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
             @NotNull final ExcerptAppender appender = queue.acquireAppender();
             appender.writeText("msg-1");

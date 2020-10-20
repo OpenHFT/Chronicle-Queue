@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -183,6 +184,7 @@ public class QueueWriteDocumentContextTest {
         IOTools.deleteDirWithFiles(OS.getTarget() + s);
         return SingleChronicleQueueBuilder.binary(OS.getTarget() + s)
                 .rollCycle(RollCycles.TEST_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .testBlockSize().build();
     }
 }
