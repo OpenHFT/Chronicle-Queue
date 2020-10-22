@@ -552,10 +552,6 @@ class StoreAppender extends AbstractCloseable
         writeBytesInternal(bytes, metadata);
     }
 
-    public static void main(String[] args) {
-        System.out.println("Integer.MAX_VALUE = " + Integer.MAX_VALUE);
-    }
-
     private void writeBytesInternal(@NotNull final BytesStore bytes, boolean metadata) {
         assert writeLock.locked();
         try {
