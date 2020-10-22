@@ -130,8 +130,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * pretouch() has to be run on the same thread, as the thread that created the appender. If you want to use pretouch() in another thread, you
-     * must first create or have an appender that was created on this thread, and then use this appender to call the pretouch()
+     * pretouch() has to be run on the same thread, as the thread that created the appender. If you want to use pretouch() in another thread, you must
+     * first create or have an appender that was created on this thread, and then use this appender to call the pretouch()
      */
     @Override
     public void pretouch() {
@@ -278,10 +278,15 @@ class StoreAppender extends AbstractCloseable
         return w;
     }
 
-    private void resetPosition() throws UnrecoverableTimeoutException {
+    /**
+     * @return true if the header number is changed, otherwise false
+     * @throws UnrecoverableTimeoutException
+     */
+    private boolean resetPosition() throws UnrecoverableTimeoutException {
+        long originalHeaderNumber = wire.headerNumber();
         try {
             if (store == null || wire == null)
-                return;
+                return false;
             long position = store.writePosition();
             position(position, position);
 
@@ -295,10 +300,13 @@ class StoreAppender extends AbstractCloseable
 
             bytes.writeLimit(bytes.capacity());
 
+            assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
+            return originalHeaderNumber != wire.headerNumber();
+
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
             throw new AssertionError(e);
         }
-        assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
+
     }
 
     private boolean checkPositionOfHeader(final Bytes<?> bytes) {
@@ -357,7 +365,6 @@ class StoreAppender extends AbstractCloseable
         wire.bytes().readPosition(wire.bytes().writePosition());
         return writeContext;
     }
-
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
@@ -503,8 +510,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without
-     * write locking as it WILL corrupt the queue file and cause data loss
+     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
+     * the queue file and cause data loss
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
         writeBytesInternal(index, bytes, false);
@@ -513,19 +520,35 @@ class StoreAppender extends AbstractCloseable
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         final int cycle = queue.rollCycle().toCycle(index);
 
-        if (wire == null)
-            setCycle2(cycle, true);
-        else if (this.cycle != cycle)
-            rollCycleTo(cycle);
+        long headerNumber = wire.headerNumber();
 
-        boolean isNextIndex = index == wire.headerNumber() + 1;
+        if (wire == null) {
+            setCycle2(cycle, true);
+            headerNumber = wire.headerNumber();
+        } else if (queue.rollCycle().toCycle(headerNumber) != cycle) {
+            rollCycleTo(cycle);
+            headerNumber = wire.headerNumber();
+        }
+
+        boolean isNextIndex = index == headerNumber + 1;
         if (!isNextIndex) {
+
             // in case our cached headerNumber is incorrect.
-            resetPosition();
-            isNextIndex = index == wire.headerNumber() + 1;
+            if (resetPosition()) {
+
+                headerNumber = wire.headerNumber();
+
+                /// if the header number has changed then we will have roll
+                if (queue.rollCycle().toCycle(headerNumber) != cycle) {
+                    rollCycleTo(cycle);
+                    headerNumber = wire.headerNumber();
+                }
+            }
+
+            isNextIndex = index == headerNumber + 1;
             if (!isNextIndex) {
-                if (index > wire.headerNumber() + 1)
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(wire.headerNumber()));
+                if (index > headerNumber + 1)
+                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
                 Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
                 return;
             }
@@ -623,8 +646,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Write an EOF marker on the current cycle if it is about to roll. It would do this any way if a new message was written, but this doesn't
-     * create a new cycle or add a message. Only used by tests.
+     * Write an EOF marker on the current cycle if it is about to roll. It would do this any way if a new message was written, but this doesn't create
+     * a new cycle or add a message. Only used by tests.
      */
     void writeEndOfCycleIfRequired() {
         if (wire != null && queue.cycle() != cycle)
