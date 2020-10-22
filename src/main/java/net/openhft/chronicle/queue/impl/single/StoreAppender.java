@@ -519,16 +519,13 @@ class StoreAppender extends AbstractCloseable
 
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         final int cycle = queue.rollCycle().toCycle(index);
-        long headerNumber = wire.headerNumber();
 
-        if (wire == null) {
+        if (wire == null)
             setCycle2(cycle, true);
-            headerNumber = wire.headerNumber();
-        } else if (queue.rollCycle().toCycle(headerNumber) != cycle) {
+        else if (queue.rollCycle().toCycle(wire.headerNumber()) != cycle)
             rollCycleTo(cycle);
-            headerNumber = wire.headerNumber();
-        }
 
+        long headerNumber = wire.headerNumber();
         boolean isNextIndex = index == headerNumber + 1;
         if (!isNextIndex) {
 
@@ -553,6 +550,10 @@ class StoreAppender extends AbstractCloseable
             }
         }
         writeBytesInternal(bytes, metadata);
+    }
+
+    public static void main(String[] args) {
+        System.out.println("Integer.MAX_VALUE = " + Integer.MAX_VALUE);
     }
 
     private void writeBytesInternal(@NotNull final BytesStore bytes, boolean metadata) {
