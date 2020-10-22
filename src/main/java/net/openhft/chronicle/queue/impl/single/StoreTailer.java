@@ -25,7 +25,8 @@ import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
 import static net.openhft.chronicle.core.UnsafeMemory.UNSAFE;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 import static net.openhft.chronicle.wire.Wires.END_OF_DATA;
 import static net.openhft.chronicle.wire.Wires.isEndOfFile;
@@ -272,6 +273,10 @@ class StoreTailer extends AbstractCloseable
                     if (!moveToIndexInternal(firstIndex))
                         return false;
                     break;
+
+                case NOT_REACHED_IN_CYCLE:
+                    boolean found = moveToIndexInternal(index);
+                    return found;
 
                 case FOUND_IN_CYCLE: {
                     try {
@@ -605,20 +610,27 @@ class StoreTailer extends AbstractCloseable
         index(index);
         final ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
         final Bytes<?> bytes = privateWire().bytes();
-        if (scanResult == FOUND) {
-            state = FOUND_IN_CYCLE;
-            moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
-            return scanResult;
-        } else if (scanResult == END_OF_FILE) {
-            state = END_OF_CYCLE;
-            return scanResult;
-        } else if (scanResult == NOT_FOUND && this.cycle < this.queue.lastCycle) {
-            state = END_OF_CYCLE;
-            return END_OF_FILE;
+        switch (scanResult) {
+            case FOUND:
+                state = FOUND_IN_CYCLE;
+                moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
+                break;
+
+            case NOT_REACHED:
+                state = NOT_REACHED_IN_CYCLE;
+                break;
+            case NOT_FOUND:
+                if (this.cycle < this.queue.lastCycle) {
+                    state = END_OF_CYCLE;
+                    return END_OF_FILE;
+                }
+                break;
+            case END_OF_FILE:
+                state = END_OF_CYCLE;
+                break;
         }
 
         return scanResult;
-
     }
 
     ScanResult moveToIndexResult(final long index) {
@@ -997,7 +1009,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean cycle(final int cycle) {
-        if (this.cycle == cycle && state == FOUND_IN_CYCLE)
+        if (this.cycle == cycle && (state == FOUND_IN_CYCLE || state == NOT_REACHED_IN_CYCLE))
             return true;
 
         final SingleChronicleQueueStore nextStore = queue.storeForCycle(

@@ -30,6 +30,7 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -150,8 +151,11 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
     }
 
+    // "see https://github.com/OpenHFT/Chronicle-Queue/issues/719")
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
+
+
         // too many hacks are required to make the (artificial) code below release resources correctly
         AbstractCloseable.disableCloseableTracing();
 
@@ -159,8 +163,13 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         dir.mkdirs();
 
         final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
+
+        MappedBytes bytes0 = null;
+        Wire wire;
+
         try (MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE * 2)) {
-            final Wire wire = new BinaryWire(bytes);
+            bytes0 = bytes;
+            wire = new BinaryWire(bytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName("header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
                     w.write("wireType").object(WireType.BINARY);
@@ -188,6 +197,13 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+        } finally {
+
+            if (bytes0.refCount() != 0)
+                System.out.println("");
+            System.out.println(bytes0);
+            if (bytes0 != null && !bytes0.isClosed())
+                bytes0.releaseLast();
         }
 
         try (ChronicleQueue queue = binary(dir)

@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -80,6 +81,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .rollCycle(TEST4_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
@@ -90,6 +92,35 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
             }
 
             assertEquals("--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T4', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 176, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 18554\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 18554\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 376, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 65100 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    4120,\n" +
@@ -248,7 +279,6 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "# position: 1028, header: 21\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_4\n" +
-                    // TODO FIX
                     "-541098.24210\n" +
                     "# position: 1040, header: 22\n" +
                     "--- !!data #binary\n" +

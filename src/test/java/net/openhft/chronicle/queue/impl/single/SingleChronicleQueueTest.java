@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -1553,6 +1554,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
 
@@ -1565,6 +1567,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertTrue(dc.isOpen());
             }
             assertEquals("--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 176, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 18554\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 18554\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 376, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 65100 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    392,\n" +
@@ -1762,6 +1793,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testMetaData6() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -1818,6 +1850,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     protected String expectedMetaDataTest2() {
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT || wireType == WireType.COMPRESSED_BINARY)
             return "--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T2', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 176, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 18554\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 18554\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 376, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 65100 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    544,\n" +
@@ -2400,6 +2461,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testMultipleAppenders() {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build();
              ExcerptAppender syncA = syncQ.acquireAppender();
              ExcerptAppender syncB = syncQ.acquireAppender();
@@ -2423,6 +2485,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     protected String expectedMultipleAppenders() {
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT || wireType == WireType.COMPRESSED_BINARY)
             return "--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 176, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 18554\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 18554\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 376, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 65100 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    504,\n" +
@@ -2726,6 +2817,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLongLivingTailerAppenderReAcquiredEachSecond() {
+        FlakyTestRunner.run(OS.isWindows(), this::testLongLivingTailerAppenderReAcquiredEachSecond0);
+    }
+
+    public void testLongLivingTailerAppenderReAcquiredEachSecond0() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         final File dir = getTmpDir();
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
@@ -2752,8 +2847,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     }
 
                     try (final DocumentContext dc = tailer.readingDocument()) {
+                        assertTrue(dc.isPresent());
                         assertEquals(i, dc.wire().read("some").int32());
                     }
+                    Jvm.pause(1);
                 }
             }
         }

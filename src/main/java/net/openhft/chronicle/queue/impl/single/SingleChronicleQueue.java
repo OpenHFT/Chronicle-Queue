@@ -17,10 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesRingBufferStats;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.PackageLocal;
@@ -51,6 +48,7 @@ import java.nio.channels.NonWritableChannelException;
 import java.text.ParseException;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -75,6 +73,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     protected final EventLoop eventLoop;
     @NotNull
     protected final TableStore<SCQMeta> metaStore;
+    // Uses this.closers as a lock. concurrent read, locking for write.
+    private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
     final Supplier<TimingPauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
@@ -290,6 +290,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public String dump() {
         StringBuilder sb = new StringBuilder(1024);
+        sb.append(metaStore.dump());
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
             try (SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false, null)) {
                 if (commonStore != null)
@@ -582,6 +583,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     protected void performClose() {
         synchronized (closers) {
+            metaStoreMap.values().forEach(Closeable::closeQuietly);
+            metaStoreMap.clear();
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
         }
@@ -796,6 +799,47 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     protected boolean threadSafetyCheck(boolean isUsed) {
         // component is thread safe
         return true;
+    }
+
+    public void tableStorePut(CharSequence key, long index) {
+        LongValue longValue = tableStoreAcquire(key, index);
+        if (longValue == null) return;
+        if (index == Long.MIN_VALUE)
+            longValue.setVolatileValue(index);
+        else
+            longValue.setMaxValue(index);
+    }
+
+    @Nullable
+    protected LongValue tableStoreAcquire(CharSequence key, long index) {
+        BytesStore keyBytes = asBytes(key);
+        LongValue longValue = metaStoreMap.get(keyBytes);
+        if (longValue == null) {
+            synchronized (closers) {
+                longValue = metaStoreMap.get(keyBytes);
+                if (longValue == null) {
+                    longValue = metaStore.acquireValueFor(key, index);
+                    int length = key.length();
+                    HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
+                    key2.write(0, keyBytes, 0, length);
+                    metaStoreMap.put(key2, longValue);
+                    return null;
+                }
+            }
+        }
+        return longValue;
+    }
+
+    public long tableStoreGet(CharSequence key) {
+        LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
+        if (longValue == null) return Long.MIN_VALUE;
+        return longValue.getVolatileValue();
+    }
+
+    private BytesStore asBytes(CharSequence key) {
+        return key instanceof BytesStore
+                ? ((BytesStore) key)
+                : ((Bytes<?>) acquireAnotherBytes()).append(key);
     }
 
     private static final class CachedCycleTree {

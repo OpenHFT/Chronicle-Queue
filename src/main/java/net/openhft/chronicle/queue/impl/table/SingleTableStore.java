@@ -269,6 +269,32 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         }
     }
 
+    @Override
+    public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
+        final StringBuilder sb = Wires.acquireStringBuilder();
+        mappedBytes.reserve(this);
+        try {
+            mappedBytes.readPosition(0);
+            mappedBytes.readLimit(mappedBytes.realCapacity());
+            while (mappedWire.readDataHeader()) {
+                final int header = mappedBytes.readVolatileInt();
+                if (Wires.isNotComplete(header))
+                    break;
+                final long readPosition = mappedBytes.readPosition();
+                final int length = Wires.lengthOf(header);
+                final ValueIn valueIn = mappedWire.readEventName(sb);
+                tsIterator.accept(accumulator, sb, valueIn);
+                mappedBytes.readPosition(readPosition + length);
+            }
+
+        } catch (EOFException e) {
+            throw new IORuntimeException(e);
+
+        } finally {
+            mappedBytes.release(this);
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -287,4 +313,5 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         // TableStore are thread safe
         return true;
     }
+
 }

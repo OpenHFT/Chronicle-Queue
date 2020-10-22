@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -40,6 +41,35 @@ public class QueueWriteDocumentContextTest {
         try (ChronicleQueue cq = createQueue(s)) {
             writeThreeKeys(cq.acquireAppender());
             assertEquals("--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 176, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 18554\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 18554\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 376, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 65100 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    392,\n" +
@@ -83,6 +113,35 @@ public class QueueWriteDocumentContextTest {
         try (ChronicleQueue cq = createQueue(s)) {
             writeThreeChainedKeys(cq.acquireAppender());
             assertEquals("--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 176, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 18554\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 18554\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 376, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 65100 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    392,\n" +
@@ -125,6 +184,7 @@ public class QueueWriteDocumentContextTest {
         IOTools.deleteDirWithFiles(OS.getTarget() + s);
         return SingleChronicleQueueBuilder.binary(OS.getTarget() + s)
                 .rollCycle(RollCycles.TEST_DAILY)
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .testBlockSize().build();
     }
 }
