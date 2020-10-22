@@ -519,7 +519,6 @@ class StoreAppender extends AbstractCloseable
 
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         final int cycle = queue.rollCycle().toCycle(index);
-
         long headerNumber = wire.headerNumber();
 
         if (wire == null) {
