@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -54,7 +55,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends Chronicle
             });
 
             try {
-                f2.get(5, TimeUnit.SECONDS);
+                f2.get(Jvm.isCodeCoverage() ? 20 : 5, TimeUnit.SECONDS);
             } catch (TimeoutException ignore) {
 
             }
