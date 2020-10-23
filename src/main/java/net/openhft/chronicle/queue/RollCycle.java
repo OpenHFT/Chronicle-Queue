@@ -22,8 +22,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 public interface RollCycle {
 
     /**
-     * Returns the format that is to be applied when file names
-     * are calculated for a new roll cycle.
+     * Returns the format that is to be applied when file names are calculated for a new roll cycle.
      * <p>
      * For example, the following formats can be returned:
      * <ul>
@@ -31,8 +30,7 @@ public interface RollCycle {
      *     <li>"yyyyMMdd" (DAILY)</li>
      * </ul>
      *
-     * @return the format that is to be applied when file names
-     * are calculated for a new roll cycle
+     * @return the format that is to be applied when file names are calculated for a new roll cycle
      */
     String format();
 
@@ -62,9 +60,8 @@ public interface RollCycle {
     /**
      * Returns the space between excerpts that are explicitly indexed.
      * <p>
-     * A higher number means higher sequential write performance but
-     * slower random access read. The sequential read performance is not
-     * affected by this property.
+     * A higher number means higher sequential write performance but slower random access read. The sequential read performance is not affected by
+     * this property.
      * <p>
      * For example, the following default index spacing can be returned:
      * <ul>
@@ -85,8 +82,7 @@ public interface RollCycle {
     /**
      * Returns the index for the given {@code cycle} and {@code sequenceNumber}.
      * <p>
-     * An index is comprised of both a cycle and a sequence number but
-     * the way the index is composed of said properties may vary.
+     * An index is comprised of both a cycle and a sequence number but the way the index is composed of said properties may vary.
      *
      * @param cycle          to be composed into an index
      * @param sequenceNumber to be composed into an index
@@ -97,10 +93,8 @@ public interface RollCycle {
     /**
      * Returns the sequence number for the given {@code index}.
      * <p>
-     * An index is comprised of both a cycle and a sequence number but
-     * the way the index is composed of said properties may vary.
-     * This method decomposes the provided {@code index} and extracts
-     * the sequence number.
+     * An index is comprised of both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
+     * decomposes the provided {@code index} and extracts the sequence number.
      *
      * @param index to use when extracting the sequence number
      * @return the sequence number for the given {@code index}
@@ -110,13 +104,16 @@ public interface RollCycle {
     /**
      * Returns the cycle for the given {@code index}.
      * <p>
-     * An index is comprised of both a cycle and a sequence number but
-     * the way the index is composed of said properties may vary.
-     * This method decomposes the provided {@code index} and extracts
-     * the cycle.
+     * An index is comprised of both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
+     * decomposes the provided {@code index} and extracts the cycle.
      *
      * @param index to use when extracting the cycle
      * @return the sequence number for the given {@code index}
      */
     int toCycle(long index);
+
+    /**
+     * @return the maximum number of messages per cycle
+     */
+    long maxMessagesPerCycle();
 }
