@@ -219,15 +219,4 @@ public enum RollCycles implements RollCycle {
         return Maths.toUInt31(index >> cycleShift);
     }
 
-    public static void main(String[] args) {
-
-        System.out.println("Integer.MAX_VALUE = " + Integer.MAX_VALUE);
-        System.out.println("max number of message per cycle");
-
-        RollCycles.all().forEach(r -> {
-                    System.out.println("" +r + " \t " + NumberFormat.getNumberInstance(Locale.UK).format(r.maxMessagesPerCycle()));
-
-                }
-        );
-    }
 }
