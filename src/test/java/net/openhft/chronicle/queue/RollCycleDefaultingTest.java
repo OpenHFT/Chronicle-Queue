@@ -92,5 +92,10 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         public int toCycle(long index) {
             return delegate.toCycle(index);
         }
+
+        @Override
+        public long maxMessagesPerCycle() {
+            return 0;
+        }
     }
 }

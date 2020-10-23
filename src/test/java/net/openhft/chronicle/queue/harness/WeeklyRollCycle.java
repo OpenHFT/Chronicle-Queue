@@ -16,9 +16,11 @@ package net.openhft.chronicle.queue.harness;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
@@ -81,5 +83,10 @@ public class WeeklyRollCycle implements RollCycle {
     @Override
     public int toCycle(long index) {
         return Maths.toUInt31(index >> cycleShift);
+    }
+
+    @Override
+    public long maxMessagesPerCycle() {
+        return RollCycles.maxMessagesPerCycle(sequenceMask, indexCount, indexSpacing);
     }
 }

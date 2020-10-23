@@ -21,9 +21,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.time.TimeProvider;
 import org.jetbrains.annotations.NotNull;
 
-import java.text.NumberFormat;
 import java.util.Arrays;
-import java.util.Locale;
 
 /**
  * Roll cycles to use with the queue. Sparse indexing roll cycles are useful for improving write performance but they slightly slow random access
@@ -169,7 +167,7 @@ public enum RollCycles implements RollCycle {
     }
 
     public long maxMessagesPerCycle() {
-        return Math.min(sequenceMask, (long) indexCount * indexCount * indexSpacing);
+        return maxMessagesPerCycle(sequenceMask, indexCount, indexSpacing);
     }
 
     public static Iterable<RollCycles> all() {
@@ -219,4 +217,7 @@ public enum RollCycles implements RollCycle {
         return Maths.toUInt31(index >> cycleShift);
     }
 
+    public static long maxMessagesPerCycle(final long sequenceMask, final int indexCount, final int indexSpacing) {
+        return Math.min(sequenceMask, (long) indexCount * indexCount * indexSpacing);
+    }
 }
