@@ -15,7 +15,7 @@ public final class WriteBytesTest extends QueueTestCommon {
 
     @Test
     public void shouldWriteBytes() throws IOException {
-        // test was not compiling see   http://teamcity.higherfrequencytrading.com/viewType.html?buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
+        // test was not compiling see   http://teamcity.chronicle.software/viewType.html?buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
 
     }
 

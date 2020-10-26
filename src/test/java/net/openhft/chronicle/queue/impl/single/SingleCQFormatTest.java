@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Chronicle Software
+ * Copyright 2016-2020 chronicle.software
  *
  * https://chronicle.software
  *
@@ -30,7 +30,6 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;

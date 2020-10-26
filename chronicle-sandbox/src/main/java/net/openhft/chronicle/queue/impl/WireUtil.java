@@ -1,5 +1,5 @@
 /*
- *     Copyright (C) 2015  higherfrequencytrading.com
+ *     Copyright (C) 2015-2020 chronicle.software
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU Lesser General Public License as published by

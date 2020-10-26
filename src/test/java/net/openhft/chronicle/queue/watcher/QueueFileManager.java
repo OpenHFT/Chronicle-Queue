@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 Chronicle Software Ltd
+ * Copyright (c) 2016-2020 chronicle.software
  */
 
 package net.openhft.chronicle.queue.watcher;

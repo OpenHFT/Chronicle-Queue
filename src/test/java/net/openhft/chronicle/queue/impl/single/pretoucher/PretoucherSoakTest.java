@@ -7,9 +7,11 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
+import org.junit.Ignore;
 
 import java.util.UUID;
 
+@Ignore("stress test")
 public class PretoucherSoakTest extends QueueTestCommon {
 
     public static void main(String[] args) {
