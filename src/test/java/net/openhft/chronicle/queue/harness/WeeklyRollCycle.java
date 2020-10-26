@@ -87,6 +87,6 @@ public class WeeklyRollCycle implements RollCycle {
 
     @Override
     public long maxMessagesPerCycle() {
-        return RollCycles.maxMessagesPerCycle(sequenceMask, indexCount, indexSpacing);
+        return RollCycles.maxMessagesPerCycle(indexCount, indexSpacing);
     }
 }
