@@ -103,4 +103,16 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
         SingleChronicleQueueBuilder builder2 = Marshallable.fromString(val);
         builder2.build().close();
     }
+
+    @Test
+    public void tryOverrideSourceId() {
+        final File tmpDir = getTmpDir();
+        final int firstSourceId = 1;
+        try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId).build()) {
+            // just create the queue
+        }
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId + 1).build()) {
+            assertEquals(firstSourceId, q.sourceId());
+        }
+    }
 }
