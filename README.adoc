@@ -1483,7 +1483,7 @@ try {
     // perform the write which may throw
 } catch (Throwable t) {
     dc.rollbackOnClose();
-    Jvm.rethrow(t);
+    throw Jvm.rethrow(t);
 } finally {
     dc.close();
 }
