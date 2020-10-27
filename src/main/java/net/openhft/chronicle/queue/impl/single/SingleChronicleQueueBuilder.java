@@ -418,8 +418,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             metaStore = SingleTableBuilder.binary(metapath, metadata).readOnly(readOnly).build();
             // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
-            if (sourceId() == 0)
-                sourceId(newMeta.sourceId());
+            sourceId(newMeta.sourceId());
 
             String format = newMeta.roll().format();
             if (!format.equals(rollCycle().format())) {

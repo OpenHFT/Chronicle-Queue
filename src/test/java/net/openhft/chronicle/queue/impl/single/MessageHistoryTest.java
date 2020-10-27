@@ -73,7 +73,7 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
     public void chainedMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);
-             final ChronicleQueue outputQueue = createQueue(middleQueueDir, 3)) {
+             final ChronicleQueue outputQueue = createQueue(middleQueueDir, 2)) {
             generateTestData(inputQueue, middleQueue);
 
             MethodReader reader = middleQueue.createTailer().methodReader(outputQueue.methodWriter(First.class));
