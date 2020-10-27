@@ -784,19 +784,18 @@ class StoreTailer extends AbstractCloseable
     public ExcerptTailer toEnd() {
         throwExceptionIfClosed();
 
-        //  if (direction.equals(TailerDirection.BACKWARD))
-
-        try {
-            return originalToEnd();
-        } catch (NotReachedException e) {
-            // due to a race condition, where the queue rolls as we are processing toEnd()
-            // we may get a NotReachedException  ( see https://github.com/OpenHFT/Chronicle-Queue/issues/702 )
-            // hence are are just going to retry.
-            return originalToEnd();
+        if (direction.equals(TailerDirection.BACKWARD)) {
+            try {
+                return originalToEnd();
+            } catch (NotReachedException e) {
+                // due to a race condition, where the queue rolls as we are processing toEnd()
+                // we may get a NotReachedException  ( see https://github.com/OpenHFT/Chronicle-Queue/issues/702 )
+                // hence are are just going to retry.
+                return originalToEnd();
+            }
         }
 
-        //  todo fix -see issue https://github.com/OpenHFT/Chronicle-Queue/issues/689
-        // return optimizedToEnd();
+        return optimizedToEnd();
     }
 
     @Override
