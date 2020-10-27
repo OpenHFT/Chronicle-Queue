@@ -12,8 +12,8 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 
 public class StoreAppenderTest {
 
-    @Test
-    public void writeBytesInternalTest() {
+    @Test(expected = IllegalStateException.class)
+    public void testJumpingAMessageThrowsAIllegalStateException() {
 
         try (SingleChronicleQueue q = binary(tempDir("q"))
                 .rollCycle(MINUTELY)
