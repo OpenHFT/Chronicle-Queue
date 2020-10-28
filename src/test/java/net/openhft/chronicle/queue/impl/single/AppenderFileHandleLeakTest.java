@@ -212,17 +212,17 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
-private static boolean isFileHandleClosed(File file) throws IOException {
-    Process plsof = null;
-    try {
-        plsof = new ProcessBuilder("lsof", "|", "grep", file.getAbsolutePath()).start();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                //     System.out.println(line);
-                if (line.contains(file.getAbsolutePath())) {
-                    reader.close();
-                    plsof.destroy();
+    private static boolean isFileHandleClosed(File file) throws IOException {
+        Process plsof = null;
+        try {
+            plsof = new ProcessBuilder("lsof", "|", "grep", file.getAbsolutePath()).start();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    //     System.out.println(line);
+                    if (line.contains(file.getAbsolutePath())) {
+                        reader.close();
+                        plsof.destroy();
                         return false;
                     }
                 }

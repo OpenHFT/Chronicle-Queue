@@ -154,7 +154,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
 
-// too many hacks are required to make the (artificial) code below release resources correctly
+        // too many hacks are required to make the (artificial) code below release resources correctly
         AbstractCloseable.disableCloseableTracing();
 
         final File dir = getTmpDir();
