@@ -302,8 +302,7 @@ public class LatencyDistributionMain {
         tailerThread.interrupt();
         tailerThread.join();
 
-
-        System.out.println("wr: " + histogramWr.toLongMicrosFormat());
+System.out.println("wr: " + histogramWr.toLongMicrosFormat());
         System.out.println("in: " + histogramIn.toLongMicrosFormat());
         System.out.println("co: " + histogramCo.toLongMicrosFormat());
     }

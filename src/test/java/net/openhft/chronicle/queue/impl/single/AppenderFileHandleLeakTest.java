@@ -22,14 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
@@ -216,21 +212,17 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
-
-
-
-
-    private static boolean isFileHandleClosed(File file) throws IOException {
-        Process plsof = null;
-        try {
-            plsof = new ProcessBuilder("lsof", "|", "grep", file.getAbsolutePath()).start();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    //     System.out.println(line);
-                    if (line.contains(file.getAbsolutePath())) {
-                        reader.close();
-                        plsof.destroy();
+private static boolean isFileHandleClosed(File file) throws IOException {
+    Process plsof = null;
+    try {
+        plsof = new ProcessBuilder("lsof", "|", "grep", file.getAbsolutePath()).start();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                //     System.out.println(line);
+                if (line.contains(file.getAbsolutePath())) {
+                    reader.close();
+                    plsof.destroy();
                         return false;
                     }
                 }

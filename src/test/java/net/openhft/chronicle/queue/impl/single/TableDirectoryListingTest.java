@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;

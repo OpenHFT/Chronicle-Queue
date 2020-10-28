@@ -17,9 +17,8 @@ public class TestCallingToEndOnRoll extends ChronicleQueueTestBase implements Ti
     private ExcerptAppender appender;
     private ExcerptTailer tailer;
 
-
-    @Ignore("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
-    @Test
+@Ignore("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
+@Test
     public void test() {
         SingleChronicleQueue build = binary(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(this).build();
         appender = build.acquireAppender();
@@ -55,8 +54,6 @@ public class TestCallingToEndOnRoll extends ChronicleQueueTestBase implements Ti
             System.exit(-1);
         }
     }
-
-
 
     @Override
     public long currentTimeMillis() {

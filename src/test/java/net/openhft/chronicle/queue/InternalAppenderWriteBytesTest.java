@@ -37,8 +37,7 @@ public class InternalAppenderWriteBytesTest {
         }
     }
 
-
-    @Test(expected = java.lang.IllegalStateException.class)
+@Test(expected = java.lang.IllegalStateException.class)
     public void test2() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         Bytes result = Bytes.elasticByteBuffer();
@@ -57,13 +56,11 @@ public class InternalAppenderWriteBytesTest {
             // this will throw because it is not in sequence
             ((InternalAppender) appender).writeBytes(2, test);
 
-
         } finally {
             result.releaseLast();
             test.releaseLast();
         }
     }
-
 
     @Test
     public void test3() {
@@ -104,7 +101,5 @@ public class InternalAppenderWriteBytesTest {
             test.releaseLast();
         }
     }
-
-
 
 }
