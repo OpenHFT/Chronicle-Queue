@@ -89,4 +89,9 @@ public class WeeklyRollCycle implements RollCycle {
     public long maxMessagesPerCycle() {
         return RollCycles.maxMessagesPerCycle(indexCount, indexSpacing);
     }
+
+    @Override
+    public long durationOfCycle() {
+        return TimeUnit.DAYS.toMillis(7);
+    }
 }

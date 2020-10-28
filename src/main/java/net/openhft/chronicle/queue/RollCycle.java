@@ -116,4 +116,9 @@ public interface RollCycle {
      * @return the maximum number of messages per cycle
      */
     long maxMessagesPerCycle();
+
+    /**
+     * @return the duration of the cycle in milliseconds
+     */
+    public long durationOfCycle();
 }

@@ -5,6 +5,8 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
+import java.util.concurrent.TimeUnit;
+
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -96,6 +98,11 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         @Override
         public long maxMessagesPerCycle() {
             return 0;
+        }
+
+        @Override
+        public long durationOfCycle() {
+            return TimeUnit.SECONDS.toMillis(1);
         }
     }
 }
