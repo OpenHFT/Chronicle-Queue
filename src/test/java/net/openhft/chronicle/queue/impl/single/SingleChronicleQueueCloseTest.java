@@ -23,23 +23,36 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.TestKey;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTailAfterClose() {
-        final ChronicleQueue queue =
-                SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).
-                        build();
-        final ExcerptAppender appender = queue.acquireAppender();
-        appender.writeDocument(w -> w.write(TestKey.test).int32(1));
-        queue.close();
-        try {
-            appender.writeDocument(w -> w.write(TestKey.test).int32(2));
-            Assert.fail();
-        } catch (IllegalStateException e) {
-            // ok
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+            appender.writeDocument(w -> w.write(TestKey.test).int32(1));
+            queue.close();
+            try {
+                appender.writeDocument(w -> w.write(TestKey.test).int32(2));
+                Assert.fail();
+            } catch (IllegalStateException e) {
+                // ok
+            }
+        }
+    }
+
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/743")
+    @Test
+    public void reacquireAppenderAfterClose() {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+            appender.close();
+
+            // should be reopened? Or we get a new appender?
+            final ExcerptAppender appender2 = queue.acquireAppender();
+            appender2.writeText("hello");
         }
     }
 }
