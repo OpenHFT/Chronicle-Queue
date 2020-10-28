@@ -1985,8 +1985,6 @@ Ring buffer capacity when using `bufferMode: Asynchronous`
 
 === The Maximum number of messages per cycle
 
-This related to indexed message and as such any queue that are replicated via TCP/IP
-
 |===
 | RollCyle Name | Max Number of messages in each cycle in Decimal | Max Number of messages in each cycle in Hexadecimal | maximum messages per seconds over the length of the cycle  ( on average )
 
