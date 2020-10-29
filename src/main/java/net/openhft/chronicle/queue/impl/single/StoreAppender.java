@@ -782,6 +782,8 @@ class StoreAppender extends AbstractCloseable
             }
 
             try {
+                // historically there have been problems with an interrupted thread causing exceptions
+                // in calls below, and we saw half-written messages
                 final boolean interrupted = checkInterrupts && Thread.currentThread().isInterrupted();
                 if (interrupted)
                     throw new InterruptedException();
