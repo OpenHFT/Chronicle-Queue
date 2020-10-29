@@ -783,7 +783,9 @@ class StoreAppender extends AbstractCloseable
 
             try {
                 final boolean interrupted = checkInterrupts && Thread.currentThread().isInterrupted();
-                if (rollbackOnClose || interrupted) {
+                if (interrupted)
+                    throw new InterruptedException();
+                if (rollbackOnClose) {
                     doRollback(interrupted);
                     return;
                 }
@@ -817,7 +819,7 @@ class StoreAppender extends AbstractCloseable
                         wire = StoreAppender.this.wire;
                     }
                 }
-            } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
+            } catch (StreamCorruptedException | UnrecoverableTimeoutException | InterruptedException e) {
                 throw new IllegalStateException(e);
             } finally {
                 isClosed = true;
