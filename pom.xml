@@ -27,7 +27,7 @@
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.20.104-SNAPSHOT</version>
+    <version>5.20.105-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -185,18 +185,18 @@
         </repository>
     </repositories>
 
-<build>
-    <pluginManagement>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.1</version>
-            </plugin>
-        </plugins>
-    </pluginManagement>
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.2.1</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
 
-    <plugins>
+        <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

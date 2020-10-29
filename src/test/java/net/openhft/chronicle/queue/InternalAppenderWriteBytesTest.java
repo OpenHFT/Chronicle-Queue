@@ -37,7 +37,7 @@ public class InternalAppenderWriteBytesTest {
         }
     }
 
-@Test(expected = java.lang.IllegalStateException.class)
+    @Test(expected = java.lang.IllegalStateException.class)
     public void test2() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         Bytes result = Bytes.elasticByteBuffer();
