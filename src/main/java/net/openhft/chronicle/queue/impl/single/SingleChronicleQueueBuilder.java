@@ -129,7 +129,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     private Boolean readOnly;
     private Boolean strongAppenders;
-    private Boolean checkInterrupts;
+    private boolean checkInterrupts;
 
     private transient TableStore<SCQMeta> metaStore;
 
@@ -1052,15 +1052,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     // *************************************************************************
 
     public boolean checkInterrupts() {
-        if (checkInterrupts == null) {
-            if (System.getProperties().contains("chronicle.queue.ignoreInterrupts"))
-                return !Jvm.getBoolean("chronicle.queue.ignoreInterrupts");
-            if (System.getProperties().contains("chronicle.queue.checkInterrupts"))
-                return Jvm.getBoolean("chronicle.queue.checkInterrupts");
-        }
 
-        // default is true unless turned off.
-        return !Boolean.FALSE.equals(checkInterrupts);
+        if (System.getProperties().contains("chronicle.queue.checkInterrupts"))
+            return Jvm.getBoolean("chronicle.queue.checkInterrupts");
+
+        return checkInterrupts;
     }
 
     public SingleChronicleQueueBuilder checkInterrupts(boolean checkInterrupts) {
