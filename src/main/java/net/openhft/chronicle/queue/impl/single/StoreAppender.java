@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
@@ -550,18 +551,28 @@ class StoreAppender extends AbstractCloseable
             }
         }
         writeBytesInternal(bytes, metadata);
+
+        headerNumber = wire.headerNumber();
+        boolean isIndex = index == headerNumber;
+        if (!isIndex) {
+            System.out.println(Long.toHexString(index) + " != " + Long.toHexString(headerNumber));
+            writeBytesInternal(bytes, metadata);
+            Thread.yield();
+        }
     }
 
     private void writeBytesInternal(@NotNull final BytesStore bytes, boolean metadata) {
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
+            assert count == 0;
             openContext(metadata, safeLength);
 
             try {
                 writeContext.wire().bytes().write(bytes);
             } finally {
                 writeContext.close(false);
+                count = 0;
             }
         } finally {
             writeContext.isClosed = true;
@@ -710,6 +721,12 @@ class StoreAppender extends AbstractCloseable
     protected boolean threadSafetyCheck(boolean isUsed) {
         return disableThreadSafetyCheck
                 || super.threadSafetyCheck(isUsed);
+    }
+
+    @Override
+    public File currentFile() {
+        SingleChronicleQueueStore store = this.store;
+        return store == null ? null : store.currentFile();
     }
 
     private class Finalizer {

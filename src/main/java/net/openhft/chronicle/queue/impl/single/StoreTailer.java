@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.StreamCorruptedException;
 import java.text.ParseException;
 
@@ -1260,4 +1261,9 @@ class StoreTailer extends AbstractCloseable
         }
     }
 
+    @Override
+    public File currentFile() {
+        SingleChronicleQueueStore store = this.store;
+        return store == null ? null : store.currentFile();
+    }
 }

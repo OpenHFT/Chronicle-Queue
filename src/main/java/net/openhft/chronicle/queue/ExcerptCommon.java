@@ -20,6 +20,8 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.io.Closeable;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+
 /**
  * The ExcerptCommon is common to both ExcerptAppender
  * and ExcerptTailer.
@@ -52,4 +54,12 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
      * @return this.
      */
     E disableThreadSafetyCheck(boolean disableThreadSafetyCheck);
+
+
+    /**
+     * @return the current file being worked on or null if not known.
+     */
+    default File currentFile() {
+        return null;
+    }
 }

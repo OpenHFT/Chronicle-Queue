@@ -402,5 +402,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public int cycle() {
         return cycle;
     }
+
+    public File currentFile() {
+        return mappedFile.file();
+    }
 }
 
