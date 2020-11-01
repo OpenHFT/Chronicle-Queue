@@ -1961,6 +1961,11 @@ In particular, the following wire types are not supported:
 - RAW
 - READ_ANY
 
+==== Unlocking a locked queue
+
+To unlock a locked chronicle queue (perhaps an appending process has been abruptly killed), the
+`net.openhft.chronicle.queue.QueueUnlockMain` utility will accomplish this. There is also a script `unlock_queue.sh` to call this.
+
 ==== Other Configuration
 
 [qanda]
