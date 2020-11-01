@@ -1870,6 +1870,11 @@ In another thread you can wake the reader with:
 pauser.unpause();
 ----
 
+=== Unlocking a locked queue
+
+To unlock a locked chronicle queue (perhaps an appending process has been abruptly killed), the
+`net.openhft.chronicle.queue.QueueUnlockMain` utility will accomplish this. There is also a script `unlock_queue.sh` to call this.
+
 === Configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
@@ -1960,11 +1965,6 @@ In particular, the following wire types are not supported:
 - TEXT (and essentially all based on text, including JSON and CSV)
 - RAW
 - READ_ANY
-
-==== Unlocking a locked queue
-
-To unlock a locked chronicle queue (perhaps an appending process has been abruptly killed), the
-`net.openhft.chronicle.queue.QueueUnlockMain` utility will accomplish this. There is also a script `unlock_queue.sh` to call this.
 
 ==== Other Configuration
 
