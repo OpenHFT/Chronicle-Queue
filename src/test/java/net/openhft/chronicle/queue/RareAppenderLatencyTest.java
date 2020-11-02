@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -78,7 +79,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             return;
 
 //        System.out.println("starting test");
-        String pathname = OS.getTarget() + "/testRareAppenderLatency-" + System.nanoTime();
+        String pathname = OS.getTarget() + "/testRareAppenderLatency-" + Time.uniqueId();
         new File(pathname).deleteOnExit();
 
         // Shared queue between two threads appending. One appends very rarely, another heavily.

@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -50,7 +51,7 @@ public class RollingCycleTest extends QueueTestCommon {
         long start = System.currentTimeMillis() - 3 * 86_400_000;
         stp.currentTimeMillis(start);
 
-        String basePath = OS.getTarget() + "/testRollCycle" + System.nanoTime();
+        String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .timeoutMS(5)

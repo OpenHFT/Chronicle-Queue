@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
@@ -38,7 +39,7 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
 
     @Test
     public void test() {
-        String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         final SingleChronicleQueueBuilder myBuilder = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .timeProvider(System::currentTimeMillis)

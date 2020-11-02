@@ -43,7 +43,7 @@ public class ReplayData {
     */
     public static void main(String[] args) throws IOException {
         TestData td = DataValueClasses.newInstance(TestData.class);
-        String path = "/tmp/test";
+        String path = OS.getTarget()+"/test"+ Time.uniqueId();
 
         long start = System.nanoTime(), count = 0;
         try (Chronicle chronicle = ChronicleQueueBuilder.indexed(path).build()) {

@@ -21,6 +21,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -71,7 +72,7 @@ public class WriteReadTextTest extends QueueTestCommon {
 
     private void doTest(@NotNull String... problematic) {
 
-        String myPath = OS.getTarget() + "/writeReadText-" + System.nanoTime();
+        String myPath = OS.getTarget() + "/writeReadText-" + Time.uniqueId();
 
         try (ChronicleQueue theQueue = SingleChronicleQueueBuilder
                 .single(myPath)

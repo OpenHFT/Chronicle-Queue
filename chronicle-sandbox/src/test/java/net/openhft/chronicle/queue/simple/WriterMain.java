@@ -27,7 +27,7 @@ public class WriterMain {
         byte[] bytes = new byte[length];
         for (int t = 0; t < 5; t++) {
             long start = System.nanoTime();
-            File tmpFile = new File("deleteme" + System.nanoTime() + ".q"); //File.createTempFile("deleteme", "q");
+            File tmpFile = new File("deleteme" + Time.uniqueId() + ".q"); //File.createTempFile("deleteme", "q");
             tmpFile.deleteOnExit();
             MappedFile file = new MappedFile(tmpFile.getName(), 1 << CHUNK_BITS, 1 << CHUNK_BITS);
             FileWriter fw = new FileWriter(file);

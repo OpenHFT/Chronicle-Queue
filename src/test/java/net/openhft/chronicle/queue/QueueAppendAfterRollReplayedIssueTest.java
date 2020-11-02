@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -23,7 +24,7 @@ public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
     public void test() {
         int messages = 10;
 
-        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final ChronicleQueue writeQueue = ChronicleQueue
                 .singleBuilder(path)

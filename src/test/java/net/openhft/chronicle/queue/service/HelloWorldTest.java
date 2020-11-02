@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -50,8 +51,8 @@ public class HelloWorldTest extends QueueTestCommon {
         // acts as three processes in one test
         // process A writes to the HelloWorld interface.
         // process B read fromt he HelloWorld interface and writes to the
-        String input = OS.getTarget() + "/input-" + System.nanoTime();
-        String output = OS.getTarget() + "/output-" + System.nanoTime();
+        String input = OS.getTarget() + "/input-" + Time.uniqueId();
+        String output = OS.getTarget() + "/output-" + Time.uniqueId();
 
         HelloReplier replier = createMock(HelloReplier.class);
         replier.reply("Hello April");

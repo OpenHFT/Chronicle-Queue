@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
@@ -10,7 +11,7 @@ import static org.junit.Assert.assertNull;
 public class StoreTailerNotReachedTest {
     @Test
     public void afterNotReached() {
-        String path = OS.getTarget() + "/afterNotReached-" + System.nanoTime();
+        String path = OS.getTarget() + "/afterNotReached-" + Time.uniqueId();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .build()) {

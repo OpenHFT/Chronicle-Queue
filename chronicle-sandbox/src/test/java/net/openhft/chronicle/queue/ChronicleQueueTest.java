@@ -34,7 +34,7 @@ import static org.junit.Assert.assertTrue;
 public class ChronicleQueueTest {
 
     public static final int RUNS = 1000000;
-    public static final String TMP = System.getProperty("java.io.tmpdir");
+    public static final String TMP = OS.getTarget();
 
     @Ignore("ignored only because this is a performance test")
     @Test

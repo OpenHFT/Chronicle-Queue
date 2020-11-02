@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -35,7 +36,7 @@ public class QueuePingPongMain {
     }
 
     static void pingPong(int size) {
-        String path = QueuePingPongMain.basePath + "/test-q-" + System.nanoTime();
+        String path = QueuePingPongMain.basePath + "/test-q-" + Time.uniqueId();
         Histogram readDelay = new Histogram();
         Histogram readDelay2 = new Histogram();
         try (ChronicleQueue queue = createQueue(path)) {

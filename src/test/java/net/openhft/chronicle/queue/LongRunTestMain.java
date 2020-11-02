@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
+import net.openhft.chronicle.core.util.Time;
 import org.jetbrains.annotations.NotNull;
 
 @RequiredForClient
@@ -40,7 +41,7 @@ public class LongRunTestMain {
         output.setMarshallable(entry);
 
         final ChronicleQueue queue = ChronicleQueue.singleBuilder(
-                OS.getTarget() + "/test-" + System.nanoTime())
+                OS.getTarget() + "/test-" + Time.uniqueId())
                 .rollCycle(RollCycles.HOURLY)
                 .build();
         final ExcerptAppender appender = queue.acquireAppender();

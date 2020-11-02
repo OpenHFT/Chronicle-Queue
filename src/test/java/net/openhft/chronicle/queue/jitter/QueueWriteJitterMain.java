@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -31,7 +32,7 @@ public class QueueWriteJitterMain {
     protected void run() {
         MappedFile.warmup();
 
-        String path = "test-q-" + System.nanoTime();
+        String path = "test-q-" + Time.uniqueId();
         System.out.println("Writing to " + path);
 
         Thread pretoucher = new Thread(() -> {

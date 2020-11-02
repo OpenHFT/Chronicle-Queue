@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -42,7 +43,7 @@ public class ReadWriteTest extends QueueTestCommon {
 
     @Before
     public void setup() {
-        chroniclePath = new File(OS.getTarget(), "read_only_" + System.currentTimeMillis());
+        chroniclePath = new File(OS.getTarget(), "read_only_" + Time.uniqueId());
         try (ChronicleQueue readWrite = ChronicleQueue.singleBuilder(chroniclePath)
                 .readOnly(false)
                 .testBlockSize()

@@ -1223,7 +1223,7 @@ To create an instance you have to use the `ChronicleQueueBuilder`.
 
 [source,Java]
 ----
-String basePath = System.getProperty("java.io.tmpdir") + "/getting-started"
+String basePath = OS.getTarget() + "/getting-started"
 ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath).build();
 ----
 

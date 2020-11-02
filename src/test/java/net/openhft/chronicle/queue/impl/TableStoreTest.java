@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.Metadata;
@@ -16,7 +17,7 @@ import static org.junit.Assert.assertTrue;
 public class TableStoreTest extends QueueTestCommon {
     @Test
     public void acquireValueFor() {
-        String file = OS.getTarget() + "/table-" + System.nanoTime() + ".cq4t";
+        String file = OS.getTarget() + "/table-" + Time.uniqueId() + ".cq4t";
         new File(file).deleteOnExit();
         try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
 

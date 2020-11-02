@@ -35,7 +35,7 @@ public class OffHeapGenerateData {
 
     public static void main(String[] args) throws IOException {
         OffHeapTestData td = DataValueClasses.newDirectInstance(OffHeapTestData.class);
-        String path = "/tmp/test2";
+        String path = OS.getTarget()+"/test2"+ Time.uniqueId();
         StringBuilder name = new StringBuilder();
 
         long start = System.nanoTime();

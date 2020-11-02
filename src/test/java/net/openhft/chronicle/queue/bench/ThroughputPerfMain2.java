@@ -5,6 +5,7 @@ import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.UnsafeMemory;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -25,7 +26,7 @@ public class ThroughputPerfMain2 {
 
     @SuppressWarnings("deprecation")
     public static void main(String[] args) {
-        String base = path + "/delete-" + System.nanoTime() + ".me";
+        String base = path + "/delete-" + Time.uniqueId() + ".me";
         long start = System.nanoTime();
         long count = 0;
         nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);

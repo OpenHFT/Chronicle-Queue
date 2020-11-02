@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -35,7 +36,7 @@ public class LastIndexAppendedTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastIndexAppendedAcrossRestarts() {
-        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
 
         for (int i = 0; i < 5; i++) {
             try (ChronicleQueue queue = single(path)

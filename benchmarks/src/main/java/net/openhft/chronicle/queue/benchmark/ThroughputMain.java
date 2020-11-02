@@ -24,7 +24,7 @@ public class ThroughputMain {
 
     public static void main(String[] args) {
         long start = System.nanoTime();
-        String base = path + "/delete-" + System.nanoTime() + ".me.";
+        String base = path + "/delete-" + Time.uniqueId() + ".me.";
 
         long blockSize = OS.is64Bit()
                 ? OS.isLinux()

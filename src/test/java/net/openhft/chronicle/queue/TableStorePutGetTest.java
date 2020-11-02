@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
@@ -13,7 +14,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     @Test
     public void indexEntry() {
         SetTimeProvider stp = new SetTimeProvider("2020/10/15T01:01:01");
-        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(OS.getTarget() + "/indexEntry-" + System.nanoTime())
+        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(OS.getTarget() + "/indexEntry-" + Time.uniqueId())
                 .rollCycle(RollCycles.TEST_DAILY)
                 .timeProvider(stp)
                 .testBlockSize()
@@ -105,7 +106,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
 
     @Test
     public void manyEntries() {
-        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(OS.getTarget() + "/manyEntries-" + System.nanoTime())
+        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(OS.getTarget() + "/manyEntries-" + Time.uniqueId())
                 .rollCycle(RollCycles.TEST_DAILY)
                 .testBlockSize()
                 .build()) {

@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.Ignore;
@@ -60,7 +61,7 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testWithQueue() {
-        File queuePath = new File(OS.getTarget(), "testWithQueue-" + System.nanoTime());
+        File queuePath = new File(OS.getTarget(), "testWithQueue-" + Time.uniqueId());
         try {
             try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
                 OrderIdeaListener orderManager = queue.acquireAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
@@ -109,8 +110,8 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     public void testWithQueueHistory0() {
-        File queuePath = new File(OS.getTarget(), "testWithQueueHistory-" + System.nanoTime());
-        File queuePath2 = new File(OS.getTarget(), "testWithQueueHistory-down-" + System.nanoTime());
+        File queuePath = new File(OS.getTarget(), "testWithQueueHistory-" + Time.uniqueId());
+        File queuePath2 = new File(OS.getTarget(), "testWithQueueHistory-down-" + Time.uniqueId());
         try {
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
@@ -178,8 +179,8 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testRestartingAService() throws FileNotFoundException {
-        File queuePath = new File(OS.getTarget(), "testRestartingAService-" + System.nanoTime());
-        File queuePath2 = new File(OS.getTarget(), "testRestartingAService-down-" + System.nanoTime());
+        File queuePath = new File(OS.getTarget(), "testRestartingAService-" + Time.uniqueId());
+        File queuePath2 = new File(OS.getTarget(), "testRestartingAService-down-" + Time.uniqueId());
         try {
 
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)

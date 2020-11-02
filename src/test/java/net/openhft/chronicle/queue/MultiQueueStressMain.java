@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.util.Time;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -23,7 +24,7 @@ public class MultiQueueStressMain {
         for (int t = 0; t < runs; t++) {
             long start0 = System.currentTimeMillis();
             int count = 0;
-            String baseDir = target + "/deleteme/" + System.nanoTime();
+            String baseDir = target + "/deleteme/" + Time.uniqueId();
             new File(baseDir).mkdirs();
             MappedBytes[] queues = new MappedBytes[queueCount];
             int pagesPer10Second = (int) (10L * (throughput << 20) / queueCount / (4 << 10));

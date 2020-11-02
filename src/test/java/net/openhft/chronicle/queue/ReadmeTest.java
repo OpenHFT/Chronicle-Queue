@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.After;
 import org.junit.Test;
@@ -29,7 +30,7 @@ public class ReadmeTest extends QueueTestCommon {
 
     @Test
     public void createAQueue() {
-        final String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        final String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)

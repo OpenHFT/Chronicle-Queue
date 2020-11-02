@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.junit.Test;
 
@@ -123,7 +124,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
         int threads = Math.min(64, Runtime.getRuntime().availableProcessors() * 4) - 1;
         int messages = 100;
 
-        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         AtomicInteger count = new AtomicInteger();
         StoreFileListener storeFileListener = (cycle, file) -> {
         };

@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.cleanup;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -17,7 +18,7 @@ import static org.junit.Assert.assertNotNull;
 public class OnReleaseTest {
     @Test
     public void onRelease() {
-        String path = OS.getTarget() + "/onRelease-" + System.nanoTime();
+        String path = OS.getTarget() + "/onRelease-" + Time.uniqueId();
         SetTimeProvider stp = new SetTimeProvider();
         AtomicInteger writeRoll = new AtomicInteger();
         AtomicInteger readRoll = new AtomicInteger();

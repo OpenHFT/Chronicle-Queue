@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
@@ -52,7 +53,7 @@ public class OvertakeTest extends QueueTestCommon {
 
     @Before
     public void before() {
-        path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (ChronicleQueue appender_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .writeBufferMode(BufferMode.None)

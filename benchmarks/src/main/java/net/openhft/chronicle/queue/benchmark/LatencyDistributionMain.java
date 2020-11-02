@@ -145,7 +145,7 @@ public class LatencyDistributionMain {
     }
 
     private File getTmpDir() {
-        return new File(Main.path + "/delete-" + System.nanoTime() + ".me");
+        return new File(Main.path + "/delete-" + Time.uniqueId() + ".me");
     }
 
     protected void runTest(@NotNull ChronicleQueue queue, @NotNull ChronicleQueue queue2) throws InterruptedException {

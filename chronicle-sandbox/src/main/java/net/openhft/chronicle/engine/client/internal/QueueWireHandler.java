@@ -184,7 +184,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                     s -> cidCounter.incrementAndGet());
             String[] parts = cspText.toString().split("/");
 
-            String filename = "/tmp/" + parts[1] + "/" + parts[2] + ".q";
+            String filename = OS.getTarget()+"/" + parts[1] + "/" + parts[2] + ".q";
 
             queue = fileNameToChronicle.computeIfAbsent
                     (filename, s -> {

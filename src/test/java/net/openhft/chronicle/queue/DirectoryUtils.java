@@ -7,6 +7,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,7 @@ public class DirectoryUtils {
     @NotNull
     public static File tempDir(String name) {
         String replacedName = name.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_');
-        final File tmpDir = new File(OS.getTarget(), replacedName + "-" + Long.toString(TIMESTAMPER.getAndIncrement(), 36));
+        final File tmpDir = new File(OS.getTarget(), replacedName + "-" + Time.uniqueId());
         DeleteStatic.INSTANCE.add(tmpDir);
 
         // Log the temporary directory in OSX as it is quite obscure

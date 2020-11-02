@@ -43,7 +43,7 @@ public class OffHeapReplayData {
     */
     public static void main(String[] args) throws IOException {
         OffHeapTestData td = DataValueClasses.newDirectReference(OffHeapTestData.class);
-        String path = "/tmp/test2";
+        String path = OS.getTarget()+"/test2"+ Time.uniqueId();
 
         long start = System.nanoTime(), count = 0;
         try (Chronicle chronicle = ChronicleQueueBuilder.indexed(path).build()) {

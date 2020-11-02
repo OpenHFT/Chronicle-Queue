@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -12,7 +13,7 @@ import static org.junit.Assert.assertNull;
 public class RestartableTailerTest extends QueueTestCommon {
     @Test
     public void restartable() {
-        String tmp = OS.getTarget() + "/restartable-" + System.nanoTime();
+        String tmp = OS.getTarget() + "/restartable-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
             for (int i = 0; i < 7; i++)
                 cq.acquireAppender().writeText("test " + i);

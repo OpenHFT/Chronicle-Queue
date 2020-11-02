@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.values.Array;
 import net.openhft.chronicle.values.MaxUtf8Length;
 import net.openhft.chronicle.values.Values;
@@ -42,7 +43,7 @@ public class SingleChroniclePerfMain {
     static void doPerfTest(TestWriter<Bytes> writer, TestReader<Bytes> reader, int count, boolean print) throws IOException {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);
-        String file = OS.getTarget() + "/deleteme-" + System.nanoTime();
+        String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
         try (ChronicleQueue chronicle = single(file).blockSize(64 << 20).build()) {
             ExcerptAppender appender = chronicle.acquireAppender();
             UncheckedBytes bytes = new UncheckedBytes(NoBytesStore.NO_BYTES);

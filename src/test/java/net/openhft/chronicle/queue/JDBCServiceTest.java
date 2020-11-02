@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -48,7 +49,7 @@ public class JDBCServiceTest extends ChronicleQueueTestBase {
             long start = System.nanoTime(), written;
             File path1 = getTmpDir();
             File path2 = getTmpDir();
-            File file = new File(OS.getTarget(), "hsqldb-" + System.nanoTime());
+            File file = new File(OS.getTarget(), "hsqldb-" + Time.uniqueId());
             file.deleteOnExit();
 
             try (ChronicleQueue in = SingleChronicleQueueBuilder

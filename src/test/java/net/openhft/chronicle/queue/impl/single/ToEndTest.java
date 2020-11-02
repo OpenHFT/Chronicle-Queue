@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
@@ -51,7 +52,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void missingCyclesToEndTest() {
-        String path = OS.getTarget() + "/missingCyclesToEndTest-" + System.nanoTime();
+        String path = OS.getTarget() + "/missingCyclesToEndTest-" + Time.uniqueId();
         IOTools.shallowDeleteDirWithFiles(path);
 
         final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -126,7 +127,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
-        String path = OS.getTarget() + "/toEndIncRefCount-" + System.nanoTime();
+        String path = OS.getTarget() + "/toEndIncRefCount-" + Time.uniqueId();
         IOTools.shallowDeleteDirWithFiles(path);
 
         SetTimeProvider time = new SetTimeProvider();

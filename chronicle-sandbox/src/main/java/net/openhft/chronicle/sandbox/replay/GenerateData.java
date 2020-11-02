@@ -35,7 +35,7 @@ public class GenerateData {
 
     public static void main(String[] args) throws IOException {
         TestData td = DataValueClasses.newInstance(TestData.class);
-        String path = "/tmp/test";
+        String path = OS.getTarget()+"/test"+ Time.uniqueId();
         StringBuilder name = new StringBuilder();
 
         long start = System.nanoTime();

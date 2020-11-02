@@ -84,17 +84,17 @@ It can outperform many data storage solutions written in `C`.
 You might be wondering, how is this possible given that well written `C` is usually faster than Java.
 
 You need a degree of protection between your application and your data storage to minimise the risk of corruption.
-As `Java` uses a `JVM`, it already has an abstraction layer, and a degree of protection. If an application throws an exception, this does not mean the data structure is corrupted.
+As `Java` uses a `JVM`, it already has an abstraction layer, and a degree of protection.If an application throws an exception, this does not mean the data structure is corrupted.
 To get a degree of isolation in `C`, many data storage solutions use `TCP`.
 The overhead of using `TCP`, even over loopback, can exceed the benefit of using `C`, and the throughput/latencies of Chronicle Queue can be `10x` greater by being able to use the data in-process.
 Chronicle Queue supports sharing of the data structure in memory for multiple JVMs, avoiding the need to use TCP to share data.
 
 === What does the data structure look like?
 
-One of our key objectives is transparency. We have worked hard to make sure you can see exactly what has been written to this data structure.
+One of our key objectives is transparency.We have worked hard to make sure you can see exactly what has been written to this data structure.
 
 We use `YAML` as this is a format which is designed to be readable.
-`JSON` and `XML`, we see, as a subset of `Javascript` and `SGML`, and not as readable. We support `JSON` for messaging with browsers.
+`JSON` and `XML`, we see, as a subset of `Javascript` and `SGML`, and not as readable.We support `JSON` for messaging with browsers.
 For performance reasons we use a binary form of `YAML`, which can be automatically translated to `YAML` for viewing.
 
 .Order class extends SelfDescribingMarshallable for helper methods
@@ -120,9 +120,9 @@ public class Order extends SelfDescribingMarshallable {
 If you cannot extend this class, you can implement the `Marshallable` interface.
 
 .Dump of a queue in a unit test
-[source, java]
+[source,java]
 ----
-File dir = new File(OS.getTarget() + "/deleteme-" + System.nanoTime());
+File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
     ExcerptAppender appender = queue.acquireAppender();
     appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6)); // <1>

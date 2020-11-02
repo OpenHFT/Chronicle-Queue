@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
@@ -12,7 +13,7 @@ import static org.junit.Assert.*;
 public class LastAcknowledgedTest extends QueueTestCommon {
     @Test
     public void testLastAcknowledge() {
-        String name = OS.getTarget() + "/testLastAcknowledge-" + System.nanoTime();
+        String name = OS.getTarget() + "/testLastAcknowledge-" + Time.uniqueId();
         long lastIndexAppended;
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(name).testBlockSize().build()) {
             ExcerptAppender excerptAppender = q.acquireAppender();

@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
@@ -91,7 +92,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
     //
     @Test
     public void testTailerForwardBackwardRead() {
-        String basePath = OS.getTarget() + "/tailerForwardBackward-" + System.nanoTime();
+        String basePath = OS.getTarget() + "/tailerForwardBackward-" + Time.uniqueId();
 
         ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
                 .testBlockSize()
@@ -144,7 +145,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
     @Test
     public void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
-        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY).build()) {
 
