@@ -294,6 +294,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void testCantAppendIfAppendLockIsSet() {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
+            ((SingleChronicleQueue) queue).appendLock().lock();
+            final ExcerptAppender appender = queue.acquireAppender();
+            appender.writeText("Hello World");
+        }
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testCantAppendIfAppendLockIsSetInDifferentQueue() {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
+            ((SingleChronicleQueue) queue).appendLock().lock();
+        }
+
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
+            queue.acquireAppender().writeText("hello");
+        }
+
+    }
+
     @Test
     public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
         File tmpDir = getTmpDir();
