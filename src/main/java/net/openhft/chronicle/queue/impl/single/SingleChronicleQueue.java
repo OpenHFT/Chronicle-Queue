@@ -115,6 +115,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final boolean checkInterrupts;
     @NotNull
     private final RollingResourcesCache dateCache;
+    private final WriteLock appendLock;
     protected int sourceId;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
@@ -174,6 +175,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             this.directoryListing.refresh(true);
             this.queueLock = builder.queueLock();
             this.writeLock = builder.writeLock();
+            this.appendLock = builder.appendLock();
 
             if (readOnly) {
                 this.lastIndexReplicated = null;
@@ -389,6 +391,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     protected ExcerptAppender newAppender() {
+       if (appendLock.locked())
+          throw new IllegalStateException("locked : unable to append");
         queueLock.waitForLock();
 
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
@@ -423,6 +427,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     WriteLock writeLock() {
         return writeLock;
+    }
+
+    /**
+     * @return {@true} if appends are locked, sink replication handlers use to prevent appends
+     */
+    public WriteLock appendLock() {
+        return appendLock;
     }
 
     @NotNull
@@ -590,11 +601,16 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
 
         // must be closed after closers.
-        closeQuietly(directoryListing, queueLock, lastAcknowledgedIndexReplicated, lastIndexReplicated, writeLock);
+        closeQuietly(directoryListing,
+                queueLock,
+                lastAcknowledgedIndexReplicated,
+                lastIndexReplicated,
+                writeLock,
+                appendLock,
+                pool,
+                storeSupplier,
+                metaStore);
 
-        closeQuietly(pool);
-        closeQuietly(storeSupplier);
-        closeQuietly(metaStore);
         // close it if we created it.
         if (eventLoop instanceof OnDemandEventLoop)
             eventLoop.close();
@@ -766,7 +782,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     void cleanupStoreFilesWithNoData() {
+        if (appendLock.locked())
+            throw new IllegalStateException("locked : unable to append");
         writeLock.lock();
+
         try {
             int cycle = cycle();
             for (int lastCycle = lastCycle(); lastCycle < cycle && lastCycle >= 0; lastCycle--) {

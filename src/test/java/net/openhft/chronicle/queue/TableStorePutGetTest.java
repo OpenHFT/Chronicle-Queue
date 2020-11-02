@@ -59,15 +59,18 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
+                    "chronicle.append.lock: -9223372036854775808\n" +
+                    "# position: 368, header: 5\n" +
+                    "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 376, header: 5\n" +
+                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                    "# position: 432, header: 6\n" +
+                    "# position: 472, header: 7\n" +
                     "--- !!data #binary\n" +
                     "=hello: 79671643340800\n" +
                     "...\n" +
-                    "# 65076 bytes remaining\n" +
+                    "# 65036 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

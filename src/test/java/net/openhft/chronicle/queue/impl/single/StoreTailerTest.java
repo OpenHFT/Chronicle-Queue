@@ -205,6 +205,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 tailer.readText();
                 fail();
             } catch (IllegalStateException expected) {
+                expected.printStackTrace();
                 //
             }
             tailer.disableThreadSafetyCheck(true).readText();

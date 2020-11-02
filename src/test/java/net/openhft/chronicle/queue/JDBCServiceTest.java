@@ -29,7 +29,7 @@ import org.junit.Test;
 import java.io.File;
 import java.sql.DriverManager;
 import java.util.concurrent.atomic.AtomicLong;
-
+@Ignore
 public class JDBCServiceTest extends ChronicleQueueTestBase {
 
     @Test

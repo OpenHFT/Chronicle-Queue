@@ -702,12 +702,15 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
+                    "chronicle.append.lock: -9223372036854775808\n" +
+                    "# position: 368, header: 5\n" +
+                    "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 376, header: 5\n" +
+                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65100 bytes remaining\n" +
+                    "# 65060 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -797,12 +800,15 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
+                    "chronicle.append.lock: -9223372036854775808\n" +
+                    "# position: 368, header: 5\n" +
+                    "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 376, header: 5\n" +
+                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65100 bytes remaining\n" +
+                    "# 65060 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -886,12 +892,15 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
+                    "chronicle.append.lock: -9223372036854775808\n" +
+                    "# position: 368, header: 5\n" +
+                    "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 376, header: 5\n" +
+                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65100 bytes remaining\n" +
+                    "# 65060 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -926,147 +935,6 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "...\n" +
                     "# 130664 bytes remaining\n";
             assertEquals(expectedEager, queue.dump());
-            for (int i = 1; i <= 16; i++)
-                appender.writeText("msg-" + i);
-            String expectedEager2 = "--- !!meta-data #binary\n" +
-                    "header: !STStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  metadata: !SCQMeta {\n" +
-                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
-                    "    deltaCheckpointInterval: 64,\n" +
-                    "    sourceId: 0\n" +
-                    "  }\n" +
-                    "}\n" +
-                    "# position: 176, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "listing.highestCycle: 18554\n" +
-                    "# position: 216, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "listing.lowestCycle: 18554\n" +
-                    "# position: 256, header: 2\n" +
-                    "--- !!data #binary\n" +
-                    "listing.modCount: 1\n" +
-                    "# position: 288, header: 3\n" +
-                    "--- !!data #binary\n" +
-                    "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 328, header: 4\n" +
-                    "--- !!data #binary\n" +
-                    "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 376, header: 5\n" +
-                    "--- !!data #binary\n" +
-                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                    "...\n" +
-                    "# 65100 bytes remaining\n" +
-                    "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  writePosition: [\n" +
-                    "    676,\n" +
-                    "    2903397892112\n" +
-                    "  ],\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 196,\n" +
-                    "    lastIndex: 17\n" +
-                    "  },\n" +
-                    "  dataFormat: 1\n" +
-                    "}\n" +
-                    "# position: 196, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 3\n" +
-                    "  296,\n" +
-                    "  500,\n" +
-                    "  688,\n" +
-                    "  0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 296, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 8\n" +
-                    "  392,\n" +
-                    "  404,\n" +
-                    "  416,\n" +
-                    "  428,\n" +
-                    "  440,\n" +
-                    "  452,\n" +
-                    "  464,\n" +
-                    "  476\n" +
-                    "]\n" +
-                    "# position: 392, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "msg-1\n" +
-                    "# position: 404, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "msg-1\n" +
-                    "# position: 416, header: 2\n" +
-                    "--- !!data #binary\n" +
-                    "msg-2\n" +
-                    "# position: 428, header: 3\n" +
-                    "--- !!data #binary\n" +
-                    "msg-3\n" +
-                    "# position: 440, header: 4\n" +
-                    "--- !!data #binary\n" +
-                    "msg-4\n" +
-                    "# position: 452, header: 5\n" +
-                    "--- !!data #binary\n" +
-                    "msg-5\n" +
-                    "# position: 464, header: 6\n" +
-                    "--- !!data #binary\n" +
-                    "msg-6\n" +
-                    "# position: 476, header: 7\n" +
-                    "--- !!data #binary\n" +
-                    "msg-7\n" +
-                    "# position: 488, header: 8\n" +
-                    "--- !!data #binary\n" +
-                    "msg-8\n" +
-                    "# position: 500, header: 8\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 8\n" +
-                    "  488,\n" +
-                    "  592,\n" +
-                    "  604,\n" +
-                    "  616,\n" +
-                    "  628,\n" +
-                    "  640,\n" +
-                    "  652,\n" +
-                    "  664\n" +
-                    "]\n" +
-                    "# position: 592, header: 9\n" +
-                    "--- !!data #binary\n" +
-                    "msg-9\n" +
-                    "# position: 604, header: 10\n" +
-                    "--- !!data #binary\n" +
-                    "msg-10\n" +
-                    "# position: 616, header: 11\n" +
-                    "--- !!data #binary\n" +
-                    "msg-11\n" +
-                    "# position: 628, header: 12\n" +
-                    "--- !!data #binary\n" +
-                    "msg-12\n" +
-                    "# position: 640, header: 13\n" +
-                    "--- !!data #binary\n" +
-                    "msg-13\n" +
-                    "# position: 652, header: 14\n" +
-                    "--- !!data #binary\n" +
-                    "msg-14\n" +
-                    "# position: 664, header: 15\n" +
-                    "--- !!data #binary\n" +
-                    "msg-15\n" +
-                    "# position: 676, header: 16\n" +
-                    "--- !!data #binary\n" +
-                    "msg-16\n" +
-                    "# position: 688, header: 16\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  676,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "...\n" +
-                    "# 130284 bytes remaining\n";
-            assertEquals(expectedEager2, queue.dump());
         }
     }
 

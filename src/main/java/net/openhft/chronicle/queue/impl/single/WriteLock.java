@@ -20,6 +20,27 @@ package net.openhft.chronicle.queue.impl.single;
 import java.io.Closeable;
 
 public interface WriteLock extends Closeable {
+
+    WriteLock NO_OP = new WriteLock() {
+
+        @Override
+        public void lock() {
+        }
+
+        @Override
+        public void unlock() {
+        }
+
+        @Override
+        public void close() {
+        }
+
+        @Override
+        public boolean locked() {
+            return false;
+        }
+    };
+
     void lock();
 
     void unlock();
@@ -29,4 +50,5 @@ public interface WriteLock extends Closeable {
     default boolean locked() {
         return false;
     }
+
 }

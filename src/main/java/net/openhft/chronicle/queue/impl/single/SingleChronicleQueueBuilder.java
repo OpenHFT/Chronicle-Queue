@@ -1100,6 +1100,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
+    public WriteLock appendLock() {
+        return readOnly() ? WriteLock.NO_OP : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2, "chronicle.append.lock");
+    }
+
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {
         INSTANCE;
 
