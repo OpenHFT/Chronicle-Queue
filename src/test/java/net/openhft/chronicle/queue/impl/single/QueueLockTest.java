@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -34,9 +33,8 @@ public class QueueLockTest extends ChronicleQueueTestBase {
 
             final long timeoutMs = 500;
             final File queueDir = getTmpDir();
-            final SetTimeProvider timeProvider = new SetTimeProvider();
             try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
-                    timeProvider(timeProvider).timeoutMS(timeoutMs).
+                    timeoutMS(timeoutMs).
                     build()) {
 
                 // lock the queue
