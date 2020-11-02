@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
@@ -63,10 +64,13 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             // success
         } catch (TimeoutException e) {
             final String lockedBy = getLockedBy(value);
-            warn().on(getClass(), "Couldn't acquire write lock " +
+            final String warningMsg = "Couldn't acquire write lock " +
                     "after " + timeout + " ms " +
-                    "for the lock file:" + path + ", overriding the lock. " +
-                    "Lock was held by " + lockedBy);
+                    "for the lock file:" + path + ". " +
+                    "Lock was held by " + lockedBy;
+            if (dontRecoverLockTimeout)
+                throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg));
+            warn().on(getClass(), warningMsg + ". Unlocking forcibly");
             forceUnlock(value);
             // we should reset the pauser after a timeout exception
             pauser.reset();

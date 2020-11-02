@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
     protected static final long UNLOCKED = Long.MIN_VALUE;
+    protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
 
     protected final LongValue lock;
     protected final TimingPauser pauser;

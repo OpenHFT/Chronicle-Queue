@@ -21,6 +21,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -117,12 +118,13 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
     private void warnLock(String msg, long value) {
         String pid = ((int) value == PID) ? "me" : Integer.toString((int) value);
-        warn().on(getClass(), "" +
-                msg + " after " + timeout + "ms for " +
+        final String warningMsg = msg + " after " + timeout + "ms for " +
                 "the lock file:" + path + ". Lock is held by " +
                 "PID: " + pid + ", " +
-                "TID: " + (int) (value >>> 32) + "." +
-                " Unlocking forcibly");
+                "TID: " + (int) (value >>> 32);
+        if (dontRecoverLockTimeout)
+            throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg));
+        warn().on(getClass(), warningMsg + ". Unlocking forcibly");
     }
 
     /**
