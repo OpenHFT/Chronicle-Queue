@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.junit.Test;
 
 import java.io.File;
@@ -44,11 +45,14 @@ public class QueueLockTest extends ChronicleQueueTestBase {
                 final CountDownLatch started = new CountDownLatch(1);
                 final CountDownLatch finished = new CountDownLatch(1);
                 final AtomicBoolean recoveredAndAcquiredTheLock = new AtomicBoolean();
+                final AtomicBoolean threwException = new AtomicBoolean();
 
                 final Thread otherWriter = new Thread(() -> {
                     started.countDown();
                     try (DocumentContext ignored = queue.acquireAppender().writingDocument()) {
                         recoveredAndAcquiredTheLock.set(true);
+                    } catch (UnrecoverableTimeoutException e) {
+                        threwException.set(true);
                     } finally {
                         finished.countDown();
                     }
@@ -60,6 +64,7 @@ public class QueueLockTest extends ChronicleQueueTestBase {
                 finished.await(1, TimeUnit.SECONDS);
                 long endTime = System.currentTimeMillis();
                 assertTrue("timeout", endTime >= startTime + timeoutMs);
+                assertEquals(shouldThrowException, threwException.get());
                 assertEquals(shouldThrowException, !recoveredAndAcquiredTheLock.get());
             }
         } finally {
