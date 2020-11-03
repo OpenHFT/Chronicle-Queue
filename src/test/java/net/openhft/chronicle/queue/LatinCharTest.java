@@ -21,6 +21,7 @@ public class LatinCharTest {
         }
     }
 
+    // see https://github.com/OpenHFT/Chronicle-Queue/issues/744
     @Test
     public void testFailsOnJava11() {
 
