@@ -4,6 +4,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class LatinCharTest {
@@ -21,7 +22,7 @@ public class LatinCharTest {
         }
     }
 
-    // see https://github.com/OpenHFT/Chronicle-Queue/issues/744
+    @Ignore("see https://github.com/OpenHFT/Chronicle-Queue/issues/744")
     @Test
     public void testFailsOnJava11() {
 
