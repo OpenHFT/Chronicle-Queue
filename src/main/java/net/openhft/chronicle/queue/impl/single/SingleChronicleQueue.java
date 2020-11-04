@@ -430,7 +430,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * @return {@true} if appends are locked, sink replication handlers use to prevent appends
+     * @return {@code true} if appends are locked, sink replication handlers use this mechanism to prevent appends being written to.
      */
     public WriteLock appendLock() {
         return appendLock;

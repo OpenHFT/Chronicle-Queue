@@ -30,6 +30,8 @@ class StoreAppender extends AbstractCloseable
     private final SingleChronicleQueue queue;
     @NotNull
     private final WriteLock writeLock;
+    private final WriteLock appendLock;
+
     @NotNull
     private final StoreAppenderContext writeContext;
     private final WireStorePool storePool;
@@ -61,6 +63,7 @@ class StoreAppender extends AbstractCloseable
         this.storePool = storePool;
         this.checkInterrupts = checkInterrupts;
         this.writeLock = queue.writeLock();
+        this.appendLock = queue.appendLock();
         this.writeContext = new StoreAppenderContext();
 
         // always put references to "this" last.
@@ -73,6 +76,11 @@ class StoreAppender extends AbstractCloseable
             // ensure that the EOF is written on the last cycle
             setCycle2(lastCycle, false);
         finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+    }
+
+    private void checkAppendLock() {
+        if (appendLock.locked())
+            throw new IllegalStateException("locked : unable to append");
     }
 
     private static void releaseBytesFor(Wire w) {
@@ -329,6 +337,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
+        checkAppendLock();
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;
@@ -462,7 +471,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(@NotNull final BytesStore bytes) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-
+        checkAppendLock();
         writeLock.lock();
         try {
             int cycle = queue.cycle();
@@ -501,7 +510,7 @@ class StoreAppender extends AbstractCloseable
      */
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
         throwExceptionIfClosed();
-
+        checkAppendLock();
         writeLock.lock();
         try {
             writeBytesInternal(index, bytes);
