@@ -277,7 +277,7 @@ public final class ChronicleReader {
     @NotNull
     private ChronicleQueue createQueue() {
         if (!Files.exists(basePath)) {
-            throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
+            throw new IllegalArgumentException(String.format("Path '%s' does not exist (absolute path '%s')", basePath, basePath.toAbsolutePath()));
         }
         return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())

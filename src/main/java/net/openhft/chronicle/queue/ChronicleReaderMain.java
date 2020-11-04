@@ -38,8 +38,12 @@ public class ChronicleReaderMain {
         new ChronicleReaderMain().run(args);
     }
 
-    public static void addOption(final Options options, final String opt, final String argName, final boolean hasArg,
-                                 final String description, final boolean isRequired) {
+    public static void addOption(final Options options,
+                                 final String opt,
+                                 final String argName,
+                                 final boolean hasArg,
+                                 final String description,
+                                 final boolean isRequired) {
         final Option option = new Option(opt, hasArg, description);
         option.setArgName(argName);
         option.setRequired(isRequired);
