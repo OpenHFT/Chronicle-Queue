@@ -3,9 +3,9 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class LatinCharTest {
 
@@ -22,9 +22,8 @@ public class LatinCharTest {
         }
     }
 
-    @Ignore("see https://github.com/OpenHFT/Chronicle-Queue/issues/744")
     @Test
-    public void testFailsOnJava11() {
+    public void shouldCorrectlyEncodeDecode() {
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(DirectoryUtils.tempDir("temp"))
@@ -40,7 +39,7 @@ public class LatinCharTest {
             Message actual = new Message();
             tailer.readDocument(actual);
 
-            Assert.assertEquals(expected, actual);
+            assertEquals(expected, actual);
         }
 
     }
