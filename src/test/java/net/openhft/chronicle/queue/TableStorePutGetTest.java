@@ -43,32 +43,23 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "    sourceId: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 176, header: 0\n" +
                     "--- !!data #binary\n" +
                     "listing.highestCycle: 18550\n" +
-                    "# position: 216, header: 1\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18550\n" +
-                    "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 1\n" +
-                    "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 368, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                    "# position: 472, header: 7\n" +
                     "--- !!data #binary\n" +
                     "=hello: 79671643340800\n" +
                     "...\n" +
-                    "# 65036 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -83,25 +74,21 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "  },\n" +
                     "  dataFormat: 1\n" +
                     "}\n" +
-                    "# position: 196, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  296,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 296, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  392,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 392, header: 0\n" +
                     "--- !!data #binary\n" +
                     "hello: world\n" +
-                    "...\n" +
-                    "# 130660 bytes remaining\n", cq.dump());
+                    "...\n", cq.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
     }
 

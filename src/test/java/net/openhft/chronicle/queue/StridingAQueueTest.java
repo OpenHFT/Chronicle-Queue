@@ -49,7 +49,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 .rollCycle(RollCycles.TEST4_SECONDLY)
                 .build()) {
 
-            assertEquals(getExpected(), queue.dump());
+            assertEquals(getExpected(), queue.dump().replaceAll("(?m)^#.+$\\n", ""));
             StringWriter sw = new StringWriter();
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd().striding(true);
             MethodReader reader = tailer.methodReader(Mocker.logging(SAQMessage.class, "", sw));
@@ -81,29 +81,21 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "    sourceId: 0\n" +
                 "  }\n" +
                 "}\n" +
-                "# position: 180, header: 0\n" +
                 "--- !!data #binary\n" +
                 "listing.highestCycle: 1567498756\n" +
-                "# position: 216, header: 1\n" +
                 "--- !!data #binary\n" +
                 "listing.lowestCycle: 1567498753\n" +
-                "# position: 256, header: 2\n" +
                 "--- !!data #binary\n" +
                 "listing.modCount: 3\n" +
-                "# position: 288, header: 3\n" +
                 "--- !!data #binary\n" +
                 "chronicle.write.lock: -9223372036854775808\n" +
-                "# position: 328, header: 4\n" +
                 "--- !!data #binary\n" +
                 "chronicle.append.lock: -9223372036854775808\n" +
-                "# position: 368, header: 5\n" +
                 "--- !!data #binary\n" +
                 "chronicle.lastIndexReplicated: -1\n" +
-                "# position: 416, header: 6\n" +
                 "--- !!data #binary\n" +
                 "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                 "...\n" +
-                "# 65060 bytes remaining\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
@@ -118,14 +110,12 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  },\n" +
                 "  dataFormat: 1\n" +
                 "}\n" +
-                "# position: 196, header: -1\n" +
                 "--- !!meta-data #binary\n" +
                 "index2index: [\n" +
                 "  # length: 32, used: 1\n" +
                 "  488,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
-                "# position: 488, header: -1\n" +
                 "--- !!meta-data #binary\n" +
                 "index: [\n" +
                 "  # length: 32, used: 4\n" +
@@ -135,100 +125,83 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  1064,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
-                "# position: 776, header: 0\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 1,\n" +
                 "  !int 0\n" +
                 "]\n" +
-                "# position: 800, header: 1\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 1,\n" +
                 "  !int 1\n" +
                 "]\n" +
-                "# position: 824, header: 2\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 1,\n" +
                 "  !int 2\n" +
                 "]\n" +
-                "# position: 848, header: 3\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 1,\n" +
                 "  !int 3\n" +
                 "]\n" +
-                "# position: 872, header: 4\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 1,\n" +
                 "  !int 4\n" +
                 "]\n" +
-                "# position: 896, header: 5\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 1,\n" +
                 "  !int 5\n" +
                 "]\n" +
-                "# position: 920, header: 6\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 1,\n" +
                 "  !int 6\n" +
                 "]\n" +
-                "# position: 944, header: 7\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 0\n" +
                 "]\n" +
-                "# position: 968, header: 8\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 1\n" +
                 "]\n" +
-                "# position: 992, header: 9\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 2\n" +
                 "]\n" +
-                "# position: 1016, header: 10\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 3\n" +
                 "]\n" +
-                "# position: 1040, header: 11\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 4\n" +
                 "]\n" +
-                "# position: 1064, header: 12\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 5\n" +
                 "]\n" +
-                "# position: 1088, header: 13\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 6\n" +
                 "]\n" +
-                "# position: 1112, header: 14\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 2,\n" +
                 "  !int 7\n" +
                 "]\n" +
-                "# position: 1136, header: 14 EOF\n" +
                 "--- !!not-ready-meta-data! #binary\n" +
                 "...\n" +
-                "# 129932 bytes remaining\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
@@ -243,14 +216,12 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  },\n" +
                 "  dataFormat: 1\n" +
                 "}\n" +
-                "# position: 196, header: -1\n" +
                 "--- !!meta-data #binary\n" +
                 "index2index: [\n" +
                 "  # length: 32, used: 1\n" +
                 "  488,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
-                "# position: 488, header: -1\n" +
                 "--- !!meta-data #binary\n" +
                 "index: [\n" +
                 "  # length: 32, used: 3\n" +
@@ -259,64 +230,53 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  968,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
-                "# position: 776, header: 0\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 0\n" +
                 "]\n" +
-                "# position: 800, header: 1\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 1\n" +
                 "]\n" +
-                "# position: 824, header: 2\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 2\n" +
                 "]\n" +
-                "# position: 848, header: 3\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 3\n" +
                 "]\n" +
-                "# position: 872, header: 4\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 4\n" +
                 "]\n" +
-                "# position: 896, header: 5\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 5\n" +
                 "]\n" +
-                "# position: 920, header: 6\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 6\n" +
                 "]\n" +
-                "# position: 944, header: 7\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 7\n" +
                 "]\n" +
-                "# position: 968, header: 8\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 3,\n" +
                 "  !int 8\n" +
                 "]\n" +
-                "# position: 992, header: 8 EOF\n" +
                 "--- !!not-ready-meta-data! #binary\n" +
                 "...\n" +
-                "# 130076 bytes remaining\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
@@ -331,14 +291,12 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  },\n" +
                 "  dataFormat: 1\n" +
                 "}\n" +
-                "# position: 196, header: -1\n" +
                 "--- !!meta-data #binary\n" +
                 "index2index: [\n" +
                 "  # length: 32, used: 1\n" +
                 "  488,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
-                "# position: 488, header: -1\n" +
                 "--- !!meta-data #binary\n" +
                 "index: [\n" +
                 "  # length: 32, used: 3\n" +
@@ -347,68 +305,57 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  968,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
-                "# position: 776, header: 0\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 0\n" +
                 "]\n" +
-                "# position: 800, header: 1\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 1\n" +
                 "]\n" +
-                "# position: 824, header: 2\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 2\n" +
                 "]\n" +
-                "# position: 848, header: 3\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 3\n" +
                 "]\n" +
-                "# position: 872, header: 4\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 4\n" +
                 "]\n" +
-                "# position: 896, header: 5\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 5\n" +
                 "]\n" +
-                "# position: 920, header: 6\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 6\n" +
                 "]\n" +
-                "# position: 944, header: 7\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 7\n" +
                 "]\n" +
-                "# position: 968, header: 8\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 8\n" +
                 "]\n" +
-                "# position: 992, header: 9\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
                 "  !int 4,\n" +
                 "  !int 9\n" +
                 "]\n" +
-                "...\n" +
-                "# 130052 bytes remaining\n";
+                "...\n";
     }
 
     interface SAQMessage {

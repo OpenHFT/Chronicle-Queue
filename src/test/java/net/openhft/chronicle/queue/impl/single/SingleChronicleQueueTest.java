@@ -1598,29 +1598,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    sourceId: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 176, header: 0\n" +
                     "--- !!data #binary\n" +
                     "listing.highestCycle: 18554\n" +
-                    "# position: 216, header: 1\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
-                    "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 1\n" +
-                    "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 368, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65060 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1635,26 +1627,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  dataFormat: 1\n" +
                     "}\n" +
-                    "# position: 196, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  296,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 296, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  392,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 392, header: 0\n" +
                     "--- !!data #binary\n" +
                     "some: data\n" +
                     "some2: other\n" +
-                    "...\n" +
-                    "# 130648 bytes remaining\n", queue.dump());
+                    "...\n", queue.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
     }
 
@@ -1868,7 +1856,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     break;
                 }
             }
-            assertEquals(expectedMetaDataTest2(), chronicle.dump());
+            assertEquals(expectedMetaDataTest2(), chronicle.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
     }
 
@@ -1884,29 +1872,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    sourceId: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 176, header: 0\n" +
                     "--- !!data #binary\n" +
                     "listing.highestCycle: 18554\n" +
-                    "# position: 216, header: 1\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
-                    "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 1\n" +
-                    "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 368, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65060 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -1921,31 +1901,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  dataFormat: 1\n" +
                     "}\n" +
-                    "# position: 196, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 16, used: 1\n" +
                     "  360,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 360, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
                     "  544,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 520, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Quartilla\n" +
-                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "FirstName: Helen\n" +
-                    "# position: 564, header: 0\n" +
                     "--- !!meta-data #binary\n" +
                     "FirstName: Steve\n" +
-                    "...\n" +
-                    "# 130484 bytes remaining\n";
+                    "...\n";
 
         throw new IllegalStateException("unknown type " + wireType);
     }
@@ -2506,7 +2480,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
             String expected = expectedMultipleAppenders();
-            assertEquals(expected, syncQ.dump());
+            assertEquals(expected, syncQ.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
     }
 
@@ -2522,29 +2496,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    sourceId: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 176, header: 0\n" +
                     "--- !!data #binary\n" +
                     "listing.highestCycle: 18554\n" +
-                    "# position: 216, header: 1\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
-                    "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 1\n" +
-                    "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 368, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65060 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -2559,14 +2525,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  dataFormat: 1\n" +
                     "}\n" +
-                    "# position: 196, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  296,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 296, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
@@ -2578,35 +2542,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  504,\n" +
                     "  0, 0\n" +
                     "]\n" +
-                    "# position: 392, header: 0\n" +
                     "--- !!data #binary\n" +
                     "hello A0\n" +
-                    "# position: 408, header: 1\n" +
                     "--- !!data #binary\n" +
                     "hello B0\n" +
-                    "# position: 424, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 440, header: 2\n" +
                     "--- !!data #binary\n" +
                     "hello A1\n" +
-                    "# position: 456, header: 3\n" +
                     "--- !!data #binary\n" +
                     "hello B1\n" +
-                    "# position: 472, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 488, header: 4\n" +
                     "--- !!data #binary\n" +
                     "hello A2\n" +
-                    "# position: 504, header: 5\n" +
                     "--- !!data #binary\n" +
                     "hello B2\n" +
-                    "# position: 520, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
-                    "...\n" +
-                    "# 130532 bytes remaining\n";
+                    "...\n";
 
         throw new IllegalStateException("unknown wiretype=" + wireType);
     }
@@ -2840,7 +2794,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
 
             f1.get(10, TimeUnit.SECONDS);
-//            System.out.println(queue.dump());
+//            System.out.println(queue.dump().replaceAll("(?m)^#.+$\\n", ""));
             f2.get(10, TimeUnit.SECONDS);
 
             executorService.shutdownNow();
@@ -3308,24 +3262,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     closeQuietly(bytesWithIndies);
                 }
 
-                String dump = queue.dump();
+                String dump = queue.dump().replaceAll("(?m)^#.+$\\n", "");
                 assertTrue(dump, dump.contains(
-                        "# position: 776, header: 0\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world0\n" +
-                                "# position: 796, header: 1\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world1\n" +
-                                "# position: 816, header: 2\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world2\n" +
-                                "# position: 836, header: 3\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world3\n" +
-                                "# position: 856, header: 4\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world4\n" +
-                                "# position: 876, header: 5\n" +
                                 "--- !!data #binary\n" +
                                 "hello\n"));
 
@@ -3346,7 +3294,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
-            String before = sourceQueue.dump();
+            String before = sourceQueue.dump().replaceAll("(?m)^#.+$\\n", "");
             try (ExcerptTailer tailer = sourceQueue.createTailer();
                  ChronicleQueue queue =
                          builder(getTmpDir(), wireType).testBlockSize().build()) {
@@ -3362,21 +3310,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     }
                 }
 
-                String dump = queue.dump();
+                String dump = queue.dump().replaceAll("(?m)^#.+$\\n", "");
                 assertEquals(before, dump);
-                assertTrue(dump, dump.contains("# position: 776, header: 0\n" +
+                assertTrue(dump, dump.contains(
                         "--- !!data #binary\n" +
                         "hello: world0\n" +
-                        "# position: 796, header: 1\n" +
                         "--- !!data #binary\n" +
                         "hello: world1\n" +
-                        "# position: 816, header: 2\n" +
                         "--- !!data #binary\n" +
                         "hello: world2\n" +
-                        "# position: 836, header: 3\n" +
                         "--- !!data #binary\n" +
                         "hello: world3\n" +
-                        "# position: 856, header: 4\n" +
                         "--- !!data #binary\n" +
                         "hello: world4"));
             }
