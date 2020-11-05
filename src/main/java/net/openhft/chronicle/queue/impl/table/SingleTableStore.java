@@ -257,12 +257,19 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             // not found
             final int safeLength = Maths.toUInt31(mappedBytes.realCapacity() - mappedBytes.readPosition());
             mappedBytes.writeLimit(mappedBytes.realCapacity());
-            mappedBytes.writePosition(mappedBytes.readPosition());
+            long start = mappedBytes.readPosition();
+            mappedBytes.writePosition(start);
             final long pos = mappedWire.enterHeader(safeLength);
             final LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
             mappedWire.writeAlignTo(Integer.BYTES, 0);
             mappedWire.updateHeader(pos, false, 0);
+            long end = mappedBytes.writePosition();
+            long chuckSize = mappedFile.chunkSize();
+            long overlapSize = mappedFile.overlapSize();
+            long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
+            if (end >= endOfChunk + overlapSize)
+                throw new IllegalStateException("Misaligned write");
             return longValue;
 
         } catch (StreamCorruptedException | EOFException e) {
