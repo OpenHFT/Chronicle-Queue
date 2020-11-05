@@ -606,10 +606,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 lastAcknowledgedIndexReplicated,
                 lastIndexReplicated,
                 writeLock,
+                appendLock,
                 pool,
                 storeSupplier,
-                metaStore,
-                appendLock);
+                metaStore);
 
         // close it if we created it.
         if (eventLoop instanceof OnDemandEventLoop)
