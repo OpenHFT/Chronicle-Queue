@@ -121,6 +121,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @Override
     public boolean locked() {
+        throwExceptionIfClosed();
         return lock.getVolatileValue(UNLOCKED) != UNLOCKED;
     }
 }
