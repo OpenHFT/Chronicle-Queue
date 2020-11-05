@@ -105,6 +105,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @Override
     public void unlock() {
+        throwExceptionIfClosed();
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
             long value = lock.getValue();
             if (value == UNLOCKED)
