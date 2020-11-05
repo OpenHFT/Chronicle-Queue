@@ -96,7 +96,7 @@ public class SingleTableBuilder<T extends Metadata> {
         try {
             if (!readOnly && file.createNewFile() && !file.canWrite())
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
-            MappedBytes bytes = MappedBytes.mappedBytes(file, 64 << 10, 16 << 10, readOnly);
+            MappedBytes bytes = MappedBytes.mappedBytes(file, 32 << 10, 32 << 10, readOnly);
             // eagerly initialize backing MappedFile page - otherwise wire.writeFirstHeader() will try to lock the file
             // to allocate the first byte store and that will cause lock overlap
             bytes.readVolatileInt(0);
