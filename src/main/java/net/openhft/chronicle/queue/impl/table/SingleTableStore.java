@@ -188,8 +188,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     /**
-     * @return creates a new instance of mapped bytes, because, for example the tailer and appender
-     * can be at different locations.
+     * @return creates a new instance of mapped bytes, because, for example the tailer and appender can be at different locations.
      */
     @NotNull
     @Override
@@ -233,6 +232,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) { // TODO Change to ThreadLocal values if performance is a problem.
+        throwExceptionIfClosed();
         final StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve(this);
         try {
