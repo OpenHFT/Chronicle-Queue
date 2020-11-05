@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
@@ -232,7 +233,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) { // TODO Change to ThreadLocal values if performance is a problem.
-        throwExceptionIfClosed();
+
+        if (mappedBytes.isClosed())
+            throw new ClosedIllegalStateException("Closed");
+
         final StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve(this);
         try {
