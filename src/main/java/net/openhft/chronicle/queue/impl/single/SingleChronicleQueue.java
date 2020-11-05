@@ -391,8 +391,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     protected ExcerptAppender newAppender() {
-       if (appendLock.locked())
-          throw new IllegalStateException("locked : unable to append");
+        if (appendLock.locked())
+            throw new IllegalStateException("locked : unable to append");
         queueLock.waitForLock();
 
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
@@ -831,6 +831,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long index) {
+        throwExceptionIfClosed();
         BytesStore keyBytes = asBytes(key);
         LongValue longValue = metaStoreMap.get(keyBytes);
         if (longValue == null) {
