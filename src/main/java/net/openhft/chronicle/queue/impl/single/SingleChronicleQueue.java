@@ -598,18 +598,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             metaStoreMap.clear();
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
-        }
 
-        // must be closed after closers.
-        closeQuietly(directoryListing,
-                queueLock,
-                lastAcknowledgedIndexReplicated,
-                lastIndexReplicated,
-                writeLock,
-                appendLock,
-                pool,
-                storeSupplier,
-                metaStore);
+            // must be closed after closers.
+            closeQuietly(directoryListing,
+                    queueLock,
+                    lastAcknowledgedIndexReplicated,
+                    lastIndexReplicated,
+                    writeLock,
+                    appendLock,
+                    pool,
+                    storeSupplier,
+                    metaStore);
+        }
 
         // close it if we created it.
         if (eventLoop instanceof OnDemandEventLoop)
@@ -831,7 +831,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long index) {
-        throwExceptionIfClosed();
+
         BytesStore keyBytes = asBytes(key);
         LongValue longValue = metaStoreMap.get(keyBytes);
         if (longValue == null) {
