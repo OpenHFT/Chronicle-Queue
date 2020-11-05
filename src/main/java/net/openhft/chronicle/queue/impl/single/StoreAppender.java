@@ -79,9 +79,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void checkAppendLock() {
-    //    throwExceptionIfClosed();
-     //   if (appendLock.locked())
-      //      throw new IllegalStateException("locked : unable to append");
+        if (appendLock.locked())
+            throw new IllegalStateException("locked : unable to append");
     }
 
     private static void releaseBytesFor(Wire w) {

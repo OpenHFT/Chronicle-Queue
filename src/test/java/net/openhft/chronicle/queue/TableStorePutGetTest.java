@@ -111,7 +111,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .testBlockSize()
                 .build()) {
-            for (int i = 0; i < 10000; i++) {
+            for (int i = 0; i < 1000; i++) {
                 cq.tableStorePut("=hello" + i, i);
             }
         }
