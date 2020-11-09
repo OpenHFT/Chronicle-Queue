@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IOTools;
@@ -99,6 +100,10 @@ public class RollCycleMultiThreadStressTest {
     }
 
     @Test
+    public void stressTest() throws Exception {
+        FlakyTestRunner.run(this::stress);
+    }
+
     public void stress() throws Exception {
         assert warnIfAssertsAreOn();
 
