@@ -196,7 +196,7 @@ public class RollCycleMultiThreadStressTest {
                 nextCheckTime = System.currentTimeMillis() + 10_000L;
             }
             i++;
-            Jvm.pause(5);
+            Jvm.pause(50);
         }
         double timeToWriteSecs = (System.currentTimeMillis() - startTime) / 1000d;
 
