@@ -31,6 +31,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static java.lang.Thread.*;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -469,10 +470,10 @@ public class RollCycleMultiThreadStressTest {
                 int loopIteration = 0;
                 while (true) {
                     final int value = write(appender);
-                    if (Thread.currentThread().isInterrupted())
+                    if (currentThread().isInterrupted())
                         return null;
                     while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
-                        if (Thread.currentThread().isInterrupted())
+                        if (currentThread().isInterrupted())
                             return null;
                         // spin
                     }
@@ -532,15 +533,17 @@ public class RollCycleMultiThreadStressTest {
 //                System.out.println("Starting pretoucher");
                 while (!queue.isClosed()) {
 
-                    if (Thread.currentThread().isInterrupted())
+                    if (currentThread().isInterrupted())
                         return null;
 
-                    Jvm.pause(1);
+
                     timeProvider.get().advanceMillis(50);
 
                     if (isClosed())
                         return null;
+
                     appender.pretouch();
+                    yield();
 
                 }
             } catch (ClosedIllegalStateException ignore) {
