@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -32,7 +33,7 @@ public class QueueLockTest extends ChronicleQueueTestBase {
             System.setProperty("queue.dont.recover.lock.timeout", Boolean.toString(shouldThrowException));
 
             final long timeoutMs = 5_000;
-            final File queueDir = getTmpDir();
+            final File queueDir = DirectoryUtils.tempDir("check");
             try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
                     timeoutMS(timeoutMs).
                     build()) {
