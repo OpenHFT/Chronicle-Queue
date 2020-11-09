@@ -103,6 +103,9 @@ public class RollCycleMultiThreadStressTest {
         assert warnIfAssertsAreOn();
 
         File file = DirectoryUtils.tempDir("stress");
+
+        DirectoryUtils.deleteDir(file);
+
 //        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
