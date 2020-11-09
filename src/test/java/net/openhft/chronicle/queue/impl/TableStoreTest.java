@@ -25,7 +25,7 @@ public class TableStoreTest extends QueueTestCommon {
         file.mkdir();
 
         final File tempFile = Files.createTempFile((Path) file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
-        tempFile.deleteOnExit();
+
 
         try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build()) {
 
