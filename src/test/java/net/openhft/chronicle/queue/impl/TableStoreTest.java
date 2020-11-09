@@ -1,26 +1,33 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TableStoreTest extends QueueTestCommon {
     @Test
-    public void acquireValueFor() {
+    public void acquireValueFor() throws IOException {
 
-        final File file = DirectoryUtils.tempDir("table");
-        file.deleteOnExit();
+        final File file = tempDir("table");
+        file.mkdir();
 
-        try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
+        final File tempFile = Files.createTempFile((Path) file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
+        tempFile.deleteOnExit();
+
+        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build()) {
 
             LongValue a = table.acquireValueFor("a");
             LongValue b = table.acquireValueFor("b");
@@ -43,7 +50,7 @@ public class TableStoreTest extends QueueTestCommon {
             closeQuietly(a, b);
         }
 
-        try (TableStore table = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
+        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build()) {
 
             LongValue c = table.acquireValueFor("c");
             LongValue b = table.acquireValueFor("b");
