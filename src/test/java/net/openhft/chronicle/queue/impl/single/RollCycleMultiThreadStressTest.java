@@ -31,7 +31,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static java.lang.Thread.*;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.yield;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -387,9 +388,11 @@ public class RollCycleMultiThreadStressTest {
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
                 final int millis = 10;//random.nextInt(DELAY_READER_RANDOM_MS);
-                Jvm.pause(millis);
+             //   Jvm.pause(millis);
                 timeProvider.get().advanceMillis(millis);
                 while (lastRead != expectedNumberOfMessages - 1) {
+                    if (Thread.currentThread().isInterrupted())
+                        return null;
                     try (DocumentContext dc = tailer.readingDocument()) {
                         if (!dc.isPresent()) {
                             long now = System.currentTimeMillis();
@@ -535,7 +538,6 @@ public class RollCycleMultiThreadStressTest {
 
                     if (currentThread().isInterrupted())
                         return null;
-
 
                     timeProvider.get().advanceMillis(50);
 
