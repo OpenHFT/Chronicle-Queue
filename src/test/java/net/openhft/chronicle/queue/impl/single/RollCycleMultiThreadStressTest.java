@@ -1,8 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.*;
+import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -32,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static java.lang.Thread.currentThread;
-import static java.lang.Thread.yield;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -59,14 +60,8 @@ public class RollCycleMultiThreadStressTest {
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
     final Logger LOG = LoggerFactory.getLogger(getClass());
-    final ThreadLocal<SetTimeProvider> timeProvider = ThreadLocal.withInitial(() -> new SetTimeProvider());
+    final SetTimeProvider timeProvider = new SetTimeProvider();
     private ChronicleQueue sharedWriterQueue;
-
-    static {
-        Jvm.setExceptionHandlers(Jvm.fatal(), Jvm.warn(), null);
-    }
-
-    private PretoucherThread pretoucherThread;
 
     public RollCycleMultiThreadStressTest() {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
@@ -105,19 +100,13 @@ public class RollCycleMultiThreadStressTest {
         }
         return allReadersComplete;
     }
+    PretoucherThread pretoucherThread = null;
 
     @Test
-    public void stressTest() throws Exception {
-        FlakyTestRunner.run(this::stress);
-    }
-
     public void stress() throws Exception {
         assert warnIfAssertsAreOn();
-        Jvm.disableDebugHandler();
+
         File file = DirectoryUtils.tempDir("stress");
-
-        DirectoryUtils.deleteDir(file);
-
 //        System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
@@ -150,6 +139,7 @@ public class RollCycleMultiThreadStressTest {
         if (SHARED_WRITE_QUEUE)
             sharedWriterQueue = createQueue(file);
 
+
         if (PRETOUCH) {
             pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);
@@ -160,7 +150,6 @@ public class RollCycleMultiThreadStressTest {
             try (ChronicleQueue queue = writerQueue(file)) {
                 tempWriter.write(queue.acquireAppender());
             }
-            timeProvider.get().advanceMillis(1);
         }
         for (int i = 0; i < numThreads - numWriters; i++) {
             final Reader reader = new Reader(file, expectedNumberOfMessages);
@@ -169,10 +158,8 @@ public class RollCycleMultiThreadStressTest {
         }
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
             LOG.warn("Wrote one now waiting for {}ms", WRITE_ONE_THEN_WAIT_MS);
-            //     Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
-            timeProvider.get().advanceMillis(WRITE_ONE_THEN_WAIT_MS);
+            Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
         }
-
         for (int i = 0; i < numWriters; i++) {
             final Writer writer = new Writer(file, wrote, expectedNumberOfMessages);
             writers.add(writer);
@@ -189,7 +176,7 @@ public class RollCycleMultiThreadStressTest {
             if (wrote.get() >= expectedNumberOfMessages)
                 break;
             if (now > nextRollTime) {
-                timeProvider.get().advanceMillis(1000);
+                timeProvider.advanceMillis(1000);
                 nextRollTime += ROLL_EVERY_MS;
             }
             if (now > nextCheckTime) {
@@ -210,8 +197,7 @@ public class RollCycleMultiThreadStressTest {
                 nextCheckTime = System.currentTimeMillis() + 10_000L;
             }
             i++;
-            //  Jvm.pause(50);
-            timeProvider.get().advanceMillis(50);
+            Jvm.pause(5);
         }
         double timeToWriteSecs = (System.currentTimeMillis() - startTime) / 1000d;
 
@@ -261,14 +247,11 @@ public class RollCycleMultiThreadStressTest {
                 }
 
 //                System.out.printf("Not all readers are complete. Waiting...%n");
-                //     Jvm.pause(2000);
-                timeProvider.get().advanceMillis(2000);
+                Jvm.pause(2000);
             }
             assertTrue("Readers did not catch up",
                     areAllReadersComplete(expectedNumberOfMessages, readers));
 
-        } catch (Exception e) {
-            e.printStackTrace();
         } finally {
 
             executorServiceRead.shutdown();
@@ -302,7 +285,7 @@ public class RollCycleMultiThreadStressTest {
         }
 
         IOTools.deleteDirWithFiles("stress");
-
+//        System.out.println("Test complete");
     }
 
     private boolean warnIfAssertsAreOn() {
@@ -314,14 +297,14 @@ public class RollCycleMultiThreadStressTest {
     SingleChronicleQueueBuilder queueBuilder(File path) {
         return SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .timeProvider(timeProvider.get())
+                .timeProvider(timeProvider)
                 .doubleBuffer(DOUBLE_BUFFER)
                 .rollCycle(RollCycles.TEST_SECONDLY);
     }
 
     @NotNull
     private ChronicleQueue createQueue(File path) {
-        return queueBuilder(path).timeProvider(timeProvider.get()).build();
+        return queueBuilder(path).build();
     }
 
     @NotNull
@@ -387,9 +370,7 @@ public class RollCycleMultiThreadStressTest {
 
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
-                final int millis = 10;//random.nextInt(DELAY_READER_RANDOM_MS);
-             //   Jvm.pause(millis);
-                timeProvider.get().advanceMillis(millis);
+                Jvm.pause(random.nextInt(DELAY_READER_RANDOM_MS));
                 while (lastRead != expectedNumberOfMessages - 1) {
                     if (Thread.currentThread().isInterrupted())
                         return null;
@@ -404,11 +385,9 @@ public class RollCycleMultiThreadStressTest {
                             }
                             continue;
                         }
-
                         int v = -1;
 
                         final ValueIn valueIn = dc.wire().getValueIn();
-
                         final long documentAcquireTimestamp = valueIn.int64();
                         if (documentAcquireTimestamp == 0L) {
                             throw new AssertionError("No timestamp");
@@ -466,9 +445,7 @@ public class RollCycleMultiThreadStressTest {
         public Throwable call() {
             ChronicleQueue queue = writerQueue(path);
             try (final ExcerptAppender appender = queue.acquireAppender()) {
-                final int millis = random.nextInt(DELAY_WRITER_RANDOM_MS);
-                Jvm.pause(millis);
-                timeProvider.get().advanceMillis(millis);
+                Jvm.pause(random.nextInt(DELAY_WRITER_RANDOM_MS));
                 final long startTime = System.nanoTime();
                 int loopIteration = 0;
                 while (true) {
@@ -528,31 +505,18 @@ public class RollCycleMultiThreadStressTest {
         @SuppressWarnings("resource")
         @Override
         public Throwable call() {
-
+            ChronicleQueue queue0 = null;
             try (ChronicleQueue queue = queueBuilder(path).build()) {
-
+                queue0 = queue;
                 ExcerptAppender appender = queue.acquireAppender();
                 appender0 = appender;
 //                System.out.println("Starting pretoucher");
-                while (!queue.isClosed()) {
-
-                    if (currentThread().isInterrupted())
-                        return null;
-
-                    timeProvider.get().advanceMillis(50);
-
-                    if (isClosed())
-                        return null;
-
+                while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
+                    Jvm.pause(50);
                     appender.pretouch();
-                    yield();
-
                 }
-            } catch (ClosedIllegalStateException ignore) {
-                // shutting down
-                return null;
             } catch (Throwable e) {
-                if (appender0 != null && appender0.isClosed())
+                if (queue0 != null && queue0.isClosed())
                     return null;
                 exception = e;
                 return e;
@@ -567,10 +531,6 @@ public class RollCycleMultiThreadStressTest {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException, Exception {
-        try {
-            new RollCycleMultiThreadStressTest().stress();
-        } catch (Exception e) {
-            throw Jvm.rethrow(e);
-        }
+        new RollCycleMultiThreadStressTest().stress();
     }
 }
