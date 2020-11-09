@@ -8,7 +8,6 @@ import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -164,9 +163,9 @@ public class RollCycleMultiThreadStressTest {
         }
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
             LOG.warn("Wrote one now waiting for {}ms", WRITE_ONE_THEN_WAIT_MS);
-        //    Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
+            Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
+            timeProvider.advanceMillis(WRITE_ONE_THEN_WAIT_MS);
         }
-        timeProvider.advanceMillis(1);
 
         for (int i = 0; i < numWriters; i++) {
             final Writer writer = new Writer(file, wrote, expectedNumberOfMessages);
@@ -257,7 +256,7 @@ public class RollCycleMultiThreadStressTest {
 
 //                System.out.printf("Not all readers are complete. Waiting...%n");
                 Jvm.pause(2000);
-                timeProvider.advanceMillis(2000)   ;
+                timeProvider.advanceMillis(2000);
             }
             assertTrue("Readers did not catch up",
                     areAllReadersComplete(expectedNumberOfMessages, readers));
@@ -378,7 +377,9 @@ public class RollCycleMultiThreadStressTest {
 
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
-                Jvm.pause(random.nextInt(DELAY_READER_RANDOM_MS));
+                final int millis = random.nextInt(DELAY_READER_RANDOM_MS);
+                Jvm.pause(millis);
+                timeProvider.advanceMillis(millis);
                 while (lastRead != expectedNumberOfMessages - 1) {
                     try (DocumentContext dc = tailer.readingDocument()) {
                         if (!dc.isPresent()) {
@@ -453,7 +454,9 @@ public class RollCycleMultiThreadStressTest {
         public Throwable call() {
             ChronicleQueue queue = writerQueue(path);
             try (final ExcerptAppender appender = queue.acquireAppender()) {
-                Jvm.pause(random.nextInt(DELAY_WRITER_RANDOM_MS));
+                final int millis = random.nextInt(DELAY_WRITER_RANDOM_MS);
+                Jvm.pause(millis);
+                timeProvider.advanceMillis(millis);
                 final long startTime = System.nanoTime();
                 int loopIteration = 0;
                 while (true) {
@@ -515,6 +518,7 @@ public class RollCycleMultiThreadStressTest {
 //                System.out.println("Starting pretoucher");
                 while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
                     Jvm.pause(50);
+                    timeProvider.advanceMillis(50);
                     appender.pretouch();
                 }
             } catch (Throwable e) {
