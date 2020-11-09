@@ -204,7 +204,7 @@ public class RollCycleMultiThreadStressTest {
                 nextCheckTime = System.currentTimeMillis() + 10_000L;
             }
             i++;
-            Jvm.pause(50);
+          //  Jvm.pause(50);
             timeProvider.advanceMillis(50);
         }
         double timeToWriteSecs = (System.currentTimeMillis() - startTime) / 1000d;
@@ -255,7 +255,7 @@ public class RollCycleMultiThreadStressTest {
                 }
 
 //                System.out.printf("Not all readers are complete. Waiting...%n");
-                Jvm.pause(2000);
+       //         Jvm.pause(2000);
                 timeProvider.advanceMillis(2000);
             }
             assertTrue("Readers did not catch up",
@@ -378,7 +378,7 @@ public class RollCycleMultiThreadStressTest {
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
                 final int millis = random.nextInt(DELAY_READER_RANDOM_MS);
-                Jvm.pause(millis);
+           //     Jvm.pause(millis);
                 timeProvider.advanceMillis(millis);
                 while (lastRead != expectedNumberOfMessages - 1) {
                     try (DocumentContext dc = tailer.readingDocument()) {
@@ -455,7 +455,7 @@ public class RollCycleMultiThreadStressTest {
             ChronicleQueue queue = writerQueue(path);
             try (final ExcerptAppender appender = queue.acquireAppender()) {
                 final int millis = random.nextInt(DELAY_WRITER_RANDOM_MS);
-                Jvm.pause(millis);
+             //   Jvm.pause(millis);
                 timeProvider.advanceMillis(millis);
                 final long startTime = System.nanoTime();
                 int loopIteration = 0;
@@ -517,7 +517,7 @@ public class RollCycleMultiThreadStressTest {
                 ExcerptAppender appender = queue.acquireAppender();
 //                System.out.println("Starting pretoucher");
                 while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
-                    Jvm.pause(50);
+                 //   Jvm.pause(50);
                     timeProvider.advanceMillis(50);
                     appender.pretouch();
                 }
