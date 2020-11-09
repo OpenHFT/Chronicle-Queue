@@ -99,7 +99,7 @@ public class RollCycleMultiThreadStressTest {
     }
 
     @Test
-    public void stress() throws InterruptedException, IOException {
+    public void stress() throws Exception {
         assert warnIfAssertsAreOn();
 
         File file = DirectoryUtils.tempDir("stress");
@@ -514,7 +514,11 @@ public class RollCycleMultiThreadStressTest {
         }
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException {
-        new RollCycleMultiThreadStressTest().stress();
+    public static void main(String[] args) throws IOException, InterruptedException, Exception {
+        try {
+            new RollCycleMultiThreadStressTest().stress();
+        } catch (Exception e) {
+            throw Jvm.rethrow(e);
+        }
     }
 }

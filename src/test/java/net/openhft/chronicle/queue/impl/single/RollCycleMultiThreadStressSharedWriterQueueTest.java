@@ -9,19 +9,15 @@ import java.io.IOException;
 public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMultiThreadStressTest {
 
     @Test
-    public void stress() throws InterruptedException, IOException {
-        try {
-            FlakyTestRunner.run(super::stress);
-        } catch (Exception e) {
-            throw Jvm.rethrow(e);
-        }
+    public void stress() throws Exception {
+        super.stress();
     }
 
     static {
         System.setProperty("sharedWriteQ", "true");
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws Exception {
         new RollCycleMultiThreadStressSharedWriterQueueTest().stress();
     }
 }
