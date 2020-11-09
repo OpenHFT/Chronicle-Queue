@@ -31,7 +31,7 @@ public class QueueLockTest extends ChronicleQueueTestBase {
         try {
             System.setProperty("queue.dont.recover.lock.timeout", Boolean.toString(shouldThrowException));
 
-            final long timeoutMs = 500;
+            final long timeoutMs = 5_000;
             final File queueDir = getTmpDir();
             try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
                     timeoutMS(timeoutMs).
@@ -59,7 +59,7 @@ public class QueueLockTest extends ChronicleQueueTestBase {
                 otherWriter.start();
                 started.await(1, TimeUnit.SECONDS);
                 long startTime = System.currentTimeMillis();
-                finished.await(1, TimeUnit.SECONDS);
+                finished.await(10, TimeUnit.SECONDS);
                 long endTime = System.currentTimeMillis();
                 assertTrue("timeout", endTime >= startTime + timeoutMs);
                 assertEquals(shouldThrowException, threwException.get());
