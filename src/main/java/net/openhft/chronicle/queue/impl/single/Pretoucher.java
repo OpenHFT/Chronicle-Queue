@@ -51,8 +51,12 @@ public final class Pretoucher extends AbstractCloseable {
     }
 
     public void execute() throws InvalidEventHandlerException {
+        if (isClosed())
+            throw new InvalidEventHandlerException();
+
+        throwExceptionIfClosed();
+
         try {
-            throwExceptionIfClosed();
             assignCurrentCycle();
 
             if (currentCycleMappedBytes != null)
