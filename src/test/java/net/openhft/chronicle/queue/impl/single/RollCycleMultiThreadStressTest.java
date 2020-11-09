@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -154,6 +155,7 @@ public class RollCycleMultiThreadStressTest {
             try (ChronicleQueue queue = writerQueue(file)) {
                 tempWriter.write(queue.acquireAppender());
             }
+            timeProvider.advanceMillis(1);
         }
         for (int i = 0; i < numThreads - numWriters; i++) {
             final Reader reader = new Reader(file, expectedNumberOfMessages);
@@ -162,8 +164,10 @@ public class RollCycleMultiThreadStressTest {
         }
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
             LOG.warn("Wrote one now waiting for {}ms", WRITE_ONE_THEN_WAIT_MS);
-            Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
+        //    Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
         }
+        timeProvider.advanceMillis(1);
+
         for (int i = 0; i < numWriters; i++) {
             final Writer writer = new Writer(file, wrote, expectedNumberOfMessages);
             writers.add(writer);
@@ -202,6 +206,7 @@ public class RollCycleMultiThreadStressTest {
             }
             i++;
             Jvm.pause(50);
+            timeProvider.advanceMillis(50);
         }
         double timeToWriteSecs = (System.currentTimeMillis() - startTime) / 1000d;
 
@@ -252,6 +257,7 @@ public class RollCycleMultiThreadStressTest {
 
 //                System.out.printf("Not all readers are complete. Waiting...%n");
                 Jvm.pause(2000);
+                timeProvider.advanceMillis(2000)   ;
             }
             assertTrue("Readers did not catch up",
                     areAllReadersComplete(expectedNumberOfMessages, readers));
@@ -306,7 +312,7 @@ public class RollCycleMultiThreadStressTest {
 
     @NotNull
     private ChronicleQueue createQueue(File path) {
-        return queueBuilder(path).build();
+        return queueBuilder(path).timeProvider(timeProvider).build();
     }
 
     @NotNull
