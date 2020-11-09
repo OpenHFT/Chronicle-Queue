@@ -53,6 +53,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         throwExceptionIfClosed();
 
         assert checkNotAlreadyLocked();
+
         long value = 0;
         try {
             int i = 0;
@@ -99,6 +100,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     private boolean checkNotAlreadyLocked() {
+        if (!locked())
+            return true;
         if (lockedByThread == null)
             return true;
         if (lockedByThread == Thread.currentThread())
