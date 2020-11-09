@@ -2939,7 +2939,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection() {
 
         try (final ChronicleQueue queue = binary(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY).build()) {
+                .rollCycle(DAILY).build()) {
 
             int value = 0;
             long cycle = 0;
