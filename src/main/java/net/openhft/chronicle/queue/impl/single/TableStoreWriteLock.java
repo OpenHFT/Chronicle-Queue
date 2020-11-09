@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -35,6 +36,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     private static final long PID = getProcessId();
     private final long timeout;
     private Thread lockedByThread = null;
+    private StackTrace lockedHere;
 
     public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs, final String lockKey) {
         super(lockKey, tableStore, pauser);
@@ -64,7 +66,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             }
 
             //noinspection ConstantConditions,AssertWithSideEffects
-            assert (lockedByThread = Thread.currentThread()) != null;
+            assert (lockedByThread = Thread.currentThread()) != null
+                    && (lockedHere = new StackTrace()) != null;
 
             // success
         } catch (TimeoutException e) {
@@ -99,7 +102,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         if (lockedByThread == null)
             return true;
         if (lockedByThread == Thread.currentThread())
-            throw new AssertionError("Lock is already acquired by current thread and is not reentrant - nested document context?");
+            throw new AssertionError("Lock is already acquired by current thread and is not reentrant - nested document context?", lockedHere);
         return true;
     }
 
@@ -117,7 +120,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
                         "by PID: " + getLockedBy(value));
         }
         //noinspection ConstantConditions,AssertWithSideEffects
-        assert (lockedByThread = null) == null;
+        lockedByThread = null;
+        lockedHere = null;
     }
 
     @Override
