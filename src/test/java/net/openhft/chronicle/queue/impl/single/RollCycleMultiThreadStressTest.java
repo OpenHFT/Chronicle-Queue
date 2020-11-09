@@ -391,9 +391,11 @@ public class RollCycleMultiThreadStressTest {
                             }
                             continue;
                         }
+
                         int v = -1;
 
                         final ValueIn valueIn = dc.wire().getValueIn();
+
                         final long documentAcquireTimestamp = valueIn.int64();
                         if (documentAcquireTimestamp == 0L) {
                             throw new AssertionError("No timestamp");
