@@ -198,8 +198,6 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
                     "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         } finally {
 
-            if (bytes0.refCount() != 0)
-                System.out.println("");
             System.out.println(bytes0);
             if (bytes0 != null && !bytes0.isClosed())
                 bytes0.releaseLast();
