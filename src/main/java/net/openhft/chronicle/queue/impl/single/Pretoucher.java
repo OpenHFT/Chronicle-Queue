@@ -51,10 +51,10 @@ public final class Pretoucher extends AbstractCloseable {
     }
 
     public void execute() throws InvalidEventHandlerException {
-        throwExceptionIfClosed();
-
-        assignCurrentCycle();
         try {
+            throwExceptionIfClosed();
+            assignCurrentCycle();
+
             if (currentCycleMappedBytes != null)
                 pretoucherState.pretouch(currentCycleMappedBytes);
         } catch (IllegalStateException e) {
@@ -67,13 +67,11 @@ public final class Pretoucher extends AbstractCloseable {
 
     public void shutdown() {
         throwExceptionIfClosed();
-
         queue.close();
     }
 
     /**
-     * used by the pretoucher to acquire the next cycle file, but does NOT do the roll. If configured,
-     * we acquire the cycle file early
+     * used by the pretoucher to acquire the next cycle file, but does NOT do the roll. If configured, we acquire the cycle file early
      */
     private void assignCurrentCycle() {
         final int qCycle = queue.cycle(pretouchTimeProvider);
@@ -90,7 +88,7 @@ public final class Pretoucher extends AbstractCloseable {
                         Jvm.warn().on(getClass(), "unable to write the EOF file=" + currentCycleMappedBytes.mappedFile().file(), ex);
                     }
                 SingleChronicleQueueStore oldStore = currentCycleWireStore;
-                    currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), CAN_WRITE, currentCycleWireStore);
+                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), CAN_WRITE, currentCycleWireStore);
                 if (oldStore != null && oldStore != currentCycleWireStore)
                     oldStore.close();
             } finally {
