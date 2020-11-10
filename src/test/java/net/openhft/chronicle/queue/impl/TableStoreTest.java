@@ -46,7 +46,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "b: 2\n" +
                     "...\n" +
-                    "# 65436 bytes remaining\n", table.dump());
+                    "# 130972 bytes remaining\n", table.dump());
             closeQuietly(a, b);
         }
 
@@ -72,7 +72,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "c: 3\n" +
                     "...\n" +
-                    "# 65420 bytes remaining\n", table.dump());
+                    "# 130956 bytes remaining\n", table.dump());
 //            System.out.println(table.dump());
             closeQuietly(c, b);
         }

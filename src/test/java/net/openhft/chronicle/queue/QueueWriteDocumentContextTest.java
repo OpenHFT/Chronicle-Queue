@@ -9,7 +9,7 @@ import net.openhft.chronicle.wire.WriteDocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import static net.openhft.chronicle.queue.DirectoryUtils.*;
+import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -70,7 +70,7 @@ public class QueueWriteDocumentContextTest {
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65060 bytes remaining\n" +
+                    "# 130596 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -145,7 +145,7 @@ public class QueueWriteDocumentContextTest {
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65060 bytes remaining\n" +
+                    "# 130596 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

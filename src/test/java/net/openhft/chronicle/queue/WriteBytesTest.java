@@ -122,7 +122,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 65060 bytes remaining\n" +
+                    "# 130596 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
