@@ -20,9 +20,11 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.analytics.Analytics;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.pom.PomPropertiesUtil;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
@@ -61,12 +63,15 @@ import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
+    public static final String LIBRARY_NAME = "queue";
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
     static final boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
+
+    private static final Analytics ANALYTICS = Analytics.acquire(LIBRARY_NAME, PomPropertiesUtil.version(LIBRARY_NAME));
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     @NotNull
@@ -188,6 +193,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
 
             sourceId = builder.sourceId();
+
+            final Map<String, String> eventParameters = new HashMap<>();
+            eventParameters.put("wire_type", wireType.toString());
+            final String rollCycleName = rollCycle.toString();
+            if (!rollCycleName.startsWith("TEST"))
+                eventParameters.put("roll_cycle", rollCycleName);
+
+            ANALYTICS.onStart(eventParameters);
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);
