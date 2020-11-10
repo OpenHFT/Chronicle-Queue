@@ -99,10 +99,6 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         public long maxMessagesPerCycle() {
             return 0;
         }
-
-        @Override
-        public long durationOfCycle() {
-            return TimeUnit.SECONDS.toMillis(1);
-        }
+        
     }
 }
