@@ -36,12 +36,14 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     protected final TimingPauser pauser;
     protected final File path;
     protected final TableStore tableStore;
+    private final String lockKey;
 
     public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauser) {
         this.tableStore = tableStore;
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(lockKey));
         this.pauser = pauser.get();
         this.path = tableStore.file();
+        this.lockKey = lockKey;
     }
 
     protected void performClose() {
@@ -58,9 +60,10 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     }
 
     /**
-     * forces the unlock only if the process that currently holds the table store lock is no-longer running.
+     * forces the unlock only if the process that currently holds the table store lock is no-longer running, otherwise will block
      */
-    public void forceUnlockIfProcessIsDead() {
+    public void forceUnlockIfProcessIsDead() throws InterruptedException {
+        long i = 0;
         for (; ; ) {
             long pid = this.lock.getValue();
             if (pid == UNLOCKED || Jvm.isProcessAlive(pid))
@@ -69,6 +72,13 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             Jvm.debug().on(this.getClass(), "Forced unlock for the lock file:" + this.path + ", unlocked: " + pid, new StackTrace("Forced unlock"));
             if (lock.compareAndSwapValue(pid, UNLOCKED))
                 return;
+
+            Thread.sleep(1);
+
+            i++;
+            if (i % 1000 == 0) {
+                Jvm.warn().on(this.getClass(), String.format("unable to release the lock=%s in file=%s as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
+            }
         }
 
     }
