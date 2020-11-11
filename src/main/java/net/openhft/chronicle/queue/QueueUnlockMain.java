@@ -59,6 +59,7 @@ public class QueueUnlockMain {
 
         TableStore store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
         TSQueueLock queueLock = new TSQueueLock(store, BusyTimedPauser::new, 0L);
+        // writeLock AKA appendLock
         TableStoreWriteLock writeLock = new TableStoreWriteLock(store, BusyTimedPauser::new, 0L);
 
         forceUnlock(queueLock);
