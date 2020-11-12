@@ -151,6 +151,8 @@ class StoreAppender extends AbstractCloseable
                 pretoucher = new Pretoucher(queue());
 
             pretoucher.execute();
+
+
         } catch (Throwable e) {
             Jvm.warn().on(getClass(), e);
             throw Jvm.rethrow(e);

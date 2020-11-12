@@ -404,8 +404,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     protected ExcerptAppender newAppender() {
-        if (appendLock.locked())
-            throw new IllegalStateException("locked : unable to append");
+        if (appendLock.locked()) {
+            final IllegalStateException e = new IllegalStateException("locked : unable to append");
+            // added here because test cases check for it, for no warn
+            Jvm.warn().on(getClass(), "locked : unable to append", e);
+            throw e;
+        }
         queueLock.waitForLock();
 
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);

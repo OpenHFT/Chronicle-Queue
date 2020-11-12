@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -140,6 +141,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @NotNull
     private static Object[] testConfiguration(final WireType binary, final boolean encrypted) {
         return new Object[]{binary.name() + " - " + (encrypted ? "" : "not ") + "encrypted", binary, encrypted};
+    }
+
+    private static boolean isThrowingIllegalStateException(ExceptionKey k) {
+        return k.throwable instanceof IllegalStateException;
     }
 
     @Test
@@ -301,6 +306,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ((SingleChronicleQueue) queue).appendLock().lock();
             final ExcerptAppender appender = queue.acquireAppender();
             appender.writeText("Hello World");
+        } finally {
+            exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
         }
     }
 
@@ -313,6 +320,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
             queue.acquireAppender().writeText("hello");
+        } finally {
+            exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
         }
 
     }
@@ -3264,7 +3273,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 String dump = queue.dump().replaceAll("(?m)^#.+$\\n", "");
                 assertTrue(dump, dump.contains(
-                                "--- !!data #binary\n" +
+                        "--- !!data #binary\n" +
                                 "hello: world0\n" +
                                 "--- !!data #binary\n" +
                                 "hello: world1\n" +
@@ -3314,15 +3323,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertEquals(before, dump);
                 assertTrue(dump, dump.contains(
                         "--- !!data #binary\n" +
-                        "hello: world0\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world1\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world2\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world3\n" +
-                        "--- !!data #binary\n" +
-                        "hello: world4"));
+                                "hello: world0\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world1\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world2\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world3\n" +
+                                "--- !!data #binary\n" +
+                                "hello: world4"));
             }
         }
     }

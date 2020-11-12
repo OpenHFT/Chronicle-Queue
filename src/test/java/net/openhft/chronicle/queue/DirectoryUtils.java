@@ -43,6 +43,10 @@ public class DirectoryUtils {
         return tmpDir;
     }
 
+    public static void deleteDir(@NotNull String dir) {
+        IOTools.deleteDirWithFiles(new File(dir));
+    }
+
     public static void deleteDir(@NotNull File dir) {
         IOTools.deleteDirWithFiles(dir);
     }

@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -96,7 +97,7 @@ public class SingleTableBuilder<T extends Metadata> {
         try {
             if (!readOnly && file.createNewFile() && !file.canWrite())
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
-            MappedBytes bytes = MappedBytes.mappedBytes(file, 32 << 10, 32 << 10, readOnly);
+            MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);
             // eagerly initialize backing MappedFile page - otherwise wire.writeFirstHeader() will try to lock the file
             // to allocate the first byte store and that will cause lock overlap
             bytes.readVolatileInt(0);

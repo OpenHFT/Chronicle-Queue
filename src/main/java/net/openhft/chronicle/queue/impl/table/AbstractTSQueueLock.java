@@ -28,6 +28,8 @@ import net.openhft.chronicle.threads.TimingPauser;
 import java.io.File;
 import java.util.function.Supplier;
 
+import static java.lang.String.format;
+
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
     protected static final long UNLOCKED = Long.MIN_VALUE;
     protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
@@ -36,12 +38,14 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     protected final TimingPauser pauser;
     protected final File path;
     protected final TableStore tableStore;
+    private final String lockKey;
 
     public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauser) {
         this.tableStore = tableStore;
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(lockKey));
         this.pauser = pauser.get();
         this.path = tableStore.file();
+        this.lockKey = lockKey;
     }
 
     protected void performClose() {
@@ -58,17 +62,31 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     }
 
     /**
-     * forces the unlock only if the process that currently holds the table store lock is no-longer running.
+     * forces the unlock only if the process that currently holds the table store lock is no-longer running, or it is this process that holds the
+     * lock, otherwise will block
      */
     public void forceUnlockIfProcessIsDead() {
+        long i = 0;
         for (; ; ) {
-            long pid = this.lock.getValue();
-            if (pid == UNLOCKED || Jvm.isProcessAlive(pid))
+
+            long pid = this.lock.getVolatileValue();
+            if (pid == UNLOCKED)
                 return;
 
-            Jvm.debug().on(this.getClass(), "Forced unlock for the lock file:" + this.path + ", unlocked: " + pid, new StackTrace("Forced unlock"));
-            if (lock.compareAndSwapValue(pid, UNLOCKED))
-                return;
+            if (!Jvm.isProcessAlive(pid) || pid == Jvm.getProcessId()) {
+                if (Jvm.isDebugEnabled(this.getClass()))
+                    Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d", lockKey, this.path, pid), new StackTrace("Forced unlock"));
+                if (lock.compareAndSwapValue(pid, UNLOCKED))
+                    return;
+            }
+
+            i++;
+            if (i % 1000 == 0) {
+                Jvm.warn().on(this.getClass(), format("unable to release the lock=%s in the table store file=%s as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
+            }
+
+            Jvm.pause(1);
+            throwExceptionIfClosed();
         }
 
     }

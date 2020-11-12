@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -35,6 +36,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     private static final long PID = getProcessId();
     private final long timeout;
     private Thread lockedByThread = null;
+    private StackTrace lockedHere;
 
     public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs, final String lockKey) {
         super(lockKey, tableStore, pauser);
@@ -51,6 +53,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         throwExceptionIfClosed();
 
         assert checkNotAlreadyLocked();
+
         long value = 0;
         try {
             int i = 0;
@@ -64,7 +67,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             }
 
             //noinspection ConstantConditions,AssertWithSideEffects
-            assert (lockedByThread = Thread.currentThread()) != null;
+            assert (lockedByThread = Thread.currentThread()) != null
+                    && (lockedHere = new StackTrace()) != null;
 
             // success
         } catch (TimeoutException e) {
@@ -96,10 +100,12 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     private boolean checkNotAlreadyLocked() {
+        if (!locked())
+            return true;
         if (lockedByThread == null)
             return true;
         if (lockedByThread == Thread.currentThread())
-            throw new AssertionError("Lock is already acquired by current thread and is not reentrant - nested document context?");
+            throw new AssertionError("Lock is already acquired by current thread and is not reentrant - nested document context?", lockedHere);
         return true;
     }
 
@@ -107,17 +113,18 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     public void unlock() {
         throwExceptionIfClosed();
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
-            long value = lock.getValue();
-            if (value == UNLOCKED) {
-                // we are already unlocked so don't do anything.
-                return;
-            } else
+            long value = lock.getVolatileValue();
+            if (value == UNLOCKED)
+                warn().on(getClass(), "Write lock was unlocked by someone else! For the " +
+                        "lock file:" + path);
+            else
                 warn().on(getClass(), "Write lock was locked by someone else! For the " +
                         "lock file:" + path + " " +
                         "by PID: " + getLockedBy(value));
         }
         //noinspection ConstantConditions,AssertWithSideEffects
-        assert (lockedByThread = null) == null;
+        lockedByThread = null;
+        lockedHere = null;
     }
 
     @Override
