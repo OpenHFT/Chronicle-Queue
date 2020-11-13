@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,6 +65,7 @@ class StoreAppender extends AbstractCloseable
         this.checkInterrupts = checkInterrupts;
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
+
         this.writeContext = new StoreAppenderContext();
 
         // always put references to "this" last.
@@ -79,8 +81,17 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void checkAppendLock() {
-        if (appendLock.locked())
-            throw new IllegalStateException("locked : unable to append");
+        if (appendLock.locked()) {
+            if (appendLock instanceof AbstractTSQueueLock) {
+                final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
+                appendLock.forceUnlockIfProcessIsDead();
+                final long lockedBy = appendLock.lockedBy();
+                if (lockedBy != AbstractTSQueueLock.UNLOCKED) {
+                    throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + lockedBy);
+                }
+            } else
+                throw new IllegalStateException("locked: unable to append");
+        }
     }
 
     private static void releaseBytesFor(Wire w) {
