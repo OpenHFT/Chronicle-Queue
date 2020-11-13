@@ -115,9 +115,6 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     protected void performClose() {
-//        if (Jvm.isDebugEnabled(getClass()))
-//            Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
-
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
@@ -151,7 +148,6 @@ class StoreAppender extends AbstractCloseable
                 pretoucher = new Pretoucher(queue());
 
             pretoucher.execute();
-
 
         } catch (Throwable e) {
             Jvm.warn().on(getClass(), e);
@@ -339,7 +335,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        checkAppendLock();
+        if (!metaData)
+            checkAppendLock();
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;
