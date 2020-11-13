@@ -175,6 +175,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             this.directoryListing.refresh(true);
             this.queueLock = builder.queueLock();
             this.writeLock = builder.writeLock();
+
+            // release the write lock if the process is dead
+            if (writeLock instanceof TableStoreWriteLock) {
+                ((TableStoreWriteLock) writeLock).forceUnlockIfProcessIsDead();
+            }
+
             this.appendLock = builder.appendLock();
 
             if (readOnly) {
