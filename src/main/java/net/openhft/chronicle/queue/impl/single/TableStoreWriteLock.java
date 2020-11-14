@@ -48,13 +48,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         timeout = timeoutMs;
     }
 
-    public void forceLockAndDontWarn() {
-        lock.setVolatileValue(PID);
-    }
-
-    public void forceUnlockLockAndDontWarn() {
-        lock.setVolatileValue(PID);
-    }
 
     @Override
     public void lock() {

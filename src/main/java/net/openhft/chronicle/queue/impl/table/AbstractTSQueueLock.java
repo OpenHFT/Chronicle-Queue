@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.threads.TimingPauser;
 
 import java.io.File;
+import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
 import static java.lang.String.format;
@@ -66,6 +67,14 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 new StackTrace("Forced unlock"));
     }
 
+
+    public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
+        long pid = this.lock.getVolatileValue();
+        if (  pid == Jvm.getProcessId())
+            return true;
+        notCurrentProcessConsumer.accept(pid);
+        return false;
+    }
     /**
      * forces an unlock only if the process that currently holds the table store lock is no-longer running, or the current process is holding the
      * lock
@@ -122,6 +131,30 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             Jvm.debug().on(this.getClass(), format("unable to release the lock=%s in the table store file=%s " +
                     "as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
         return false;
+    }
+
+
+    /**
+     * forces lock only if the process is the current process or the process that hold the lock is dead
+     *
+     * @return {@code true} if successful, more formally, returns {@code true} if the lock was original unlocked, or the process that was holding the
+     * lock is no longer running, otherwise {@code false } is returned if it is locked by another process
+     */
+    public boolean forceLockIfProcessIsDead() {
+        long pid = 0;
+        for (; ; ) {
+            pid = this.lock.getVolatileValue();
+
+            if (pid == Jvm.getProcessId())
+                return true;
+
+            if (pid == UNLOCKED || !Jvm.isProcessAlive(pid) ){
+                if (lock.compareAndSwapValue(pid, Jvm.getProcessId()))
+                    return true;
+            } else
+                return false;
+
+        }
     }
 
     @Override
