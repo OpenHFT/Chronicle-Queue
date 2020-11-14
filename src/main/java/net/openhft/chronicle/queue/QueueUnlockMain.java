@@ -55,10 +55,10 @@ public class QueueUnlockMain {
         final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
 
         // appender lock
-        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, "chronicle.append.lock")).forceUnlockLockAndDontWarn();
+        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, "chronicle.append.lock")).forceUnlockIfProcessIsDeadOrCurrentProcess();
 
         // write lock
-        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L)).forceUnlockLockAndDontWarn();
+        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L)).forceUnlockIfProcessIsDeadOrCurrentProcess();
 
         System.out.println("Done");
     }
