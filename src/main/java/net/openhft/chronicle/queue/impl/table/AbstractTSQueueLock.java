@@ -135,7 +135,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
 
     /**
-     * forces lock only if the process is the current process or the process that hold the lock is dead
+     * forces lock only if the process holding the lock, is the current process or the process that holds the lock is dead
      *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was original unlocked, or the process that was holding the
      * lock is no longer running, otherwise {@code false } is returned if it is locked by another process

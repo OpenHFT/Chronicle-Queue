@@ -788,9 +788,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     void cleanupStoreFilesWithNoData() {
 
-        if (appendLock.locked())
-            return;
-
         writeLock.lock();
 
         try {
