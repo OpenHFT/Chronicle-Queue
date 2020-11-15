@@ -69,18 +69,18 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
-        long pid = this.lock.getVolatileValue();
+        final long pid = this.lock.getVolatileValue();
         if (  pid == Jvm.getProcessId())
             return true;
         notCurrentProcessConsumer.accept(pid);
         return false;
     }
+
     /**
-     * forces an unlock only if the process that currently holds the table store lock is no-longer running, or the current process is holding the
-     * lock
+     * force unlock only if the process that currently holds the lock is no-longer running or the current process is holding the lock
      *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, the lock was held by this process or
-     * the process that was holding the lock is no longer running, otherwise {@code false } is returned if it was able to remove the lock.
+     * the process that is holding the lock is no longer running, otherwise {@code false } is returned to indicate that the lock could not be removed
      */
     public boolean forceUnlockIfProcessIsDeadOrCurrentProcess() {
         long pid = 0;
@@ -135,7 +135,6 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
 
     /**
-     * forces lock only if the process holding the lock, is the current process or the process that holds the lock is dead
      *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was original unlocked, or the process that was holding the
      * lock is no longer running, otherwise {@code false } is returned if it is locked by another process
