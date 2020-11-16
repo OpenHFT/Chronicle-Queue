@@ -18,15 +18,14 @@
 package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -40,39 +39,31 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitial() {
-        Assume.assumeFalse(OS.isWindows());
-        doTest(true);
-    }
 
-    private void doTest(boolean recordHistoryFirst) {
-        VanillaMessageHistory veh = new VanillaMessageHistory();
-        veh.addSourceDetails(true);
-        MessageHistory.set(veh);
-
-        int extraTiming = recordHistoryFirst ? 1 : 0;
-        long nanoTime = System.nanoTime();
-        File queuePath = new File(OS.getTarget(), "testWithQueueHistory-" + nanoTime);
-        File queuePath2 = new File(OS.getTarget(), "testWithQueueHistory2-" + nanoTime);
-        File queuePath3 = new File(OS.getTarget(), "testWithQueueHistory3-" + nanoTime);
+        int extraTiming = 1;
+        File queuePath1 = IOTools.createTempFile("testWithQueueHistory1-");
+        File queuePath2 = IOTools.createTempFile("testWithQueueHistory2-");
+        File queuePath3 = IOTools.createTempFile("testWithQueueHistory3-");
         try {
-            try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath).testBlockSize().sourceId(1).build()) {
+            try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
                         .get();
+                // this will write the 1st timestamps
                 writer.say("hello");
             }
 
-            try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath).testBlockSize().sourceId(1).build();
-                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build()) {
+            try (ChronicleQueue in = queue(queuePath1, 1);
+                 ChronicleQueue out = queue(queuePath2, 2)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
-                        .recordHistory(true)
                         .get();
                 DummyListener dummy = msg -> {
                     MessageHistory history = MessageHistory.get();
                     Assert.assertEquals(1, history.sources());
                     // written 1st then received by me
                     Assert.assertEquals(1 + extraTiming, history.timings());
+                    // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
@@ -80,16 +71,16 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
 
-            try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build();
-                 ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath3).testBlockSize().sourceId(3).build()) {
+            try (ChronicleQueue in = queue(queuePath2, 2);
+                 ChronicleQueue out = queue(queuePath3, 3)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(DummyListener.class)
-                        .recordHistory(true)
                         .get();
                 DummyListener dummy = msg -> {
                     MessageHistory history = MessageHistory.get();
                     Assert.assertEquals(2, history.sources());
                     Assert.assertEquals(3 + extraTiming, history.timings());
+                    // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
@@ -100,28 +91,20 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
                     .withBasePath(queuePath3.toPath())
                     .withTimeUnit(TimeUnit.MICROSECONDS)
-                    .withMessageSink(s -> {
-                    });
+                    .withMessageSink(System.out::println);
             Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
-
             chronicleHistoryReader.outputData();
 
-            if (recordHistoryFirst) {
-                Assert.assertEquals(5, histos.size());
-                Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
-
-            } else {
-                Assert.assertEquals(4, histos.size());
-                Assert.assertEquals("[1, 2, 1to2, endToEnd]", histos.keySet().toString());
-            }
+            Assert.assertEquals(5, histos.size());
+            Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
         } finally {
-            try {
-                IOTools.shallowDeleteDirWithFiles(queuePath);
-                IOTools.shallowDeleteDirWithFiles(queuePath2);
-                IOTools.shallowDeleteDirWithFiles(queuePath3);
-            } catch (Exception e) {
-            }
+            IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
         }
+    }
+
+    @NotNull
+    private SingleChronicleQueue queue(File queuePath1, int sourceId) {
+        return ChronicleQueue.singleBuilder(queuePath1).testBlockSize().sourceId(sourceId).build();
     }
 
     @FunctionalInterface
