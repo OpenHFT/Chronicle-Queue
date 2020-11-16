@@ -94,10 +94,6 @@ public class ChronicleHistoryReader {
     }
 
     public Map<String, Histogram> readChronicle() {
-        final VanillaMessageHistory dontMutateIncomingHistory = new VanillaMessageHistory();
-        dontMutateIncomingHistory.addSourceDetails(false);
-        MessageHistory.set(dontMutateIncomingHistory);
-
         try (final ChronicleQueue q = createQueue()) {
             final ExcerptTailer tailer = q.createTailer();
             final WireParselet parselet = parselet();
