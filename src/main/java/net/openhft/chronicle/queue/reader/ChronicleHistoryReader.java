@@ -107,8 +107,6 @@ public class ChronicleHistoryReader {
                     }
                 }
             }
-        } finally {
-            MessageHistory.set(null);
         }
 
         return histos;
