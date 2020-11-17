@@ -26,28 +26,38 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.threads.TimingPauser;
 
 import java.io.File;
+import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
+import static java.lang.String.format;
+
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
-    protected static final long UNLOCKED = Long.MIN_VALUE;
+    public static final long UNLOCKED = Long.MIN_VALUE;
     protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
 
     protected final LongValue lock;
     protected final TimingPauser pauser;
     protected final File path;
     protected final TableStore tableStore;
+    private final String lockKey;
 
     public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauser) {
         this.tableStore = tableStore;
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(lockKey));
         this.pauser = pauser.get();
         this.path = tableStore.file();
+        this.lockKey = lockKey;
     }
 
     protected void performClose() {
         Closeable.closeQuietly(lock);
     }
 
+    /**
+     * will only force unlock if you give it the correct pid
+     *
+     * @param value
+     */
     protected void forceUnlock(long value) {
         boolean unlocked = lock.compareAndSwapValue(value, UNLOCKED);
         Jvm.warn().on(getClass(), "" +
@@ -57,20 +67,93 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 new StackTrace("Forced unlock"));
     }
 
+
+    public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
+        final long pid = this.lock.getVolatileValue();
+        if (  pid == Jvm.getProcessId())
+            return true;
+        notCurrentProcessConsumer.accept(pid);
+        return false;
+    }
+
     /**
-     * forces the unlock only if the process that currently holds the table store lock is no-longer running.
+     * force unlock only if the process that currently holds the lock is no-longer running or the current process is holding the lock
+     *
+     * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, the lock was held by this process or
+     * the process that is holding the lock is no longer running, otherwise {@code false } is returned to indicate that the lock could not be removed
      */
-    public void forceUnlockIfProcessIsDead() {
+    public boolean forceUnlockIfProcessIsDeadOrCurrentProcess() {
+        long pid = 0;
         for (; ; ) {
-            long pid = this.lock.getValue();
-            if (pid == UNLOCKED || Jvm.isProcessAlive(pid))
-                return;
+            pid = this.lock.getVolatileValue();
+            if (pid == UNLOCKED)
+                return true;
 
-            Jvm.debug().on(this.getClass(), "Forced unlock for the lock file:" + this.path + ", unlocked: " + pid, new StackTrace("Forced unlock"));
-            if (lock.compareAndSwapValue(pid, UNLOCKED))
-                return;
+            if (!Jvm.isProcessAlive(pid) || pid == Jvm.getProcessId()) {
+                if (Jvm.isDebugEnabled(this.getClass()))
+                    Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d",
+                            lockKey, this.path, pid), new StackTrace("Forced unlock"));
+                if (lock.compareAndSwapValue(pid, UNLOCKED))
+                    return true;
+            } else
+                break;
+
         }
+        if (Jvm.isDebugEnabled(this.getClass()))
+            Jvm.debug().on(this.getClass(), format("unable to release the lock=%s in the table store file=%s as it is being held by" +
+                    " pid=%d, and this process is still running.", lockKey, path, pid));
+        return false;
+    }
 
+    /**
+     * forces an unlock only if the process that currently holds the table store lock is no-longer running
+     *
+     * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, or the process that was holding the
+     * lock is no longer running, otherwise {@code false } is returned if it was able to remove the lock.
+     */
+    public boolean forceUnlockIfProcessIsDead() {
+        long pid = 0;
+        for (; ; ) {
+            pid = this.lock.getVolatileValue();
+            if (pid == UNLOCKED)
+                return true;
+
+            if (!Jvm.isProcessAlive(pid)) {
+                if (Jvm.isDebugEnabled(this.getClass()))
+                    Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
+                            lockKey, this.path, pid), new StackTrace("Forced unlock"));
+                if (lock.compareAndSwapValue(pid, UNLOCKED))
+                    return true;
+            } else
+                break;
+        }
+        if (Jvm.isDebugEnabled(this.getClass()))
+            Jvm.debug().on(this.getClass(), format("unable to release the lock=%s in the table store file=%s " +
+                    "as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
+        return false;
+    }
+
+
+    /**
+     *
+     * @return {@code true} if successful, more formally, returns {@code true} if the lock was original unlocked, or the process that was holding the
+     * lock is no longer running, otherwise {@code false } is returned if it is locked by another process
+     */
+    public boolean forceLockIfProcessIsDead() {
+        long pid = 0;
+        for (; ; ) {
+            pid = this.lock.getVolatileValue();
+
+            if (pid == Jvm.getProcessId())
+                return true;
+
+            if (pid == UNLOCKED || !Jvm.isProcessAlive(pid) ){
+                if (lock.compareAndSwapValue(pid, Jvm.getProcessId()))
+                    return true;
+            } else
+                return false;
+
+        }
     }
 
     @Override
@@ -79,4 +162,10 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         return true;
     }
 
+    /**
+     * @return the pid that had the locked or the returns UNLOCKED if it is not locked
+     */
+    public long lockedBy() {
+        return lock.getVolatileValue();
+    }
 }

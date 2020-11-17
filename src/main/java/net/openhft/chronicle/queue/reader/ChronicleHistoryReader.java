@@ -108,6 +108,7 @@ public class ChronicleHistoryReader {
                 }
             }
         }
+
         return histos;
     }
 

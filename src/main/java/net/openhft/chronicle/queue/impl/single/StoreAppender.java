@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,6 +65,7 @@ class StoreAppender extends AbstractCloseable
         this.checkInterrupts = checkInterrupts;
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
+
         this.writeContext = new StoreAppenderContext();
 
         // always put references to "this" last.
@@ -79,8 +81,16 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void checkAppendLock() {
-        if (appendLock.locked())
-            throw new IllegalStateException("locked : unable to append");
+        if (appendLock.locked()) {
+            if (appendLock instanceof AbstractTSQueueLock) {
+                final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
+                final long lockedBy = appendLock.lockedBy();
+                if (lockedBy != AbstractTSQueueLock.UNLOCKED) {
+                    throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + lockedBy);
+                }
+            } else
+                throw new IllegalStateException("locked: unable to append");
+        }
     }
 
     private static void releaseBytesFor(Wire w) {
@@ -115,9 +125,6 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     protected void performClose() {
-//        if (Jvm.isDebugEnabled(getClass()))
-//            Jvm.debug().on(getClass(), "Closing store append for " + queue.file().getAbsolutePath());
-
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
@@ -151,6 +158,7 @@ class StoreAppender extends AbstractCloseable
                 pretoucher = new Pretoucher(queue());
 
             pretoucher.execute();
+
         } catch (Throwable e) {
             Jvm.warn().on(getClass(), e);
             throw Jvm.rethrow(e);
@@ -337,7 +345,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        checkAppendLock();
+        if (!metaData)
+            checkAppendLock();
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;

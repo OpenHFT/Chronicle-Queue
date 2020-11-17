@@ -17,20 +17,15 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.TSQueueLock;
 import net.openhft.chronicle.queue.impl.single.TableStoreWriteLock;
-import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.BusyTimedPauser;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 
@@ -57,24 +52,16 @@ public class QueueUnlockMain {
             System.exit(0);
         }
 
-        TableStore store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
-        TSQueueLock queueLock = new TSQueueLock(store, BusyTimedPauser::new, 0L);
-        TableStoreWriteLock writeLock = new TableStoreWriteLock(store, BusyTimedPauser::new, 0L);
+        final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
 
-        forceUnlock(queueLock);
-        forceUnlock(writeLock);
+        // appender lock
+        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, "chronicle.append.lock")).forceUnlockIfProcessIsDeadOrCurrentProcess();
+
+        // write lock
+        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L)).forceUnlockIfProcessIsDeadOrCurrentProcess();
 
         System.out.println("Done");
     }
 
-    private static void forceUnlock(AbstractTSQueueLock lock) {
-        try {
-            Method forceUnlock = AbstractTSQueueLock.class.getDeclaredMethod("forceUnlock");
-            Jvm.setAccessible(forceUnlock);
-            forceUnlock.invoke(lock);
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
-            System.exit(2);
-        }
-    }
 }
+
