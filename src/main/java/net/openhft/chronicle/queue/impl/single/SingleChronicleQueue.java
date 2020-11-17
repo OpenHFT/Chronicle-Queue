@@ -63,8 +63,6 @@ import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
-    public static final String GROUP_ID = "net.openhft";
-    public static final String ARTIFACT_ID = "chronicle-queue";
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
@@ -75,7 +73,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final AnalyticsFacade ANALYTICS = AnalyticsFacade.standardBuilder(
             "G-4K5MBLGPLE",
             "k1hK3x2qQaKk4F5gL-PBhQ",
-            PomProperties.version(GROUP_ID, ARTIFACT_ID))
+            PomProperties.version("net.openhft", "chronicle-queue"))
             //.withReportDespiteJUnit()
             .build();
 
