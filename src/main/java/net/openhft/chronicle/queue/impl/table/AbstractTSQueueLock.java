@@ -67,10 +67,14 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 new StackTrace("Forced unlock"));
     }
 
+    public boolean isLockedByCurrentProcess() {
+        return isLockedByCurrentProcess(x -> {
+        });
+    }
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         final long pid = this.lock.getVolatileValue();
-        if (  pid == Jvm.getProcessId())
+        if (pid == Jvm.getProcessId())
             return true;
         notCurrentProcessConsumer.accept(pid);
         return false;
@@ -133,9 +137,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         return false;
     }
 
-
     /**
-     *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was original unlocked, or the process that was holding the
      * lock is no longer running, otherwise {@code false } is returned if it is locked by another process
      */
@@ -147,7 +149,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             if (pid == Jvm.getProcessId())
                 return true;
 
-            if (pid == UNLOCKED || !Jvm.isProcessAlive(pid) ){
+            if (pid == UNLOCKED || !Jvm.isProcessAlive(pid)) {
                 if (lock.compareAndSwapValue(pid, Jvm.getProcessId()))
                     return true;
             } else
