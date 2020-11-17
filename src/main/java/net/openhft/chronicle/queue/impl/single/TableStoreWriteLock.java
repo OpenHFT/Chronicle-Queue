@@ -48,6 +48,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         timeout = timeoutMs;
     }
 
+
     @Override
     public void lock() {
         throwExceptionIfClosed();
