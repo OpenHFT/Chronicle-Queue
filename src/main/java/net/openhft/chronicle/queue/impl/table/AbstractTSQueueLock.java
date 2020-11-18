@@ -67,10 +67,14 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 new StackTrace("Forced unlock"));
     }
 
+    public boolean isLockedByCurrentProcess() {
+        return isLockedByCurrentProcess(x -> {
+        });
+    }
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         final long pid = this.lock.getVolatileValue();
-        if (  pid == Jvm.getProcessId())
+        if (pid == Jvm.getProcessId())
             return true;
         notCurrentProcessConsumer.accept(pid);
         return false;
@@ -80,9 +84,11 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
      * force unlock only if the process that currently holds the lock is no-longer running or the current process is holding the lock
      *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, the lock was held by this process or
-     * the process that is holding the lock is no longer running, otherwise {@code false } is returned to indicate that the lock could not be removed
+     * the process that is holding the lock is no longer running, otherwise {@code false } is returned to indicate that the lock could not be removed or the lock isClosed()
      */
     public boolean forceUnlockIfProcessIsDeadOrCurrentProcess() {
+        if (isClosed())
+            return false;
         long pid = 0;
         for (; ; ) {
             pid = this.lock.getVolatileValue();
@@ -133,9 +139,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         return false;
     }
 
-
     /**
-     *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was original unlocked, or the process that was holding the
      * lock is no longer running, otherwise {@code false } is returned if it is locked by another process
      */
@@ -147,7 +151,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             if (pid == Jvm.getProcessId())
                 return true;
 
-            if (pid == UNLOCKED || !Jvm.isProcessAlive(pid) ){
+            if (pid == UNLOCKED || !Jvm.isProcessAlive(pid)) {
                 if (lock.compareAndSwapValue(pid, Jvm.getProcessId()))
                     return true;
             } else
