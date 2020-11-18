@@ -2,10 +2,11 @@
 
 == Trying Analytics
 The `AnalyticsMain` is a program that creates two queues for the purpose of demonstrating the new analytics feature.
+Because chronicle-analytics is currently set to limit the number of events to one per hour per JVM instance, only one event will be sent upstream.
 
 == Setup
 
-Before trying out the feature, both core and queue must use the correct feature branches:
+Before trying out the feature, both `chronicle-core` and `chronicle-queue` must be on the correct feature branches:
 
 .Chronicle-Core (please note the "2" at the end of the feature branch name)
 [source, shell script]
@@ -35,6 +36,8 @@ Chronicle-Queue % git checkout feature/analytics
 Chronicle-Queue % mvn clean install
 ----
 
+NOTE: Analytics will detect if run under JUnit and (by default) prevent any events from being sent during testing. This setting can be overridden in the analytics builder.
+
 == Run
 
 Enter the following command to run:
@@ -44,3 +47,5 @@ Enter the following command to run:
 ----
 Chronicle-Queue % mvn exec:java@AnalyticsMain
 ----
+
+The version of the library will be extracted from a META_INF/maven file.
