@@ -1,0 +1,46 @@
+= AnalyticMain
+
+== Trying Analytics
+The `AnalyticsMain` is a program that creates two queues for the purpose of demonstrating the new analytics feature.
+
+== Setup
+
+Before trying out the feature, both core and queue must use the correct feature branches:
+
+.Chronicle-Core (please note the "2" at the end of the feature branch name)
+[source, shell script]
+----
+Chronicle-Core % git checkout feature/analytics2
+Chronicle-Core % mvn clean install
+----
+
+Now, update the Chronicle BOM to use the core SNAPSHOT version above and add the following line at the top of the dependencies tag:
+
+[source, xml]
+----
+            <!-- core projects -->
+            <dependency>
+                <groupId>net.openhft</groupId>
+                <artifactId>chronicle-analytics</artifactId>
+                <version>2.20.1</version>
+            </dependency>
+----
+
+then, rebuild the BOM using `mvn clean install`.
+
+.Chronicle-Queue
+[source, shell script]
+----
+Chronicle-Queue % git checkout feature/analytics
+Chronicle-Queue % mvn clean install
+----
+
+== Run
+
+Enter the following command to run:
+
+.Chronicle-Queue
+[source, shell script]
+----
+Chronicle-Queue % mvn exec:java@AnalyticsMain
+----
