@@ -13,7 +13,7 @@ public final class AnalyticsMain {
 
     public static void main(String[] args) {
         System.out.println("Creating two queues and sending analytics...");
-        System.out.println("Currently, there is a limit of one message per h per JVM instance so only one analytics message will be sent upstream.");
+        System.out.println("Currently, there is a limit of four message per h per JVM instance so only some analytics message might be sent upstream.");
         try (SingleChronicleQueue q1 = SingleChronicleQueueBuilder.binary(BASE_QUEUE_NAME + "1").build()) {
             try (SingleChronicleQueue q2 = SingleChronicleQueueBuilder.binary(BASE_QUEUE_NAME + "2").rollCycle(RollCycles.HOURLY).build()) {
 

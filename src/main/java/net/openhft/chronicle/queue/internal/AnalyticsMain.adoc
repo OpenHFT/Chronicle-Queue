@@ -2,9 +2,17 @@
 
 == Trying Analytics
 The `AnalyticsMain` is a program that creates two queues for the purpose of demonstrating the new analytics feature.
-Because chronicle-analytics is currently set to limit the number of events to one per hour per JVM instance, only one event will be sent upstream.
+Because chronicle-analytics is currently set to limit the number of events to four per hour per JVM instance, only some events might be sent upstream.
 
 == Setup
+
+First, check out Chronicle-Analytics and `mvn clean install` the snapshot version 2.20.2-SNAPSHOT.
+
+.Chronicle-Analytics
+[source, shell script]
+----
+Chronicle-Analytics % mvn clean install
+----
 
 Before trying out the feature, both `chronicle-core` and `chronicle-queue` must be on the correct feature branches:
 
@@ -23,7 +31,7 @@ Now, update the Chronicle BOM to use the core SNAPSHOT version above and add the
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-analytics</artifactId>
-                <version>2.20.1</version>
+                <version>2.20.2-SNAPSHOT</version>
             </dependency>
 ----
 
