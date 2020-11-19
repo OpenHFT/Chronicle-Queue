@@ -345,8 +345,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        if (!metaData)
-            checkAppendLock();
+        checkAppendLock();
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;

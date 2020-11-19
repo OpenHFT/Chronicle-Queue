@@ -49,16 +49,16 @@ public class QueueUnlockMain {
 
         if (!storeFilePath.exists()) {
             System.err.println("Metadata file not found, nothing to unlock");
-            System.exit(0);
+            System.exit(1);
         }
 
         final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
 
         // appender lock
-        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, "chronicle.append.lock")).forceUnlockIfProcessIsDeadOrCurrentProcess();
+        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, TableStoreWriteLock.APPEND_LOCK_KEY)).forceUnlock();
 
         // write lock
-        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L)).forceUnlockIfProcessIsDeadOrCurrentProcess();
+        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L)).forceUnlock();
 
         System.out.println("Done");
     }

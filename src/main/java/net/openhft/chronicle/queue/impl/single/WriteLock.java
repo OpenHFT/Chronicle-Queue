@@ -41,8 +41,14 @@ public interface WriteLock extends Closeable {
         }
     };
 
+    /**
+     * Guaranteed to succeed in getting the lock (may involve timeout and recovery) or else throw.
+     */
     void lock();
 
+    /**
+     * May not unlock. If it does not there will be a log.warn
+     */
     void unlock();
 
     void close();
@@ -50,5 +56,4 @@ public interface WriteLock extends Closeable {
     default boolean locked() {
         return false;
     }
-
 }
