@@ -35,6 +35,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -69,13 +70,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     static final boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
-
-    private static final AnalyticsFacade ANALYTICS = AnalyticsFacade.standardBuilder(
-            "G-4K5MBLGPLE",
-            "k1hK3x2qQaKk4F5gL-PBhQ",
-            PomProperties.version("net.openhft", "chronicle-queue"))
-            //.withReportDespiteJUnit()
-            .build();
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     @NotNull
@@ -210,7 +204,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             if (!rollCycleName.startsWith("TEST"))
                 additionalEventParameters.put("roll_cycle", rollCycleName);
 
-            ANALYTICS.sendEvent("started", additionalEventParameters);
+            AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);
