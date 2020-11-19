@@ -302,7 +302,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSet() {
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
             final ExcerptAppender appender = queue.acquireAppender();
             appender.writeText("Hello World");
@@ -314,7 +314,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSetInDifferentQueue() {
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
         }
 
@@ -323,7 +323,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } finally {
             exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
         }
+    }
 
+    @Test
+    public void testCanAppendWriteBytesInternalIfAppendLockIsSet() {
+        @NotNull Bytes<byte[]> test = Bytes.from("hello world");
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
+            ((SingleChronicleQueue) queue).appendLock().lock();
+            final StoreAppender appender = (StoreAppender) queue.acquireAppender();
+            ((SingleChronicleQueue) queue).writeLock().lock();
+            appender.writeBytesInternal(0, test);
+        }
     }
 
     @Test

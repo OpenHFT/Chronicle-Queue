@@ -81,15 +81,26 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void checkAppendLock() {
-        if (appendLock.locked()) {
-            if (appendLock instanceof AbstractTSQueueLock) {
-                final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
-                appendLock.isLockedByCurrentProcess(value -> {
-                    throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + value);
-                });
-            } else
-                throw new IllegalStateException("locked: unable to append");
-        }
+        checkAppendLock(false);
+    }
+
+    private void checkAppendLock(boolean allowMyProcess) {
+        if (appendLock.locked())
+            checkAppendLockLocked(allowMyProcess);
+    }
+
+    private void checkAppendLockLocked(boolean allowMyProcess) {
+        // separate method as this is in fast path
+        if (appendLock instanceof AbstractTSQueueLock) {
+            final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
+            final long lockedBy = appendLock.lockedBy();
+            if (lockedBy == AbstractTSQueueLock.UNLOCKED)
+                return;
+            if (allowMyProcess && lockedBy == Jvm.getProcessId())
+                return;
+            throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + lockedBy);
+        } else
+            throw new IllegalStateException("locked: unable to append");
     }
 
     private static void releaseBytesFor(Wire w) {
@@ -528,13 +539,15 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
-     * the queue file and cause data loss
+     * the queue file and cause data loss.
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
         writeBytesInternal(index, bytes, false);
     }
 
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
+        checkAppendLock(true);
+
         final int cycle = queue.rollCycle().toCycle(index);
 
         if (wire == null)
