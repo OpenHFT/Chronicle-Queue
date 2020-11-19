@@ -331,6 +331,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
+            Assume.assumeTrue(queue.acquireAppender() instanceof StoreAppender);
             final StoreAppender appender = (StoreAppender) queue.acquireAppender();
             ((SingleChronicleQueue) queue).writeLock().lock();
             appender.writeBytesInternal(0, test);
