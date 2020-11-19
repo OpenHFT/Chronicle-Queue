@@ -62,7 +62,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             if (value == PID) {
                 if (Jvm.isDebugEnabled(this.getClass()))
                     debug().on(getClass(), "Already locked by me, pid " + PID);
-                return;
             }
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
