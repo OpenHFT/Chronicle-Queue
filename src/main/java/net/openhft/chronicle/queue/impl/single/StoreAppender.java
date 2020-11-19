@@ -84,10 +84,9 @@ class StoreAppender extends AbstractCloseable
         if (appendLock.locked()) {
             if (appendLock instanceof AbstractTSQueueLock) {
                 final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
-                final long lockedBy = appendLock.lockedBy();
-                if (lockedBy != AbstractTSQueueLock.UNLOCKED) {
-                    throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + lockedBy);
-                }
+                appendLock.isLockedByCurrentProcess(value -> {
+                    throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + value);
+                });
             } else
                 throw new IllegalStateException("locked: unable to append");
         }
