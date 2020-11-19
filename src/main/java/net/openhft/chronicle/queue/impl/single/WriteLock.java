@@ -34,15 +34,17 @@ public interface WriteLock extends Closeable {
         @Override
         public void close() {
         }
-
-        @Override
-        public boolean locked() {
-            return false;
-        }
     };
 
+    /**
+     * Guaranteed to succeed in getting the lock (may involve timeout and recovery) or else throw.
+     * <p>This is not re-entrant i.e. if you lock and try and lock again it will timeout and recover
+     */
     void lock();
 
+    /**
+     * May not unlock. If it does not there will be a log.warn
+     */
     void unlock();
 
     void close();
@@ -50,5 +52,4 @@ public interface WriteLock extends Closeable {
     default boolean locked() {
         return false;
     }
-
 }

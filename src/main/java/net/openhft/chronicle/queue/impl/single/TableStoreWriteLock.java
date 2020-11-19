@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
@@ -28,12 +29,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static net.openhft.chronicle.core.Jvm.getProcessId;
+import static net.openhft.chronicle.core.Jvm.debug;
 import static net.openhft.chronicle.core.Jvm.warn;
 
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
     private static final String LOCK_KEY = "chronicle.write.lock";
-    private static final long PID = getProcessId();
+    public static final String APPEND_LOCK_KEY = "chronicle.append.lock";
     private final long timeout;
     private Thread lockedByThread = null;
     private StackTrace lockedHere;
@@ -48,7 +49,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         timeout = timeoutMs;
     }
 
-
+    /**
+     * Guaranteed to succeed in getting the lock (may involve timeout and recovery) or else throw.
+     * <p>This is not re-entrant i.e. if you lock and try and lock again it will timeout and recover
+     */
     @Override
     public void lock() {
         throwExceptionIfClosed();
@@ -59,6 +63,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         try {
             int i = 0;
             value = lock.getVolatileValue();
+            if (value == PID) {
+                if (Jvm.isDebugEnabled(this.getClass()))
+                    debug().on(getClass(), "Already locked by me, pid " + PID);
+            }
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
                 if (i++ > 1000 && Thread.interrupted())
@@ -87,7 +95,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             lock();
         } finally {
             pauser.reset();
-
         }
     }
 
@@ -132,5 +139,15 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     public boolean locked() {
         throwExceptionIfClosed();
         return lock.getVolatileValue(UNLOCKED) != UNLOCKED;
+    }
+
+    /**
+     * Don't use this - for internal use only
+     */
+    public void forceUnlock() {
+        throwExceptionIfClosed();
+
+        if (locked())
+            forceUnlock(lockedBy());
     }
 }

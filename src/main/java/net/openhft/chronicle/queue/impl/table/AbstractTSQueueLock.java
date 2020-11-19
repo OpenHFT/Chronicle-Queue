@@ -30,8 +30,10 @@ import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
 import static java.lang.String.format;
+import static net.openhft.chronicle.core.Jvm.getProcessId;
 
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
+    protected static final long PID = getProcessId();
     public static final long UNLOCKED = Long.MIN_VALUE;
     protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
 
@@ -63,13 +65,9 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         Jvm.warn().on(getClass(), "" +
                         "Forced unlock for the " +
                         "lock file:" + path + ", " +
+                        "lockKey: " + lockKey + ", " +
                         "unlocked: " + unlocked,
                 new StackTrace("Forced unlock"));
-    }
-
-    public boolean isLockedByCurrentProcess() {
-        return isLockedByCurrentProcess(x -> {
-        });
     }
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
@@ -81,83 +79,25 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     }
 
     /**
-     * force unlock only if the process that currently holds the lock is no-longer running or the current process is holding the lock
-     *
-     * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, the lock was held by this process or
-     * the process that is holding the lock is no longer running, otherwise {@code false } is returned to indicate that the lock could not be removed or the lock isClosed()
-     */
-    public boolean forceUnlockIfProcessIsDeadOrCurrentProcess() {
-        if (isClosed())
-            return false;
-        long pid = 0;
-        for (; ; ) {
-            pid = this.lock.getVolatileValue();
-            if (pid == UNLOCKED)
-                return true;
-
-            if (!Jvm.isProcessAlive(pid) || pid == Jvm.getProcessId()) {
-                if (Jvm.isDebugEnabled(this.getClass()))
-                    Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d",
-                            lockKey, this.path, pid), new StackTrace("Forced unlock"));
-                if (lock.compareAndSwapValue(pid, UNLOCKED))
-                    return true;
-            } else
-                break;
-
-        }
-        if (Jvm.isDebugEnabled(this.getClass()))
-            Jvm.debug().on(this.getClass(), format("unable to release the lock=%s in the table store file=%s as it is being held by" +
-                    " pid=%d, and this process is still running.", lockKey, path, pid));
-        return false;
-    }
-
-    /**
      * forces an unlock only if the process that currently holds the table store lock is no-longer running
      *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, or the process that was holding the
-     * lock is no longer running, otherwise {@code false } is returned if it was able to remove the lock.
+     * lock is no longer running, or current process, otherwise {@code false} is returned if it was able to remove the lock.
      */
     public boolean forceUnlockIfProcessIsDead() {
-        long pid = 0;
-        for (; ; ) {
-            pid = this.lock.getVolatileValue();
-            if (pid == UNLOCKED)
-                return true;
+        long pid = this.lock.getVolatileValue();
+        if (pid == UNLOCKED || pid == Jvm.getProcessId())
+            return true;
 
-            if (!Jvm.isProcessAlive(pid)) {
-                if (Jvm.isDebugEnabled(this.getClass()))
-                    Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
-                            lockKey, this.path, pid), new StackTrace("Forced unlock"));
-                if (lock.compareAndSwapValue(pid, UNLOCKED))
-                    return true;
-            } else
-                break;
+        if (!Jvm.isProcessAlive(pid)) {
+            Jvm.warn().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
+                    lockKey, this.path, pid), new StackTrace("Forced unlock"));
+            if (lock.compareAndSwapValue(pid, UNLOCKED))
+                return true;
         }
-        if (Jvm.isDebugEnabled(this.getClass()))
-            Jvm.debug().on(this.getClass(), format("unable to release the lock=%s in the table store file=%s " +
-                    "as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
+        Jvm.warn().on(this.getClass(), format("Unable to release the lock=%s in the table store file=%s " +
+                "as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
         return false;
-    }
-
-    /**
-     * @return {@code true} if successful, more formally, returns {@code true} if the lock was original unlocked, or the process that was holding the
-     * lock is no longer running, otherwise {@code false } is returned if it is locked by another process
-     */
-    public boolean forceLockIfProcessIsDead() {
-        long pid = 0;
-        for (; ; ) {
-            pid = this.lock.getVolatileValue();
-
-            if (pid == Jvm.getProcessId())
-                return true;
-
-            if (pid == UNLOCKED || !Jvm.isProcessAlive(pid)) {
-                if (lock.compareAndSwapValue(pid, Jvm.getProcessId()))
-                    return true;
-            } else
-                return false;
-
-        }
     }
 
     @Override
@@ -171,5 +111,14 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
      */
     public long lockedBy() {
         return lock.getVolatileValue();
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "{" +
+                "lock=" + lock +
+                ", path=" + path +
+                ", lockKey='" + lockKey + '\'' +
+                '}';
     }
 }
