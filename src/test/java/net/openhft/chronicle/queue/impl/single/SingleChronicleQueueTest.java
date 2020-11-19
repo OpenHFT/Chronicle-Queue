@@ -60,6 +60,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
@@ -332,9 +333,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
             Assume.assumeTrue(queue.acquireAppender() instanceof StoreAppender);
-            final StoreAppender appender = (StoreAppender) queue.acquireAppender();
+            @NotNull ExcerptAppender appender = queue.acquireAppender();
+            assumeTrue(appender instanceof StoreAppender);
+            StoreAppender storeAppender = (StoreAppender) appender;
             ((SingleChronicleQueue) queue).writeLock().lock();
-            appender.writeBytesInternal(0, test);
+            storeAppender.writeBytesInternal(0, test);
         }
     }
 
