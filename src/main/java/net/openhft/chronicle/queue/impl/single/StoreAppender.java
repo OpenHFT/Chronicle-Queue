@@ -96,9 +96,10 @@ class StoreAppender extends AbstractCloseable
             final long lockedBy = appendLock.lockedBy();
             if (lockedBy == AbstractTSQueueLock.UNLOCKED)
                 return;
-            if (allowMyProcess && lockedBy == Jvm.getProcessId())
+            boolean myPID = lockedBy == Jvm.getProcessId();
+            if (allowMyProcess && myPID)
                 return;
-            throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + lockedBy);
+            throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + (myPID ? "me" : lockedBy));
         } else
             throw new IllegalStateException("locked: unable to append");
     }
