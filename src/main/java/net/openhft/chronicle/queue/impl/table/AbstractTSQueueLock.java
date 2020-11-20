@@ -82,7 +82,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
      * forces an unlock only if the process that currently holds the table store lock is no-longer running
      *
      * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, or the process that was holding the
-     * lock is no longer running, or current process, otherwise {@code false} is returned if it was able to remove the lock.
+     * lock is no longer running, or it is the current process, otherwise {@code false} is returned if it was able to remove the lock.
      */
     public boolean forceUnlockIfProcessIsDead() {
         long pid = this.lock.getVolatileValue();
