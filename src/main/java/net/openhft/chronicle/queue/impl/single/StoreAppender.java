@@ -585,14 +585,13 @@ class StoreAppender extends AbstractCloseable
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
         if (!isIndex) {
-            System.out.println(Long.toHexString(index) + " != " + Long.toHexString(headerNumber));
             writeBytesInternal(bytes, metadata);
             Thread.yield();
         }
     }
 
     private void writeBytesInternal(@NotNull final BytesStore bytes, boolean metadata) {
-        assert writeLock.locked();
+        writeLock.lock();
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0;
@@ -606,6 +605,7 @@ class StoreAppender extends AbstractCloseable
             }
         } finally {
             writeContext.isClosed = true;
+            writeLock.unlock();
         }
     }
 
