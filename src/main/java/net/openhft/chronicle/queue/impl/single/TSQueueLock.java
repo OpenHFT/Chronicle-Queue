@@ -128,16 +128,19 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
     /**
      * Checks if the lock is held by current thread and if so, releases it, removing entry from TableStore and clearing ThreadLocal state, allowing
-     * anyone to proceed with {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender}.
+     * anyone to proceed with {@link net.openhft.chronicle.queue.ChronicleQueue#acquireAppender}.  If it is already unlocked, no action is taken.
      */
     @Override
     public void unlock() {
         throwExceptionIfClosed();
 
+        if (lock.getVolatileValue() == UNLOCKED)
+            return;
+
         long tid = Thread.currentThread().getId();
 
         if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
-            warn().on(getClass(), "Queue lock was unlocked by someone else!");
+            warn().on(getClass(), "Queue lock was unlocked by another thread, currentID=" + tid + ", lock-tid=" + lock.getVolatileValue());
         }
     }
 

@@ -356,7 +356,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        checkAppendLock();
+        if (!metaData)
+            checkAppendLock();
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;
@@ -547,7 +548,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
-        checkAppendLock(true);
+        if (!metadata)
+            checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
 
@@ -576,7 +578,11 @@ class StoreAppender extends AbstractCloseable
             if (!isNextIndex) {
                 if (index > headerNumber + 1)
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
-                Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+
+                // this can happen when using queue replication when we are back filling from a number of sinks at them same time
+                // its normal behavour in the is use case so should not be a WARN
+                if (Jvm.isDebugEnabled(getClass()))
+                    Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
                 return;
             }
         }
