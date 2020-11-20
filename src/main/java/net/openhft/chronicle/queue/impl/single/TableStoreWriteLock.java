@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
@@ -29,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static net.openhft.chronicle.core.Jvm.debug;
 import static net.openhft.chronicle.core.Jvm.warn;
 
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
@@ -63,10 +61,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         try {
             int i = 0;
             value = lock.getVolatileValue();
-            if (value == PID) {
-                if (Jvm.isDebugEnabled(this.getClass()))
-                    debug().on(getClass(), "Already locked by me, pid " + PID);
-            }
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
                 if (i++ > 1000 && Thread.interrupted())
