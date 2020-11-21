@@ -300,6 +300,20 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Test
+    public void testCanAppendMetadataIfAppendLockIsSet() {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
+            ((SingleChronicleQueue) queue).appendLock().lock();
+            final ExcerptAppender appender = queue.acquireAppender();
+            try (DocumentContext dc = appender.writingDocument(true)) {
+                dc.wire().write("Hello World");
+            }
+        } finally {
+            exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
+        }
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSet() {
         File tmpDir = getTmpDir();

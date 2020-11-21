@@ -356,8 +356,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        if (!metaData)
-            checkAppendLock();
+        // we allow the sink process to write metaData
+        checkAppendLock(metaData);
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;
@@ -530,7 +530,6 @@ class StoreAppender extends AbstractCloseable
      */
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
         throwExceptionIfClosed();
-        checkAppendLock();
         writeLock.lock();
         try {
             writeBytesInternal(index, bytes);
@@ -548,8 +547,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
-        if (!metadata)
-            checkAppendLock(true);
+        checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
 
@@ -591,7 +589,6 @@ class StoreAppender extends AbstractCloseable
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
         if (!isIndex) {
-            System.out.println(Long.toHexString(index) + " != " + Long.toHexString(headerNumber));
             writeBytesInternal(bytes, metadata);
             Thread.yield();
         }
