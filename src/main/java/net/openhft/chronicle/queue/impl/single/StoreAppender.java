@@ -74,28 +74,38 @@ class StoreAppender extends AbstractCloseable
         queue.cleanupStoreFilesWithNoData();
         int cycle = queue.cycle();
         int lastCycle = queue.lastCycle();
-        if (lastCycle!=cycle && lastCycle >= 0)
+        if (lastCycle != cycle && lastCycle >= 0)
             // ensure that the EOF is written on the last cycle
             setCycle2(lastCycle, false);
-        finalizer = Jvm.isResourceTracing() ? new Finalizer():null;
+        finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
     private void checkAppendLock() {
-        if (appendLock.locked()) {
-            if (appendLock instanceof AbstractTSQueueLock) {
-                final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
-                final long lockedBy = appendLock.lockedBy();
-                if (lockedBy!=AbstractTSQueueLock.UNLOCKED) {
-                    String by = lockedBy==Jvm.getProcessId() ? "another thread on this process.":"pid=" + lockedBy;
-                    throw new IllegalStateException("locked: unable to append because a lock is being held by " + by);
-                }
-            } else
-                throw new IllegalStateException("locked: unable to append");
-        }
+        checkAppendLock(false);
+    }
+
+    private void checkAppendLock(boolean allowMyProcess) {
+        if (appendLock.locked())
+            checkAppendLockLocked(allowMyProcess);
+    }
+
+    private void checkAppendLockLocked(boolean allowMyProcess) {
+        // separate method as this is in fast path
+        if (appendLock instanceof AbstractTSQueueLock) {
+            final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
+            final long lockedBy = appendLock.lockedBy();
+            if (lockedBy == AbstractTSQueueLock.UNLOCKED)
+                return;
+            boolean myPID = lockedBy == Jvm.getProcessId();
+            if (allowMyProcess && myPID)
+                return;
+            throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + (myPID ? "me" : lockedBy));
+        } else
+            throw new IllegalStateException("locked: unable to append");
     }
 
     private static void releaseBytesFor(Wire w) {
-        if (w!=null) {
+        if (w != null) {
             w.bytes().releaseLast();
         }
     }
@@ -103,7 +113,7 @@ class StoreAppender extends AbstractCloseable
     @Deprecated // Should not be providing accessors to reference-counted objects
     @NotNull
     WireStore store() {
-        if (store==null)
+        if (store == null)
             setCycle(cycle());
         return store;
     }
@@ -119,7 +129,7 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> bytes = dc.wire().bytes();
             long wp = bytes.writePosition();
             marshallable.writeMarshallable(bytes);
-            if (wp==bytes.writePosition())
+            if (wp == bytes.writePosition())
                 dc.rollbackOnClose();
         }
     }
@@ -130,10 +140,10 @@ class StoreAppender extends AbstractCloseable
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
 
-        if (pretoucher!=null)
+        if (pretoucher != null)
             pretoucher.close();
 
-        if (store!=null) {
+        if (store != null) {
             storePool.closeStore(store);
             store = null;
         }
@@ -155,7 +165,7 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
 
         try {
-            if (pretoucher==null)
+            if (pretoucher == null)
                 pretoucher = new Pretoucher(queue());
 
             pretoucher.execute();
@@ -186,7 +196,7 @@ class StoreAppender extends AbstractCloseable
             int writeCount = Math.min(128 << 10,
                     (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1));
 
-            if (wire!=null && writeCount > 0) {
+            if (wire != null && writeCount > 0) {
                 MappedBytes bytes = (MappedBytes) wire.bytes();
                 long address = bytes.addressForWrite(bytes.writePosition());
                 long bstart = bytes.start();
@@ -198,7 +208,7 @@ class StoreAppender extends AbstractCloseable
                 count += lengthCount >> 32;
 
             } else {
-                if (batchTmp==null) {
+                if (batchTmp == null) {
                     batchTmp = NativeBytesStore.lazyNativeBytesStoreWithFixedCapacity(maxMsgSize);
                 }
 
@@ -233,11 +243,11 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public boolean recordHistory() {
-        return sourceId()!=0;
+        return sourceId() != 0;
     }
 
     void setCycle(int cycle) {
-        if (cycle!=this.cycle)
+        if (cycle != this.cycle)
             setCycle2(cycle, true);
     }
 
@@ -253,9 +263,9 @@ class StoreAppender extends AbstractCloseable
 
         SingleChronicleQueueStore newStore = storePool.acquire(cycle, queue.epoch(), createIfAbsent, oldStore);
 
-        if (newStore!=oldStore) {
+        if (newStore != oldStore) {
             this.store = newStore;
-            if (oldStore!=null)
+            if (oldStore != null)
                 storePool.closeStore(oldStore);
         }
         resetWires(queue);
@@ -263,7 +273,7 @@ class StoreAppender extends AbstractCloseable
         // only set the cycle after the wire is set.
         this.cycle = cycle;
 
-        if (this.store==null)
+        if (this.store == null)
             return;
 
         assert wire.startUse();
@@ -277,14 +287,14 @@ class StoreAppender extends AbstractCloseable
         WireType wireType = queue.wireType();
         {
             Wire oldw = this.wire;
-            this.wire = store==null ? null:createWire(wireType);
-            assert wire!=oldw || wire==null;
+            this.wire = store == null ? null : createWire(wireType);
+            assert wire != oldw || wire == null;
             releaseBytesFor(oldw);
         }
         {
             Wire old = this.wireForIndex;
-            this.wireForIndex = store==null ? null:createWire(wireType);
-            assert wire!=old || wire==null;
+            this.wireForIndex = store == null ? null : createWire(wireType);
+            assert wire != old || wire == null;
             releaseBytesFor(old);
         }
     }
@@ -303,7 +313,7 @@ class StoreAppender extends AbstractCloseable
     private boolean resetPosition() throws UnrecoverableTimeoutException {
         long originalHeaderNumber = wire.headerNumber();
         try {
-            if (store==null || wire==null)
+            if (store == null || wire == null)
                 return false;
             long position = store.writePosition();
             position(position, position);
@@ -314,12 +324,12 @@ class StoreAppender extends AbstractCloseable
             final long headerNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
 
-            assert !SingleChronicleQueue.CHECK_INDEX || wire.headerNumber()!=-1 || checkIndex(wire.headerNumber(), positionOfHeader);
+            assert !SingleChronicleQueue.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
 
             bytes.writeLimit(bytes.capacity());
 
             assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
-            return originalHeaderNumber!=wire.headerNumber();
+            return originalHeaderNumber != wire.headerNumber();
 
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
             throw new AssertionError(e);
@@ -328,7 +338,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     private boolean checkPositionOfHeader(final Bytes<?> bytes) {
-        if (positionOfHeader==0) {
+        if (positionOfHeader == 0) {
             return true;
         }
         int header = bytes.readVolatileInt(positionOfHeader);
@@ -350,7 +360,7 @@ class StoreAppender extends AbstractCloseable
             checkAppendLock();
         count++;
         if (count > 1) {
-            assert metaData==writeContext.metaData;
+            assert metaData == writeContext.metaData;
             return writeContext;
         }
 
@@ -358,7 +368,7 @@ class StoreAppender extends AbstractCloseable
             writeContext.isClosed = false;
             writeContext.rollbackOnClose = false;
             writeContext.buffered = true;
-            if (bufferWire==null) {
+            if (bufferWire == null) {
                 Bytes bufferBytes = Bytes.allocateElasticOnHeap();
                 bufferWire = queue().wireType().apply(bufferBytes);
             }
@@ -368,10 +378,10 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
             int cycle = queue.cycle();
 
-            if (wire==null)
+            if (wire == null)
                 setWireIfNull(cycle);
 
-            if (this.cycle!=cycle)
+            if (this.cycle != cycle)
                 rollCycleTo(cycle);
 
             int safeLength = (int) queue.overlapSize();
@@ -390,21 +400,21 @@ class StoreAppender extends AbstractCloseable
     public DocumentContext acquireWritingDocument(boolean metaData) {
         if (!CHECK_THREAD_SAFETY)
             this.threadSafetyCheck(true);
-        if (wire!=null && writeContext.isOpen() && writeContext.chainedElement())
+        if (wire != null && writeContext.isOpen() && writeContext.chainedElement())
             return writeContext;
         return writingDocument(metaData);
     }
 
     private void setWireIfNull(final int cycle) {
         int lastCycle = queue.lastCycle();
-        if (lastCycle==Integer.MIN_VALUE)
+        if (lastCycle == Integer.MIN_VALUE)
             lastCycle = cycle;
         else {
             int cur = lastCycle - 1;
             int firstCycle = queue.firstCycle();
             while (cur >= firstCycle) {
                 setCycle2(cur, false);
-                if (wire!=null) {
+                if (wire != null) {
                     if (!store.writeEOF(wire, timeoutMS()))
                         break;
                 }
@@ -430,14 +440,14 @@ class StoreAppender extends AbstractCloseable
             }
         }
         int header = bytes.readVolatileInt(lastPos);
-        assert header!=NOT_INITIALIZED;
+        assert header != NOT_INITIALIZED;
         lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
         return wire.enterHeader(safeLength);
     }
 
     private void openContext(final boolean metaData, final int safeLength) {
-        assert wire!=null;
+        assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
         writeContext.isClosed = false;
         writeContext.rollbackOnClose = false;
@@ -447,14 +457,14 @@ class StoreAppender extends AbstractCloseable
     }
 
     boolean checkWritePositionHeaderNumber() {
-        if (wire==null || wire.headerNumber()==Long.MIN_VALUE) return true;
+        if (wire == null || wire.headerNumber() == Long.MIN_VALUE) return true;
         try {
             long pos = positionOfHeader;
 
             long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
             long seq2 = store.sequenceForPosition(this, pos, true);
 
-            if (seq1!=seq2) {
+            if (seq1 != seq2) {
                 String message = "~~~~~~~~~~~~~~ " +
                         "thread: " + Thread.currentThread().getName() +
                         " pos: " + pos +
@@ -485,10 +495,10 @@ class StoreAppender extends AbstractCloseable
         writeLock.lock();
         try {
             int cycle = queue.cycle();
-            if (wire==null)
+            if (wire == null)
                 setWireIfNull(cycle);
 
-            if (this.cycle!=cycle)
+            if (this.cycle != cycle)
                 rollCycleTo(cycle);
 
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
@@ -531,22 +541,25 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
-     * the queue file and cause data loss
+     * the queue file and cause data loss.
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
         writeBytesInternal(index, bytes, false);
     }
 
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
+        if (!metadata)
+            checkAppendLock(true);
+
         final int cycle = queue.rollCycle().toCycle(index);
 
-        if (wire==null)
+        if (wire == null)
             setCycle2(cycle, true);
-        else if (queue.rollCycle().toCycle(wire.headerNumber())!=cycle)
+        else if (queue.rollCycle().toCycle(wire.headerNumber()) != cycle)
             rollCycleTo(cycle);
 
         long headerNumber = wire.headerNumber();
-        boolean isNextIndex = index==headerNumber + 1;
+        boolean isNextIndex = index == headerNumber + 1;
         if (!isNextIndex) {
 
             // in case our cached headerNumber is incorrect.
@@ -555,24 +568,28 @@ class StoreAppender extends AbstractCloseable
                 headerNumber = wire.headerNumber();
 
                 /// if the header number has changed then we will have roll
-                if (queue.rollCycle().toCycle(headerNumber)!=cycle) {
+                if (queue.rollCycle().toCycle(headerNumber) != cycle) {
                     rollCycleTo(cycle);
                     headerNumber = wire.headerNumber();
                 }
             }
 
-            isNextIndex = index==headerNumber + 1;
+            isNextIndex = index == headerNumber + 1;
             if (!isNextIndex) {
                 if (index > headerNumber + 1)
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
-                Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+
+                // this can happen when using queue replication when we are back filling from a number of sinks at them same time
+                // its normal behavour in the is use case so should not be a WARN
+                if (Jvm.isDebugEnabled(getClass()))
+                    Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
                 return;
             }
         }
         writeBytesInternal(bytes, metadata);
 
         headerNumber = wire.headerNumber();
-        boolean isIndex = index==headerNumber;
+        boolean isIndex = index == headerNumber;
         if (!isIndex) {
             System.out.println(Long.toHexString(index) + " != " + Long.toHexString(headerNumber));
             writeBytesInternal(bytes, metadata);
@@ -584,7 +601,7 @@ class StoreAppender extends AbstractCloseable
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
-            assert count==0;
+            assert count == 0;
             openContext(metadata, safeLength);
 
             try {
@@ -608,10 +625,10 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public long lastIndexAppended() {
-        if (lastIndex!=Long.MIN_VALUE)
+        if (lastIndex != Long.MIN_VALUE)
             return lastIndex;
 
-        if (lastPosition==Long.MIN_VALUE || wire==null) {
+        if (lastPosition == Long.MIN_VALUE || wire == null) {
             throw new IllegalStateException("nothing has been appended, so there is no last index");
         }
 
@@ -627,7 +644,7 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public int cycle() {
-        if (cycle==Integer.MIN_VALUE) {
+        if (cycle == Integer.MIN_VALUE) {
             int cycle = this.queue.lastCycle();
             if (cycle < 0)
                 cycle = queue.cycle();
@@ -656,14 +673,14 @@ class StoreAppender extends AbstractCloseable
     private void rollCycleTo(final int cycle) throws UnrecoverableTimeoutException {
 
         // only a valid check if the wire was set.
-        if (this.cycle==cycle)
+        if (this.cycle == cycle)
             throw new AssertionError();
 
         store.writeEOF(wire, timeoutMS());
 
         int lastCycle = queue.lastCycle();
 
-        if (lastCycle < cycle && lastCycle!=this.cycle && lastCycle >= 0) {
+        if (lastCycle < cycle && lastCycle != this.cycle && lastCycle >= 0) {
             setCycle2(lastCycle, false);
             rollCycleTo(cycle);
         } else {
@@ -676,7 +693,7 @@ class StoreAppender extends AbstractCloseable
      * a new cycle or add a message. Only used by tests.
      */
     void writeEndOfCycleIfRequired() {
-        if (wire!=null && queue.cycle()!=cycle)
+        if (wire != null && queue.cycle() != cycle)
             store.writeEOF(wire, timeoutMS());
     }
 
@@ -692,7 +709,7 @@ class StoreAppender extends AbstractCloseable
             final long seq1 = queue.rollCycle().toSequenceNumber(index + 1) - 1;
             final long seq2 = store.sequenceForPosition(this, position, true);
 
-            if (seq1!=seq2) {
+            if (seq1 != seq2) {
                 final long seq3 = ((SingleChronicleQueueStore) store).indexing
                         .linearScanByPosition(wireForIndex(), position, 0, 0, true);
                 System.out.println("Thread=" + Thread.currentThread().getName() +
@@ -703,8 +720,8 @@ class StoreAppender extends AbstractCloseable
 
                 System.out.println(store.dump());
 
-                assert seq1==seq3:"seq1=" + seq1 + ", seq3=" + seq3;
-                assert seq1==seq2:"seq1=" + seq1 + ", seq2=" + seq2;
+                assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
+                assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
             }
         } catch (@NotNull EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
@@ -745,7 +762,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public File currentFile() {
         SingleChronicleQueueStore store = this.store;
-        return store==null ? null:store.currentFile();
+        return store == null ? null : store.currentFile();
     }
 
     private class Finalizer {
@@ -828,7 +845,7 @@ class StoreAppender extends AbstractCloseable
                     return;
                 }
 
-                if (wire==StoreAppender.this.wire) {
+                if (wire == StoreAppender.this.wire) {
 
                     try {
                         wire.updateHeader(positionOfHeader, metaData, 0);
@@ -844,11 +861,11 @@ class StoreAppender extends AbstractCloseable
                     if (!metaData) {
                         lastIndex(wire.headerNumber());
                         store.writePosition(positionOfHeader);
-                        if (lastIndex!=Long.MIN_VALUE)
+                        if (lastIndex != Long.MIN_VALUE)
                             writeIndexForPosition(lastIndex, positionOfHeader);
                     }
 
-                } else if (wire!=null) {
+                } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
                         unlock = false;
@@ -883,18 +900,18 @@ class StoreAppender extends AbstractCloseable
 
         @Override
         public long index() throws IORuntimeException {
-            if (this.wire.headerNumber()==Long.MIN_VALUE) {
+            if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
                     long headerNumber0 = wire.headerNumber();
                     assert (((AbstractWire) this.wire).isInsideHeader());
-                    return isMetaData() ? headerNumber0:headerNumber0 + 1;
+                    return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                 } catch (IOException e) {
                     throw new IORuntimeException(e);
                 }
             }
 
-            return isMetaData() ? Long.MIN_VALUE:this.wire.headerNumber() + 1;
+            return isMetaData() ? Long.MIN_VALUE : this.wire.headerNumber() + 1;
         }
 
         @Override

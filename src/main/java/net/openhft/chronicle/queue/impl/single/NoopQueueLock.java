@@ -21,29 +21,22 @@ public class NoopQueueLock implements QueueLock {
 
     @Override
     public void waitForLock() {
-        throwExceptionIfClosed();
-
     }
 
     @Override
     public void acquireLock() {
-        throwExceptionIfClosed();
     }
 
     @Override
     public void unlock() {
-        throwExceptionIfClosed();
-
     }
 
     @Override
     public void quietUnlock() {
-        throwExceptionIfClosed();
     }
 
     @Override
     public void close() {
-
     }
 
     @Override

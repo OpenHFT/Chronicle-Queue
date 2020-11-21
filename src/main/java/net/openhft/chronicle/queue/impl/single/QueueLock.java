@@ -23,12 +23,18 @@ public interface QueueLock extends Closeable {
 
     void waitForLock();
 
+    /**
+     * Guaranteed to lock or throw
+     */
     void acquireLock();
 
+    /**
+     * Tries to unlock, and if it can't, logs a warning
+     */
     void unlock();
 
     /**
-     * wont report if it was unable to unlock, useful when closing, and you are not sure if you hold the lock in the first place.
+     * only unlocks if locked
      */
     void quietUnlock();
 }

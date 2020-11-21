@@ -28,12 +28,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static net.openhft.chronicle.core.Jvm.getProcessId;
 import static net.openhft.chronicle.core.Jvm.warn;
 
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
     private static final String LOCK_KEY = "chronicle.write.lock";
-    private static final long PID = getProcessId();
+    public static final String APPEND_LOCK_KEY = "chronicle.append.lock";
     private final long timeout;
     private Thread lockedByThread = null;
     private StackTrace lockedHere;
@@ -48,7 +47,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         timeout = timeoutMs;
     }
 
-
+    /**
+     * Guaranteed to succeed in getting the lock (may involve timeout and recovery) or else throw.
+     * <p>This is not re-entrant i.e. if you lock and try and lock again it will timeout and recover
+     */
     @Override
     public void lock() {
         throwExceptionIfClosed();
@@ -87,7 +89,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             lock();
         } finally {
             pauser.reset();
-
         }
     }
 
@@ -116,7 +117,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
             long value = lock.getVolatileValue();
             if (value == UNLOCKED)
-                warn().on(getClass(), "Write lock was unlocked by someone else! For the " +
+                warn().on(getClass(), "Write lock was already unlocked by a differrent process, For the " +
                         "lock file:" + path);
             else
                 warn().on(getClass(), "Write lock was locked by someone else! For the " +
@@ -133,4 +134,15 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         throwExceptionIfClosed();
         return lock.getVolatileValue(UNLOCKED) != UNLOCKED;
     }
+
+    /**
+     * Don't use this - for internal use only
+     */
+    public void forceUnlock() {
+        throwExceptionIfClosed();
+
+        if (locked())
+            forceUnlock(lockedBy());
+    }
+
 }
