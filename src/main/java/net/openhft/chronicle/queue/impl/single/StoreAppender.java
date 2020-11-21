@@ -84,6 +84,10 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(false);
     }
 
+    /**
+     * check the appendLock
+     * @param allowMyProcess this will only be true for any writes coming from the sink replicator
+     */
     private void checkAppendLock(boolean allowMyProcess) {
         if (appendLock.locked())
             checkAppendLockLocked(allowMyProcess);
