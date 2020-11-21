@@ -530,6 +530,7 @@ class StoreAppender extends AbstractCloseable
      */
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
         throwExceptionIfClosed();
+        checkAppendLock();
         writeLock.lock();
         try {
             writeBytesInternal(index, bytes);
