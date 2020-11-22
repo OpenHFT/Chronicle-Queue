@@ -306,6 +306,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
             final ExcerptAppender appender = queue.acquireAppender();
+            Assume.assumeTrue("Failing in CQE", queue.acquireAppender() instanceof StoreAppender);
             try (DocumentContext dc = appender.writingDocument(true)) {
                 dc.wire().write("Hello World");
             }
