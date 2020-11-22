@@ -84,6 +84,10 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(false);
     }
 
+    /**
+     * check the appendLock
+     * @param allowMyProcess this will only be true for any writes coming from the sink replicator
+     */
     private void checkAppendLock(boolean allowMyProcess) {
         if (appendLock.locked())
             checkAppendLockLocked(allowMyProcess);
@@ -356,8 +360,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        if (!metaData)
-            checkAppendLock();
+        // we allow the sink process to write metaData
+        checkAppendLock(metaData);
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;
@@ -548,8 +552,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
-        if (!metadata)
-            checkAppendLock(true);
+        checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
 
@@ -591,7 +594,6 @@ class StoreAppender extends AbstractCloseable
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
         if (!isIndex) {
-            System.out.println(Long.toHexString(index) + " != " + Long.toHexString(headerNumber));
             writeBytesInternal(bytes, metadata);
             Thread.yield();
         }

@@ -425,19 +425,27 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return strongExcerptAppenderThreadLocal.get();
     }
 
+    /**
+     * @return the {@link QueueLock} that is used to lock changes to queue state e.g. the addition of a new appender
+     */
     @Override
     @NotNull
     public QueueLock queueLock() {
         return queueLock;
     }
 
+    /**
+     * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to
+     * coordinate writes from multiple threads and processes
+     */
     @NotNull
     WriteLock writeLock() {
         return writeLock;
     }
 
     /**
-     * @return {@code true} if appends are locked, sink replication handlers use this mechanism to prevent appends being written to.
+     * @return the {@link WriteLock} that is used to lock appends. This is only used by Queue Enterprise
+     * sink replication handlers. See Queue Enterprise docs for more details.
      */
     public WriteLock appendLock() {
         return appendLock;
