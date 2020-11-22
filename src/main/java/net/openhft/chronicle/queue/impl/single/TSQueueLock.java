@@ -94,7 +94,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
         long value = lock.getVolatileValue();
         try {
-            while (value != UNLOCKED) {
+            while (value!=UNLOCKED) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
                 pauser.pause(timeout, TimeUnit.MILLISECONDS);
@@ -116,7 +116,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     private void warnLock(String msg, long value) {
-        String pid = ((int) value == PID) ? "me" : Integer.toString((int) value);
+        String pid = ((int) value==PID) ? "me":Integer.toString((int) value);
         final String warningMsg = msg + " after " + timeout + "ms for " +
                 "the lock file:" + path + ". Lock is held by " +
                 "PID: " + pid + ", " +
@@ -133,12 +133,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public void unlock() {
         throwExceptionIfClosed();
-
-        if (lock.getVolatileValue() == UNLOCKED)
-            return;
-
-        long tid = Thread.currentThread().getId();
-
+        final long tid = Thread.currentThread().getId();
         if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
             warn().on(getClass(), "Queue lock was unlocked by another thread, currentID=" + tid + ", lock-tid=" + lock.getVolatileValue());
         }
@@ -147,11 +142,11 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     public void quietUnlock() {
         throwExceptionIfClosed();
 
-        if (lockedBy() != UNLOCKED)
+        if (lockedBy()!=UNLOCKED)
             unlock();
     }
 
     private boolean isLockHeldByCurrentThread(long tid) {
-        return lock.getVolatileValue() == getLockValueFromTid(tid);
+        return lock.getVolatileValue()==getLockValueFromTid(tid);
     }
 }
