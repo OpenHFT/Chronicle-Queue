@@ -15,7 +15,6 @@ public class NoDataIsSkippedWithInterruptTest {
     @Test
     public void test() {
         Assume.assumeTrue(!OS.isWindows());
-        Thread.currentThread().interrupt();
 
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(DirectoryUtils.tempDir("."))
@@ -23,14 +22,17 @@ public class NoDataIsSkippedWithInterruptTest {
              final ExcerptAppender excerptAppender = q.acquireAppender();
              final ExcerptTailer tailer = q.createTailer()) {
 
+            Thread.currentThread().interrupt();
             excerptAppender.writeText(EXPECTED);
+            Assert.assertTrue(Thread.currentThread().isInterrupted());
+
             timeProvider.advanceMillis(60_000);
 
             excerptAppender.writeText(EXPECTED);
 
             Assert.assertEquals(EXPECTED, tailer.readText());
             Assert.assertEquals(EXPECTED, tailer.readText());
-            Assert.assertTrue(Thread.currentThread().isInterrupted());
+
         }
     }
 
