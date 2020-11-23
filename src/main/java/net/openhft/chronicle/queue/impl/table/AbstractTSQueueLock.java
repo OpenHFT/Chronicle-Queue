@@ -81,9 +81,9 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     /**
      * forces an unlock only if the process that currently holds the table store lock is no-longer running
      *
-     * @return {@code true} if the lock was already unlocked.
+     * @return {@code true} if the lock was already unlocked, It will not release the lock if it is held by this process
      * or the process that was holding the lock is no longer running (and we were able to unlock).
-     * Otherwise {@code false} is returned if the lock is held by another live process.
+     * Otherwise {@code false} is returned if the lock is held by this process or another live process.
      */
     public boolean forceUnlockIfProcessIsDead() {
         long pid = 0;
@@ -92,7 +92,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             if (pid == UNLOCKED)
                 return true;
 
-            if (!Jvm.isProcessAlive(pid) || pid == Jvm.getProcessId()) {
+            if (!Jvm.isProcessAlive(pid)) {
                 if (Jvm.isDebugEnabled(this.getClass()))
                     Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
                             lockKey, this.path, pid), new StackTrace("Forced unlock"));
