@@ -1,12 +1,17 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.*;
+import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ReferenceCounted;
 import net.openhft.chronicle.core.util.ThrowingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -53,20 +58,32 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
 
     @Override
     protected void performClose() {
-        bgCleanup();
-        if (! cache.isEmpty()) {
-            Jvm.warn().on(getClass(), "Cache should have been cleaned");
-            synchronized (cache) {
-                for (T value : cache.values()) {
-                    try {
-                        value.release(this);
+        List<T> retained = new ArrayList<>();
+        synchronized (cache) {
+            for (T value : cache.values()) {
+                try {
+                    value.release(this);
+                    if (value.refCount() > 0)
+                        retained.add(value);
 //                    System.err.println("Released (performClose) " + value + " by " + this);
-                    } catch (Exception e) {
-                        Jvm.debug().on(getClass(), e);
-                    }
+                } catch (Exception e) {
+                    Jvm.debug().on(getClass(), e);
                 }
             }
+            cache.clear();
         }
+        if (retained.isEmpty() || !Jvm.isResourceTracing())
+            return;
+        for (int i = 1; i <= 2_000; i++) {
+            Jvm.pause(1);
+            if (retained.stream().noneMatch(v -> v.refCount() > 0)) {
+                if (i > 1)
+                    Jvm.warn().on(getClass(), "Took " + i + " to release " + retained);
+                return;
+            }
+        }
+        Jvm.warn().on(getClass(), "STILL retained " + retained);
+
     }
 
     @Override
@@ -75,21 +92,15 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     }
 
     void bgCleanup() {
+        // remove all which have been de-referenced by other than me. Garbagy but rare
         synchronized (cache) {
-            // remove all which have been de-referenced by other than me. Garbagey but rare
             cache.entrySet().removeIf(entry -> {
                 T value = entry.getValue();
-                final boolean noOtherReferencers = value.refCount() == 1;
-                if (noOtherReferencers) {
-                    //System.err.println("Removing " + value.toString() + " by " + this);
-                    try {
-                        value.release(this);
-                        value.close();
-                    } catch (ClosedIllegalStateException e) {
-                        // could be closed in the foreground
-                    }
+                int refCount = value.refCount();
+                if (refCount == 1) {
+                    value.release(this);
                 }
-                return noOtherReferencers;
+                return refCount <= 1;
             });
         }
     }

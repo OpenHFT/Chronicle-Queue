@@ -622,8 +622,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     writeLock,
                     appendLock,
                     pool,
-                    storeSupplier,
-                    metaStore);
+                    metaStore,
+                    storeSupplier);
         }
 
         // close it if we created it.
