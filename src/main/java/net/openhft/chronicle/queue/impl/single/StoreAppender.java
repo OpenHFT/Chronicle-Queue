@@ -583,7 +583,7 @@ class StoreAppender extends AbstractCloseable
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
 
                 // this can happen when using queue replication when we are back filling from a number of sinks at them same time
-                // its normal behavour in the is use case so should not be a WARN
+                // its normal behaviour in the is use case so should not be a WARN
                 if (Jvm.isDebugEnabled(getClass()))
                     Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
                 return;
