@@ -400,14 +400,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     protected ExcerptAppender newAppender() {
 
-        try {
-            queueLock.acquireLock();
+        queueLock.waitForLock();
 
-            final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
-            return new StoreAppender(this, newPool, checkInterrupts);
-        } finally {
-            queueLock.unlock();
-        }
+        final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
+        return new StoreAppender(this, newPool, checkInterrupts);
     }
 
     protected StoreFileListener storeFileListener() {

@@ -21,15 +21,10 @@ import net.openhft.chronicle.core.io.Closeable;
 
 public interface QueueLock extends Closeable {
 
-    /**
-     * Waits for lock to become unlocked
-     * @deprecated use acquireLock + unlock
-     */
-    @Deprecated
     void waitForLock();
 
     /**
-     * Acquires the lock. Guaranteed to lock or throw i.e. if this method completes, you will have the lock
+     * Guaranteed to lock or throw
      */
     void acquireLock();
 
@@ -39,7 +34,7 @@ public interface QueueLock extends Closeable {
     void unlock();
 
     /**
-     * Only unlocks if locked
+     * only unlocks if locked
      */
     void quietUnlock();
 }
