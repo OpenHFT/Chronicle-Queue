@@ -28,7 +28,7 @@ public class NoDataIsSkippedWithInterruptTest {
 
             Assert.assertEquals(EXPECTED, tailer.readText());
             Assert.assertEquals(EXPECTED, tailer.readText());
-         //   Assert.assertTrue(Thread.currentThread().isInterrupted());
+            Assert.assertTrue(Thread.currentThread().isInterrupted());
         }
     }
 
