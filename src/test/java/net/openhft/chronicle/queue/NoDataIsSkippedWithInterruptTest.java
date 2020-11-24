@@ -20,8 +20,7 @@ public class NoDataIsSkippedWithInterruptTest {
 
             Thread.currentThread().interrupt();
             excerptAppender.writeText(EXPECTED);
-            // todo fix this
-            //   Assert.assertTrue(Thread.currentThread().isInterrupted());
+            Assert.assertTrue(Thread.currentThread().isInterrupted());
 
             timeProvider.advanceMillis(60_000);
 
@@ -29,10 +28,8 @@ public class NoDataIsSkippedWithInterruptTest {
 
             Assert.assertEquals(EXPECTED, tailer.readText());
             Assert.assertEquals(EXPECTED, tailer.readText());
-
         }
     }
-
 }
 
 
