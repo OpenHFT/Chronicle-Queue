@@ -3,12 +3,18 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class NoDataIsSkippedWithInterruptTest {
 
     private static final String EXPECTED = "Hello World";
+
+    @After
+    public void clearInterrupt() {
+        Thread.interrupted();
+    }
 
     @Test
     public void test() {
