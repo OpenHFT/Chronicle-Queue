@@ -14,7 +14,10 @@ public class NoDataIsSkippedWithInterruptTest {
     public void test() {
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(DirectoryUtils.tempDir("."))
-                .rollCycle(RollCycles.MINUTELY).timeProvider(timeProvider).build();
+                .rollCycle(RollCycles.MINUTELY)
+                .timeProvider(timeProvider)
+                .testBlockSize()
+                .build();
              final ExcerptAppender excerptAppender = q.acquireAppender();
              final ExcerptTailer tailer = q.createTailer()) {
 
