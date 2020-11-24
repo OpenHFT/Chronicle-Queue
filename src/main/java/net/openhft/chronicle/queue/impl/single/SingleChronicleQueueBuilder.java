@@ -1028,7 +1028,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             metaStore.close();
             throw ex;
         }
-        if (epoch == 0 && (rollTime != null || rollTimeZone != null))
+        if ((epoch == null || epoch == 0) && (rollTime != null || rollTimeZone != null))
             rollTime(rollTime, rollTimeZone);
     }
 
