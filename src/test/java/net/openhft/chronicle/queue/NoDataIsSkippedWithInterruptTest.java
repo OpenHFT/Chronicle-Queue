@@ -1,11 +1,9 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 public class NoDataIsSkippedWithInterruptTest {
@@ -14,8 +12,6 @@ public class NoDataIsSkippedWithInterruptTest {
 
     @Test
     public void test() {
-        Assume.assumeTrue(!OS.isWindows());
-
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(DirectoryUtils.tempDir("."))
                 .rollCycle(RollCycles.MINUTELY).timeProvider(timeProvider).build();
