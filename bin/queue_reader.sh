@@ -13,4 +13,4 @@ fi
 java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "$@"
 
 # if running this in CQ source dir, beware of the default system.properties which is for unit testing,
-# and enables resource tracing. This will lead to this tool dieing after a while with OOME
+# and enables resource tracing. This will lead to this tool dying after a while with OOME
