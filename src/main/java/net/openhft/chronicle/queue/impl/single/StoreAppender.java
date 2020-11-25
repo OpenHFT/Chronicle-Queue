@@ -603,7 +603,7 @@ class StoreAppender extends AbstractCloseable
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
-            assert count == 0;
+            assert count == 0 : "count=" + count;
             openContext(metadata, safeLength);
 
             try {
