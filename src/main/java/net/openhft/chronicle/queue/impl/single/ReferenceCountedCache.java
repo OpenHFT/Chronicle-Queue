@@ -78,7 +78,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
             Jvm.pause(1);
             if (retained.stream().noneMatch(v -> v.refCount() > 0)) {
                 if (i > 1)
-                    Jvm.warn().on(getClass(), "Took " + i + " to release " + retained);
+                    Jvm.perf().on(getClass(), "Took " + i + " to release " + retained);
                 return;
             }
         }
