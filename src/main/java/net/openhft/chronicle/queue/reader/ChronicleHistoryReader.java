@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import net.openhft.chronicle.wire.VanillaMethodReader;
@@ -35,6 +36,10 @@ public class ChronicleHistoryReader {
     protected long lastWindowCount = 0;
     protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
     protected int lastHistosSize = 0;
+
+    static {
+        ToolsUtil.warnIfResourceTracing();
+    }
 
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
