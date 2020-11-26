@@ -6,7 +6,7 @@ Peter Lawrey, Rob Austin
 image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[caption="",link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
-image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html]
+image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
 
 image::images/Queue_line.png[]
 
