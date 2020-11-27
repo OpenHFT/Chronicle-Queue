@@ -7,7 +7,6 @@ image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-que
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
-image:https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000[License, link=https://github.com/OpenHFT/Chronicle-Queue/blob/master/LICENSE]
 
 image::images/Queue_line.png[]
 
