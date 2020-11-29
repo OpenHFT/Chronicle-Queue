@@ -117,7 +117,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
             long value = lock.getVolatileValue();
             if (value == UNLOCKED)
-                warn().on(getClass(), "Write lock was already unlocked by a differrent process, For the " +
+                warn().on(getClass(), "Write lock was already unlocked. For the " +
                         "lock file:" + path);
             else
                 warn().on(getClass(), "Write lock was locked by someone else! For the " +

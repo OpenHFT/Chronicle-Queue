@@ -163,18 +163,17 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
 
-        MappedBytes bytes0 = null;
         Wire wire;
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE * 2)) {
-            bytes0 = bytes;
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE * 2);
+             SCQIndexing marshallable = new SCQIndexing(WireType.BINARY, 32, 4)) {
             wire = new BinaryWire(bytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName("header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
                     w.write("wireType").object(WireType.BINARY);
                     w.write("writePosition").int64forBinding(0);
                     w.write("roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0, null, null));
-                    w.write("indexing").typedMarshallable(new SCQIndexing(WireType.BINARY, 32, 4));
+                    w.write("indexing").typedMarshallable(marshallable);
                     w.write("lastAcknowledgedIndexReplicated").int64forBinding(0);
                 });
             }
@@ -196,11 +195,6 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
-        } finally {
-
-            System.out.println(bytes0);
-            if (bytes0 != null && !bytes0.isClosed())
-                bytes0.releaseLast();
         }
 
         try (ChronicleQueue queue = binary(dir)

@@ -18,11 +18,17 @@ import java.util.Comparator;
 
 public class TestBinarySearch extends ChronicleQueueTestBase {
 
-    private static final int MAX_NUMBER_OF_TESTED_MESSAGES = 50;
-
     @Test
     public void testBinarySearch() throws ParseException {
+        test(50);
+    }
 
+    @Test
+    public void testBinarySearchOne() throws ParseException {
+        test(1);
+    }
+
+    private void test(int numberOfMessages) throws ParseException {
         final SetTimeProvider stp = new SetTimeProvider();
         long time = 0;
         stp.currentTimeMillis(time);
@@ -35,7 +41,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
 
             final ExcerptAppender appender = queue.acquireAppender();
 
-            for (int i = 0; i < MAX_NUMBER_OF_TESTED_MESSAGES; i++) {
+            for (int i = 0; i < numberOfMessages; i++) {
 
                 try (final DocumentContext dc = appender.writingDocument()) {
 
@@ -49,50 +55,52 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
             }
             //     System.out.println(queue.dump());
 
-            for (int j = 0; j < MAX_NUMBER_OF_TESTED_MESSAGES; j++) {
+            final Comparator<Wire> comparator = (o1, o2) -> {
 
-                Wire key = toWire(j);
+                final long readPositionO1 = o1.bytes().readPosition();
+                final long readPositionO2 = o2.bytes().readPosition();
+                try {
+                    MyData myDataO1;
+                    MyData myDataO2;
 
-                final Comparator<Wire> comparator = (o1, o2) -> {
-
-                    final long readPositionO1 = o1.bytes().readPosition();
-                    final long readPositionO2 = o2.bytes().readPosition();
-                    try {
-                        MyData myDataO1 = null;
-                        MyData myDataO2 = null;
-
-                        try (final DocumentContext dc = o1.readingDocument()) {
-                            myDataO1 = dc.wire().getValueIn().typedMarshallable();
-                            assert myDataO1.value != null;
-                        }
-
-                        try (final DocumentContext dc = o2.readingDocument()) {
-                            myDataO2 = dc.wire().getValueIn().typedMarshallable();
-                            assert myDataO2.value != null;
-                        }
-
-                        final int compare = Integer.compare(myDataO1.key, myDataO2.key);
-
-                        return compare;
-
-                    } finally {
-                        o1.bytes().readPosition(readPositionO1);
-                        o2.bytes().readPosition(readPositionO2);
-
+                    try (final DocumentContext dc = o1.readingDocument()) {
+                        myDataO1 = dc.wire().getValueIn().typedMarshallable();
+                        assert myDataO1.value != null;
                     }
-                };
 
-                long index = BinarySearch.search(queue, key, comparator);
-                //   assert index != -1 : "i=" + j;
+                    try (final DocumentContext dc = o2.readingDocument()) {
+                        myDataO2 = dc.wire().getValueIn().typedMarshallable();
+                        assert myDataO2.value != null;
+                    }
 
-                try (final ExcerptTailer tailer = queue.createTailer()) {
+                    final int compare = Integer.compare(myDataO1.key, myDataO2.key);
+
+                    return compare;
+
+                } finally {
+                    o1.bytes().readPosition(readPositionO1);
+                    o2.bytes().readPosition(readPositionO2);
+                }
+            };
+
+            try (final ExcerptTailer tailer = queue.createTailer()) {
+                for (int j = 0; j < numberOfMessages; j++) {
+
+                    Wire key = toWire(j);
+
+                    long index = BinarySearch.search(queue, key, comparator);
+                    //   assert index != -1 : "i=" + j;
+
                     tailer.moveToIndex(index);
                     try (final DocumentContext documentContext = tailer.readingDocument()) {
                         Assert.assertTrue(documentContext.toString().contains("some value where the key=" + j));
                     }
+                    key.bytes().releaseLast();
                 }
-                key.bytes().releaseLast();
             }
+
+            Wire key = toWire(numberOfMessages);
+            Assert.assertTrue("Should not find non-existent", BinarySearch.search(queue, key, comparator) < 0);
         } finally {
             System.gc();
             IOTools.deleteDirWithFiles(tmpDir);

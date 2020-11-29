@@ -86,7 +86,7 @@ public enum BinarySearch {
 
     /**
      * @return The index if an exact match is found, an approximation in the form of -approximateIndex
-     * or -1 if there was no searching to be done.
+     * or a negative number (- the approx index) if there was no searching to be done.
      * <p>
      * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
      * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
@@ -105,8 +105,6 @@ public enum BinarySearch {
             long lowSeqNum = 0;
 
             long highSeqNum = q.exceptsPerCycle(cycle) - 1;
-            if (highSeqNum == 0)
-                return rollCycle.toIndex(cycle, 0);
 
             // nothing to search
             if (highSeqNum < lowSeqNum)
@@ -136,7 +134,7 @@ public enum BinarySearch {
                 }
             }
 
-            return -midIndex;  // -approximateIndex
+            return midIndex == 0 ? -1 : -midIndex;  // -approximateIndex
         } finally {
             key.bytes().readPosition(readPosition);
         }
