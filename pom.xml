@@ -275,7 +275,7 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-            <!--
+
                         <plugin>
                             <groupId>org.apache.maven.plugins</groupId>
                             <artifactId>maven-shade-plugin</artifactId>
@@ -293,11 +293,11 @@
                                 </execution>
                             </executions>
                         </plugin>
-                        -->
+
             <plugin>
                 <groupId>net.openhft</groupId>
                 <artifactId>binary-compatibility-enforcer-plugin</artifactId>
-                <version>1.0.0</version>
+                <version>1.0.1</version>
                 <executions>
                     <execution>
                         <phase>verify</phase>
