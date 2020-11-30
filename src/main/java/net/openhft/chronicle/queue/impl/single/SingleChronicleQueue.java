@@ -198,7 +198,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             sourceId = builder.sourceId();
 
-            final Map<String, String> additionalEventParameters = new HashMap<>();
+            final Map<String, String> additionalEventParameters = AnalyticsFacade.standardAdditionalProperties();
             additionalEventParameters.put("wire_type", wireType.toString());
             final String rollCycleName = rollCycle.toString();
             if (!rollCycleName.startsWith("TEST"))
