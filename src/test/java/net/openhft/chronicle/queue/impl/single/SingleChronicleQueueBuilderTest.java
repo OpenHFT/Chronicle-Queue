@@ -72,8 +72,17 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
                 "  path: " + getTmpDir() +
                 "  rollCycle: !net.openhft.chronicle.queue.RollCycles DAILY,\n" +
                 "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +
+                "  rollTime: 17:02,\n" +
+                "  rollTimeZone: !java.time.ZoneRegion {\n" +
+                "    id: UTC\n" +
+                "  }," +
                 "}\n");
         builder.build().close();
+        assertEquals(61320000, builder.epoch());
+
+        SingleChronicleQueueBuilder builder2 = Marshallable.fromString(builder.toString());
+        builder2.build().close();
+        assertEquals(61320000, builder2.epoch());
     }
 
     @Test

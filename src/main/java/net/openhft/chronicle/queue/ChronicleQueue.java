@@ -70,7 +70,7 @@ public interface ChronicleQueue extends Closeable {
      *
      * @param pathName of the directory to use for storing the queue
      * @return a new {@link ChronicleQueue} that will be stored
-     *         in the directory given by the provided {@code pathName}
+     * in the directory given by the provided {@code pathName}
      * @throws NullPointerException if the provided {@code pathName} is {@code null}.
      */
     static ChronicleQueue single(@NotNull String pathName) {
@@ -83,7 +83,6 @@ public interface ChronicleQueue extends Closeable {
      * The builder can be used to build a ChronicleQueue.
      *
      * @return a new {@link SingleChronicleQueueBuilder}
-     *
      */
     static SingleChronicleQueueBuilder singleBuilder() {
         return SingleChronicleQueueBuilder.single();
@@ -96,8 +95,8 @@ public interface ChronicleQueue extends Closeable {
      *
      * @param pathName of the directory to pre-configure for storing the queue
      * @return a new {@link SingleChronicleQueueBuilder} that will
-     *         be pre-configured to use files located in the directory named by the
-     *         provided {@code pathName}
+     * be pre-configured to use files located in the directory named by the
+     * provided {@code pathName}
      * @throws NullPointerException if the provided {@code pathName} is {@code null}.
      */
     static SingleChronicleQueueBuilder singleBuilder(@NotNull String pathName) {
@@ -111,8 +110,8 @@ public interface ChronicleQueue extends Closeable {
      *
      * @param path of the directory to pre-configure for storing the queue
      * @return a new {@link SingleChronicleQueueBuilder} that will
-     *         be pre-configured to use files located in the directory named by the
-     *         provided {@code pathName}
+     * be pre-configured to use files located in the directory named by the
+     * provided {@code pathName}
      * @throws NullPointerException if the provided {@code path} is {@code null}.
      */
     static SingleChronicleQueueBuilder singleBuilder(@NotNull File path) {
@@ -126,8 +125,8 @@ public interface ChronicleQueue extends Closeable {
      *
      * @param path of the directory to pre-configure for storing the queue
      * @return a new {@link SingleChronicleQueueBuilder} that will
-     *         be pre-configured to use files located in the directory named by the
-     *         provided {@code pathName}
+     * be pre-configured to use files located in the directory named by the
+     * provided {@code pathName}
      * @throws NullPointerException if the provided {@code path} is {@code null}.
      */
     static SingleChronicleQueueBuilder singleBuilder(@NotNull Path path) {
@@ -139,7 +138,7 @@ public interface ChronicleQueue extends Closeable {
      * <b>
      * Tailers are NOT thread-safe. Sharing a Tailer across threads will lead to errors and unpredictable behaviour.
      * </b>
-     *
+     * <p>
      * The tailor is created at the start, so unless you are using named tailors,
      * this method is the same as calling `net.openhft.chronicle.queue.ChronicleQueue#createTailer(java.lang.String).toStart()`
      *
@@ -160,7 +159,6 @@ public interface ChronicleQueue extends Closeable {
      * <p>
      * If the provided {@code id} is {@code null}, the Trailer will be unnamed and this is
      * equivalent to invoking {@link #createTailer()}.
-     *
      *
      * @param id unique id for a tailer which uses to track where it was up to
      * @return a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}
@@ -192,7 +190,7 @@ public interface ChronicleQueue extends Closeable {
      * @deprecated to be remove in version 4.6 or later use {@link ChronicleQueue#acquireAppender()}
      */
     @NotNull
-    @Deprecated
+    @Deprecated(/* remove in x.21*/)
     default ExcerptAppender createAppender() {
         return acquireAppender();
     }
@@ -202,7 +200,7 @@ public interface ChronicleQueue extends Closeable {
      * if no such index exists.
      *
      * @return the lowest valid index available for this ChronicleQueue, or {@link Long#MAX_VALUE}
-     *         if no such index exists
+     * if no such index exists
      */
     long firstIndex();
 
@@ -285,7 +283,7 @@ public interface ChronicleQueue extends Closeable {
      */
     int sourceId();
 
-/**
+    /**
      * Creates and returns a new writer proxy for the given interface {@code tclass} and the given {@code additional }
      * interfaces.
      * <p>
@@ -294,11 +292,11 @@ public interface ChronicleQueue extends Closeable {
      * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
      * </b>
      *
-     * @param tClass of the main interface to be implemented
+     * @param tClass     of the main interface to be implemented
      * @param additional interfaces to be implemented
-     * @param <T> type parameter of the main interface
+     * @param <T>        type parameter of the main interface
      * @return a new proxy for the given interface {@code tclass} and the given {@code additional }
-     *         interfaces
+     * interfaces
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
@@ -306,6 +304,7 @@ public interface ChronicleQueue extends Closeable {
         Stream.of(additional).forEach(builder::addInterface);
         return builder.build();
     }
+
     /**
      * Creates and returns a new writer proxy for the given interface {@code tclass}.
      * <p>
@@ -316,9 +315,8 @@ public interface ChronicleQueue extends Closeable {
      * </b>
      *
      * @param tClass of the main interface to be implemented
-     * @param <T> type parameter of the main interface
+     * @param <T>    type parameter of the main interface
      * @return a new proxy for the given interface {@code tclass}
-     *
      * @throws NullPointerException if the provided parameter is {@code null}.
      */
     @NotNull
@@ -360,6 +358,7 @@ public interface ChronicleQueue extends Closeable {
      * such index exists, returns -1.
      * <p>
      * This method is only applicable for replicating queues.
+     *
      * @return the last index that was replicated to a remote host
      */
     long lastIndexReplicated();
@@ -369,6 +368,7 @@ public interface ChronicleQueue extends Closeable {
      * such index exists, returns -1.
      * <p>
      * This method is only applicable for replicating queues.
+     *
      * @return the last index that was replicated and acknowledged by all remote hosts
      */
     long lastAcknowledgedIndexReplicated();

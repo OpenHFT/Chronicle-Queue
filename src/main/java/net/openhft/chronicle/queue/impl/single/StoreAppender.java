@@ -84,6 +84,10 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(false);
     }
 
+    /**
+     * check the appendLock
+     * @param allowMyProcess this will only be true for any writes coming from the sink replicator
+     */
     private void checkAppendLock(boolean allowMyProcess) {
         if (appendLock.locked())
             checkAppendLockLocked(allowMyProcess);
@@ -356,7 +360,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
         throwExceptionIfClosed();
-        checkAppendLock();
+        // we allow the sink process to write metaData
+        checkAppendLock(metaData);
         count++;
         if (count > 1) {
             assert metaData == writeContext.metaData;
@@ -576,7 +581,11 @@ class StoreAppender extends AbstractCloseable
             if (!isNextIndex) {
                 if (index > headerNumber + 1)
                     throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
-                Jvm.warn().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+
+                // this can happen when using queue replication when we are back filling from a number of sinks at them same time
+                // its normal behaviour in the is use case so should not be a WARN
+                if (Jvm.isDebugEnabled(getClass()))
+                    Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
                 return;
             }
         }
@@ -585,7 +594,6 @@ class StoreAppender extends AbstractCloseable
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
         if (!isIndex) {
-            System.out.println(Long.toHexString(index) + " != " + Long.toHexString(headerNumber));
             writeBytesInternal(bytes, metadata);
             Thread.yield();
         }
@@ -595,7 +603,7 @@ class StoreAppender extends AbstractCloseable
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
-            assert count == 0;
+            assert count == 0 : "count=" + count;
             openContext(metadata, safeLength);
 
             try {

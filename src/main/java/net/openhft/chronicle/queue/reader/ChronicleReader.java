@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -48,7 +49,7 @@ public final class ChronicleReader {
 
     private final List<Pattern> inclusionRegex = new ArrayList<>();
     private final List<Pattern> exclusionRegex = new ArrayList<>();
-    private final Pauser pauser = Pauser.balanced();
+    private final Pauser pauser = Pauser.millis(1, 100);
     private Path basePath;
     private long startIndex = UNSET_VALUE;
     private boolean tailInputSource = false;
@@ -62,6 +63,10 @@ public final class ChronicleReader {
     private boolean displayIndex = true;
     private Class<?> methodReaderInterface;
     private volatile boolean running = true;
+
+    static {
+        ToolsUtil.warnIfResourceTracing();
+    }
 
     private static boolean checkForMatches(final List<Pattern> patterns, final String text,
                                            final boolean shouldBePresent) {
@@ -217,7 +222,13 @@ public final class ChronicleReader {
     }
 
     public ChronicleReader asMethodReader(String methodReaderInterface) {
-        entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
+        if (methodReaderInterface == null)
+            entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
+        else try {
+            this.methodReaderInterface = Class.forName(methodReaderInterface);
+        } catch (ClassNotFoundException e) {
+            throw Jvm.rethrow(e);
+        }
         return this;
     }
 

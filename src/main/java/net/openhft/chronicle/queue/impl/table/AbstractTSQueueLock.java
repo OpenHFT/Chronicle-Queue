@@ -72,7 +72,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         final long pid = this.lock.getVolatileValue();
-        if (pid == Jvm.getProcessId())
+        if (pid==Jvm.getProcessId())
             return true;
         notCurrentProcessConsumer.accept(pid);
         return false;
@@ -81,22 +81,30 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     /**
      * forces an unlock only if the process that currently holds the table store lock is no-longer running
      *
-     * @return {@code true} if successful, more formally, returns {@code true} if the lock was already unlocked, or the process that was holding the
-     * lock is no longer running, or current process, otherwise {@code false} is returned if it was able to remove the lock.
+     * @return {@code true} if the lock was already unlocked, It will not release the lock if it is held by this process
+     * or the process that was holding the lock is no longer running (and we were able to unlock).
+     * Otherwise {@code false} is returned if the lock is held by this process or another live process.
      */
     public boolean forceUnlockIfProcessIsDead() {
-        long pid = this.lock.getVolatileValue();
-        if (pid == UNLOCKED || pid == Jvm.getProcessId())
-            return true;
-
-        if (!Jvm.isProcessAlive(pid)) {
-            Jvm.warn().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
-                    lockKey, this.path, pid), new StackTrace("Forced unlock"));
-            if (lock.compareAndSwapValue(pid, UNLOCKED))
+        long pid = 0;
+        for (; ; ) {
+            pid = this.lock.getVolatileValue();
+            if (pid == UNLOCKED)
                 return true;
+
+            if (!Jvm.isProcessAlive(pid)) {
+                if (Jvm.isDebugEnabled(this.getClass()))
+                    Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
+                            lockKey, this.path, pid), new StackTrace("Forced unlock"));
+                if (lock.compareAndSwapValue(pid, UNLOCKED))
+                    return true;
+            } else
+                break;
         }
-        Jvm.warn().on(this.getClass(), format("Unable to release the lock=%s in the table store file=%s " +
-                "as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
+        if (Jvm.isDebugEnabled(this.getClass()))
+            // don't make this a WARN as this method should only unlock if process is dead or current process.
+            Jvm.debug().on(this.getClass(), format("Unable to release the lock=%s in the table store file=%s " +
+                    "as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
         return false;
     }
 

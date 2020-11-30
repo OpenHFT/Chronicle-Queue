@@ -356,7 +356,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         }
 
         long tookUS = (end - start) / 1000;
-        Jvm.warn().on(getClass(), "Took " + tookUS + " us to " + desc + " from " +
+        Jvm.perf().on(getClass(), "Took " + tookUS + " us to " + desc + " from " +
                         fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
                         + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
                         (toIndex - fromKnownIndex),

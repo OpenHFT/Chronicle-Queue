@@ -60,6 +60,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
@@ -299,6 +300,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Test
+    public void testCanAppendMetadataIfAppendLockIsSet() {
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
+            ((SingleChronicleQueue) queue).appendLock().lock();
+            final ExcerptAppender appender = queue.acquireAppender();
+            Assume.assumeTrue("Failing in CQE", queue.acquireAppender() instanceof StoreAppender);
+            try (DocumentContext dc = appender.writingDocument(true)) {
+                dc.wire().write("Hello World");
+            }
+        } finally {
+            exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
+        }
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSet() {
         File tmpDir = getTmpDir();
@@ -331,9 +347,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
-            final StoreAppender appender = (StoreAppender) queue.acquireAppender();
+            Assume.assumeTrue(queue.acquireAppender() instanceof StoreAppender);
+            @NotNull ExcerptAppender appender = queue.acquireAppender();
+            assumeTrue(appender instanceof StoreAppender);
+            StoreAppender storeAppender = (StoreAppender) appender;
             ((SingleChronicleQueue) queue).writeLock().lock();
-            appender.writeBytesInternal(0, test);
+            storeAppender.writeBytesInternal(0, test);
         }
     }
 
