@@ -16,22 +16,41 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
+@RunWith(Parameterized.class)
 public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
+    private final boolean useMethodIds;
     private Path dataDir;
+
+    public ChronicleMethodReaderTest(final boolean useMethodIds) {
+        this.useMethodIds = useMethodIds;
+    }
+
+    @Parameterized.Parameters(name = "write with method ids: {0}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+                {true},
+                {false}
+        });
+    }
 
     @Before
     public void before() {
@@ -42,7 +61,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                 .build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<All> methodWriterBuilder = excerptAppender.methodWriterBuilder(All.class);
-            final All events = methodWriterBuilder.build();
+            final All events = methodWriterBuilder.useMethodIds(useMethodIds).build();
 
             for (int i = 0; i < 24; ) {
                 Method1Type m1 = new Method1Type();
@@ -103,14 +122,12 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                 asMethodReader(null).
                 execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("method2")));
     }
 
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
-        if (OS.isWindows()) {
-            System.err.println("#460 read-only not supported on Windows");
-            return;
-        }
+        assumeFalse("#460 read-only not supported on Windows", OS.isWindows());
         final Path queueFile = Files.list(dataDir).
                 filter(f -> f.getFileName().toString().endsWith(SingleChronicleQueue.SUFFIX)).findFirst().
                 orElseThrow(() ->
@@ -131,8 +148,8 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                         .count();
         assertEquals(24, msgCount);
         // "hello"
-        assertTrue(capturedOutput.stream()
-                .anyMatch(msg -> msg.contains("hello")));
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("hello")));
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("method1")));
     }
 
     @Test
