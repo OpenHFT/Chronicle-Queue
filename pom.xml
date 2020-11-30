@@ -304,13 +304,12 @@
                                <goal>enforcer</goal>
                            </goals>
                            <configuration>
-                               <referenceVersion>5.20.100</referenceVersion>
+                               <referenceVersion>5.20.3</referenceVersion>
                            </configuration>
                        </execution>
                    </executions>
                </plugin>
         </plugins>
-
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
