@@ -144,7 +144,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        .peek(System.out::println)
+                        //.peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
         // "hello"
@@ -158,7 +158,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        .peek(System.out::println)
+                        //.peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
         // "hello"
