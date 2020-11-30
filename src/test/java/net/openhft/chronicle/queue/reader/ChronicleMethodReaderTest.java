@@ -5,12 +5,10 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
-import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -25,10 +23,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
@@ -77,8 +71,13 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
     }
 
     @NotNull
-    public ChronicleReader basicReader(Path path) {
-        return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).asMethodReader(All.class.getName());
+    private ChronicleReader basicReader(Path path) {
+        return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
+    }
+
+    @NotNull
+    private ChronicleReader basicReaderMethodReader(Path path) {
+        return basicReader(path).asMethodReader(All.class.getName());
     }
 
     @Test
@@ -96,12 +95,11 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
-    @Ignore("TODO FIX")
     @Test
     public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
         basicReader().
                 // matches goodbye, but not hello or history
-                        withInclusionRegex("goodbye").
+                withInclusionRegex("goodbye").
                 asMethodReader(null).
                 execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
@@ -124,12 +122,25 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void shouldConvertEntriesToText() {
+    public void shouldConvertEntriesToTextMethodReader() {
+        basicReaderMethodReader().execute();
+        long msgCount =
+                capturedOutput.stream()
+                        .filter(msg -> !msg.startsWith("0x"))
+                        .peek(System.out::println)
+                        .count();
+        assertEquals(24, msgCount);
+        // "hello"
+        assertTrue(capturedOutput.stream()
+                .anyMatch(msg -> msg.contains("hello")));
+    }
+
+    @Test
+    public void shouldNotConvertEntriesToText() {
         basicReader().execute();
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        .filter(s -> !s.contains("history:"))
                         .peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
@@ -177,7 +188,6 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        .filter(s -> !s.contains("history:"))
 //                        .peek(System.out::println)
                         .count();
         assertEquals(12, msgCount);
@@ -187,18 +197,17 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
     @Ignore("TODO FIX")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
-        basicReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
+        basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
-        basicReader().historyRecords(5).execute();
+        basicReaderMethodReader().historyRecords(5).execute();
 
         assertEquals(5,
                 capturedOutput.stream()
-                        .filter(s -> !s.contains("history:"))
                         .filter(msg -> !msg.startsWith("0x")).count());
     }
 
@@ -213,13 +222,16 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
         assertEquals(24,
                 capturedOutput.stream()
-                        .filter(s -> !s.contains("history:"))
                         .filter(msg -> !msg.startsWith("0x"))
                         .count());
     }
 
     private ChronicleReader basicReader() {
         return basicReader(dataDir);
+    }
+
+    private ChronicleReader basicReaderMethodReader() {
+        return basicReaderMethodReader(dataDir);
     }
 
     @After
@@ -250,47 +262,5 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         String text;
         long value;
         double number;
-    }
-
-    private static final class RecordCounter implements Consumer<String> {
-        private final AtomicLong recordCount = new AtomicLong();
-        private final CountDownLatch latch = new CountDownLatch(1);
-
-        @Override
-        public void accept(final String msg) {
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                // ignore
-            }
-
-            if (!msg.startsWith("0x")) {
-                recordCount.incrementAndGet();
-            }
-        }
-    }
-
-    private static final class FiniteDocumentPollMethod implements Function<ExcerptTailer, DocumentContext> {
-
-        private final int maxPollsReturningEmptyDocument;
-        private int invocationCount;
-
-        private FiniteDocumentPollMethod(final int maxPollsReturningEmptyDocument) {
-            this.maxPollsReturningEmptyDocument = maxPollsReturningEmptyDocument;
-        }
-
-        @Override
-        public DocumentContext apply(final ExcerptTailer excerptTailer) {
-            final DocumentContext documentContext = excerptTailer.readingDocument();
-
-            if (!documentContext.isPresent()) {
-                invocationCount++;
-                if (invocationCount >= maxPollsReturningEmptyDocument) {
-                    throw new ArithmeticException("For testing purposes");
-                }
-            }
-
-            return documentContext;
-        }
     }
 }
