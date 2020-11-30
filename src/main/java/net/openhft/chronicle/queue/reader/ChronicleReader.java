@@ -222,7 +222,13 @@ public final class ChronicleReader {
     }
 
     public ChronicleReader asMethodReader(String methodReaderInterface) {
-        entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
+        if (methodReaderInterface == null)
+            entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
+        else try {
+            this.methodReaderInterface = Class.forName(methodReaderInterface);
+        } catch (ClassNotFoundException e) {
+            throw Jvm.rethrow(e);
+        }
         return this;
     }
 
