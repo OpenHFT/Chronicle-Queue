@@ -304,7 +304,7 @@
                                <goal>enforcer</goal>
                            </goals>
                            <configuration>
-                               <referenceVersion>5.20.3</referenceVersion>
+                               <referenceVersion>5.20.114</referenceVersion>
                            </configuration>
                        </execution>
                    </executions>
