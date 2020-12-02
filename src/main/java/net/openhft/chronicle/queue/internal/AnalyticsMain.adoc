@@ -6,36 +6,7 @@ Because chronicle-analytics is currently set to limit the number of events to fo
 
 == Setup
 
-First, check out Chronicle-Analytics and `mvn clean install` the snapshot version 2.20.2-SNAPSHOT.
-
-.Chronicle-Analytics
-[source, shell script]
-----
-Chronicle-Analytics % mvn clean install
-----
-
-Before trying out the feature, both `chronicle-core` and `chronicle-queue` must be on the correct feature branches:
-
-.Chronicle-Core (please note the "2" at the end of the feature branch name)
-[source, shell script]
-----
-Chronicle-Core % git checkout feature/analytics2
-Chronicle-Core % mvn clean install
-----
-
-Now, update the Chronicle BOM to use the core SNAPSHOT version above and add the following line at the top of the dependencies tag:
-
-[source, xml]
-----
-            <!-- core projects -->
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>chronicle-analytics</artifactId>
-                <version>2.20.2-SNAPSHOT</version>
-            </dependency>
-----
-
-then, rebuild the BOM using `mvn clean install`.
+Before trying out the feature, `chronicle-queue` must be on the correct feature branch:
 
 .Chronicle-Queue
 [source, shell script]
