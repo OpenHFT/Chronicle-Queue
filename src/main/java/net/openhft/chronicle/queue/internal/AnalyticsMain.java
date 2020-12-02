@@ -23,7 +23,7 @@ public final class AnalyticsMain {
         } finally {
             IOTools.deleteDirWithFiles(QUEUE_NAME1, QUEUE_NAME2);
         }
-        Jvm.pause(100_000);
+        Jvm.pause(2_000);
         System.out.println("Completed successfully");
         System.exit(0);
     }
