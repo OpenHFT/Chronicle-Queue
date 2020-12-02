@@ -15,20 +15,19 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.24</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.20.115-SNAPSHOT</version>
+    <version>5.20.116-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -276,40 +275,39 @@
                 </configuration>
             </plugin>
 
-                        <plugin>
-                            <groupId>org.apache.maven.plugins</groupId>
-                            <artifactId>maven-shade-plugin</artifactId>
-                            <version>3.2.4</version>
-                            <executions>
-                                <execution>
-                                    <phase>package</phase>
-                                    <goals>
-                                        <goal>shade</goal>
-                                    </goals>
-                                    <configuration>
-                                        <shadedArtifactAttached>true</shadedArtifactAttached>
-                                        <shadedClassifierName>all</shadedClassifierName>
-                                    </configuration>
-                                </execution>
-                            </executions>
-                        </plugin>
-
             <plugin>
-                <groupId>net.openhft</groupId>
-                <artifactId>binary-compatibility-enforcer-plugin</artifactId>
-                <version>1.0.1</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
                 <executions>
                     <execution>
-                        <phase>verify</phase>
+                        <phase>package</phase>
                         <goals>
-                            <goal>enforcer</goal>
+                            <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <referenceVersion>5.20.100</referenceVersion>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>all</shadedClassifierName>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+               <plugin>
+                   <groupId>net.openhft</groupId>
+                   <artifactId>binary-compatibility-enforcer-plugin</artifactId>
+                   <version>1.0.2</version>
+                   <executions>
+                       <execution>
+                           <phase>verify</phase>
+                           <goals>
+                               <goal>enforcer</goal>
+                           </goals>
+                           <configuration>
+                               <referenceVersion>5.20.114</referenceVersion>
+                           </configuration>
+                       </execution>
+                   </executions>
+               </plugin>
 
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -331,6 +329,23 @@
             </plugin>
 
         </plugins>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/queue.pom.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>**/queue.pom.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
 
     </build>
 

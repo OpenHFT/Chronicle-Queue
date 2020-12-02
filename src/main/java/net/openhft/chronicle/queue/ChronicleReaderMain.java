@@ -127,7 +127,8 @@ public class ChronicleReaderMain {
             chronicleReader.withStartIndex(Long.decode(commandLine.getOptionValue('n')));
         }
         if (commandLine.hasOption('r')) {
-            chronicleReader.asMethodReader(commandLine.getOptionValue('r'));
+            final String r = commandLine.getOptionValue('r');
+            chronicleReader.asMethodReader(r.equals("null") ? null : r);
         }
         if (commandLine.hasOption('w')) {
             chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w')));
@@ -147,7 +148,7 @@ public class ChronicleReaderMain {
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
         addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
         addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
-        addOption(options, "r", "as-method-reader", false, "Use when reading from a queue generated using a MethodWriter", false);
+        addOption(options, "r", "as-method-reader", true, "Use when reading from a queue generated using a MethodWriter", false);
         addOption(options, "w", "wire-type", true, "Control output i.e. JSON", false);
         addOption(options, "s", "suppress-index", false, "Display index", false);
         addOption(options, "l", "single-line", false, "Squash each output message into a single line", false);

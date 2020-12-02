@@ -712,7 +712,7 @@ class StoreAppender extends AbstractCloseable
             final long seq2 = store.sequenceForPosition(this, position, true);
 
             if (seq1 != seq2) {
-                final long seq3 = ((SingleChronicleQueueStore) store).indexing
+                final long seq3 = store.indexing
                         .linearScanByPosition(wireForIndex(), position, 0, 0, true);
                 System.out.println("Thread=" + Thread.currentThread().getName() +
                         " pos: " + position +

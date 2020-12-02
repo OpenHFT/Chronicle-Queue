@@ -843,7 +843,13 @@ class StoreTailer extends AbstractCloseable
             // fixes #378
             if (sequenceNumber == -1L) {
                 // nothing has been written yet, so point to start of cycle
-                return originalToEnd();
+                try {
+                    return originalToEnd();
+                } catch (NotReachedException e) {
+                    // due to a race condition, where the queue rolls as we are processing toEnd()
+                    // we may get a NotReachedException hence are are just going to retry.
+                    return originalToEnd();
+                }
             }
 
             final Bytes<?> bytes = privateWire().bytes();
