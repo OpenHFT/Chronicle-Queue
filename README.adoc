@@ -1447,8 +1447,8 @@ the Padding enum is as follows :
         SMART("adds padding to ensure new wire headers dont straggle cache lines, where possible to do so without breaking theexisting message format specification");
 
         /** @deprecated */
-        @Deprecated
-        public static final MarshallableOut.Padding ALWAYS = CACHE_LINE;
+        @Deprecated(/* to be removed in x.22 */)
+public static final MarshallableOut.Padding ALWAYS = CACHE_LINE;
 
         private Padding(String comment) {
         }
