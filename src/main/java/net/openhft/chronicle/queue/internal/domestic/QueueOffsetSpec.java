@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.internal;
+package net.openhft.chronicle.queue.internal.domestic;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
