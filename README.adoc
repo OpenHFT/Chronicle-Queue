@@ -1023,10 +1023,6 @@ Of course, creating a new file every second is a little extreme, but it's a good
 When using secondly rolling, If you had written 10 seconds worth of data and then you wish to read this data, chronicle would have to scan across 10 files.
 To reduce the creation of the file handles, chronicle queue cashes them lazily and when it comes to writing data to the queue files, care-full consideration must be taken when closing the files, because on most OS’s a close of the file, will force any data that has been appended to the file, to be flushed to disk, and if we are not careful this could stall your application.
 
-Consideration has to be given to low latency applications with high throughput especially where the business critical thread is bound by thread affinity.
-You should ensure that the background thread which is responsible for closing the file handles and bus flashing the data disk is not saturated, this thread is called the “chronicle-weak-reference-cleaner”.
-If you are seeing a large number of file handles open, please ensure that your throughput of data does not exceed your disk write speeds and the the “chronicle-weak-reference-cleaner” is not being saturated by other processes.
-
 === Double-buffering for contended writes
 
 Normally, all writes to the queue will be serialized based on the write lock acquisition.
