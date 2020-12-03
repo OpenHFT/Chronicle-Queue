@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.BinaryWire;
@@ -7,7 +7,6 @@ import net.openhft.chronicle.wire.WireType;
 
 import java.util.function.Consumer;
 
-@Deprecated /* For removal in 2.22, moved to internal */
 public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
     private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
     private final WireType wireType;

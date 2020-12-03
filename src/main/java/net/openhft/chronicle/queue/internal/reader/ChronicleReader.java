@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
@@ -44,7 +44,6 @@ import java.util.regex.Pattern;
 
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
-@Deprecated /* For removal in 2.22, moved to internal */
 public final class ChronicleReader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 

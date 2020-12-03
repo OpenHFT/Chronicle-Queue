@@ -21,7 +21,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     public void correctConfigGetsLoaded() {
         String aClass = RollCycles.HOURLY.getClass().getName();
         String configuredCycle = aClass + ":HOURLY";
-        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
         assertEquals(RollCycles.HOURLY, builder.rollCycle());
     }
@@ -29,7 +29,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     @Test
     public void customDefinitionGetsLoaded() {
         String configuredCycle = MyRollcycle.class.getName();
-        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
 
         assertTrue(builder.rollCycle() instanceof MyRollcycle);
@@ -38,7 +38,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     @Test
     public void unknownClassDefaultsToDaily() {
         String configuredCycle = "foobarblah";
-        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
         assertEquals(RollCycles.DEFAULT, builder.rollCycle());
 
@@ -47,7 +47,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     @Test
     public void nonRollCycleDefaultsToDaily() {
         String configuredCycle = String.class.getName();
-        System.setProperty(DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
+        System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
         assertEquals(RollCycles.DEFAULT, builder.rollCycle());
     }

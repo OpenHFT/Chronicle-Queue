@@ -71,9 +71,10 @@ import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable {
-    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
+    @Deprecated /* For removal in 2.22, Use QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY instead*/
+    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
-    private static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
 
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -269,11 +270,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private static RollCycle loadDefaultRollCycle() {
-        if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
+        if (null == System.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY)) {
             return RollCycles.DEFAULT;
         }
 
-        String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
+        String rollCycleProperty = System.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
         if (rollCyclePropertyParts.length > 0) {
             try {
@@ -709,7 +710,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * GMT
      */
     public long epoch() {
-        return epoch == null ? Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
+        return epoch == null ? Long.getLong(QueueSystemProperties.DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
     }
 
     /**

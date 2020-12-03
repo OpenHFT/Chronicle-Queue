@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.wire.DocumentContext;
 
@@ -9,7 +9,6 @@ import java.util.function.Consumer;
  * Particularly useful when you need more than the text representation e.g.
  * when your queue is written in binary.
  */
-@Deprecated /* For removal in 2.22, moved to internal */
 public interface ChronicleReaderPlugin {
     void onReadDocument(DocumentContext dc);
 

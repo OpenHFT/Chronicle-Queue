@@ -18,7 +18,7 @@
 
 package net.openhft.chronicle.queue.internal.main;
 
-import net.openhft.chronicle.queue.reader.ChronicleReader;
+import net.openhft.chronicle.queue.internal.reader.ChronicleReader;
 import net.openhft.chronicle.wire.WireType;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
