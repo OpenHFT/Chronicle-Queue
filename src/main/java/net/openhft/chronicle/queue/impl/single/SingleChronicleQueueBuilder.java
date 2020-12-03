@@ -729,7 +729,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the
      * Chronicle Queue using a background thread
      */
-    @Deprecated
+    @Deprecated(/* to be removed in x.22 */)
     public boolean buffered() {
         return this.writeBufferMode == BufferMode.Asynchronous;
     }
@@ -877,7 +877,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return ringBufferPauserSupplier == null ? Pauser::busy : ringBufferPauserSupplier;
     }
 
-    @Deprecated
+    @Deprecated(/* to be removed in x.22 */)
     public SingleChronicleQueueBuilder ringBufferPauser(Pauser ringBufferPauser) {
         return ringBufferPauserSupplier(() -> ringBufferPauser);
     }

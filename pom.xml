@@ -15,20 +15,19 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.24</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.20.115-SNAPSHOT</version>
+    <version>5.20.116-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -296,7 +295,7 @@
                <plugin>
                    <groupId>net.openhft</groupId>
                    <artifactId>binary-compatibility-enforcer-plugin</artifactId>
-                   <version>1.0.3</version>
+                   <version>1.0.4</version>
                    <executions>
                        <execution>
                            <phase>verify</phase>
@@ -305,7 +304,6 @@
                            </goals>
                            <configuration>
                                <referenceVersion>5.20.114</referenceVersion>
-                               <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                            </configuration>
                        </execution>
                    </executions>
