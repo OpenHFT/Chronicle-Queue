@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -323,16 +324,16 @@ class StoreAppender extends AbstractCloseable
             position(position, position);
 
             Bytes<?> bytes = wire.bytes();
-            assert !SingleChronicleQueue.CHECK_INDEX || checkPositionOfHeader(bytes);
+            assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
             final long headerNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
 
-            assert !SingleChronicleQueue.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
+            assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
 
             bytes.writeLimit(bytes.capacity());
 
-            assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
+            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
             return originalHeaderNumber != wire.headerNumber();
 
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
@@ -390,7 +391,7 @@ class StoreAppender extends AbstractCloseable
 
             int safeLength = (int) queue.overlapSize();
             resetPosition();
-            assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
+            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
             // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);

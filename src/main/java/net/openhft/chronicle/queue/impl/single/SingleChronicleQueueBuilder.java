@@ -40,6 +40,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.internal.QueueOffsetSpec;
 import net.openhft.chronicle.threads.MediumEventLoop;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;

@@ -2,7 +2,10 @@ package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.Jvm;
 
-public class ToolsUtil {
+public final class ToolsUtil {
+
+    private ToolsUtil() {
+    }
 
     /**
      * When running tools e.g. ChronicleReader, from the CQ source dir, resource tracing may be turned on

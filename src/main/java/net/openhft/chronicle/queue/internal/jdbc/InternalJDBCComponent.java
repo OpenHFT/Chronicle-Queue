@@ -15,22 +15,23 @@
  *
  */
 
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal.jdbc;
 
 import net.openhft.chronicle.core.util.ThrowingSupplier;
+import net.openhft.chronicle.queue.JDBCResult;
+import net.openhft.chronicle.queue.JDBCStatement;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Deprecated /* For removal, use JdbcStatement.create() instead */
-public class JDBCComponent implements JDBCStatement {
+public final class InternalJDBCComponent implements JDBCStatement {
     @NotNull
     private final Connection connection;
     private final JDBCResult result;
 
-    public JDBCComponent(@NotNull ThrowingSupplier<Connection, SQLException> connectionSupplier, JDBCResult result) throws SQLException {
+    public InternalJDBCComponent(@NotNull ThrowingSupplier<Connection, SQLException> connectionSupplier, JDBCResult result) throws SQLException {
         connection = connectionSupplier.get();
         this.result = result;
     }

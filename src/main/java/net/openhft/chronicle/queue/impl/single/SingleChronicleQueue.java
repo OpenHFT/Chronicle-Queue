@@ -61,11 +61,9 @@ import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
-    public static final String LIBRARY_NAME = "chronicle-queue";
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
-    static final boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 

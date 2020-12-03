@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
@@ -7,6 +7,9 @@ import net.openhft.chronicle.core.Memory;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -14,8 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.locks.LockSupport;
 
-@Deprecated /* For removal in 2.22, use net.openhft.chronicle.queue.main.BenchmarkMain instead */
-public class BenchmarkMain {
+public class InternalBenchmarkMain {
     static volatile boolean running = true;
     static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 300); // seconds

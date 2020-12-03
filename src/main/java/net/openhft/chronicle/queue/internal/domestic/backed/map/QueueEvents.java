@@ -2,10 +2,9 @@
  * Copyright (c) 2016-2020 chronicle.software
  */
 
-package net.openhft.chronicle.queue.backed.map;
+package net.openhft.chronicle.queue.internal.domestic.backed.map;
 
 // TODO add queue names and only read the ones for it.
-@Deprecated /* For removal in 2.22. Use net.openhft.chronicle.queue.internal.domestic.backed.map.QueueEvents instead */
 public interface QueueEvents<K, V> {
     /**
      * @param key       to put

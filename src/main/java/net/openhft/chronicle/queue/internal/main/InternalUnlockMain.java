@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -29,8 +29,7 @@ import java.io.File;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 
-@Deprecated /* For removal in 2.22, use net.openhft.chronicle.queue.main.HistoryMain instead */
-public class QueueUnlockMain {
+public final class InternalUnlockMain {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
@@ -65,3 +64,4 @@ public class QueueUnlockMain {
     }
 
 }
+

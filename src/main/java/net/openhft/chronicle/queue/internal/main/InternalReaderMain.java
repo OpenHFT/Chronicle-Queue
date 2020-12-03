@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.wire.WireType;
@@ -32,11 +32,10 @@ import static java.util.Arrays.stream;
 /**
  * Display records in a Chronicle in a text form.
  */
-@Deprecated /* For removal in 2.22, use net.openhft.chronicle.queue.main.ReaderMain instead */
-public class ChronicleReaderMain {
+public class InternalReaderMain {
 
     public static void main(@NotNull String[] args) {
-        new ChronicleReaderMain().run(args);
+        new InternalReaderMain().run(args);
     }
 
     public static void addOption(final Options options,

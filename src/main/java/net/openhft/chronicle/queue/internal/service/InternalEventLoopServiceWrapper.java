@@ -15,7 +15,7 @@
  *
  */
 
-package net.openhft.chronicle.queue.service;
+package net.openhft.chronicle.queue.internal.service;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.Closeable;
@@ -24,13 +24,14 @@ import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.service.ServiceWrapper;
+import net.openhft.chronicle.queue.service.ServiceWrapperBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-@Deprecated /* For removal in 2.22. This is now an internal concern. */
-public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler {
+class InternalEventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler {
     @NotNull
     protected final MethodReader[] serviceIn;
     private final HandlerPriority priority;
@@ -46,7 +47,7 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
     @Nullable
     private EventLoop eventLoop;
 
-    public EventLoopServiceWrapper(@NotNull ServiceWrapperBuilder<O> builder) {
+    InternalEventLoopServiceWrapper(@NotNull ServiceWrapper.Builder<O> builder) {
         this.priority = builder.priority();
         outputQueue = ChronicleQueue.singleBuilder(builder.outputPath())
                 .sourceId(builder.outputSourceId())

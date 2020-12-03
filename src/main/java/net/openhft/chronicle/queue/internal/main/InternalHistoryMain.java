@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.*;
@@ -25,6 +25,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
+
+import static net.openhft.chronicle.queue.internal.main.InternalReaderMain.addOption;
 
 /**
  * Reads @see MessageHistory from a chronicle and outputs histograms for
@@ -35,14 +37,13 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Jerry Shea
  */
-@Deprecated /* For removal in 2.22, use net.openhft.chronicle.queue.main.HistoryMain instead */
-public class ChronicleHistoryReaderMain {
+public class InternalHistoryMain {
 
     public static void main(@NotNull String[] args) {
-        new ChronicleHistoryReaderMain().run(args);
+        new InternalHistoryMain().run(args);
     }
 
-    protected void run(String[] args) {
+    public void run(String[] args) {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
@@ -108,12 +109,12 @@ public class ChronicleHistoryReaderMain {
     @NotNull
     protected Options options() {
         final Options options = new Options();
-        ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
-        ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
-        ChronicleReaderMain.addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
-        ChronicleReaderMain.addOption(options, "i", "ignore", true, "How many items to ignore from start", false);
-        ChronicleReaderMain.addOption(options, "w", "window", true, "Window duration in time unit. Instead of one output at the end, will output every window period", false);
-        ChronicleReaderMain.addOption(options, "u", "histo offset", true, "Summary output. Instead of histograms, will show one value only, in CSV format. Set this to 0 for 50th, 1 for 90th etc., -1 for worst", false);
+        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
+        addOption(options, "h", "help-message", false, "Print this help and exit", false);
+        addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
+        addOption(options, "i", "ignore", true, "How many items to ignore from start", false);
+        addOption(options, "w", "window", true, "Window duration in time unit. Instead of one output at the end, will output every window period", false);
+        addOption(options, "u", "histo offset", true, "Summary output. Instead of histograms, will show one value only, in CSV format. Set this to 0 for 50th, 1 for 90th etc., -1 for worst", false);
         options.addOption(new Option("p", false, "Show progress"));
         options.addOption(new Option("m", false, "By method"));
         return options;

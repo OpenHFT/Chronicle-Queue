@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.jitter;
+package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -12,8 +12,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 
-@Deprecated /* For removal for 2.22, Use main.PingPongMain instead*/
-public class QueuePingPongMain {
+public final class InternalPingPongMain {
     //    static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 30); // seconds
     static String basePath = System.getProperty("path", OS.TMP);
@@ -37,7 +36,7 @@ public class QueuePingPongMain {
     }
 
     static void pingPong(int size) {
-        String path = QueuePingPongMain.basePath + "/test-q-" + Time.uniqueId();
+        String path = InternalPingPongMain.basePath + "/test-q-" + Time.uniqueId();
         Histogram readDelay = new Histogram();
         Histogram readDelay2 = new Histogram();
         try (ChronicleQueue queue = createQueue(path)) {

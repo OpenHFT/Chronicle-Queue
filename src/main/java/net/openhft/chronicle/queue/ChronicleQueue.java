@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import net.openhft.chronicle.wire.WireType;
@@ -62,7 +63,9 @@ import java.util.stream.Stream;
  * @author peter.lawrey
  */
 public interface ChronicleQueue extends Closeable {
-    int TEST_BLOCK_SIZE = 64 * 1024; // smallest safe block size for Windows 8+
+
+    @Deprecated /* For removal, use QueueUtil.testBlockSize instead */
+    int TEST_BLOCK_SIZE = QueueUtil.testBlockSize();
 
     /**
      * Creates and returns a new {@link ChronicleQueue} that will be backed by

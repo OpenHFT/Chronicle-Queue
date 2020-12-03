@@ -15,7 +15,7 @@
  *
  */
 
-package net.openhft.chronicle.queue.service;
+package net.openhft.chronicle.queue.internal.service;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.Closeable;
@@ -24,6 +24,8 @@ import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.service.EventLoopServiceWrapper;
+import net.openhft.chronicle.queue.service.ServiceWrapper;
 import net.openhft.chronicle.threads.EventGroup;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,8 +34,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-@Deprecated /* For removal in 2.22. Please use ServiceWrapper.builder() instead */
-public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
+public class InternalServiceWrapperBuilder<O> implements ServiceWrapper.Builder<O> {
     private final List<String> inputPaths = new ArrayList<>();
     private final List<Function<O, Object>> serviceFunctions = new ArrayList<>();
     private String outputPath;
@@ -45,12 +46,12 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     private int outputSourceId;
     private final List<ChronicleQueue> queues = new ArrayList<>();
 
-    ServiceWrapperBuilder() {
+    InternalServiceWrapperBuilder() {
     }
 
     @NotNull
-    public static <O> ServiceWrapperBuilder<O> serviceBuilder(String inputPath, String outputPath, Class<O> outClass, Function<O, Object> serviceFunction) {
-        ServiceWrapperBuilder<O> swb = new ServiceWrapperBuilder<>();
+    public static <O> InternalServiceWrapperBuilder<O> serviceBuilder(String inputPath, String outputPath, Class<O> outClass, Function<O, Object> serviceFunction) {
+        InternalServiceWrapperBuilder<O> swb = new InternalServiceWrapperBuilder<>();
         swb.addInputPath(inputPath);
         swb.outputPath = outputPath;
         swb.outClass = outClass;
@@ -64,7 +65,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public ServiceWrapperBuilder<O> addInputPath(String inputPath) {
+    public InternalServiceWrapperBuilder<O> addInputPath(String inputPath) {
         this.inputPaths.add(inputPath);
         return this;
     }
@@ -74,7 +75,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public ServiceWrapperBuilder<O> outClass(Class<O> outClass) {
+    public InternalServiceWrapperBuilder<O> outClass(Class<O> outClass) {
         this.outClass = outClass;
         return this;
     }
@@ -84,7 +85,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public ServiceWrapperBuilder<O> outputPath(String outputPath) {
+    public InternalServiceWrapperBuilder<O> outputPath(String outputPath) {
         this.outputPath = outputPath;
         return this;
     }
@@ -95,7 +96,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public ServiceWrapperBuilder<O> addServiceFunction(Function<O, Object> serviceFunctions) {
+    public InternalServiceWrapperBuilder<O> addServiceFunction(Function<O, Object> serviceFunctions) {
         this.serviceFunctions.add(serviceFunctions);
         return this;
     }
@@ -117,7 +118,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public ServiceWrapperBuilder<O> priority(HandlerPriority priority) {
+    public InternalServiceWrapperBuilder<O> priority(HandlerPriority priority) {
         this.priority = priority;
         return this;
     }
@@ -127,7 +128,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public ServiceWrapperBuilder<O> inputSourceId(int inputSourceId) {
+    public InternalServiceWrapperBuilder<O> inputSourceId(int inputSourceId) {
         this.inputSourceId = inputSourceId;
         return this;
     }
@@ -137,7 +138,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     @NotNull
-    public ServiceWrapperBuilder<O> outputSourceId(int outputSourceId) {
+    public InternalServiceWrapperBuilder<O> outputSourceId(int outputSourceId) {
         this.outputSourceId = outputSourceId;
         return this;
     }
@@ -149,7 +150,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
             eventLoop = new EventGroup(false);
             createdEventLoop = true;
         }
-        return new EventLoopServiceWrapper<>(this);
+        return new InternalEventLoopServiceWrapper<>(this);
     }
 
     @NotNull

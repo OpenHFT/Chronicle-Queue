@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal;
 
 import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.core.threads.HandlerPriority;
@@ -7,12 +7,11 @@ import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
 
-@Deprecated /* For removal. Use Pretouch.createEventHandler() instead */
-public final class PretouchHandler implements EventHandler {
+public final class InternalPretouchHandler implements EventHandler {
     private final Pretoucher pretoucher;
     private long lastRun = 0;
 
-    public PretouchHandler(final SingleChronicleQueue queue) {
+    public InternalPretouchHandler(final SingleChronicleQueue queue) {
         this.pretoucher = new Pretoucher(queue);
     }
 
@@ -36,4 +35,5 @@ public final class PretouchHandler implements EventHandler {
     public void shutdown() {
         pretoucher.shutdown();
     }
+
 }

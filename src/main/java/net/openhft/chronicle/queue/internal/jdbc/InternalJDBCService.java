@@ -15,12 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal.jdbc;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.JDBCResult;
+import net.openhft.chronicle.queue.JDBCServiceProvider;
+import net.openhft.chronicle.queue.JDBCStatement;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
 import org.jetbrains.annotations.NotNull;
@@ -32,16 +36,14 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Deprecated /* For removal, use JDBCServiceProvider.create instead */
-public class JDBCService extends AbstractCloseable implements Closeable, JDBCServiceProvider {
-    private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
+public class InternalJDBCService extends AbstractCloseable implements Closeable, JDBCServiceProvider {
+    private static final Logger LOGGER = LoggerFactory.getLogger(InternalJDBCService.class);
     @NotNull
     private final ChronicleQueue in;
     private final ChronicleQueue out;
     private final ThrowingSupplier<Connection, SQLException> connectionSupplier;
 
-    @Deprecated
-    public JDBCService(@NotNull ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
+    public InternalJDBCService(@NotNull ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
         this.in = in;
         this.out = out;
         this.connectionSupplier = connectionSupplier;
@@ -52,7 +54,7 @@ public class JDBCService extends AbstractCloseable implements Closeable, JDBCSer
         service.shutdown(); // stop when the task exits.
     }
 
-    public void runLoop() {
+    void runLoop() {
         try {
             JDBCResult result = out.acquireAppender()
                     .methodWriterBuilder(JDBCResult.class)

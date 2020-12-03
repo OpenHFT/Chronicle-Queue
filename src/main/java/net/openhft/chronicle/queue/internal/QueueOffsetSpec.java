@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.internal;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
@@ -7,7 +7,6 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.function.Function;
 
-@Deprecated /* For removal in 2.22, This class is now internal.QueueOffsetSpec instead */
 public final class QueueOffsetSpec {
 
     private static final String TOKEN_DELIMITER = ";";
