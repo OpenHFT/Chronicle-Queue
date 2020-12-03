@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.batch;
 
 import net.openhft.chronicle.core.OS;
 
+@Deprecated() // "to be removed in version 21.x"
 public class BatchAppenderNative implements BatchAppender {
 
     static {

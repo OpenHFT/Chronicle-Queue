@@ -26,6 +26,7 @@ package net.openhft.chronicle.queue.batch;
  * and then the length to ensure that a tailer does not attempt to read a half written message.
  */
 @FunctionalInterface
+@Deprecated() // "to be removed in version 21.x"
 public interface BatchAppender {
 
     /**
@@ -34,6 +35,8 @@ public interface BatchAppender {
      * @param rawMaxMessages the maximum number of messages that can be written directly to the off heap memory
      * @return the count and the length as <code>( count &lt;&lt; 32) | length</code>
      */
+    @Deprecated()
+    // "to be removed in version 21.x"
     long writeMessages(long rawAddress, long rawMaxBytes, int rawMaxMessages);
 
 }
