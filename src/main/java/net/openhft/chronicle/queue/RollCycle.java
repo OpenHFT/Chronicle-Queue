@@ -47,7 +47,7 @@ public interface RollCycle {
      */
     int lengthInMillis();
 
-    @Deprecated
+    @Deprecated(/* to be removed in x.22 */)
     default int length() {
         return lengthInMillis();
     }

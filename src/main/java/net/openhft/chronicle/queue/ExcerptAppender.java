@@ -143,7 +143,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * know what you are doing. Misuse of this API could corrupt your data or even
      * worst cause the JVM or your application to crash.
      */
-    @Deprecated
+    @Deprecated(/* to be removed in x.22 */)
     long batchAppend(int timeoutMS, BatchAppender batchAppender);
 
 }

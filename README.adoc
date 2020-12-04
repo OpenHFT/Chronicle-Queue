@@ -9,6 +9,7 @@ image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
 
+
 image::images/Queue_line.png[]
 
 == Contents
@@ -1023,11 +1024,6 @@ If we create a queue file every second, we would refer to this as SECONDLY rolli
 Of course, creating a new file every second is a little extreme, but it's a good way to illustrate my following point.
 When using secondly rolling, If you had written 10 seconds worth of data and then you wish to read this data, chronicle would have to scan across 10 files.
 To reduce the creation of the file handles, chronicle queue cashes them lazily and when it comes to writing data to the queue files, care-full consideration must be taken when closing the files, because on most OS’s a close of the file, will force any data that has been appended to the file, to be flushed to disk, and if we are not careful this could stall your application.
-As such, chronicle queue flushes its data using a background thread so your application is not stalled.
-
-Consideration has to be given to low latency applications with high throughput especially where the business critical thread is bound by thread affinity.
-You should ensure that the background thread which is responsible for closing the file handles and bus flashing the data disk is not saturated, this thread is called the “chronicle-weak-reference-cleaner”.
-If you are seeing a large number of file handles open, please ensure that your throughput of data does not exceed your disk write speeds and the the “chronicle-weak-reference-cleaner” is not being saturated by other processes.
 
 === Double-buffering for contended writes
 
@@ -1448,8 +1444,8 @@ the Padding enum is as follows :
         SMART("adds padding to ensure new wire headers dont straggle cache lines, where possible to do so without breaking theexisting message format specification");
 
         /** @deprecated */
-        @Deprecated
-        public static final MarshallableOut.Padding ALWAYS = CACHE_LINE;
+        @Deprecated(/* to be removed in x.22 */)
+public static final MarshallableOut.Padding ALWAYS = CACHE_LINE;
 
         private Padding(String comment) {
         }
