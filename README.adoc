@@ -62,6 +62,10 @@ This is using one thread to publish, and one thread to consume.
 
 see https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html
 
+=== Usage
+
+https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vTe-ijX-uRMc86pB1r-qPUIDZmzI0drPQtvUiGiU8p6WEq98HHDO47HXfV_dk_q6Tmhr1fq2pLxLkqv/pubhtml[Usage of Chronicle-Queue]
+
 === More benchmarks
 
 https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
