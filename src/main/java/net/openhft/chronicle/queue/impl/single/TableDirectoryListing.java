@@ -68,6 +68,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         while (true) {
             throwExceptionIfClosed();
             tableStore.throwExceptionIfClosed();
+            Jvm.safepoint();
             final long currentMax = maxCycleValue.getVolatileValue();
             final File[] queueFiles = queuePath.toFile().
                     listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
