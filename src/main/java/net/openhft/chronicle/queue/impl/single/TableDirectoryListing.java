@@ -70,6 +70,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
             tableStore.throwExceptionIfClosed();
             Jvm.safepoint();
             final long currentMax = maxCycleValue.getVolatileValue();
+            Jvm.safepoint();
             final File[] queueFiles = queuePath.toFile().
                     listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
             int min = UNSET_MIN_CYCLE;
