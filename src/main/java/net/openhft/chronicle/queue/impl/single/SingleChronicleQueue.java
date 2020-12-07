@@ -20,9 +20,11 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.pom.PomProperties;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
@@ -33,6 +35,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -61,7 +64,6 @@ import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
-    public static final String LIBRARY_NAME = "chronicle-queue";
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
@@ -196,6 +198,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             sourceId = builder.sourceId();
 
+            final Map<String, String> additionalEventParameters = AnalyticsFacade.standardAdditionalProperties();
+            additionalEventParameters.put("wire_type", wireType.toString());
+            final String rollCycleName = rollCycle.toString();
+            if (!rollCycleName.startsWith("TEST"))
+                additionalEventParameters.put("roll_cycle", rollCycleName);
+
+            AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);
