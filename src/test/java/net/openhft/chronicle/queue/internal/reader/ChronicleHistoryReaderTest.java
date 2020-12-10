@@ -15,7 +15,7 @@
  *
  */
 
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.IOTools;
@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.internal.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;

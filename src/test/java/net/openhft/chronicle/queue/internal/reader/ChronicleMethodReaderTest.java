@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodId;
 import net.openhft.chronicle.core.OS;
@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.internal.reader.ChronicleReader;
 import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;

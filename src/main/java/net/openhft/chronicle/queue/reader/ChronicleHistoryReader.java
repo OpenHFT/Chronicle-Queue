@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+@Deprecated /* For removal in 2.22, moved to internal */
 public class ChronicleHistoryReader {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;

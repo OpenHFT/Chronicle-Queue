@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;

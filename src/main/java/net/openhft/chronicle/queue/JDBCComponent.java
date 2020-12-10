@@ -24,6 +24,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated /* For removal, use JdbcStatement.create() instead */
 public class JDBCComponent implements JDBCStatement {
     @NotNull
     private final Connection connection;

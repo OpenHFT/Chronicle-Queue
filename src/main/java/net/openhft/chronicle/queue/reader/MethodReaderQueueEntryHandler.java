@@ -7,6 +7,7 @@ import net.openhft.chronicle.wire.WireIn;
 
 import java.util.function.Consumer;
 
+@Deprecated /* For removal in 2.22, moved to internal */
 public final class MethodReaderQueueEntryHandler implements QueueEntryHandler {
     private final Class<?> mrInterface;
 

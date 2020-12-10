@@ -7,6 +7,7 @@ import net.openhft.chronicle.wire.WireType;
 
 import java.util.function.Consumer;
 
+@Deprecated /* For removal in 2.22, moved to internal */
 public final class DummyMethodReaderQueueEntryHandler implements QueueEntryHandler {
     private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
     private final WireType wireType;

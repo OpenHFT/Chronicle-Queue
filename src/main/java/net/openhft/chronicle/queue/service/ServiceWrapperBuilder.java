@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+@Deprecated /* For removal in 2.22. Please use ServiceWrapper.builder() instead */
 public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     private final List<String> inputPaths = new ArrayList<>();
     private final List<Function<O, Object>> serviceFunctions = new ArrayList<>();
@@ -42,7 +43,7 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     private boolean createdEventLoop = false;
     private int inputSourceId;
     private int outputSourceId;
-    private List<ChronicleQueue> queues = new ArrayList<>();
+    private final List<ChronicleQueue> queues = new ArrayList<>();
 
     ServiceWrapperBuilder() {
     }

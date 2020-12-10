@@ -32,13 +32,15 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class JDBCService extends AbstractCloseable implements Closeable {
+@Deprecated /* For removal, use JDBCServiceProvider.create instead */
+public class JDBCService extends AbstractCloseable implements Closeable, JDBCServiceProvider {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
     @NotNull
     private final ChronicleQueue in;
     private final ChronicleQueue out;
     private final ThrowingSupplier<Connection, SQLException> connectionSupplier;
 
+    @Deprecated
     public JDBCService(@NotNull ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
         this.in = in;
         this.out = out;
@@ -50,12 +52,12 @@ public class JDBCService extends AbstractCloseable implements Closeable {
         service.shutdown(); // stop when the task exits.
     }
 
-    void runLoop() {
+    public void runLoop() {
         try {
             JDBCResult result = out.acquireAppender()
                     .methodWriterBuilder(JDBCResult.class)
                     .get();
-            JDBCComponent js = new JDBCComponent(connectionSupplier, result);
+            JDBCStatement js = JDBCStatement.create(connectionSupplier, result);
             MethodReader reader = in.createTailer().afterLastWritten(out).methodReader(js);
             Pauser pauser = Pauser.millis(1, 10);
             while (!isClosed()) {

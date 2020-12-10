@@ -29,6 +29,7 @@ import java.io.File;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 
+@Deprecated /* For removal in 2.22, use net.openhft.chronicle.queue.main.HistoryMain instead */
 public class QueueUnlockMain {
     static {
         SingleChronicleQueueBuilder.addAliases();
@@ -64,4 +65,3 @@ public class QueueUnlockMain {
     }
 
 }
-

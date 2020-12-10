@@ -17,8 +17,21 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.util.ThrowingSupplier;
+import net.openhft.chronicle.queue.internal.jdbc.InternalJDBCComponent;
+import org.jetbrains.annotations.NotNull;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+
 public interface JDBCStatement {
+
     void executeQuery(String query, Object... args);
 
     void executeUpdate(String query, Object... args);
+
+    static JDBCStatement create(@NotNull ThrowingSupplier<Connection, SQLException> connectionSupplier, JDBCResult resul) throws SQLException {
+        return new InternalJDBCComponent(connectionSupplier,resul);
+    }
+
 }

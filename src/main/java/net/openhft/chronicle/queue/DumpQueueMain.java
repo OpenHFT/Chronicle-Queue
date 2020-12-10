@@ -29,8 +29,17 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import static java.lang.System.err;
-
+/**
+ * Parameters to the methods in this class can be set using any of the
+ * following system properties:
+ *
+ * private static final String FILE = System.getProperty("file");
+ * private static final boolean SKIP_TABLE_STORE = Jvm.getBoolean("skipTableStoreDump");
+ * private static final boolean UNALIGNED = Jvm.getBoolean("dumpUnaligned");
+ * private static final int LENGTH = ", 0".length();
+ *
+ */
+@Deprecated /* For removal, use net.openhft.chronicle.queue.main.Dumpain instead */
 public class DumpQueueMain {
     private static final String FILE = System.getProperty("file");
     private static final boolean SKIP_TABLE_STORE = Jvm.getBoolean("skipTableStoreDump");
@@ -56,7 +65,7 @@ public class DumpQueueMain {
                             : (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX);
             File[] files = path.listFiles(filter);
             if (files == null) {
-                err.println("Directory not found " + path);
+                System.err.println("Directory not found " + path);
                 System.exit(1);
             }
 
@@ -98,7 +107,7 @@ public class DumpQueueMain {
                 }
             }
         } catch (IOException ioe) {
-            err.println("Failed to read " + file + " " + ioe);
+            System.err.println("Failed to read " + file + " " + ioe);
         } finally {
             buffer.releaseLast();
         }

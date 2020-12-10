@@ -1,18 +1,11 @@
 package net.openhft.chronicle.queue.util;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
+import net.openhft.chronicle.queue.main.RemovableRollFileCandidatesMain;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.util.Comparator;
-import java.util.List;
 import java.util.stream.Stream;
-
-import static java.util.Comparator.comparing;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Utility methods for handling Files in connection with ChronicleQueue.
@@ -22,8 +15,6 @@ import static java.util.stream.Collectors.toList;
  */
 public final class FileUtil {
 
-    private static final Comparator<File> EARLIEST_FIRST = comparing(File::getName);
-
     private FileUtil() {}
 
     /**
@@ -32,16 +23,9 @@ public final class FileUtil {
      *
      * @param args the directory. If no directory is given, "." is assumed
      */
+    @Deprecated /* For removal in 20.22, Use RemovableRollFileCandidatesMain.main instead */
     public static void main(String[] args) {
-        final File dir;
-        if (args.length == 0) {
-            dir = new File(".");
-        } else {
-            dir = new File(args[0]);
-        }
-        removableRollFileCandidates(dir)
-            .map(File::getAbsolutePath)
-            .forEach(System.out::println);
+        RemovableRollFileCandidatesMain.main(args);
     }
 
     /**
@@ -81,23 +65,7 @@ public final class FileUtil {
      */
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
-        assertOsSupported();
-        final File[] files = baseDir.listFiles(FileUtil::hasQueueSuffix);
-        if (files == null)
-            return Stream.empty();
-
-        final List<File> sortedInitialCandidates = Stream.of(files)
-            .sorted(EARLIEST_FIRST)
-            .collect(toList());
-
-        final Stream.Builder<File> builder = Stream.builder();
-        for (File file : sortedInitialCandidates) {
-            // If one file is not closed, discard it and the rest in the sequence
-            if (state(file) != FileState.CLOSED) break;
-            builder.accept(file);
-        }
-
-        return builder.build();
+        return InternalFileUtil.removableRollFileCandidates(baseDir);
     }
 
     /**
@@ -109,7 +77,7 @@ public final class FileUtil {
      *            suffix
      */
     public static boolean hasQueueSuffix(@NotNull File file) {
-        return file.getName().endsWith(SingleChronicleQueue.SUFFIX);
+        return InternalFileUtil.hasQueueSuffix(file);
     }
 
     /**
@@ -125,54 +93,6 @@ public final class FileUtil {
      *           supported for the current platform (e.g. Windows).
      */
     public static FileState state(@NotNull File file) {
-        assertOsSupported();
-        if (!file.exists()) return FileState.NON_EXISTENT;
-        final String absolutePath = file.getAbsolutePath();
-        try {
-            final Process process = new ProcessBuilder(new String[]{"lsof", "|", "grep", absolutePath}).start();
-            try  (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                return reader.lines()
-                    .anyMatch(l -> l.contains(absolutePath))
-                    ? FileState.OPEN
-                    : FileState.CLOSED;
-            } finally {
-                process.destroyForcibly();
-            }
-        } catch(IOException ignored) {
-            // Do nothing
-        }
-        return FileState.UNDETERMINED;
+        return InternalFileUtil.state(file);
     }
-
-    /**
-     * Returns if the given {@code file } is used by any process (i.e.
-     * has the file open for reading or writing).
-     *
-     * @param    file to check
-     * @return   if the given {@code file } is used by any process
-     */
-    // Todo: Here is a candidate for Windows. Verify that it works
-    private static FileState stateWindows(@NotNull File file) {
-        if (!file.exists()) return FileState.NON_EXISTENT;
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-             FileChannel fileChannel = randomAccessFile.getChannel()) {
-
-            final FileLock fileLock = fileChannel.tryLock();
-            if (fileLock != null) {
-                fileLock.close();
-                return FileState.CLOSED;
-            }
-            return FileState.OPEN;
-        } catch (IOException ignored) {
-            // Do nothing
-        }
-        return FileState.UNDETERMINED;
-    }
-
-    private static void assertOsSupported() {
-        if (OS.isWindows()) {
-            throw new UnsupportedOperationException("This operation is not supported under Windows.");
-        }
-    }
-
 }

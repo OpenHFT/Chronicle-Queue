@@ -758,13 +758,13 @@ class StoreTailer extends AbstractCloseable
         final WireType wireType = queue.wireType();
 
         final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
-        assert !SingleChronicleQueue.CHECK_INDEX || headerNumberCheck(wire);
+        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
 
         final Wire wireForIndexOld = wireForIndex;
         wireForIndex = readAnywhere(wireType.apply(store().bytes()));
-        assert !SingleChronicleQueue.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
+        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
         assert wire != wireForIndexOld;
 
         if (wireForIndexOld != null)
