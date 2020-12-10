@@ -20,9 +20,11 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.pom.PomProperties;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
@@ -33,6 +35,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -194,6 +197,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             sourceId = builder.sourceId();
 
+            final Map<String, String> additionalEventParameters = AnalyticsFacade.standardAdditionalProperties();
+            additionalEventParameters.put("wire_type", wireType.toString());
+            final String rollCycleName = rollCycle.toString();
+            if (!rollCycleName.startsWith("TEST"))
+                additionalEventParameters.put("roll_cycle", rollCycleName);
+
+            AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);

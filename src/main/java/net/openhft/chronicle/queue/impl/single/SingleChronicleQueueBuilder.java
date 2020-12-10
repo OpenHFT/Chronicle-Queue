@@ -24,6 +24,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
@@ -1027,7 +1028,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         try {
             initializeMetadata();
         } catch (Exception ex) {
-            metaStore.close();
+            Closeable.closeQuietly(metaStore);
             throw ex;
         }
         if ((epoch == null || epoch == 0) && (rollTime != null || rollTimeZone != null))
