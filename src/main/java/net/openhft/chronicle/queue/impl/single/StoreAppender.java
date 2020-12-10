@@ -844,7 +844,7 @@ class StoreAppender extends AbstractCloseable
                 if (interrupted)
                     throw new InterruptedException();
                 if (rollbackOnClose) {
-                    doRollback(interrupted);
+                    doRollback();
                     return;
                 }
 
@@ -890,9 +890,7 @@ class StoreAppender extends AbstractCloseable
             }
         }
 
-        private void doRollback(final boolean interrupted) {
-            if (interrupted)
-                Jvm.warn().on(getClass(), "Thread is interrupted. Can't guarantee complete message, so not committing");
+        private void doRollback() {
             // zero out all contents...
             for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
                 wire.bytes().writeByte(i, (byte) 0);
