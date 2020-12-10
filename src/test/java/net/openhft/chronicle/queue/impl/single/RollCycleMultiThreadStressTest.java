@@ -1,10 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
-import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.io.*;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -512,11 +509,11 @@ public class RollCycleMultiThreadStressTest {
                 appender0 = appender;
                // System.out.println("Starting pretoucher");
                 while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
-                    Jvm.pause(50);
                     appender.pretouch();
+                    Jvm.pause(50);
                 }
             } catch (Throwable e) {
-                if (queue0 != null && queue0.isClosed())
+                if (e instanceof ClosedIllegalStateException || queue0 != null && queue0.isClosed())
                     return null;
                 exception = e;
                 return e;
