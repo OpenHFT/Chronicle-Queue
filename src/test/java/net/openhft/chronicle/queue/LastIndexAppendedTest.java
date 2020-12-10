@@ -87,7 +87,7 @@ public class LastIndexAppendedTest extends ChronicleQueueTestBase {
             long t_index;
             t_index = doRead(tailer, 5);
             assertEquals(a_index, t_index);
-//            System.out.println("Continue appending");
+           // System.out.println("Continue appending");
             try (ChronicleQueue appender_queue = single(path)
                             .testBlockSize()
                             .rollCycle(TEST_DAILY)
@@ -102,12 +102,12 @@ public class LastIndexAppendedTest extends ChronicleQueueTestBase {
                 assertTrue(a_index > t_index);
             }
             // if the tailer continues as well it should see the 5 new messages
-//            System.out.println("Reading messages added");
+           // System.out.println("Reading messages added");
             t_index = doRead(tailer, 5);
             assertEquals(a_index, t_index);
 
             // if the tailer is expecting to read all the message again
-//            System.out.println("Reading all the messages again");
+           // System.out.println("Reading all the messages again");
             tailer.toStart();
             t_index = doRead(tailer, 10);
             assertEquals(a_index, t_index);
@@ -129,7 +129,7 @@ public class LastIndexAppendedTest extends ChronicleQueueTestBase {
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
                     assertNotNull(msg);
-//                    System.out.println("msg:" + msg);
+                   // System.out.println("msg:" + msg);
                     i[0]++;
                 });
             }

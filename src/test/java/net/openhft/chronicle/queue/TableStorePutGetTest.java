@@ -104,7 +104,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     cq.tableStorePut("=hello" + (j + i), i);
                 }
                 long end = System.nanoTime() - start;
-                System.out.println(j + ": " + end / 1000 / 1e3 + " us/entry");
+               // System.out.println(j + ": " + end / 1000 / 1e3 + " us/entry");
             }
         }
     }

@@ -22,13 +22,13 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         StoreFileListener sfl = new StoreFileListener() {
             @Override
             public void onAcquired(int cycle, File file) {
-//                    System.out.println("onAcquired(): " + file);
+                   // System.out.println("onAcquired(): " + file);
                 acount.incrementAndGet();
             }
 
             @Override
             public void onReleased(int cycle, File file) {
-//                    System.out.println("onReleased(): " + file);
+                   // System.out.println("onReleased(): " + file);
                 qcount.incrementAndGet();
             }
         };

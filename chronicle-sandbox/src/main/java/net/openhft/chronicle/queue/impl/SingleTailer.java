@@ -183,7 +183,7 @@ public class SingleTailer implements ExcerptTailer {
 
         try {
 
-//            final LongArrayValues values = value.get();
+           // final LongArrayValues values = value.get();
             final long[] result = new long[1];
 
             chronicle.bytes().position(offset);

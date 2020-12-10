@@ -51,12 +51,12 @@ public class LongRunTestMain {
                 appender.writeBytes(output);
             }
 
-            System.out.println((j + 1) * 100000);
+           // System.out.println((j + 1) * 100000);
             // Jvm.pause(100L);
         }
 
         queue.close();
-        System.out.println("took " + (System.currentTimeMillis() - start) / 1e3);
+       // System.out.println("took " + (System.currentTimeMillis() - start) / 1e3);
     }
 
     static class TLogEntry {

@@ -33,9 +33,9 @@ public final class ResultGenerator {
         final StageConfig lastStageConfig = allStageConfigs.
                 get(allStageConfigs.size() - 1);
         Jvm.setExceptionHandlers((c, m, t) -> {
-            System.out.println(m);
+           // System.out.println(m);
         }, (c, m, t) -> {
-            System.out.println(m);
+           // System.out.println(m);
             if (t != null) {
                 t.printStackTrace();
             }
@@ -136,21 +136,21 @@ public final class ResultGenerator {
                     writeToResults(" " + TimeUnit.NANOSECONDS.toMicros(maxQueueDeltas[i]));
                 }
                 writeToResults("\n");
-                System.out.println("Worst in second");
-                System.out.println(FORMATTER.format(LocalDateTime.ofEpochSecond(worstCopy.batchStartMillis / 1000, 0, ZoneOffset.UTC)));
-                System.out.println("publish to first stage");
+               // System.out.println("Worst in second");
+               // System.out.println(FORMATTER.format(LocalDateTime.ofEpochSecond(worstCopy.batchStartMillis / 1000, 0, ZoneOffset.UTC)));
+               // System.out.println("publish to first stage");
                 if (worstCopy.stagesToPublishBitMask == 5) {
-                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t0 - worstCopy.publishNanos));
+                   // System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t0 - worstCopy.publishNanos));
                 } else {
-                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t1 - worstCopy.publishNanos));
+                   // System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t1 - worstCopy.publishNanos));
                 }
-                System.out.println("first to second stage");
+               // System.out.println("first to second stage");
                 if (worstCopy.stagesToPublishBitMask == 5) {
-                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t2 - worstCopy.t0));
+                   // System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t2 - worstCopy.t0));
                 } else {
-                    System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t2 - worstCopy.t1));
+                   // System.out.println(TimeUnit.NANOSECONDS.toMicros(worstCopy.t2 - worstCopy.t1));
                 }
-                System.out.println(worstMessage);
+               // System.out.println(worstMessage);
 
                 messagesInThisSecond = 0L;
                 maxTotalLatencyInThisSecond = 0L;

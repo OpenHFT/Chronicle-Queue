@@ -39,7 +39,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 for (int i = 0; i < 6 + j; i++)
                     writer.hi(j, i);
                 timeProvider.advanceMillis(j * 500);
-//            System.out.println(timeProvider.currentTimeMillis());
+           // System.out.println(timeProvider.currentTimeMillis());
             }
         }
 

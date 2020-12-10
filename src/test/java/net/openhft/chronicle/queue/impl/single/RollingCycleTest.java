@@ -217,7 +217,7 @@ public class RollingCycleTest extends QueueTestCommon {
                     "...\n" +
                     "# 130532 bytes remaining\n";
 
-//            System.out.println("Wrote: " + numWritten + " messages");
+           // System.out.println("Wrote: " + numWritten + " messages");
 
             long numRead = 0;
             final TestBytesMarshallable reusableData = new TestBytesMarshallable(0);
@@ -240,7 +240,7 @@ public class RollingCycleTest extends QueueTestCommon {
             }
             assertFalse(currentPosTailer.readBytes(reusableData));
 
-//            System.out.println("Wrote " + numWritten + " Read " + numRead);
+           // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
             assertTrue(dump.contains(expectedEagerFile1));

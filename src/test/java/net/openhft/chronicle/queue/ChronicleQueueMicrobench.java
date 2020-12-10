@@ -86,7 +86,7 @@ public class ChronicleQueueMicrobench {
                 file.delete();
             } else {
                 file.getParentFile().mkdirs();
-//                file.createNewFile();
+               // file.createNewFile();
             }
 
             runnerOptions.resultFormat(ResultFormatType.JSON);

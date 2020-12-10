@@ -41,7 +41,7 @@ public class ReadmeTest extends QueueTestCommon {
             // write - {msg: TestMessage}
             appender.writeDocument(w -> w.write("msg").text("TestMessage"));
 
-//            System.out.println(queue.dump());
+           // System.out.println(queue.dump());
             // write - TestMessage
             appender.writeText("TestMessage");
 

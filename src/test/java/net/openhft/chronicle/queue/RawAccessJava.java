@@ -27,7 +27,7 @@ public class RawAccessJava {
             return;
 
         String tmp = "/dev/shm/RawAccessCtoJ";
-        System.out.println(tmp); // so C++ knows this ran rather than skipped
+       // System.out.println(tmp); // so C++ knows this ran rather than skipped
 
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
 
@@ -69,7 +69,7 @@ public class RawAccessJava {
             return;
 
         String tmp = "/dev/shm/RawAccessJtoC";
-        System.out.println(tmp); // so C++ knows this ran rather than skipped
+       // System.out.println(tmp); // so C++ knows this ran rather than skipped
 
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
 

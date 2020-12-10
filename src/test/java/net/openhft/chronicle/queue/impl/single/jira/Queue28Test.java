@@ -44,7 +44,7 @@ public class Queue28Test extends ChronicleQueueTestBase {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-//                {WireType.TEXT},
+               // {WireType.TEXT},
                 {WireType.BINARY}
         });
     }

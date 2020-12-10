@@ -57,10 +57,10 @@ public class OffHeapReplayData {
                 }
                 count++;
                 if (count % 1000000 == 0)
-                    System.out.println(tailer.index() + " : " + td);
+                   // System.out.println(tailer.index() + " : " + td);
             }
         }
-        System.out.printf("Took %.3f seconds to read %,d records%n",
+       // System.out.printf("Took %.3f seconds to read %,d records%n",
                 (System.nanoTime() - start) / 1e9, count);
     }
 }

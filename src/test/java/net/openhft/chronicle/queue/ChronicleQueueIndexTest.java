@@ -152,7 +152,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                 .path(file).build()) {
             String dump = queue123.dump();
-//            System.out.println(dump);
+           // System.out.println(dump);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data! #binary");
         }
     }
@@ -233,7 +233,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
             for (int j = 0; j < 8; j++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("hello").text(msg + (i++));
-//                    long indexWritten = dc.index();
+                   // long indexWritten = dc.index();
                 }
                 stp.advanceMillis(1500);
             }
@@ -265,7 +265,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
                 String s5 = dc.wire().read("hello").text();
-                System.out.println(s5);
+               // System.out.println(s5);
                 assertEquals(msg + 4, s5);
             }
         }

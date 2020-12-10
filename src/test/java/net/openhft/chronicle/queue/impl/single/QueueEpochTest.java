@@ -31,7 +31,7 @@ public final class QueueEpochTest extends ChronicleQueueTestBase {
 
     private static void logDebug(final String format, final Object... args) {
         if (DEBUG) {
-            System.out.printf(format, args);
+           // System.out.printf(format, args);
         }
     }
 

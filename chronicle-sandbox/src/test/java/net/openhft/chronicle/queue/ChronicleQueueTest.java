@@ -75,7 +75,7 @@ public class ChronicleQueueTest {
                     future.get();
                 }
                 long end = System.nanoTime();
-                System.out.printf("Threads: %,d - Write rate %.1f M/s - Read rate %.1f M/s%n", t, t * RUNS * 1e3 / (mid - start), t * RUNS * 1e3 / (end - mid));
+               // System.out.printf("Threads: %,d - Write rate %.1f M/s - Read rate %.1f M/s%n", t, t * RUNS * 1e3 / (mid - start), t * RUNS * 1e3 / (end - mid));
                 for (File f : files) {
                     f.delete();
                 }

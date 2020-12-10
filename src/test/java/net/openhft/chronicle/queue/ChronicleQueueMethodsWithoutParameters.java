@@ -42,7 +42,7 @@ public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBa
             assertTrue(someManager.methodWithOneParamInvoked);       // one param method was invoked
             assertTrue(someManager.methodWithoutParamsInvoked);      // no params method was NOT invoked
 
-//            LOG.warn(queue.dump());
+           // LOG.warn(queue.dump());
         }
     }
 

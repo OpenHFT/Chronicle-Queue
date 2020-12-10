@@ -52,7 +52,7 @@ public class IndexTest extends ChronicleQueueTestBase {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-//                {WireType.TEXT}, // TODO Add CAS to LongArrayReference.
+               // {WireType.TEXT}, // TODO Add CAS to LongArrayReference.
                 {WireType.BINARY}
         });
     }

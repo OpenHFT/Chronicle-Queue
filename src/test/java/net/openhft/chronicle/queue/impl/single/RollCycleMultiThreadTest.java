@@ -107,7 +107,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
 
                 Assert.assertEquals(2, (int) scheduledExecutorService.submit(observer).get());
 
-//                System.out.println(queue.dump());
+               // System.out.println(queue.dump());
                 assertEquals(2, observer.documentsRead);
             }
             scheduledExecutorService.shutdown();
@@ -152,12 +152,12 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
 
         @Override
         public void onAcquired(int cycle, File file) {
-//            System.out.println("Acquiring " + file);
+           // System.out.println("Acquiring " + file);
         }
 
         @Override
         public void onReleased(int cycle, File file) {
-//            System.out.println("Releasing " + file);
+           // System.out.println("Releasing " + file);
         }
 
         @Override
@@ -165,7 +165,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
 
             try (final DocumentContext dc = tailer.readingDocument()) {
 
-//                System.out.println("index=" + Long.toHexString(dc.index()));
+               // System.out.println("index=" + Long.toHexString(dc.index()));
                 if (!dc.isPresent())
                     return documentsRead;
 
@@ -176,7 +176,7 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
                 if (java.util.Objects.equals(readText, "")) {
                     return documentsRead;
                 }
-//                System.out.println("Read a document " + readText);
+               // System.out.println("Read a document " + readText);
                 documentsRead++;
 
             }

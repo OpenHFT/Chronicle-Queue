@@ -42,18 +42,18 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
 
             try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
                 String absolutePath = wireStore.file().getAbsolutePath();
-//                    System.out.println(absolutePath);
+                   // System.out.println(absolutePath);
                 Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
             }
 
-            //   Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
+              // Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
 
             try (DocumentContext dc = tailer.readingDocument()) {
-//                Assert.assertTrue(!dc.isPresent());
-//                    System.out.println(Long.toHexString(dc.index()));
+               // Assert.assertTrue(!dc.isPresent());
+                   // System.out.println(Long.toHexString(dc.index()));
             }
 
-            //  Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
+             // Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
             try (final SingleChronicleQueue q2 = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).build()) {
                 try (DocumentContext dc = q2.acquireAppender().writingDocument()) {
                     dc.wire().write("hello").text("world");
@@ -64,7 +64,7 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
                 Assert.assertTrue(dc.isPresent());
                 String actual = dc.wire().read("hello").text();
                 Assert.assertEquals("world", actual);
-//                    System.out.println(Long.toHexString(dc.index()));
+                   // System.out.println(Long.toHexString(dc.index()));
             }
         }
     }

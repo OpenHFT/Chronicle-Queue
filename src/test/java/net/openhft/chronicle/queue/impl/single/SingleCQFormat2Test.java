@@ -62,11 +62,11 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             @NotNull ExcerptAppender appender = queue.acquireAppender();
             try (DocumentContext dc = appender.writingDocument()) {
                 @NotNull MyData name = new MyData("name", 12345, 1.2, 111);
-//                System.out.println(name);
+               // System.out.println(name);
                 name.writeMarshallable(dc.wire());
 
                 @NotNull MyData name2 = new MyData("name2", 12346, 1.3, 112);
-//                System.out.println(name2);
+               // System.out.println(name2);
                 name2.writeMarshallable(dc.wire());
             }
             String dump = queue.dump();

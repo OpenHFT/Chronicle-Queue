@@ -38,13 +38,13 @@ public class VdsoTest {
                     end = Long.parseLong(parts[1], 16);
                 }
 
-//                System.out.println(line);
+               // System.out.println(line);
             }
         } catch (IOException ioe) {
             br.close();
             throw ioe;
         }
-        System.out.printf("vdso %x to %x %n", start, end);
+       // System.out.printf("vdso %x to %x %n", start, end);
         NativeBytes nb = new NativeBytes(start, end);
         long[] longs = new long[(int) ((end - start) / 8)];
         for (int i = 0; i < longs.length; i++)
@@ -53,7 +53,7 @@ public class VdsoTest {
         for (int i = 0; i < longs.length; i++) {
             long l = nb.readLong(i * 8);
             if (l != longs[i])
-                System.out.printf("%d: %d %x%n", i, l, l);
+               // System.out.printf("%d: %d %x%n", i, l, l);
         }
     }
 }

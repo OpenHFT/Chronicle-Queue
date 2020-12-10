@@ -73,7 +73,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "c: 3\n" +
                     "...\n" +
                     "# 130956 bytes remaining\n", table.dump());
-//            System.out.println(table.dump());
+           // System.out.println(table.dump());
             closeQuietly(c, b);
         }
     }

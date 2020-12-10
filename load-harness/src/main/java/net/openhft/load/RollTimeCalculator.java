@@ -11,7 +11,7 @@ public final class RollTimeCalculator {
     private static final long WINDOW_SIZE = TimeUnit.MINUTES.toMillis(15);
 
     public static void main(String[] args) {
-        System.out.println(getNextRollWindow());
+       // System.out.println(getNextRollWindow());
     }
 
     public static LocalTime getNextRollWindow() {

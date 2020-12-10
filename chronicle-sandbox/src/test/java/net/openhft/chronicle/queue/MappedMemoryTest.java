@@ -39,7 +39,7 @@ public class MappedMemoryTest {
                     bytes.writeLong(i);
                 }
 
-                System.out.println("With MappedNativeBytes,\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + BLOCK_SIZE / 8));
+               // System.out.println("With MappedNativeBytes,\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + BLOCK_SIZE / 8));
                 mappedFile.close();
             } finally {
                 tempFile.delete();
@@ -63,7 +63,7 @@ public class MappedMemoryTest {
                     bytes1.writeLong(i);
                 }
 
-                System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + BLOCK_SIZE / 8));
+               // System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + BLOCK_SIZE / 8));
                 mappedFile.close();
             } finally {
                 tempFile.delete();
@@ -77,7 +77,7 @@ public class MappedMemoryTest {
     public void testShowComparablePerformanceOfBytes() throws IOException {
 
         for (int x = 0; x < 5; x++) {
-            System.out.println("\n\niteration " + x);
+           // System.out.println("\n\niteration " + x);
             File tempFile = File.createTempFile("chronicle", "q");
             try {
 
@@ -89,7 +89,7 @@ public class MappedMemoryTest {
                     bytes.writeByte('X');
                 }
 
-                System.out.println("With MappedNativeBytes,\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
+               // System.out.println("With MappedNativeBytes,\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
             } finally {
                 tempFile.delete();
             }
@@ -105,11 +105,11 @@ public class MappedMemoryTest {
                     bytes1.writeByte('X');
                 }
 
-                System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
+               // System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
             } finally {
                 tempFile2.delete();
             }
-            System.out.println("");
+           // System.out.println("");
         }
     }
 
@@ -129,7 +129,7 @@ public class MappedMemoryTest {
             bytes.writeUTF("hello this is some more long text...................");
 
             bytes.position(100);
-            System.out.println("result=" + bytes.readUTF());
+           // System.out.println("result=" + bytes.readUTF());
         } finally {
             tempFile.delete();
         }

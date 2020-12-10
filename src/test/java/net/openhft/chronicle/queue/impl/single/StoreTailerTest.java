@@ -126,8 +126,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
             append.writeDocument(w -> w.write("test").text("text"));
 
             if (!tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals))) {
-                System.out.println("dump chronicle:\n" + chronicle.dump());
-                System.out.println("dump chronicle2:\n" + chronicle2.dump());
+               // System.out.println("dump chronicle:\n" + chronicle.dump());
+               // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");
             }
         }

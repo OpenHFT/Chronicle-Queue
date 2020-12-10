@@ -150,12 +150,12 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                         if (EventGroup.IS_DEBUG) {
                             long len = outWire.bytes().position() - SIZE_OF_SIZE;
                             if (len == 0) {
-                                System.out.println("--------------------------------------------\n" +
+                               // System.out.println("--------------------------------------------\n" +
                                         "server writes:\n\n<EMPTY>");
 
                             } else {
 
-                                System.out.println("--------------------------------------------\n" +
+                               // System.out.println("--------------------------------------------\n" +
                                         "server writes:\n\n" +
                                         Wires.fromSizePrefixedBlobs(outWire.bytes(), SIZE_OF_SIZE, len));
                             }

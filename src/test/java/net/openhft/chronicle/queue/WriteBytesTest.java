@@ -54,7 +54,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
             outgoingBytes.write(outgoingMsgBytes);
             postOneMessage(appender);
             fetchOneMessage(tailer, incomingMsgBytes);
-//            System.out.println(new String(incomingMsgBytes));
+           // System.out.println(new String(incomingMsgBytes));
 
             outgoingBytes.clear();
 
@@ -64,7 +64,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
 
             postOneMessage(appender);
             fetchOneMessage(tailer, incomingMsgBytes);
-//            System.out.println(new String(incomingMsgBytes));
+           // System.out.println(new String(incomingMsgBytes));
 
         } finally {
             try {

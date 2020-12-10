@@ -104,7 +104,7 @@ public class PretoucherTest extends ChronicleQueueTestBase {
 
             assertEquals(11, capturedCycles.size());
             // TODO FIX
-//            assertFalse(chunkListener.chunkMap.isEmpty());
+           // assertFalse(chunkListener.chunkMap.isEmpty());
         }
     }
 

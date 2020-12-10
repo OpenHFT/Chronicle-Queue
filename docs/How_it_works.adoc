@@ -119,7 +119,7 @@ public class Example {
         MyObject result = new MyObject();
         tailer.readDocument(result);
 
-        System.out.println(result);
+       // System.out.println(result);
     }
 
 }

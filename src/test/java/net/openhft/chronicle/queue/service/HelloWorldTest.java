@@ -70,13 +70,13 @@ public class HelloWorldTest extends QueueTestCommon {
             helloWorld.hello("April");
             helloWorld.hello("June");
 
-//            System.out.println(helloWorldService.inputQueues()[0].dump());
+           // System.out.println(helloWorldService.inputQueues()[0].dump());
             for (int i = 0; i < 2; i++) {
                 while (!replyReader.readOne()) {
                     Thread.yield();
                 }
             }
-//            System.out.println(helloWorldService.outputQueue().dump());
+           // System.out.println(helloWorldService.outputQueue().dump());
             verify(replier);
         } finally {
             builder.closeQueues();

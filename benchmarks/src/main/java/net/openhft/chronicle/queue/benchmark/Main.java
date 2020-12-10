@@ -39,7 +39,7 @@ public class Main {
     static final BufferMode BUFFER_MODE = getBufferMode();
 
     static {
-        System.out.println("Testing with " +
+       // System.out.println("Testing with " +
                 "-Dtime=" + time + " " +
                 "-Dthreads=" + threads + " " +
                 "-Dsize=" + size + " " +
@@ -66,9 +66,9 @@ public class Main {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        System.out.println("[Throughput]");
+       // System.out.println("[Throughput]");
         ThroughputMain.main(args);
-        System.out.println("\n[Latency]");
+       // System.out.println("\n[Latency]");
         LatencyDistributionMain.main(args);
     }
 }

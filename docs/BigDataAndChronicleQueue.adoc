@@ -127,7 +127,7 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
     ExcerptAppender appender = queue.acquireAppender();
     appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6)); // <1>
     appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6))); // <2>
-    System.out.print(queue.dump());
+   // System.out.print(queue.dump());
 }
 ----
 <1> Written as `keys` and `values`.

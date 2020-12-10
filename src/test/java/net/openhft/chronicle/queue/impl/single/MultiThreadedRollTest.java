@@ -72,13 +72,13 @@ public class MultiThreadedRollTest extends ChronicleQueueTestBase {
                     long index;
                     do {
                         try (DocumentContext documentContext = tailer.readingDocument()) {
-//                            System.out.println("tailer.state: " + tailer.state());
+                           // System.out.println("tailer.state: " + tailer.state());
                             // index is only meaningful if present.
                             index = documentContext.index();
-                            //    if (documentContext.isPresent())
+                               // if (documentContext.isPresent())
                             final boolean present = documentContext.isPresent();
-//                            System.out.println("documentContext.isPresent=" + present
-//                                    + (present ? ",index=" + Long.toHexString(index) : ", no index"));
+                           // System.out.println("documentContext.isPresent=" + present
+                                   // + (present ? ",index=" + Long.toHexString(index) : ", no index"));
                             Jvm.pause(50);
                         }
                     } while (index != 0x200000000L && !reader.isShutdown());

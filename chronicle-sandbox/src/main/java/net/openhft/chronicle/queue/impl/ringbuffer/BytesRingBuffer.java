@@ -241,9 +241,9 @@ public class BytesRingBuffer {
             this.buffer = buffer.bytes();
         }
 
-//        final AtomicLong writeLocationAtomic = new AtomicLong();
-//        final AtomicLong readLocationAtomic = new AtomicLong();
-//        final AtomicLong writeUpToOffsetAtomic = new AtomicLong();
+       // final AtomicLong writeLocationAtomic = new AtomicLong();
+       // final AtomicLong readLocationAtomic = new AtomicLong();
+       // final AtomicLong writeUpToOffsetAtomic = new AtomicLong();
 
         boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
             //return writeLocationAtomic.compareAndSet(expectedValue, newValue);
