@@ -12,14 +12,18 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 public final class InternalPingPongMain {
     //    static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 30); // seconds
     static String basePath = System.getProperty("path", OS.TMP);
-    static volatile long writeTime = 0;
-    static volatile int writeCount = 0;
-    static volatile int readCount = 0;
-    static volatile boolean running = true;
+    static AtomicLong writeTime = new AtomicLong();
+    static AtomicInteger writeCount = new AtomicInteger();
+    static AtomicInteger readCount = new AtomicInteger();
+    static AtomicBoolean running = new AtomicBoolean(true);
 
     static {
         System.setProperty("jvm.safepoint.enabled", "true");
@@ -43,50 +47,50 @@ public final class InternalPingPongMain {
 
             Thread reader = new Thread(() -> {
                 ExcerptTailer tailer = queue.createTailer();
-                while (running) {
+                while (running.get()) {
                     //noinspection StatementWithEmptyBody
-                    while (readCount == writeCount) ;
+                    while (readCount.get() == writeCount.get()) ;
 
                     long wakeTime = System.nanoTime();
-                    while (running) {
+                    while (running.get()) {
                         try (DocumentContext dc = tailer.readingDocument(true)) {
                             if (!dc.isPresent())
                                 continue;
                         }
                         break;
                     }
-                    long delay = wakeTime - writeTime;
-                    long time = System.nanoTime() - wakeTime;
+                    final long delay = wakeTime - writeTime.get();
+                    final long time = System.nanoTime() - wakeTime;
                     readDelay2.sample(time);
                     readDelay.sample(delay);
                     if (time + delay > 20_000)
                         System.out.println("td " + delay + " + " + time);
-                    if (readCount == 100000) {
+                    if (readCount.get() == 100000) {
                         System.out.println("reset");
                         readDelay.reset();
                         readDelay2.reset();
                     }
-                    readCount++;
+                    readCount.incrementAndGet();
                 }
             });
             reader.setDaemon(true);
             reader.start();
             Jvm.pause(100);
 
-            long finish = System.currentTimeMillis() + runtime * 1000;
-            ExcerptAppender appender = queue.acquireAppender();
+            final long finish = System.currentTimeMillis() + runtime * 1000L;
+            final ExcerptAppender appender = queue.acquireAppender();
             while (System.currentTimeMillis() < finish) {
-                if (readCount < writeCount) {
+                if (readCount.get() < writeCount.get()) {
                     Thread.yield();
                     continue;
                 }
                 try (DocumentContext dc = appender.writingDocument(false)) {
                     dc.wire().bytes().writeSkip(size);
                 }
-                writeCount++;
-                writeTime = System.nanoTime();
+                writeCount.incrementAndGet();
+                writeTime.set(System.nanoTime());
             }
-            running = false;
+            running.set(false);
         }
         System.out.println("read delay: " + readDelay.toMicrosFormat());
         System.out.println("read delay2: " + readDelay2.toMicrosFormat());
