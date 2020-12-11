@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
-@Deprecated /* For removal in 5.22., use Reader.create() instead */
+@Deprecated /* For removal in x.22., use Reader.create() instead */
 public final class ChronicleReader implements Reader {
 
     private final InternalChronicleReader delegate = new InternalChronicleReader();

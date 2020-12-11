@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
 
-@Deprecated /* For removal. Use Pretouch.createEventHandler() instead */
+@Deprecated /* For removal in x.20. Use Pretouch.createEventHandler() instead */
 public final class PretouchHandler implements EventHandler {
     private final Pretoucher pretoucher;
     private long lastRun = 0;

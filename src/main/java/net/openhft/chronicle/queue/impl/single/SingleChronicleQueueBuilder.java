@@ -72,7 +72,7 @@ import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable {
-    @Deprecated /* For removal in 2.22, Use QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY instead*/
+    @Deprecated /* For removal in x.22, Use QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY instead*/
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
 

@@ -12,7 +12,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 
-@Deprecated /* For removal for 2.22, Use main.PingPongMain instead*/
+@Deprecated /* For removal for x.22, Use main.PingPongMain instead*/
 public class QueuePingPongMain {
     //    static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 30); // seconds

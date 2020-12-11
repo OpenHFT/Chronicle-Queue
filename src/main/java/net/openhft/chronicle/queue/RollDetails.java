@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import org.jetbrains.annotations.Nullable;
 
-@Deprecated /* For removal, Is this ever used? */
+@Deprecated /* For removal in x.22, Is this ever used? */
 public class RollDetails extends BytesInBinaryMarshallable {
     final int cycle;
     final long epoch;

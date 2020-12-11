@@ -7,7 +7,7 @@ import net.openhft.chronicle.wire.WireType;
 
 import java.util.function.Consumer;
 
-@Deprecated /* For removal in 5.22, Use QueueEntryHandler.messageToText() instead */
+@Deprecated /* For removal in x.22, Use QueueEntryHandler.messageToText() instead */
 public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
     private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
     private final WireType wireType;

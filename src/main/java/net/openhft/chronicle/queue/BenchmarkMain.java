@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.locks.LockSupport;
 
-@Deprecated /* For removal in 2.22, use net.openhft.chronicle.queue.main.BenchmarkMain instead */
+@Deprecated /* For removal in x.22, use net.openhft.chronicle.queue.main.BenchmarkMain instead */
 public class BenchmarkMain {
     static volatile boolean running = true;
     static int throughput = Integer.getInteger("throughput", 250); // MB/s

@@ -23,7 +23,7 @@ public final class FileUtil {
      *
      * @param args the directory. If no directory is given, "." is assumed
      */
-    @Deprecated /* For removal in 20.22, Use RemovableRollFileCandidatesMain.main instead */
+    @Deprecated /* For removal in x.22, Use RemovableRollFileCandidatesMain.main instead */
     public static void main(String[] args) {
         RemovableRollFileCandidatesMain.main(args);
     }

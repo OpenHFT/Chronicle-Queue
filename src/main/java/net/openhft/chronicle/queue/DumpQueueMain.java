@@ -39,7 +39,7 @@ import java.util.Arrays;
  * private static final int LENGTH = ", 0".length();
  *
  */
-@Deprecated /* For removal, use net.openhft.chronicle.queue.main.Dumpain instead */
+@Deprecated /* For removal in x.22 , use net.openhft.chronicle.queue.main.Dumpain instead */
 public class DumpQueueMain {
     private static final String FILE = System.getProperty("file");
     private static final boolean SKIP_TABLE_STORE = Jvm.getBoolean("skipTableStoreDump");

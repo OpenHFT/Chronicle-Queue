@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Used by services to handle multiple QueueBackedMaps
  */
-@Deprecated /* For removal in 2.22. Use net.openhft.chronicle.queue.internal.domestic.backed.map.QueueBackedMaps instead */
+@Deprecated /* For removal in x.22. Use net.openhft.chronicle.queue.internal.domestic.backed.map.QueueBackedMaps instead */
 public class QueueBackedMaps implements QueueEvents {
     final Map<String, QueueEvents> maps = new ConcurrentHashMap<>();
 

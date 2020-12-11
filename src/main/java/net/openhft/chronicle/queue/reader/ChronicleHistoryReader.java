@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-@Deprecated /* For removal in 5.22, Use HistoryReader.create instead */
+@Deprecated /* For removal in x.22, Use HistoryReader.create instead */
 public class ChronicleHistoryReader implements HistoryReader {
 
     // Because the class is not final and contains protected methods

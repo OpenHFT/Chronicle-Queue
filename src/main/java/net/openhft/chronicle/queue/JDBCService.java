@@ -32,7 +32,7 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Deprecated /* For removal, use JDBCServiceProvider.create instead */
+@Deprecated /* For removal in x.22, use JDBCServiceProvider.create instead */
 public class JDBCService extends AbstractCloseable implements Closeable, JDBCServiceProvider {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
     @NotNull

@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-@Deprecated /* For removal in 2.22. This is now an internal concern. */
+@Deprecated /* For removal in x.22. This is now an internal concern. */
 public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler {
     @NotNull
     protected final MethodReader[] serviceIn;

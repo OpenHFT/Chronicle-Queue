@@ -64,7 +64,7 @@ import java.util.stream.Stream;
  */
 public interface ChronicleQueue extends Closeable {
 
-    @Deprecated /* For removal, use QueueUtil.testBlockSize instead */
+    @Deprecated /* For removal in x.22, use QueueUtil.testBlockSize instead */
     int TEST_BLOCK_SIZE = QueueUtil.testBlockSize();
 
     /**
