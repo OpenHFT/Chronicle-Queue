@@ -104,6 +104,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
     @NotNull
+    @Override
     default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
         return queue().methodWriter(tClass, additional);
     }
@@ -123,6 +124,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws NullPointerException if the provided parameter is {@code null}.
      */
     @NotNull
+    @Override
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
         return queue().methodWriterBuilder(tClass);
     }

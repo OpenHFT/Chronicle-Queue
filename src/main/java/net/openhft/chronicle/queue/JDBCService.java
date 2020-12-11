@@ -68,7 +68,7 @@ public class JDBCService extends AbstractCloseable implements Closeable, JDBCSer
                         pauser.pause();
                 }
             }
-        } catch (Throwable t) {
+        } catch (Exception t) {
             LOGGER.warn("Run loop exited", t);
         }
     }

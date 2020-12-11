@@ -41,7 +41,7 @@ public class InternalAppenderTest {
             appender.writeBytes(index + 2, Bytes.from("Replicated 2"));
 
             // We should have three messages in our queue.
-            assertEquals(queue.entryCount(), 3);
+            assertEquals(3, queue.entryCount());
 
         } finally {
             IOTools.deleteDirWithFiles(file);

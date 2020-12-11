@@ -71,6 +71,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return if {@link #readingDocument()} would return a DocumentContext
      *         that provides excerpts to read.
      */
+    @Override
     default boolean peekDocument() {
         return true;
     }

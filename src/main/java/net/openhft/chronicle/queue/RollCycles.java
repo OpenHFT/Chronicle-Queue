@@ -157,16 +157,6 @@ public enum RollCycles implements RollCycle {
     private final int indexSpacing;
     private final long sequenceMask;
 
-/*    RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
-        this.format = format;
-        this.lengthInMillis = lengthInMillis;
-        this.indexCount = Maths.nextPower2(indexCount, 8);
-        this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
-        cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
-        sequenceMask = (1L << cycleShift) - 1;
-
-    }*/
-
     RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this.format = format;
         this.lengthInMillis = lengthInMillis;
@@ -175,7 +165,6 @@ public enum RollCycles implements RollCycle {
         cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
         sequenceMask = (1L << cycleShift) - 1;
     }
- 
 
     public long maxMessagesPerCycle() {
         return maxMessagesPerCycle(indexCount, indexSpacing);
