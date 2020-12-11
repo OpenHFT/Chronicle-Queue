@@ -3,16 +3,19 @@ package net.openhft.chronicle.queue.internal.reader;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Mocker;
+import net.openhft.chronicle.queue.reader.QueueEntryHandler;
 import net.openhft.chronicle.wire.WireIn;
 
 import java.util.function.Consumer;
 
-public final class MethodReaderQueueEntryHandler implements QueueEntryHandler {
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
+
+public final class InternalMethodReaderQueueEntryHandler implements QueueEntryHandler {
     private final Class<?> mrInterface;
 
-    public MethodReaderQueueEntryHandler(String methodReaderInterface) {
+    public InternalMethodReaderQueueEntryHandler(String methodReaderInterface) {
         try {
-            mrInterface = Class.forName(methodReaderInterface);
+            mrInterface = Class.forName(requireNonNull(methodReaderInterface));
         } catch (ClassNotFoundException e) {
             throw Jvm.rethrow(e);
         }

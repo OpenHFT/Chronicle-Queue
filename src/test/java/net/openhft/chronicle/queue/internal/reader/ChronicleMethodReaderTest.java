@@ -8,7 +8,6 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
-import net.openhft.chronicle.queue.internal.reader.ChronicleReader;
 import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
@@ -91,12 +90,12 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
     }
 
     @NotNull
-    private ChronicleReader basicReader(Path path) {
-        return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
+    private InternalChronicleReader basicReader(Path path) {
+        return new InternalChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
     }
 
     @NotNull
-    private ChronicleReader basicReaderMethodReader(Path path) {
+    private InternalChronicleReader basicReaderMethodReader(Path path) {
         return basicReader(path).asMethodReader(All.class.getName());
     }
 
@@ -244,11 +243,11 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                         .count());
     }
 
-    private ChronicleReader basicReader() {
+    private InternalChronicleReader basicReader() {
         return basicReader(dataDir);
     }
 
-    private ChronicleReader basicReaderMethodReader() {
+    private InternalChronicleReader basicReaderMethodReader() {
         return basicReaderMethodReader(dataDir);
     }
 

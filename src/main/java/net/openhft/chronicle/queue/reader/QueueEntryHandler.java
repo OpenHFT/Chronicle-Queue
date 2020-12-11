@@ -1,8 +1,8 @@
 package net.openhft.chronicle.queue.reader;
 
-import net.openhft.chronicle.queue.internal.reader2.InternalDummyMethodReaderQueueEntryHandler;
-import net.openhft.chronicle.queue.internal.reader2.InternalMessageToTextQueueEntryHandler;
-import net.openhft.chronicle.queue.internal.reader2.InternalMethodReaderQueueEntryHandler;
+import net.openhft.chronicle.queue.internal.reader.InternalDummyMethodReaderQueueEntryHandler;
+import net.openhft.chronicle.queue.internal.reader.InternalMessageToTextQueueEntryHandler;
+import net.openhft.chronicle.queue.internal.reader.InternalMethodReaderQueueEntryHandler;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;

@@ -18,7 +18,8 @@
 
 package net.openhft.chronicle.queue.internal.main;
 
-import net.openhft.chronicle.queue.internal.reader.ChronicleHistoryReader;
+
+import net.openhft.chronicle.queue.reader.HistoryReader;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -47,17 +48,17 @@ public class InternalHistoryMain {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
-        final ChronicleHistoryReader chronicleHistoryReader = chronicleHistoryReader();
+        final HistoryReader chronicleHistoryReader = chronicleHistoryReader();
         setup(commandLine, chronicleHistoryReader);
         chronicleHistoryReader.execute();
     }
 
-    protected void setup(CommandLine commandLine, ChronicleHistoryReader chronicleHistoryReader) {
-        chronicleHistoryReader.
-                withMessageSink(System.out::println).
-                withProgress(commandLine.hasOption('p')).
-                withHistosByMethod(commandLine.hasOption('m')).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+    protected void setup(CommandLine commandLine, HistoryReader chronicleHistoryReader) {
+        chronicleHistoryReader
+                .withMessageSink(System.out::println)
+                .withProgress(commandLine.hasOption('p'))
+                .withHistosByMethod(commandLine.hasOption('m'))
+                .withBasePath(Paths.get(commandLine.getOptionValue('d')));
         if (commandLine.hasOption('t'))
             chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
         if (commandLine.hasOption('i'))
@@ -69,8 +70,8 @@ public class InternalHistoryMain {
     }
 
     @NotNull
-    protected ChronicleHistoryReader chronicleHistoryReader() {
-        return new ChronicleHistoryReader();
+    protected HistoryReader chronicleHistoryReader() {
+        return HistoryReader.create();
     }
 
     protected CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {

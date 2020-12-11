@@ -18,7 +18,7 @@
 
 package net.openhft.chronicle.queue.internal.main;
 
-import net.openhft.chronicle.queue.internal.reader.ChronicleReader;
+import net.openhft.chronicle.queue.reader.Reader;
 import net.openhft.chronicle.wire.WireType;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
@@ -54,15 +54,15 @@ public class InternalReaderMain {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
-        final ChronicleReader chronicleReader = chronicleReader();
+        final Reader chronicleReader = chronicleReader();
 
         configureReader(chronicleReader, commandLine);
 
         chronicleReader.execute();
     }
 
-    protected ChronicleReader chronicleReader() {
-        return new ChronicleReader();
+    protected Reader chronicleReader() {
+        return Reader.create();
     }
 
     protected CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {
@@ -103,13 +103,13 @@ public class InternalReaderMain {
         System.exit(status);
     }
 
-    protected void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
+    protected void configureReader(final Reader chronicleReader, final CommandLine commandLine) {
         final Consumer<String> messageSink = commandLine.hasOption('l') ?
                 s -> System.out.println(s.replaceAll("\n", "")) :
                 System.out::println;
-        chronicleReader.
-                withMessageSink(messageSink).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+        chronicleReader
+                .withMessageSink(messageSink)
+                .withBasePath(Paths.get(commandLine.getOptionValue('d')));
 
         if (commandLine.hasOption('i')) {
             stream(commandLine.getOptionValues('i')).forEach(chronicleReader::withInclusionRegex);

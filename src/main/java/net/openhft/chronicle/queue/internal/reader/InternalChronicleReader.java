@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue.internal.reader2;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
@@ -238,14 +238,11 @@ public final class InternalChronicleReader implements Reader{
         running = false;
     }
 
-    /*
-    // visible for testing
+    // visible for testing only
     InternalChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
         this.pollMethod = requireNonNull(pollMethod);
         return this;
     }
-
-     */
 
     private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex, ChronicleQueue queue) {
         long currentTailIndex = indexOfEnd(queue);

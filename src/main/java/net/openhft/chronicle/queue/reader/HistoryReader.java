@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.internal.reader2.InternalChronicleHistoryReader;
+import net.openhft.chronicle.queue.internal.reader.InternalChronicleHistoryReader;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;

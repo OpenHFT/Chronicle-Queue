@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.internal.reader2;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.reader.QueueEntryHandler;

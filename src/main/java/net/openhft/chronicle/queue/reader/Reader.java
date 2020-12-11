@@ -19,7 +19,7 @@
 package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.internal.reader2.InternalChronicleReader;
+import net.openhft.chronicle.queue.internal.reader.InternalChronicleReader;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

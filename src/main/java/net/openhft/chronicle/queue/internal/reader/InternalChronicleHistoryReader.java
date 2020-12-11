@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.reader.HistoryReader;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
@@ -18,74 +19,91 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class ChronicleHistoryReader {
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
+
+public final class InternalChronicleHistoryReader implements HistoryReader {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
-    protected Path basePath;
-    protected Consumer<String> messageSink;
-    protected boolean progress = false;
-    protected TimeUnit timeUnit = TimeUnit.NANOSECONDS;
-    protected boolean histosByMethod = false;
-    protected Map<String, Histogram> histos = new LinkedHashMap<>();
-    protected long ignore = 0;
-    protected long counter = 0;
-    protected long measurementWindowNanos = 0;
-    protected long firstTimeStampNanos = 0;
-    protected long lastWindowCount = 0;
-    protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
-    protected int lastHistosSize = 0;
 
     static {
         ToolsUtil.warnIfResourceTracing();
     }
 
-    public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
+    private final Supplier<? extends ChronicleQueue> queueSupplier;
+
+    private Path basePath;
+    private Consumer<String> messageSink;
+    private boolean progress = false;
+    private TimeUnit timeUnit = TimeUnit.NANOSECONDS;
+    private boolean histosByMethod = false;
+    private Map<String, Histogram> histos = new LinkedHashMap<>();
+    private long ignore = 0;
+    private long counter = 0;
+    private long measurementWindowNanos = 0;
+    private long firstTimeStampNanos = 0;
+    private long lastWindowCount = 0;
+    private int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
+    private int lastHistosSize = 0;
+
+    public InternalChronicleHistoryReader() {
+        this.queueSupplier = null;
+    }
+
+    public InternalChronicleHistoryReader(@NotNull final Supplier<? extends ChronicleQueue> queueSupplier) {
+        this.queueSupplier = requireNonNull(queueSupplier);
+    }
+
+    public InternalChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
         return this;
     }
 
-    public ChronicleHistoryReader withBasePath(final Path path) {
+    public InternalChronicleHistoryReader withBasePath(final Path path) {
         this.basePath = path;
         return this;
     }
 
-    public ChronicleHistoryReader withProgress(boolean p) {
+    public InternalChronicleHistoryReader withProgress(boolean p) {
         this.progress = p;
         return this;
     }
 
-    public ChronicleHistoryReader withTimeUnit(TimeUnit p) {
+    public InternalChronicleHistoryReader withTimeUnit(TimeUnit p) {
         this.timeUnit = p;
         return this;
     }
 
-    public ChronicleHistoryReader withHistosByMethod(boolean b) {
+    public InternalChronicleHistoryReader withHistosByMethod(boolean b) {
         this.histosByMethod = b;
         return this;
     }
 
-    public ChronicleHistoryReader withIgnore(long ignore) {
+    public InternalChronicleHistoryReader withIgnore(long ignore) {
         this.ignore = ignore;
         return this;
     }
 
-    public ChronicleHistoryReader withMeasurementWindow(long measurementWindow) {
+    public InternalChronicleHistoryReader withMeasurementWindow(long measurementWindow) {
         this.measurementWindowNanos = timeUnit.toNanos(measurementWindow);
         return this;
     }
 
-    public ChronicleHistoryReader withSummaryOutput(int offset) {
+    public InternalChronicleHistoryReader withSummaryOutput(int offset) {
         this.summaryOutputOffset = offset;
         return this;
     }
 
     @NotNull
-    protected ChronicleQueue createQueue() {
-        if (!Files.exists(basePath)) {
+    private ChronicleQueue createQueue() {
+        if (queueSupplier != null)
+            return queueSupplier.get();
+
+        if (!Files.exists(basePath))
             throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
-        }
+
         return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .readOnly(true)
@@ -186,7 +204,7 @@ public class ChronicleHistoryReader {
         return sb.toString();
     }
 
-    protected WireParselet parselet() {
+    private WireParselet parselet() {
         return (methodName, v) -> {
             v.skipValue();
             if (counter < ignore)
@@ -212,7 +230,7 @@ public class ChronicleHistoryReader {
         };
     }
 
-    protected void processMessage(CharSequence methodName, MessageHistory history) {
+    private void processMessage(CharSequence methodName, MessageHistory history) {
         CharSequence extraHistoId = histosByMethod ? ("_" + methodName) : "";
         long lastTime = 0;
         // if the tailer has recordHistory(true) then the MessageHistory will be

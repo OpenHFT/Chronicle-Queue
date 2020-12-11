@@ -92,7 +92,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
             assertEquals(2, getNumberOfQueueFiles(path));
 
             List<String> l = new LinkedList<>();
-            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
+            new InternalChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
             // 2 entries per message
             assertEquals(4, l.size());
         } finally {
@@ -125,7 +125,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
             removeEOF(firstQueueFile.get());
 
             List<String> l = new LinkedList<>();
-            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
+            new InternalChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
             // 2 entries per message
             assertEquals(4, l.size());
         } finally {
@@ -159,7 +159,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
             removeEOF(firstQueueFile.get());
 
             List<String> l = new LinkedList<>();
-            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).withReadOnly(false).execute();
+            new InternalChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).withReadOnly(false).execute();
             // 2 entries per message
             assertEquals(4, l.size());
         } finally {
