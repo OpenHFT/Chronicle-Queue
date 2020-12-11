@@ -36,15 +36,17 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * Writes (i.e. appends) the provided {@code bytes} to the queue.
      *
      * @param bytes to write to excerpt.
+     * @throws UnrecoverableTimeoutException if the operation times out.
      */
-    void writeBytes(@NotNull BytesStore bytes) throws UnrecoverableTimeoutException;
+    void writeBytes(@NotNull BytesStore bytes);
 
     /**
      * Writes (i.e. appends) the provided {@code bytes} to the queue.
      *
      * @param bytes to write to excerpt.
+     * @throws UnrecoverableTimeoutException if the operation times out.
      */
-    default void writeBytes(@NotNull Bytes bytes) throws UnrecoverableTimeoutException {
+    default void writeBytes(@NotNull Bytes bytes) {
         writeBytes((BytesStore) bytes);
     }
 

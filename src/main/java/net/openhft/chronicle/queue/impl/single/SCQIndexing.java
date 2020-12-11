@@ -564,7 +564,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         newIndex(wire, index2index, 0);
     }
 
-    private LongArrayValues getIndex2index(@NotNull Wire wire) throws UnrecoverableTimeoutException {
+    private LongArrayValues getIndex2index(@NotNull Wire wire) {
 
         LongArrayValuesHolder holder = getIndex2IndexArray();
         LongArrayValues values = holder.values;
@@ -577,8 +577,8 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         }
     }
 
-    private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2)
-            throws UnrecoverableTimeoutException, StreamCorruptedException {
+    // May throw UnrecoverableTimeoutException
+    private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2) throws  StreamCorruptedException {
         long secondaryAddress = index2indexArr.getVolatileValueAt(index2);
         if (secondaryAddress == 0) {
             secondaryAddress = newIndex(wire, index2indexArr, index2);
@@ -601,7 +601,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
      */
     void setPositionForSequenceNumber(@NotNull ExcerptContext ec,
                                       long sequenceNumber,
-                                      long position) throws UnrecoverableTimeoutException, StreamCorruptedException {
+                                      long position) throws StreamCorruptedException {
 
         // only say for example index every 0,15,31st entry
         if (!indexable(sequenceNumber)) {

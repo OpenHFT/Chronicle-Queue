@@ -87,7 +87,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @throws java.lang.IllegalStateException if the cycle of {@code fromIndex} or {@code toIndex} can
      *                                         not be ascertained
      */
-    long countExcerpts(long fromIndex, long toIndex) throws java.lang.IllegalStateException;
+    long countExcerpts(long fromIndex, long toIndex);
 
     /**
      * @return the current cycle

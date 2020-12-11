@@ -264,7 +264,8 @@ class StoreTailer extends AbstractCloseable
         }
     }
 
-    private boolean next0(final boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
+    // throws UnrecoverableTimeoutException
+    private boolean next0(final boolean includeMetaData) throws StreamCorruptedException {
         for (int i = 0; i < 1000; i++) {
             switch (state) {
                 case UNINITIALISED:

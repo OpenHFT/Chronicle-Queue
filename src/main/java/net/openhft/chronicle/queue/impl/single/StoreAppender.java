@@ -127,7 +127,7 @@ class StoreAppender extends AbstractCloseable
      * @param marshallable to write to excerpt.
      */
     @Override
-    public void writeBytes(@NotNull final WriteBytesMarshallable marshallable) throws UnrecoverableTimeoutException {
+    public void writeBytes(@NotNull final WriteBytesMarshallable marshallable) {
         throwExceptionIfClosed();
 
         try (DocumentContext dc = writingDocument()) {
@@ -313,9 +313,9 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * @return true if the header number is changed, otherwise false
-     * @throws UnrecoverableTimeoutException
+     * @throws UnrecoverableTimeoutException todo
      */
-    private boolean resetPosition() throws UnrecoverableTimeoutException {
+    private boolean resetPosition() {
         long originalHeaderNumber = wire.headerNumber();
         try {
             if (store == null || wire == null)
@@ -353,13 +353,15 @@ class StoreAppender extends AbstractCloseable
 
     @NotNull
     @Override
-    public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
+    // throws UnrecoverableTimeoutException
+    public DocumentContext writingDocument()  {
         return writingDocument(false); // avoid overhead of a default method.
     }
 
     @NotNull
     @Override
-    public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
+    // throws UnrecoverableTimeoutException
+    public DocumentContext writingDocument(final boolean metaData) {
         throwExceptionIfClosed();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
@@ -494,7 +496,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public void writeBytes(@NotNull final BytesStore bytes) throws UnrecoverableTimeoutException {
+    public void writeBytes(@NotNull final BytesStore bytes)  {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
@@ -673,7 +675,8 @@ class StoreAppender extends AbstractCloseable
     /*
      * wire must be not null when this method is called
      */
-    private void rollCycleTo(final int cycle) throws UnrecoverableTimeoutException {
+    // throws UnrecoverableTimeoutException
+    private void rollCycleTo(final int cycle) {
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
@@ -700,8 +703,8 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
     }
 
-    void writeIndexForPosition(final long index, final long position)
-            throws UnrecoverableTimeoutException, StreamCorruptedException {
+    // throws UnrecoverableTimeoutException
+    void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
 
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
@@ -900,7 +903,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         @Override
-        public long index() throws IORuntimeException {
+        public long index() {
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));

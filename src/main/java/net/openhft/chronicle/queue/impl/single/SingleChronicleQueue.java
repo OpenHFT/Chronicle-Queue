@@ -522,7 +522,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @throws IllegalStateException if we are not able to read the chronicle files
      */
     @Override
-    public long countExcerpts(long fromIndex, long toIndex) throws IllegalStateException {
+    public long countExcerpts(long fromIndex, long toIndex) {
         throwExceptionIfClosed();
 
         if (fromIndex > toIndex) {
