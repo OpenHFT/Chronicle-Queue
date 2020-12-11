@@ -220,7 +220,7 @@ class StoreAppender extends AbstractCloseable
                 try (DocumentContext dc = writingDocument()) {
                     long lengthCount = batchAppender.writeMessages(batchTmp.addressForWrite(0), maxMsgSize, 1);
                     int len = (int) lengthCount;
-                    dc.wire().bytes().write(batchTmp, (long) Integer.BYTES, len - Integer.BYTES);
+                    dc.wire().bytes().write(batchTmp, (long) Integer.BYTES, (long) len - Integer.BYTES);
                 }
                 lastIndex = lastIndexAppended();
                 count++;

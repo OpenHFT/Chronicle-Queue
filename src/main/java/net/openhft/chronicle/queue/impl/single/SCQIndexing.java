@@ -638,7 +638,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         long posN = indexValues.getValueAt(index3);
         if (posN == 0) {
             indexValues.setValueAt(index3, position);
-            indexValues.setMaxUsed(index3 + 1);
+            indexValues.setMaxUsed(index3 + 1L);
         } else {
             assert posN == position;
         }

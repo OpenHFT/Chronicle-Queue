@@ -244,20 +244,20 @@ public final class InternalChronicleHistoryReader implements HistoryReader {
             Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
             long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
             long processedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset + 1);
-            histo.sample(processedByThisComponent - receivedByThisComponent);
+            histo.sample((double) (processedByThisComponent - receivedByThisComponent));
             if (lastTime == 0 && firstWriteOffset > 0) {
                 Histogram histo1 = histos.computeIfAbsent("startTo" + histoId, s -> histogram());
-                histo1.sample(receivedByThisComponent - history.timing(0));
+                histo1.sample((double) (receivedByThisComponent - history.timing(0)));
             } else if (lastTime != 0) {
                 Histogram histo1 = histos.computeIfAbsent(history.sourceId(sourceIndex - 1) + "to" + histoId, s -> histogram());
                 // here we are comparing System.nanoTime across processes. YMMV
-                histo1.sample(receivedByThisComponent - lastTime);
+                histo1.sample((double) (receivedByThisComponent - lastTime));
             }
             lastTime = processedByThisComponent;
         }
         if (history.sources() > 1) {
             Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> histogram());
-            histoE2E.sample(history.timing(history.timings() - 1) - history.timing(0));
+            histoE2E.sample((double) (history.timing(history.timings() - 1) - history.timing(0)));
         }
     }
 

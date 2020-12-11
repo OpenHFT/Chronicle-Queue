@@ -189,7 +189,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             int size = bytes.readInt(0);
             if (!Wires.isReady(size))
                 return "not ready";
-            bytes.readLimit(Wires.lengthOf(size) + 4);
+            bytes.readLimit(Wires.lengthOf(size) + 4L);
             return Wires.fromSizePrefixedBlobs(bytes);
         }
     }

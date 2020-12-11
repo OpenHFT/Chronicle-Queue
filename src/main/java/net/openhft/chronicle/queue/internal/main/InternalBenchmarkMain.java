@@ -70,7 +70,7 @@ public class InternalBenchmarkMain {
             ExcerptTailer tailer = queue.createTailer().toEnd();
             long endLoop = System.nanoTime();
             while (running) {
-                loopTime.sample(System.nanoTime() - endLoop);
+                loopTime.sample((double) (System.nanoTime() - endLoop));
                 Jvm.safepoint();
 
 //                    readerLoopTime = System.nanoTime();
@@ -164,8 +164,8 @@ public class InternalBenchmarkMain {
             Bytes<?> bytes = wire.bytes();
             long start = readMessage(bytes);
             long end = System.nanoTime();
-            transportTime.sample(transport - start);
-            readTime.sample(end - transport);
+            transportTime.sample((double) (transport - start));
+            readTime.sample((double) (end - transport));
         }
         Jvm.safepoint();
     }
