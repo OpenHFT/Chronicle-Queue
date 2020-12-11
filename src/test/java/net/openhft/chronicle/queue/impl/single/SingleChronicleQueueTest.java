@@ -2642,7 +2642,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]));
 
             /// check for the case when the last index has a sequence number of -1
-            assertEquals(queue.rollCycle().toSequenceNumber(indexs[6]), 0);
+            assertEquals(0, queue.rollCycle().toSequenceNumber(indexs[6]));
             assertEquals(5, queue.countExcerpts(indexs[0],
                     indexs[6] - 1));
 

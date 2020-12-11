@@ -59,7 +59,7 @@ public final class RollAtEndOfCycleTest extends ChronicleQueueTestBase {
             while (true) {
                 final DocumentContext context = newTailer.readingDocument();
                 if (context.isPresent() && context.isData()) {
-                    assertTrue(context.wire().read().int32() != 0);
+                    assertNotEquals(0, context.wire().read().int32());
                     totalCount++;
                 } else if (!context.isPresent()) {
                     break;

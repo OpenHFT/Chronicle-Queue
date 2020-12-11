@@ -31,8 +31,7 @@ import java.io.File;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
 @RequiredForClient
@@ -118,7 +117,7 @@ public class ReadWriteTest extends QueueTestCommon {
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
             long index = tailer.index();
-            assertTrue(index != 0);
+            assertNotEquals(0, index);
         }
     }
 
@@ -138,7 +137,7 @@ public class ReadWriteTest extends QueueTestCommon {
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
             long index = tailer.index();
-            assertTrue(index != 0);
+            assertNotEquals(0, index);
         }
     }
 }
