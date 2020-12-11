@@ -95,10 +95,10 @@ class InternalEventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler
     public boolean action() throws InvalidEventHandlerException {
         if (isClosed()) {
             Closeable.closeQuietly(serviceImpl);
-            Closeable.closeQuietly(serviceIn);
+            Closeable.closeQuietly((Object[])serviceIn);
             Closeable.closeQuietly(outputQueue);
-            Closeable.closeQuietly(inputQueues);
-            throw new InvalidEventHandlerException();
+            Closeable.closeQuietly((Object[])inputQueues);
+            throw InvalidEventHandlerException.reusable();
         }
 
         boolean busy = false;

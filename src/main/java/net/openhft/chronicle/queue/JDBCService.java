@@ -58,13 +58,15 @@ public class JDBCService extends AbstractCloseable implements Closeable, JDBCSer
                     .methodWriterBuilder(JDBCResult.class)
                     .get();
             JDBCStatement js = JDBCStatement.create(connectionSupplier, result);
-            MethodReader reader = in.createTailer().afterLastWritten(out).methodReader(js);
-            Pauser pauser = Pauser.millis(1, 10);
-            while (!isClosed()) {
-                if (reader.readOne())
-                    pauser.reset();
-                else
-                    pauser.pause();
+            try (ExcerptTailer tailer = in.createTailer()) {
+                final MethodReader reader = tailer.afterLastWritten(out).methodReader(js);
+                final Pauser pauser = Pauser.millis(1, 10);
+                while (!isClosed()) {
+                    if (reader.readOne())
+                        pauser.reset();
+                    else
+                        pauser.pause();
+                }
             }
         } catch (Throwable t) {
             LOGGER.warn("Run loop exited", t);

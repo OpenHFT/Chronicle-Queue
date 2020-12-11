@@ -21,10 +21,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.JDBCResult;
-import net.openhft.chronicle.queue.JDBCServiceProvider;
-import net.openhft.chronicle.queue.JDBCStatement;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
 import org.jetbrains.annotations.NotNull;
@@ -60,13 +57,15 @@ public class InternalJDBCService extends AbstractCloseable implements Closeable,
                     .methodWriterBuilder(JDBCResult.class)
                     .get();
             JDBCStatement js = JDBCStatement.create(connectionSupplier, result);
-            MethodReader reader = in.createTailer().afterLastWritten(out).methodReader(js);
-            Pauser pauser = Pauser.millis(1, 10);
-            while (!isClosed()) {
-                if (reader.readOne())
-                    pauser.reset();
-                else
-                    pauser.pause();
+            try (ExcerptTailer tailer = in.createTailer()) {
+                final MethodReader reader = tailer.afterLastWritten(out).methodReader(js);
+                final Pauser pauser = Pauser.millis(1, 10);
+                while (!isClosed()) {
+                    if (reader.readOne())
+                        pauser.reset();
+                    else
+                        pauser.pause();
+                }
             }
         } catch (Throwable t) {
             LOGGER.warn("Run loop exited", t);
