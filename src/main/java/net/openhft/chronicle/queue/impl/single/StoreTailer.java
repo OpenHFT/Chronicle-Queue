@@ -183,7 +183,8 @@ class StoreTailer extends AbstractCloseable
 
         try {
 //            Jvm.optionalSafepoint();
-            boolean next = false, tryAgain = true;
+            boolean next = false;
+            boolean tryAgain = true;
             if (state == FOUND_IN_CYCLE) {
                 try {
 //                    Jvm.optionalSafepoint();

@@ -61,7 +61,7 @@ public final class InternalChronicleReader implements Reader{
     private Consumer<? super String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
     private WireType wireType = WireType.TEXT;
-    private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
+    private Supplier<QueueEntryHandler> entryHandlerFactory = () -> QueueEntryHandler.messageToText(wireType);
     private boolean displayIndex = true;
     private Class<?> methodReaderInterface;
     private volatile boolean running = true;
@@ -133,7 +133,7 @@ public final class InternalChronicleReader implements Reader{
                         return;
                 } while (tailInputSource || queueHasBeenModified);
             } catch (final RuntimeException e) {
-                if (e.getCause() != null && e.getCause() instanceof DateTimeParseException) {
+                if (e.getCause() instanceof DateTimeParseException) {
                     // ignore this error - due to a race condition between
                     // the reader creating a Queue (with default roll-cycle due to no files on disk)
                     // and the writer appending to the Queue with a non-default roll-cycle
@@ -215,7 +215,7 @@ public final class InternalChronicleReader implements Reader{
 
     public InternalChronicleReader asMethodReader(String methodReaderInterface) {
         if (methodReaderInterface == null)
-            entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
+            entryHandlerFactory = () -> QueueEntryHandler.dummy(wireType);
         else try {
             this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {

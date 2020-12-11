@@ -49,8 +49,10 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
 
     final LongValue nextEntryToBeIndexed;
-    private final int indexCount, indexCountBits;
-    private final int indexSpacing, indexSpacingBits;
+    private final int indexCount;
+    private final int indexCountBits;
+    private final int indexSpacing;
+    private final int indexSpacingBits;
     private final LongValue index2Index;
     private final Supplier<LongArrayValues> longArraySupplier;
     @NotNull

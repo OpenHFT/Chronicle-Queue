@@ -48,7 +48,7 @@ public class SingleTableBuilder<T extends Metadata> {
     @NotNull
     private final File file;
     @NotNull
-    private T metadata;
+    private final T metadata;
 
     private WireType wireType;
     private boolean readOnly;
@@ -103,7 +103,7 @@ public class SingleTableBuilder<T extends Metadata> {
             bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
             if (readOnly)
-                return SingleTableStore.doWithSharedLock(file, (v) -> {
+                return SingleTableStore.doWithSharedLock(file, v -> {
                     try {
                         return readTableStore(wire);
                     } catch (IOException ex) {
@@ -111,7 +111,7 @@ public class SingleTableBuilder<T extends Metadata> {
                     }
                 }, () -> null);
             else
-                return SingleTableStore.doWithExclusiveLock(file, (v) -> {
+                return SingleTableStore.doWithExclusiveLock(file, v -> {
                     try {
                         if (wire.writeFirstHeader()) {
                             return writeTableStore(bytes, wire);

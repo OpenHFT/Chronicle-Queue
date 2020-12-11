@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.service.EventLoopServiceWrapper;
 import net.openhft.chronicle.queue.service.ServiceWrapper;
 import net.openhft.chronicle.threads.EventGroup;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +31,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class InternalServiceWrapperBuilder<O> implements ServiceWrapper.Builder<O> {
     private final List<String> inputPaths = new ArrayList<>();

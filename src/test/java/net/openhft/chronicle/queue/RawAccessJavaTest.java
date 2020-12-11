@@ -9,7 +9,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 // For use with C++ RawAccessJava. Called from C++
-public class RawAccessJava {
+public class RawAccessJavaTest {
 
     final long QUEUE_HEADER_SIZE = 4;
     final long RAW_SIZE_PREFIX = 4;

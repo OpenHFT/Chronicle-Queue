@@ -34,7 +34,7 @@ import static net.openhft.chronicle.queue.RollCycles.SMALL_DAILY;
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
+public class ChronicleQueueTwoThreadsTest extends ChronicleQueueTestBase {
 
     private static final int BYTES_LENGTH = 256;
     private static final long INTERVAL_US = 10;

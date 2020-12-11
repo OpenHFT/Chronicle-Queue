@@ -297,7 +297,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        ;
+
         ValueOut wireOut = wire.write(MetaDataField.writePosition);
         intForBinding(wireOut, writePosition)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)

@@ -52,7 +52,6 @@ import java.text.ParseException;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -90,7 +89,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final boolean isBuffered;
     @NotNull
     private final WireType wireType;
-    private final long blockSize, overlapSize;
+    private final long blockSize;
+    private final long overlapSize;
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     private final long bufferCapacity;
@@ -766,12 +766,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return readOnly;
     }
 
-    private int toCycle(@Nullable Map.Entry<Long, File> entry) {
-        if (entry == null || entry.getValue() == null)
-            return -1;
-        return dateCache.parseCount(fileToText().apply(entry.getValue()));
-    }
-
     @NotNull
     @Override
     public String toString() {
@@ -1174,6 +1168,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 default:
                     throw new UnsupportedOperationException("Unsupported Direction");
             }
+        }
+
+        private int toCycle(@Nullable Map.Entry<Long, File> entry) {
+            if (entry == null || entry.getValue() == null)
+                return -1;
+            return dateCache.parseCount(fileToText().apply(entry.getValue()));
         }
 
         /**

@@ -22,10 +22,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.internal.service.InternalServiceWrapperBuilder;
-import net.openhft.chronicle.threads.EventGroup;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
