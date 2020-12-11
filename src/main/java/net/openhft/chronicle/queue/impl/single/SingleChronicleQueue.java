@@ -47,6 +47,7 @@ import java.io.*;
 import java.lang.ref.WeakReference;
 import java.nio.channels.FileLock;
 import java.nio.channels.NonWritableChannelException;
+import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.ZoneId;
 import java.util.*;
@@ -121,11 +122,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     protected final boolean doubleBuffer;
-    private StoreFileListener storeFileListener;
+    private final StoreFileListener storeFileListener;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
-    private RollCycle rollCycle;
-    private int deltaCheckpointInterval;
+    private final RollCycle rollCycle;
+    private final int deltaCheckpointInterval;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -154,7 +155,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             time = builder.timeProvider();
             pauserSupplier = builder.pauserSupplier();
             // add a 10% random element to make it less likely threads will timeout at the same time.
-            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
+            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * new SecureRandom().nextFloat())); // Not time critical
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
