@@ -316,6 +316,7 @@
             </plugin>
 
             <!-- Enable again once TC works-->
+<!--
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -335,6 +336,7 @@
                     </execution>
                 </executions>
             </plugin>
+            -->
 
             <plugin>
                 <groupId>org.sonarsource.scanner.maven</groupId>
