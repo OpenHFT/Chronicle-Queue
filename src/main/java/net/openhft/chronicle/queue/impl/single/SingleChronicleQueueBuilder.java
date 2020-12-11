@@ -388,7 +388,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    public SingleChronicleQueueBuilder rollTime(final LocalTime rollTime) {
+    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime) {
         rollTime(rollTime, rollTimeZone);
         return this;
     }
@@ -397,12 +397,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return rollTimeZone;
     }
 
-    public SingleChronicleQueueBuilder rollTimeZone(final ZoneId rollTimeZone) {
+    public SingleChronicleQueueBuilder rollTimeZone(@NotNull final ZoneId rollTimeZone) {
         rollTime(rollTime, rollTimeZone);
         return this;
     }
 
-    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, final ZoneId zoneId) {
+    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, @NotNull final ZoneId zoneId) {
         this.rollTime = rollTime;
         this.rollTimeZone = zoneId;
         this.epoch = TimeUnit.SECONDS.toMillis(rollTime.toSecondOfDay());
@@ -962,7 +962,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public boolean readOnly() {
-        return readOnly == Boolean.TRUE && !OS.isWindows();
+        return Boolean.TRUE.equals(readOnly) && !OS.isWindows();
     }
 
     public SingleChronicleQueueBuilder readOnly(boolean readOnly) {
@@ -1031,7 +1031,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             Closeable.closeQuietly(metaStore);
             throw ex;
         }
-        if ((epoch == null || epoch == 0) && (rollTime != null || rollTimeZone != null))
+        if ((epoch == null || epoch == 0) && (rollTime != null && rollTimeZone != null))
             rollTime(rollTime, rollTimeZone);
     }
 

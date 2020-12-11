@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.internal.domestic;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -21,7 +22,7 @@ public final class QueueOffsetSpec {
         return new QueueOffsetSpec(Type.EPOCH, new String[]{Long.toString(epoch)});
     }
 
-    public static QueueOffsetSpec ofRollTime(final LocalTime time, final ZoneId zoneId) {
+    public static QueueOffsetSpec ofRollTime(@NotNull final LocalTime time, @NotNull final ZoneId zoneId) {
         return new QueueOffsetSpec(Type.ROLL_TIME, new String[]{time.toString(), zoneId.toString()});
     }
 
@@ -29,7 +30,7 @@ public final class QueueOffsetSpec {
         return new QueueOffsetSpec(Type.NONE, new String[]{});
     }
 
-    public static QueueOffsetSpec parse(final String definition) {
+    public static QueueOffsetSpec parse(@NotNull final String definition) {
         final String[] tokens = definition.split(TOKEN_DELIMITER);
         final Type type = Type.valueOf(tokens[0]);
         switch (type) {
