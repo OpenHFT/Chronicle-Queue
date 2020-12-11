@@ -1061,7 +1061,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 if (!dir.exists())
                     dir.mkdirs();
 
-                path.createNewFile();
+                if (!path.createNewFile()) {
+                    Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath());
+                }
             } catch (IOException ex) {
                 Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
