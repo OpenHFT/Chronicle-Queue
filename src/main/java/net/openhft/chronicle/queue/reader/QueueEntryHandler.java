@@ -1,12 +1,33 @@
 package net.openhft.chronicle.queue.reader;
 
+import net.openhft.chronicle.queue.internal.reader2.InternalDummyMethodReaderQueueEntryHandler;
+import net.openhft.chronicle.queue.internal.reader2.InternalMessageToTextQueueEntryHandler;
+import net.openhft.chronicle.queue.internal.reader2.InternalMethodReaderQueueEntryHandler;
 import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-@Deprecated /* For removal in 2.22, moved to internal */
 public interface QueueEntryHandler extends BiConsumer<WireIn, Consumer<String>>, AutoCloseable {
+
     @Override
     void close();
+
+    @NotNull
+    static QueueEntryHandler dummy(@NotNull final WireType wireType) {
+        return new InternalDummyMethodReaderQueueEntryHandler(wireType);
+    }
+
+    @NotNull
+    static QueueEntryHandler messageToText(@NotNull final WireType wireType) {
+        return new InternalMessageToTextQueueEntryHandler(wireType);
+    }
+
+    @NotNull
+    static QueueEntryHandler methodReader(@NotNull final String methodReaderInterface) {
+        return new InternalMethodReaderQueueEntryHandler(methodReaderInterface);
+    }
+
 }

@@ -1,19 +1,22 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader2;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.queue.reader.QueueEntryHandler;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
 
-@Deprecated /* For removal in 2.22, Use QueueEntryHandler.dummy() instead */
-public final class DummyMethodReaderQueueEntryHandler implements QueueEntryHandler {
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
+
+public final class InternalDummyMethodReaderQueueEntryHandler implements QueueEntryHandler {
     private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
     private final WireType wireType;
 
-    public DummyMethodReaderQueueEntryHandler(WireType wireType) {
-        this.wireType = wireType;
+    public InternalDummyMethodReaderQueueEntryHandler(@NotNull WireType wireType) {
+        this.wireType = requireNonNull(wireType);
     }
 
     @Override

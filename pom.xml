@@ -15,14 +15,15 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.24</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
@@ -293,23 +294,54 @@
                 </executions>
 
             </plugin>
-               <plugin>
-                   <groupId>net.openhft</groupId>
-                   <artifactId>binary-compatibility-enforcer-plugin</artifactId>
-                   <version>1.0.4</version>
-                   <executions>
-                       <execution>
-                           <phase>verify</phase>
-                           <goals>
-                               <goal>enforcer</goal>
-                           </goals>
-                           <configuration>
-                               <referenceVersion>5.20.114</referenceVersion>
-                               <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
-                           </configuration>
-                       </execution>
-                   </executions>
-               </plugin>
+
+            <plugin>
+                <groupId>net.openhft</groupId>
+                <artifactId>binary-compatibility-enforcer-plugin</artifactId>
+                <version>1.0.4</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>enforcer</goal>
+                        </goals>
+                        <configuration>
+                             <!--To be removed-->
+                            <binaryCompatibilityPercentageRequired>90</binaryCompatibilityPercentageRequired>
+                            <referenceVersion>5.20.114</referenceVersion>
+                            <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Enable again once TC works-->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.6</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>3.7.0.1746</version>
+            </plugin>
+
         </plugins>
         <resources>
             <resource>

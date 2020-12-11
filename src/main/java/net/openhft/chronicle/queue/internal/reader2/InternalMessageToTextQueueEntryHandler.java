@@ -1,19 +1,21 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader2;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.queue.reader.QueueEntryHandler;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
 
 import java.util.function.Consumer;
 
-@Deprecated /* For removal in 5.22, Use QueueEntryHandler.messageToText() instead */
-public final class MessageToTextQueueEntryHandler implements QueueEntryHandler {
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
+
+public final class InternalMessageToTextQueueEntryHandler implements QueueEntryHandler {
     private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
     private final WireType wireType;
 
-    public MessageToTextQueueEntryHandler(WireType wireType) {
-        this.wireType = wireType;
+    public InternalMessageToTextQueueEntryHandler(WireType wireType) {
+        this.wireType = requireNonNull(wireType);
     }
 
     private static boolean isBinaryFormat(final byte dataFormatIndicator) {

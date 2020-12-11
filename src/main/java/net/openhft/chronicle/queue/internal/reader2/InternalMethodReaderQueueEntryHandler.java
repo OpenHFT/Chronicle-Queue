@@ -1,19 +1,21 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader2;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Mocker;
+import net.openhft.chronicle.queue.reader.QueueEntryHandler;
 import net.openhft.chronicle.wire.WireIn;
 
 import java.util.function.Consumer;
 
-@Deprecated /* For removal in 5.22, Use QueueEntryHandler.methodReader() instead */
-public final class MethodReaderQueueEntryHandler implements QueueEntryHandler {
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
+
+public final class InternalMethodReaderQueueEntryHandler implements QueueEntryHandler {
     private final Class<?> mrInterface;
 
-    public MethodReaderQueueEntryHandler(String methodReaderInterface) {
+    public InternalMethodReaderQueueEntryHandler(String methodReaderInterface) {
         try {
-            mrInterface = Class.forName(methodReaderInterface);
+            mrInterface = Class.forName(requireNonNull(methodReaderInterface));
         } catch (ClassNotFoundException e) {
             throw Jvm.rethrow(e);
         }

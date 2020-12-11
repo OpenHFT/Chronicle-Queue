@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue.internal.reader;
+package net.openhft.chronicle.queue.internal.reader2;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.reader.*;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -42,9 +43,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
-public final class ChronicleReader {
+public final class InternalChronicleReader implements Reader{
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
     private final List<Pattern> inclusionRegex = new ArrayList<>();
@@ -56,7 +58,7 @@ public final class ChronicleReader {
     private long maxHistoryRecords = UNSET_VALUE;
     private boolean readOnly = true;
     private ChronicleReaderPlugin customPlugin;
-    private Consumer<String> messageSink;
+    private Consumer<? super String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
     private WireType wireType = WireType.TEXT;
     private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
@@ -68,19 +70,6 @@ public final class ChronicleReader {
         ToolsUtil.warnIfResourceTracing();
     }
 
-    private static boolean checkForMatches(final List<Pattern> patterns, final String text,
-                                           final boolean shouldBePresent) {
-        for (Pattern pattern : patterns) {
-            if (!shouldBePresent == pattern.matcher(text).find()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean isSet(final long configValue) {
-        return configValue != UNSET_VALUE;
-    }
 
     private ThreadLocal<ExcerptTailer> tlTailer;
 
@@ -157,7 +146,10 @@ public final class ChronicleReader {
 
     }
 
-    public boolean readOne(QueueEntryHandler messageConverter, ExcerptTailer tailer, Consumer<String> messageConsumer) {
+    public boolean readOne(@NotNull QueueEntryHandler messageConverter, @NotNull ExcerptTailer tailer, @NotNull Consumer<String> messageConsumer) {
+        requireNonNull(messageConsumer);
+        requireNonNull(tailer);
+        requireNonNull(messageConsumer);
         try (DocumentContext dc = pollMethod.apply(tailer)) {
             if (!dc.isPresent()) {
                 return false;
@@ -172,56 +164,56 @@ public final class ChronicleReader {
         return true;
     }
 
-    public ChronicleReader withReadOnly(boolean readOnly) {
+    InternalChronicleReader withReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
         return this;
     }
 
-    public ChronicleReader withMessageSink(final Consumer<String> messageSink) {
-        this.messageSink = messageSink;
+    public InternalChronicleReader withMessageSink(@NotNull Consumer<? super String> messageSink) {
+        this.messageSink = requireNonNull(messageSink);
         return this;
     }
 
-    public Consumer<String> messageSink() {
+    public Consumer<? super String> messageSink() {
         return messageSink;
     }
 
-    public ChronicleReader withBasePath(final Path path) {
-        this.basePath = path;
+    public InternalChronicleReader withBasePath(final @NotNull Path path) {
+        this.basePath = requireNonNull(path);
         return this;
     }
 
-    public ChronicleReader withInclusionRegex(final String regex) {
-        this.inclusionRegex.add(Pattern.compile(regex));
+    public InternalChronicleReader withInclusionRegex(final @NotNull String regex) {
+        this.inclusionRegex.add(Pattern.compile(requireNonNull(regex)));
         return this;
     }
 
-    public ChronicleReader withExclusionRegex(final String regex) {
-        this.exclusionRegex.add(Pattern.compile(regex));
+    public InternalChronicleReader withExclusionRegex(final @NotNull String regex) {
+        this.exclusionRegex.add(Pattern.compile(requireNonNull(regex)));
         return this;
     }
 
-    public ChronicleReader withCustomPlugin(final ChronicleReaderPlugin customPlugin) {
-        this.customPlugin = customPlugin;
+    public InternalChronicleReader withCustomPlugin(final @NotNull ChronicleReaderPlugin customPlugin) {
+        this.customPlugin = requireNonNull(customPlugin);
         return this;
     }
 
-    public ChronicleReader withStartIndex(final long index) {
+    public InternalChronicleReader withStartIndex(final long index) {
         this.startIndex = index;
         return this;
     }
 
-    public ChronicleReader tail() {
+    public InternalChronicleReader tail() {
         this.tailInputSource = true;
         return this;
     }
 
-    public ChronicleReader historyRecords(final long maxHistoryRecords) {
+    public InternalChronicleReader historyRecords(final long maxHistoryRecords) {
         this.maxHistoryRecords = maxHistoryRecords;
         return this;
     }
 
-    public ChronicleReader asMethodReader(String methodReaderInterface) {
+    public InternalChronicleReader asMethodReader(String methodReaderInterface) {
         if (methodReaderInterface == null)
             entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
         else try {
@@ -232,21 +224,28 @@ public final class ChronicleReader {
         return this;
     }
 
-    public ChronicleReader withWireType(WireType wireType) {
-        this.wireType = wireType;
+    public InternalChronicleReader withWireType(@NotNull WireType wireType) {
+        this.wireType = requireNonNull(wireType);
         return this;
     }
 
-    public ChronicleReader suppressDisplayIndex() {
+    public InternalChronicleReader suppressDisplayIndex() {
         this.displayIndex = false;
         return this;
     }
 
+    public void stop() {
+        running = false;
+    }
+
+    /*
     // visible for testing
-    ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
-        this.pollMethod = pollMethod;
+    InternalChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
+        this.pollMethod = requireNonNull(pollMethod);
         return this;
     }
+
+     */
 
     private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex, ChronicleQueue queue) {
         long currentTailIndex = indexOfEnd(queue);
@@ -273,6 +272,21 @@ public final class ChronicleReader {
             tailer.toEnd();
         }
     }
+
+    private static boolean checkForMatches(final List<Pattern> patterns, final String text,
+                                           final boolean shouldBePresent) {
+        for (Pattern pattern : patterns) {
+            if (!shouldBePresent == pattern.matcher(text).find()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isSet(final long configValue) {
+        return configValue != UNSET_VALUE;
+    }
+
 
     private long indexOfEnd(ChronicleQueue queue) {
         final ExcerptTailer excerptTailer = tlTailer.get();
@@ -305,9 +319,5 @@ public final class ChronicleReader {
                 messageSink.accept(text);
             }
         }
-    }
-
-    public void stop() {
-        running = false;
     }
 }
