@@ -305,9 +305,7 @@
                             <goal>enforcer</goal>
                         </goals>
                         <configuration>
-                             <!--To be removed-->
-                            <binaryCompatibilityPercentageRequired>90</binaryCompatibilityPercentageRequired>
-                            <referenceVersion>5.20.114</referenceVersion>
+                            <referenceVersion>5.20.121</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                         </configuration>
                     </execution>
