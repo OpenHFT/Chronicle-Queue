@@ -118,7 +118,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         // use CQ dir in current directory, not tmp as that is often tmpfs
         final File tmpDir = new File(this.getClass().getSimpleName() + "_" + System.currentTimeMillis());
         tmpDir.deleteOnExit();
-//        System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
+       // System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(tmpDir)
                 .blockSize(BLOCK_SIZE)
@@ -164,9 +164,9 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 int counter = 0;
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
-//                        if (SAMPLING)
-//                            sampler.thread(Thread.currentThread());
-//                        boolean found = tailer.readDocument(myReadMarshallable);
+                       // if (SAMPLING)
+                           // sampler.thread(Thread.currentThread());
+                       // boolean found = tailer.readDocument(myReadMarshallable);
                         boolean found;
                         try (DocumentContext dc = tailer.readingDocument()) {
                             found = dc.isPresent();
@@ -183,7 +183,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                                 long now = System.nanoTime();
                                 histogramCo.sample(now - startCo);
                                 histogramIn.sample(now - startIn);
-//                                if (count % 1_000_000 == 0) System.out.println("read  " + count);
+                               // if (count % 1_000_000 == 0) System.out.println("read  " + count);
                             }
                         }
 /*
@@ -194,7 +194,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                                         !stack[0].getClassName().equals("java.lang.Thread")) {
                                     StringBuilder sb = new StringBuilder();
                                     Jvm.trimStackTrace(sb, stack);
-                                    System.out.println(sb);
+                                   // System.out.println(sb);
                                 }
                             } else if (!found) {
                                 Thread.yield();
@@ -255,7 +255,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                         }
                     }
                     next += interval;
-//                    if (i % 1_000_000 == 0) System.out.println("wrote " + i);
+                   // if (i % 1_000_000 == 0) System.out.println("wrote " + i);
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)
@@ -282,8 +282,8 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         tailerThread.interrupt();
         tailerThread.join();
 
-        System.out.println("wr: " + histogramWr.toMicrosFormat());
-        System.out.println("in: " + histogramIn.toMicrosFormat());
-        System.out.println("co: " + histogramCo.toMicrosFormat());
+       // System.out.println("wr: " + histogramWr.toMicrosFormat());
+       // System.out.println("in: " + histogramIn.toMicrosFormat());
+       // System.out.println("co: " + histogramCo.toMicrosFormat());
     }
 }

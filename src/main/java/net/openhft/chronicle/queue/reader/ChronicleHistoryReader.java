@@ -20,7 +20,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class ChronicleHistoryReader {
+@Deprecated /* For removal in x.22, Use HistoryReader.create instead */
+public class ChronicleHistoryReader implements HistoryReader {
+
+    // Because the class is not final and contains protected methods
+    // we cannot provide a delegator. So, this class remains as it is
+    // and will be removed in 5.22
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
     protected Path basePath;
@@ -41,41 +46,49 @@ public class ChronicleHistoryReader {
         ToolsUtil.warnIfResourceTracing();
     }
 
+    @Override
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
         return this;
     }
 
+    @Override
     public ChronicleHistoryReader withBasePath(final Path path) {
         this.basePath = path;
         return this;
     }
 
+    @Override
     public ChronicleHistoryReader withProgress(boolean p) {
         this.progress = p;
         return this;
     }
 
+    @Override
     public ChronicleHistoryReader withTimeUnit(TimeUnit p) {
         this.timeUnit = p;
         return this;
     }
 
+    @Override
     public ChronicleHistoryReader withHistosByMethod(boolean b) {
         this.histosByMethod = b;
         return this;
     }
 
+    @Override
     public ChronicleHistoryReader withIgnore(long ignore) {
         this.ignore = ignore;
         return this;
     }
 
+    @Override
     public ChronicleHistoryReader withMeasurementWindow(long measurementWindow) {
         this.measurementWindowNanos = timeUnit.toNanos(measurementWindow);
         return this;
     }
 
+    @Override
     public ChronicleHistoryReader withSummaryOutput(int offset) {
         this.summaryOutputOffset = offset;
         return this;
@@ -92,12 +105,14 @@ public class ChronicleHistoryReader {
                 .build();
     }
 
+    @Override
     public void execute() {
         readChronicle();
         if (measurementWindowNanos == 0)
             outputData();
     }
 
+    @Override
     public Map<String, Histogram> readChronicle() {
         try (final ChronicleQueue q = createQueue()) {
             final ExcerptTailer tailer = q.createTailer();
@@ -117,6 +132,7 @@ public class ChronicleHistoryReader {
         return histos;
     }
 
+    @Override
     public void outputData() {
         if (summaryOutputOffset != SUMMARY_OUTPUT_UNSET)
             printSummary();
@@ -226,20 +242,20 @@ public class ChronicleHistoryReader {
             Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
             long receivedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset);
             long processedByThisComponent = history.timing((2 * sourceIndex) + firstWriteOffset + 1);
-            histo.sample(processedByThisComponent - receivedByThisComponent);
+            histo.sample((double) (processedByThisComponent - receivedByThisComponent));
             if (lastTime == 0 && firstWriteOffset > 0) {
                 Histogram histo1 = histos.computeIfAbsent("startTo" + histoId, s -> histogram());
-                histo1.sample(receivedByThisComponent - history.timing(0));
+                histo1.sample((double) (receivedByThisComponent - history.timing(0)));
             } else if (lastTime != 0) {
                 Histogram histo1 = histos.computeIfAbsent(history.sourceId(sourceIndex - 1) + "to" + histoId, s -> histogram());
                 // here we are comparing System.nanoTime across processes. YMMV
-                histo1.sample(receivedByThisComponent - lastTime);
+                histo1.sample((double) (receivedByThisComponent - lastTime));
             }
             lastTime = processedByThisComponent;
         }
         if (history.sources() > 1) {
             Histogram histoE2E = histos.computeIfAbsent("endToEnd", s -> histogram());
-            histoE2E.sample(history.timing(history.timings() - 1) - history.timing(0));
+            histoE2E.sample((double) (history.timing(history.timings() - 1) - history.timing(0)));
         }
     }
 

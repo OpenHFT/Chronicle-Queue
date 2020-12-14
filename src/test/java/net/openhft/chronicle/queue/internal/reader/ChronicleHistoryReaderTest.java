@@ -15,7 +15,7 @@
  *
  */
 
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.IOTools;
@@ -88,7 +88,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
 
-            ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
+            InternalChronicleHistoryReader chronicleHistoryReader = new InternalChronicleHistoryReader()
                     .withBasePath(queuePath3.toPath())
                     .withTimeUnit(TimeUnit.MICROSECONDS)
                     .withMessageSink(System.out::println);

@@ -8,8 +8,8 @@ import java.util.function.ToIntFunction;
 final class FileSystemDirectoryListing extends SimpleCloseable implements DirectoryListing {
     private final File queueDir;
     private final ToIntFunction<File> fileToCycleFunction;
-    private int minCreatedCycle = Integer.MAX_VALUE,
-            maxCreatedCycle = Integer.MIN_VALUE;
+    private int minCreatedCycle = Integer.MAX_VALUE;
+    private int maxCreatedCycle = Integer.MIN_VALUE;
 
     FileSystemDirectoryListing(final File queueDir,
                                final ToIntFunction<File> fileToCycleFunction) {

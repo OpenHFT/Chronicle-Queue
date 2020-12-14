@@ -144,14 +144,14 @@ public class ToEndTest extends ChronicleQueueTestBase {
             Field storeF1 = StoreAppender.class.getDeclaredField("store");
             Jvm.setAccessible(storeF1);
             SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
-//            System.out.println(store1);
+           // System.out.println(store1);
 
             appender.writeDocument(wire -> wire.write("msg").int32(1));
 
             final StoreTailer tailer = (StoreTailer) queue.createTailer();
-//            System.out.println(tailer);
+           // System.out.println(tailer);
             tailer.toEnd();
-//            System.out.println(tailer);
+           // System.out.println(tailer);
 
             Field storeF2 = StoreTailer.class.getDeclaredField("store");
             Jvm.setAccessible(storeF2);

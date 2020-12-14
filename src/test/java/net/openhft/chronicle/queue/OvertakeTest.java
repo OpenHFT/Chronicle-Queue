@@ -99,7 +99,7 @@ public class OvertakeTest extends QueueTestCommon {
 
     @Test
     public void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
-//        System.out.println("Continue appending");
+       // System.out.println("Continue appending");
         ExecutorService execService = Executors.newFixedThreadPool(2,
                 new NamedThreadFactory("test"));
         SynchronousQueue<Long> sync = new SynchronousQueue<>();
@@ -146,7 +146,7 @@ public class OvertakeTest extends QueueTestCommon {
                 sync.put(index);
                 Long fromReader = sync.take();
                 if (index != fromReader) {
-                    System.out.println("Writer:Not the same:" + index + " vs. " + fromReader);
+                   // System.out.println("Writer:Not the same:" + index + " vs. " + fromReader);
                 }
                 for (int i = 0; i < 50; i++) {
                     appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
@@ -178,13 +178,13 @@ public class OvertakeTest extends QueueTestCommon {
             Long fromWriter = sync.take();
             long index = doReadBad(tailer, messages + 50, false);
             if (index != fromWriter) {
-                System.out.println("Reader:1 Not the same:" + index + " vs. " + fromWriter);
+               // System.out.println("Reader:1 Not the same:" + index + " vs. " + fromWriter);
             }
             sync.put(index);
             fromWriter = sync.take();
             index = doReadBad(tailer, 50, false);
             if (index != fromWriter) {
-                System.out.println("Reader:2 Not the same:" + index + " vs. " + fromWriter);
+               // System.out.println("Reader:2 Not the same:" + index + " vs. " + fromWriter);
             }
             return index;
         }

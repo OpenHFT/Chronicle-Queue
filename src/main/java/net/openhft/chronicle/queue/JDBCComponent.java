@@ -24,6 +24,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated /* For removal in x.22, use JdbcStatement.create() instead */
 public class JDBCComponent implements JDBCStatement {
     @NotNull
     private final Connection connection;
@@ -42,7 +43,7 @@ public class JDBCComponent implements JDBCStatement {
             int count = ps.executeUpdate();
             // record the count.
             result.updateResult(count, query, args);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             result.updateThrown(t, query, args);
         }
     }
@@ -69,7 +70,7 @@ public class JDBCComponent implements JDBCStatement {
             }
             result.queryResult(headings, rows, query, args);
 
-        } catch (Throwable t) {
+        } catch (Exception t) {
             result.queryThrown(t, query, args);
         }
     }

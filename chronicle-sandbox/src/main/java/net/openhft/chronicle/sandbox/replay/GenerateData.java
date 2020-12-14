@@ -53,7 +53,7 @@ public class GenerateData {
                 appender.finish();
             }
         }
-        System.out.printf("Took %.3f seconds to write %,d records%n",
+       // System.out.printf("Took %.3f seconds to write %,d records%n",
                 (System.nanoTime() - start) / 1e9, RECORDS);
     }
 }

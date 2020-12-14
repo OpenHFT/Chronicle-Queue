@@ -92,7 +92,7 @@ public class PeekDocumentTest extends ChronicleQueueTestBase {
 
                 String result = wire.read("value").text();
                 assertEquals("hello", result);
-//                System.out.println(result);
+               // System.out.println(result);
 
             }
 
@@ -178,7 +178,7 @@ public class PeekDocumentTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = queue.createTailer();
             ExcerptAppender appender = queue.acquireAppender();
 
-            boolean peekDocumentBeforeWrite = tailer.peekDocument();   //  peekDocumentBeforeWrite   should be false.but returns true
+            boolean peekDocumentBeforeWrite = tailer.peekDocument();    // peekDocumentBeforeWrite   should be false.but returns true
             assertFalse(peekDocumentBeforeWrite);
 
             try (DocumentContext dc = appender.writingDocument()) {

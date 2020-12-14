@@ -219,7 +219,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    //     System.out.println(line);
+                        // System.out.println(line);
                     if (line.contains(file.getAbsolutePath())) {
                         reader.close();
                         plsof.destroy();

@@ -14,9 +14,9 @@ class PretoucherState {
     @NotNull
     private final LongSupplier posSupplier;
     private int minHeadRoom;
-    private long lastTouchedPage = 0,
-            lastTouchedPos = 0,
-            lastPos = 0;
+    private long lastTouchedPage = 0;
+    private long lastTouchedPos = 0;
+    private long lastPos = 0;
     private int lastBytesHashcode = -1;
     private long averageMove = 0;
 

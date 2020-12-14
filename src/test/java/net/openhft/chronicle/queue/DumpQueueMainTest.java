@@ -8,6 +8,7 @@ import org.junit.Test;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
@@ -29,16 +30,18 @@ public class DumpQueueMainTest extends ChronicleQueueTestBase {
             excerptAppender.writeText("first");
             excerptAppender.writeText("last");
 
-            final Path queueFile = Files.list(dataDir.toPath()).
-                    filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
-                    findFirst().orElseThrow(() ->
-                    new AssertionError("Could not find queue file in directory " + dataDir));
-            assertTrue(queueFile.toFile().setWritable(false));
+            try (Stream<Path> list = Files.list(dataDir.toPath())) {
+                final Path queueFile = list.
+                        filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
+                        findFirst().orElseThrow(() ->
+                        new AssertionError("Could not find queue file in directory " + dataDir));
+                assertTrue(queueFile.toFile().setWritable(false));
 
-            final CountingOutputStream countingOutputStream = new CountingOutputStream();
-            DumpQueueMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
+                final CountingOutputStream countingOutputStream = new CountingOutputStream();
+                DumpQueueMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
 
-            assertThat(countingOutputStream.bytes, is(not(0L)));
+                assertThat(countingOutputStream.bytes, is(not(0L)));
+            }
         }
     }
 

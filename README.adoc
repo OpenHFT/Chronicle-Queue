@@ -143,6 +143,10 @@ For more information on Chronicle Queue (Enterprise Edition), please contact mai
 
 == How does Chronicle Queue work
 
+=== Internals
+Classes that reside in either of the packages 'internal', 'impl', and 'main' (the latter containing various runnable main methods) and
+any sub-packages are not a part of the public API and *may become subject to change at any time for any reason*. See the respective `package-info.java` files for details.
+
 === Terminology
 
 - Messages are grouped by *topics*.

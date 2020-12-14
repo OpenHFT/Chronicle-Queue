@@ -71,6 +71,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return if {@link #readingDocument()} would return a DocumentContext
      *         that provides excerpts to read.
      */
+    @Override
     default boolean peekDocument() {
         return true;
     }
@@ -193,7 +194,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @throws NullPointerException if the provided {@code queue} is {@code null}
      */
     @NotNull
-    ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
+    ExcerptTailer afterLastWritten(ChronicleQueue queue);
 
     /**
      * Sets the Read After Replica Acknowledged property of this Trailer to the

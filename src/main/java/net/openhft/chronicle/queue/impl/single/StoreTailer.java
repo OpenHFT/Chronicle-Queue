@@ -183,7 +183,8 @@ class StoreTailer extends AbstractCloseable
 
         try {
 //            Jvm.optionalSafepoint();
-            boolean next = false, tryAgain = true;
+            boolean next = false;
+            boolean tryAgain = true;
             if (state == FOUND_IN_CYCLE) {
                 try {
 //                    Jvm.optionalSafepoint();
@@ -264,7 +265,8 @@ class StoreTailer extends AbstractCloseable
         }
     }
 
-    private boolean next0(final boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
+    // throws UnrecoverableTimeoutException
+    private boolean next0(final boolean includeMetaData) throws StreamCorruptedException {
         for (int i = 0; i < 1000; i++) {
             switch (state) {
                 case UNINITIALISED:
@@ -758,13 +760,13 @@ class StoreTailer extends AbstractCloseable
         final WireType wireType = queue.wireType();
 
         final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
-        assert !SingleChronicleQueue.CHECK_INDEX || headerNumberCheck(wire);
+        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
 
         final Wire wireForIndexOld = wireForIndex;
         wireForIndex = readAnywhere(wireType.apply(store().bytes()));
-        assert !SingleChronicleQueue.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
+        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
         assert wire != wireForIndexOld;
 
         if (wireForIndexOld != null)

@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.locks.LockSupport;
 
+@Deprecated /* For removal in x.22, use net.openhft.chronicle.queue.main.BenchmarkMain instead */
 public class BenchmarkMain {
     static volatile boolean running = true;
     static int throughput = Integer.getInteger("throughput", 250); // MB/s
@@ -67,7 +68,7 @@ public class BenchmarkMain {
             ExcerptTailer tailer = queue.createTailer().toEnd();
             long endLoop = System.nanoTime();
             while (running) {
-                loopTime.sample(System.nanoTime() - endLoop);
+                loopTime.sample((double) (System.nanoTime() - endLoop));
                 Jvm.safepoint();
 
 //                    readerLoopTime = System.nanoTime();
@@ -161,8 +162,8 @@ public class BenchmarkMain {
             Bytes<?> bytes = wire.bytes();
             long start = readMessage(bytes);
             long end = System.nanoTime();
-            transportTime.sample(transport - start);
-            readTime.sample(end - transport);
+            transportTime.sample((double) (transport - start));
+            readTime.sample((double) (end - transport));
         }
         Jvm.safepoint();
     }

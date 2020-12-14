@@ -155,7 +155,7 @@ Created /tmp/chronicle-queue-tools.tar
 
 The resulting `tar` file can be copied to another location, and expanded.
 Once unpacked, invoke the `queue_reader.sh` script in order to execute the
-`ChronicleReader` utility:
+`InternalChronicleReader` utility:
 
 [source,bash]
 ....

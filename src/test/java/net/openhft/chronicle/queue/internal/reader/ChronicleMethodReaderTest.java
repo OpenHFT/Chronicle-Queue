@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodId;
 import net.openhft.chronicle.core.OS;
@@ -90,12 +90,12 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
     }
 
     @NotNull
-    private ChronicleReader basicReader(Path path) {
-        return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
+    private InternalChronicleReader basicReader(Path path) {
+        return new InternalChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
     }
 
     @NotNull
-    private ChronicleReader basicReaderMethodReader(Path path) {
+    private InternalChronicleReader basicReaderMethodReader(Path path) {
         return basicReader(path).asMethodReader(All.class.getName());
     }
 
@@ -243,11 +243,11 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                         .count());
     }
 
-    private ChronicleReader basicReader() {
+    private InternalChronicleReader basicReader() {
         return basicReader(dataDir);
     }
 
-    private ChronicleReader basicReaderMethodReader() {
+    private InternalChronicleReader basicReaderMethodReader() {
         return basicReaderMethodReader(dataDir);
     }
 

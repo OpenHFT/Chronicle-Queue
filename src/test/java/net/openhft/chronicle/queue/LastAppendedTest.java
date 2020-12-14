@@ -55,7 +55,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 msg.msg("somedata-3");
                 msg.msg("somedata-4");
 
-//                System.out.println(inQueue.dump());
+               // System.out.println(inQueue.dump());
 
                 AtomicReference<String> actualValue = new AtomicReference<>();
 

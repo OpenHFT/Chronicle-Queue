@@ -110,7 +110,7 @@ public class ContendedWriterTest extends ChronicleQueueTestBase {
     }
 
     private void test(String name, Config... configs) {
-//        System.out.println(name);
+       // System.out.println(name);
         File path = getTmpDir();
         SingleChronicleQueue[] queues = new SingleChronicleQueue[configs.length];
         StartAndMonitor[] startAndMonitors = new StartAndMonitor[configs.length];
@@ -120,7 +120,7 @@ public class ContendedWriterTest extends ChronicleQueueTestBase {
                 queues[i] = SingleChronicleQueueBuilder
                         .binary(path)
                         .testBlockSize()
-//                        .progressOnContention(configs[i].progressOnContention)
+                       // .progressOnContention(configs[i].progressOnContention)
                         .build();
                 startAndMonitors[i] = new StartAndMonitor(queues[i], Integer.toString(i), configs[i].writePause, configs[i].pauseBetweenWrites);
             }
@@ -197,13 +197,13 @@ public class ContendedWriterTest extends ChronicleQueueTestBase {
                     while (running.get()) {
                         long loopStart = System.nanoTime();
                         final ExcerptAppender appender = queue.acquireAppender();
-//                        System.out.println("about to open");
+                       // System.out.println("about to open");
                         try (final DocumentContext ctx = appender.writingDocument()) {
-//                            System.out.println("about to write");
+                           // System.out.println("about to write");
                             ctx.wire().getValueOut().marshallable(object);
-//                            System.out.println("about to close");
+                           // System.out.println("about to close");
                         }
-//                        System.out.println("closed");
+                       // System.out.println("closed");
                         long timeTaken = System.nanoTime() - loopStart;
                         histo.sampleNanos(timeTaken);
                         Jvm.pause(sleepBetweenMillis);

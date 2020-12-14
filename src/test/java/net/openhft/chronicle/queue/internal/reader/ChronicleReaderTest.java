@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.reader;
+package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -89,7 +89,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             }
         }
 
-        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        new InternalChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertFalse(capturedOutput.isEmpty());
     }
 
@@ -114,7 +114,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         Files.list(path).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(p -> p.toFile().delete());
         waitForGcCycle();
 
-        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        new InternalChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertFalse(capturedOutput.isEmpty());
     }
 
@@ -184,7 +184,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         expectException("Failback to readonly tablestore");
-        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        new InternalChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertTrue(capturedOutput.isEmpty());
     }
 
@@ -225,7 +225,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
             final long readerCapacity = getCurrentQueueFileLength(dataDir);
 
             final RecordCounter recordCounter = new RecordCounter();
-            final ChronicleReader chronicleReader = basicReader().withMessageSink(recordCounter);
+            final InternalChronicleReader chronicleReader = basicReader().withMessageSink(recordCounter);
 
             final ExecutorService executorService = Executors.newSingleThreadExecutor(
                     new NamedThreadFactory("executor"));
@@ -368,8 +368,8 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
                 .replaceAll(":", "");
     }
 
-    private ChronicleReader basicReader() {
-        return new ChronicleReader()
+    private InternalChronicleReader basicReader() {
+        return new InternalChronicleReader()
                 .withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add);
     }

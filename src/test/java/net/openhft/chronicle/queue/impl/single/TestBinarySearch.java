@@ -53,7 +53,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                     stp.currentTimeMillis(time);
                 }
             }
-            //     System.out.println(queue.dump());
+                // System.out.println(queue.dump());
 
             final Comparator<Wire> comparator = (o1, o2) -> {
 
@@ -89,7 +89,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                     Wire key = toWire(j);
 
                     long index = BinarySearch.search(queue, key, comparator);
-                    //   assert index != -1 : "i=" + j;
+                      // assert index != -1 : "i=" + j;
 
                     tailer.moveToIndex(index);
                     try (final DocumentContext documentContext = tailer.readingDocument()) {

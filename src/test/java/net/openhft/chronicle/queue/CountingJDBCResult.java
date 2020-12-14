@@ -34,10 +34,10 @@ class CountingJDBCResult implements JDBCResult {
 
     @Override
     public void queryResult(List<String> columns, @NotNull List<List<Object>> rows, String query, Object... args) {
-//        System.out.println("query " + query + " returned " + columns);
+       // System.out.println("query " + query + " returned " + columns);
 /*
         for (List<Object> row : rows) {
-            System.out.println("\t" + row);
+           // System.out.println("\t" + row);
         }
 */
         queries.incrementAndGet();

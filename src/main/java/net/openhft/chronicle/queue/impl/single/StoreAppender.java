@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -126,7 +127,7 @@ class StoreAppender extends AbstractCloseable
      * @param marshallable to write to excerpt.
      */
     @Override
-    public void writeBytes(@NotNull final WriteBytesMarshallable marshallable) throws UnrecoverableTimeoutException {
+    public void writeBytes(@NotNull final WriteBytesMarshallable marshallable) {
         throwExceptionIfClosed();
 
         try (DocumentContext dc = writingDocument()) {
@@ -219,7 +220,7 @@ class StoreAppender extends AbstractCloseable
                 try (DocumentContext dc = writingDocument()) {
                     long lengthCount = batchAppender.writeMessages(batchTmp.addressForWrite(0), maxMsgSize, 1);
                     int len = (int) lengthCount;
-                    dc.wire().bytes().write(batchTmp, (long) Integer.BYTES, len - Integer.BYTES);
+                    dc.wire().bytes().write(batchTmp, (long) Integer.BYTES, (long) len - Integer.BYTES);
                 }
                 lastIndex = lastIndexAppended();
                 count++;
@@ -312,9 +313,9 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * @return true if the header number is changed, otherwise false
-     * @throws UnrecoverableTimeoutException
+     * @throws UnrecoverableTimeoutException todo
      */
-    private boolean resetPosition() throws UnrecoverableTimeoutException {
+    private boolean resetPosition() {
         long originalHeaderNumber = wire.headerNumber();
         try {
             if (store == null || wire == null)
@@ -323,16 +324,16 @@ class StoreAppender extends AbstractCloseable
             position(position, position);
 
             Bytes<?> bytes = wire.bytes();
-            assert !SingleChronicleQueue.CHECK_INDEX || checkPositionOfHeader(bytes);
+            assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
             final long headerNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
 
-            assert !SingleChronicleQueue.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
+            assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
 
             bytes.writeLimit(bytes.capacity());
 
-            assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
+            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
             return originalHeaderNumber != wire.headerNumber();
 
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
@@ -352,13 +353,15 @@ class StoreAppender extends AbstractCloseable
 
     @NotNull
     @Override
-    public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
+    // throws UnrecoverableTimeoutException
+    public DocumentContext writingDocument()  {
         return writingDocument(false); // avoid overhead of a default method.
     }
 
     @NotNull
     @Override
-    public DocumentContext writingDocument(final boolean metaData) throws UnrecoverableTimeoutException {
+    // throws UnrecoverableTimeoutException
+    public DocumentContext writingDocument(final boolean metaData) {
         throwExceptionIfClosed();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
@@ -390,7 +393,7 @@ class StoreAppender extends AbstractCloseable
 
             int safeLength = (int) queue.overlapSize();
             resetPosition();
-            assert !SingleChronicleQueue.CHECK_INDEX || checkWritePositionHeaderNumber();
+            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
             // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);
@@ -493,7 +496,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public void writeBytes(@NotNull final BytesStore bytes) throws UnrecoverableTimeoutException {
+    public void writeBytes(@NotNull final BytesStore bytes)  {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
@@ -672,7 +675,8 @@ class StoreAppender extends AbstractCloseable
     /*
      * wire must be not null when this method is called
      */
-    private void rollCycleTo(final int cycle) throws UnrecoverableTimeoutException {
+    // throws UnrecoverableTimeoutException
+    private void rollCycleTo(final int cycle) {
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
@@ -699,8 +703,8 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
     }
 
-    void writeIndexForPosition(final long index, final long position)
-            throws UnrecoverableTimeoutException, StreamCorruptedException {
+    // throws UnrecoverableTimeoutException
+    void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
 
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
@@ -843,7 +847,7 @@ class StoreAppender extends AbstractCloseable
                 if (interrupted)
                     throw new InterruptedException();
                 if (rollbackOnClose) {
-                    doRollback(interrupted);
+                    doRollback();
                     return;
                 }
 
@@ -889,9 +893,7 @@ class StoreAppender extends AbstractCloseable
             }
         }
 
-        private void doRollback(final boolean interrupted) {
-            if (interrupted)
-                Jvm.warn().on(getClass(), "Thread is interrupted. Can't guarantee complete message, so not committing");
+        private void doRollback() {
             // zero out all contents...
             for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
                 wire.bytes().writeByte(i, (byte) 0);
@@ -901,7 +903,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         @Override
-        public long index() throws IORuntimeException {
+        public long index() {
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));

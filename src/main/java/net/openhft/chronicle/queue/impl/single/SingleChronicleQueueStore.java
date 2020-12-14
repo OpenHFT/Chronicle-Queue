@@ -189,7 +189,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             int size = bytes.readInt(0);
             if (!Wires.isReady(size))
                 return "not ready";
-            bytes.readLimit(Wires.lengthOf(size) + 4);
+            bytes.readLimit(Wires.lengthOf(size) + 4L);
             return Wires.fromSizePrefixedBlobs(bytes);
         }
     }
@@ -267,8 +267,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @Override
-    public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws
-            UnrecoverableTimeoutException, StreamCorruptedException {
+    public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws StreamCorruptedException {
         throwExceptionIfClosed();
 
         return indexing.sequenceForPosition(ec, position, inclusive);
@@ -298,7 +297,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        ;
+
         ValueOut wireOut = wire.write(MetaDataField.writePosition);
         intForBinding(wireOut, writePosition)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
@@ -322,9 +321,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @Override
-    public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec, long sequenceNumber,
-                                             long position)
-            throws UnrecoverableTimeoutException, StreamCorruptedException {
+    public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec,
+                                             long sequenceNumber,
+                                             long position) throws  StreamCorruptedException {
         throwExceptionIfClosedInSetter();
 
         sequence.setSequence(sequenceNumber, position);

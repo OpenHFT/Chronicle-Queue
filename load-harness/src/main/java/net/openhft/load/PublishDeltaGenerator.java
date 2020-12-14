@@ -24,9 +24,9 @@ public final class PublishDeltaGenerator {
             throw new IllegalArgumentException("Usage: <program> [resource-name]");
         }
         Jvm.setExceptionHandlers((c, m, t) -> {
-            System.out.println(m);
+           // System.out.println(m);
         }, (c, m, t) -> {
-            System.out.println(m);
+           // System.out.println(m);
             t.printStackTrace();
         }, (c, m, t) -> System.out.println(m));
 

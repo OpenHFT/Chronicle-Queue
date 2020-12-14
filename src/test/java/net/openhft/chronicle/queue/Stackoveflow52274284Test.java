@@ -16,7 +16,7 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
         String path = Files.createTempDirectory(Paths.get(basePath), "chronicle-")
                 .toAbsolutePath()
                 .toString();
-//        System.out.printf("Using temp path '%s'%n", path);
+       // System.out.printf("Using temp path '%s'%n", path);
 
         try (ChronicleQueue chronicleQueue = ChronicleQueue.singleBuilder(path).testBlockSize().build()) {
 
@@ -31,10 +31,10 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
 
             // Write
             for (int i = 0; i <= numberOfRecords; i++) {
-//                System.out.println("Writing " + i);
+               // System.out.println("Writing " + i);
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("msg").text("Hello World!");
-//                    System.out.println("your data was store to index=" + dc.index());
+                   // System.out.println("your data was store to index=" + dc.index());
                 } catch (Exception e) {
                     System.err.println("Unable to store value to chronicle");
                     e.printStackTrace();
@@ -42,10 +42,10 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
             }
             // Read
             for (int i = 0; i <= numberOfRecords; i++) {
-//                System.out.println("Reading " + i);
+               // System.out.println("Reading " + i);
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     long currentOffset = documentContext.index();
-//                    System.out.println("Current offset: " + currentOffset);
+                   // System.out.println("Current offset: " + currentOffset);
 
                     Wire wire = documentContext.wire();
 
@@ -53,7 +53,7 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
                         String msg = wire
                                 .read("msg")
                                 .text();
-//                        System.out.println(msg);
+                       // System.out.println(msg);
                     }
                 }
             }

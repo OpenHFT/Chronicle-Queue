@@ -24,6 +24,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.HandlerPriority;
@@ -40,6 +41,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
 import net.openhft.chronicle.threads.MediumEventLoop;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
@@ -70,9 +72,10 @@ import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable {
-    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
+    @Deprecated /* For removal in x.22, Use QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY instead*/
+    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
-    private static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
 
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -268,11 +271,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private static RollCycle loadDefaultRollCycle() {
-        if (null == System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY)) {
+        if (null == System.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY)) {
             return RollCycles.DEFAULT;
         }
 
-        String rollCycleProperty = System.getProperty(DEFAULT_ROLL_CYCLE_PROPERTY);
+        String rollCycleProperty = System.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
         if (rollCyclePropertyParts.length > 0) {
             try {
@@ -385,7 +388,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    public SingleChronicleQueueBuilder rollTime(final LocalTime rollTime) {
+    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime) {
         rollTime(rollTime, rollTimeZone);
         return this;
     }
@@ -394,12 +397,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return rollTimeZone;
     }
 
-    public SingleChronicleQueueBuilder rollTimeZone(final ZoneId rollTimeZone) {
+    public SingleChronicleQueueBuilder rollTimeZone(@NotNull final ZoneId rollTimeZone) {
         rollTime(rollTime, rollTimeZone);
         return this;
     }
 
-    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, final ZoneId zoneId) {
+    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, @NotNull final ZoneId zoneId) {
         this.rollTime = rollTime;
         this.rollTimeZone = zoneId;
         this.epoch = TimeUnit.SECONDS.toMillis(rollTime.toSecondOfDay());
@@ -708,7 +711,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * GMT
      */
     public long epoch() {
-        return epoch == null ? Long.getLong(DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
+        return epoch == null ? Long.getLong(QueueSystemProperties.DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
     }
 
     /**
@@ -959,7 +962,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public boolean readOnly() {
-        return readOnly == Boolean.TRUE && !OS.isWindows();
+        return Boolean.TRUE.equals(readOnly) && !OS.isWindows();
     }
 
     public SingleChronicleQueueBuilder readOnly(boolean readOnly) {
@@ -1025,10 +1028,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         try {
             initializeMetadata();
         } catch (Exception ex) {
-            metaStore.close();
+            Closeable.closeQuietly(metaStore);
             throw ex;
         }
-        if ((epoch == null || epoch == 0) && (rollTime != null || rollTimeZone != null))
+        if ((epoch == null || epoch == 0) && (rollTime != null && rollTimeZone != null))
             rollTime(rollTime, rollTimeZone);
     }
 

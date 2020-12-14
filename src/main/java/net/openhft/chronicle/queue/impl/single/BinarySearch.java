@@ -29,8 +29,7 @@ public enum BinarySearch {
                               @NotNull Wire key,
                               @NotNull Comparator<Wire> c) throws ParseException {
         final long readPosition = key.bytes().readPosition();
-        try {
-            final ExcerptTailer tailer = q.createTailer();
+        try (final ExcerptTailer tailer = q.createTailer()) {
             final long start = tailer.toStart().index();
             final long end = tailer.toEnd().index();
 

@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.*;
@@ -57,27 +58,28 @@ public final class TailerIndexingQueueTest extends ChronicleQueueTestBase {
         }
 
         // remove all but the first file
-        final Path firstFile =
-                Files.list(this.path.toPath())
-                        .sorted(Comparator.comparing(Path::toString))
-                        .findFirst()
-                        .orElseThrow(AssertionError::new);
-        Files.list(this.path.toPath())
-                .filter(p -> !p.equals(firstFile))
-                .forEach(TailerIndexingQueueTest::deleteFile);
+        try (Stream<Path> list = Files.list(this.path.toPath());
+             Stream<Path> list2 = Files.list(this.path.toPath())) {
+            final Path firstFile =
+                    list.sorted(Comparator.comparing(Path::toString))
+                            .findFirst()
+                            .orElseThrow(AssertionError::new);
+            list2.filter(p -> !p.equals(firstFile))
+                    .forEach(TailerIndexingQueueTest::deleteFile);
 
-        try (final ChronicleQueue queue = createQueue(path, SystemTimeProvider.INSTANCE)) {
-            final ExcerptTailer tailer = queue.createTailer().toEnd();
-            // move to END_OF_CYCLE
-            try (final DocumentContext readCtx = tailer.readingDocument()) {
-                assertFalse(readCtx.isPresent());
+            try (final ChronicleQueue queue = createQueue(path, SystemTimeProvider.INSTANCE)) {
+                final ExcerptTailer tailer = queue.createTailer().toEnd();
+                // move to END_OF_CYCLE
+                try (final DocumentContext readCtx = tailer.readingDocument()) {
+                    assertFalse(readCtx.isPresent());
+                }
+                assertEquals(TailerState.END_OF_CYCLE, tailer.state());
+
+                tailer.direction(TailerDirection.BACKWARD);
+
+                tailer.toEnd();
+                assertTrue(tailer.readingDocument().isPresent());
             }
-            assertEquals(TailerState.END_OF_CYCLE, tailer.state());
-
-            tailer.direction(TailerDirection.BACKWARD);
-
-            tailer.toEnd();
-            assertTrue(tailer.readingDocument().isPresent());
         }
     }
 }

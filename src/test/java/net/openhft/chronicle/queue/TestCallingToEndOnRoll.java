@@ -47,7 +47,7 @@ public class TestCallingToEndOnRoll extends ChronicleQueueTestBase implements Ti
     private void toEnd0() {
         try {
             long index = tailer.toEnd().index();
-            System.out.println("index = " + index);
+           // System.out.println("index = " + index);
         } catch (IllegalStateException e) {
             e.printStackTrace();
             Assert.fail();

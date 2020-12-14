@@ -70,7 +70,7 @@ public class ThroughputMain {
                     }
                 } while (start + time * 1e9 > System.nanoTime());
             }
-            System.out.println("... All data written, now reading ...");
+           // System.out.println("... All data written, now reading ...");
             nbs.releaseLast();
             count.addAndGet(count2);
         });
@@ -100,9 +100,9 @@ public class ThroughputMain {
         long end = System.nanoTime();
         long time2 = end - mid;
 
-        System.out.printf("Writing %,d messages took %.3f seconds, at a rate of %,d per second%n",
+       // System.out.printf("Writing %,d messages took %.3f seconds, at a rate of %,d per second%n",
                 count.longValue(), time1 / 1e9, 1000 * (long) (1e6 * count.get() / time1));
-        System.out.printf("Reading %,d messages took %.3f seconds, at a rate of %,d per second%n",
+       // System.out.printf("Reading %,d messages took %.3f seconds, at a rate of %,d per second%n",
                 count.longValue(), time2 / 1e9, 1000 * (long) (1e6 * count.get() / time2));
 
         Jvm.pause(200);
@@ -123,7 +123,7 @@ public class ThroughputMain {
     private static long writeMessages(long address, long canWrite, int writeCount, BytesStore nbs) {
         long length = 0;
         long count = 0;
-//        writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
+       // writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
         long fromAddress = nbs.addressForRead(0);
         while (writeCount > count && length + 4 + size <= canWrite) {
             UnsafeMemory.UNSAFE.copyMemory(fromAddress, address + 4, size);
@@ -132,7 +132,7 @@ public class ThroughputMain {
             length += 4 + size;
             count++;
         }
-//        System.out.println("w "+count+" "+length);
+       // System.out.println("w "+count+" "+length);
         return (count << 32) | length;
     }
 }

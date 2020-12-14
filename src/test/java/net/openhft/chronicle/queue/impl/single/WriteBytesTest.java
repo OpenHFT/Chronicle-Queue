@@ -19,7 +19,7 @@ public final class WriteBytesTest extends QueueTestCommon {
 
     }
 
-    //  @Test
+     // @Test
   /*  public void shouldWriteBytes() throws IOException {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(tmpDir.newFolder()).testBlockSize().build()) {

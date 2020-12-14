@@ -58,7 +58,7 @@ public class TestTailAfterRoll extends ChronicleQueueTestBase {
             appender.writeText("hello world  2");
         }
 
-        Assert.assertEquals(files.length, 1);
+        Assert.assertEquals(1, files.length);
         File file = files[0];
         file.delete();
 

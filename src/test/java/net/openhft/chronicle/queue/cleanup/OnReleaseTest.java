@@ -27,7 +27,7 @@ public class OnReleaseTest {
                 .rollCycle(RollCycles.MINUTELY)
                 .timeProvider(stp)
                 .storeFileListener((c, f) -> {
-//                    System.out.println("write released " + f);
+                   // System.out.println("write released " + f);
                     writeRoll.incrementAndGet();
                 })
                 .build();
@@ -36,7 +36,7 @@ public class OnReleaseTest {
                      .rollCycle(RollCycles.MINUTELY)
                      .timeProvider(stp)
                      .storeFileListener((c, f) -> {
-//                         System.out.println("read released " + f);
+                        // System.out.println("read released " + f);
                          readRoll.incrementAndGet();
                      })
                      .build()) {

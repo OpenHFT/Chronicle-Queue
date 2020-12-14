@@ -145,7 +145,7 @@ public class RollingResourcesCache {
         return value;
     }
 
-    static class ParseCount {
+    static final class ParseCount {
         final String name;
         final int count;
 
@@ -155,7 +155,7 @@ public class RollingResourcesCache {
         }
     }
 
-    public static class Resource {
+    public static final class Resource {
         public final long millis;
         public final String text;
         public final File path;

@@ -59,10 +59,10 @@ public class DtoBytesMarshallableTest extends ChronicleQueueTestBase {
 
             try (DocumentContext dc = q.createTailer().readingDocument()) {
                 String yaml = dc.toString();
-//                System.out.println(yaml);
+               // System.out.println(yaml);
 
                 DtoAbstractMarshallable who = (DtoAbstractMarshallable) dc.wire().read("who").object();
-//                System.out.println(who);
+               // System.out.println(who);
 
                 Assert.assertTrue(yaml.contains(who.toString()));
             }

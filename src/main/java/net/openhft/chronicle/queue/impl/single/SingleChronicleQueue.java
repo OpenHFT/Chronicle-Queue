@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.pom.PomProperties;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
@@ -48,11 +47,11 @@ import java.io.*;
 import java.lang.ref.WeakReference;
 import java.nio.channels.FileLock;
 import java.nio.channels.NonWritableChannelException;
+import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -67,7 +66,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
-    static final boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
@@ -91,7 +89,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final boolean isBuffered;
     @NotNull
     private final WireType wireType;
-    private final long blockSize, overlapSize;
+    private final long blockSize;
+    private final long overlapSize;
     @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     private final long bufferCapacity;
@@ -123,11 +122,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     protected final boolean doubleBuffer;
-    private StoreFileListener storeFileListener;
+    private final StoreFileListener storeFileListener;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
-    private RollCycle rollCycle;
-    private int deltaCheckpointInterval;
+    private final RollCycle rollCycle;
+    private final int deltaCheckpointInterval;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -156,7 +155,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             time = builder.timeProvider();
             pauserSupplier = builder.pauserSupplier();
             // add a 10% random element to make it less likely threads will timeout at the same time.
-            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextFloat()));
+            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * new SecureRandom().nextFloat())); // Not time critical
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
@@ -523,7 +522,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @throws IllegalStateException if we are not able to read the chronicle files
      */
     @Override
-    public long countExcerpts(long fromIndex, long toIndex) throws IllegalStateException {
+    public long countExcerpts(long fromIndex, long toIndex) {
         throwExceptionIfClosed();
 
         if (fromIndex > toIndex) {
@@ -765,12 +764,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     boolean isReadOnly() {
         return readOnly;
-    }
-
-    private int toCycle(@Nullable Map.Entry<Long, File> entry) {
-        if (entry == null || entry.getValue() == null)
-            return -1;
-        return dateCache.parseCount(fileToText().apply(entry.getValue()));
     }
 
     @NotNull
@@ -1063,7 +1056,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 if (!dir.exists())
                     dir.mkdirs();
 
-                path.createNewFile();
+                if (!path.createNewFile()) {
+                    Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath());
+                }
             } catch (IOException ex) {
                 Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
@@ -1173,6 +1168,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 default:
                     throw new UnsupportedOperationException("Unsupported Direction");
             }
+        }
+
+        private int toCycle(@Nullable Map.Entry<Long, File> entry) {
+            if (entry == null || entry.getValue() == null)
+                return -1;
+            return dateCache.parseCount(fileToText().apply(entry.getValue()));
         }
 
         /**

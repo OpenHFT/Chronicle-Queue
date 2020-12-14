@@ -182,9 +182,9 @@ public class LatencyDistributionMain {
                 int counter = 0;
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
-//                        if (SAMPLING)
-//                            sampler.thread(Thread.currentThread());
-//                        boolean found = tailer.readDocument(myReadMarshallable);
+                       // if (SAMPLING)
+                           // sampler.thread(Thread.currentThread());
+                       // boolean found = tailer.readDocument(myReadMarshallable);
                         boolean found;
                         try (DocumentContext dc = tailer.readingDocument()) {
                             found = dc.isPresent();
@@ -212,7 +212,7 @@ public class LatencyDistributionMain {
                                         !stack[0].getClassName().equals("java.lang.Thread")) {
                                     StringBuilder sb = new StringBuilder();
                                     Jvm.trimStackTrace(sb, stack);
-                                    System.out.println(sb);
+                                   // System.out.println(sb);
                                 }
                             } else if (!found) {
                                 Thread.yield();
@@ -303,7 +303,7 @@ public class LatencyDistributionMain {
         tailerThread.join();
 
 System.out.println("wr: " + histogramWr.toLongMicrosFormat());
-        System.out.println("in: " + histogramIn.toLongMicrosFormat());
-        System.out.println("co: " + histogramCo.toLongMicrosFormat());
+       // System.out.println("in: " + histogramIn.toLongMicrosFormat());
+       // System.out.println("co: " + histogramCo.toLongMicrosFormat());
     }
 }

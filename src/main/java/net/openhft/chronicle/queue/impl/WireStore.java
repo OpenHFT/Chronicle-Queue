@@ -49,13 +49,22 @@ public interface WireStore extends CommonStore, Closeable {
      * @param ec       the wire of the bytes, to work with
      * @param position of the start of the message
      * @return index in this store.
+     * @throws UnrecoverableTimeoutException if the operation times out
      */
-    long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive)
-            throws UnrecoverableTimeoutException, StreamCorruptedException;
+    long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws StreamCorruptedException;
 
     long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException;
 
-    void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
+    /**
+     * Sets the position using the provided parameters.
+     *
+     * @param ec       the wire of the bytes, to work with
+     * @param sequenceNumber to use when setting position
+     * @param position of the start of the message
+     * @throws UnrecoverableTimeoutException if the operation times out
+     * @throws StreamCorruptedException if the stream is corrupted
+     */
+    void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws StreamCorruptedException;
 
     /**
      * @return true if EOF was written

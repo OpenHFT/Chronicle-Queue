@@ -43,12 +43,12 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
             int cycle;
             {
                 ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD);
-                System.out.println(Long.toHexString(tailer.index()));
+               // System.out.println(Long.toHexString(tailer.index()));
                 tailer.toEnd();
                 cycle = tailer.cycle();
-                System.out.println(Long.toHexString(tailer.index()));
+               // System.out.println(Long.toHexString(tailer.index()));
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    System.out.println(Long.toHexString(tailer.index()));
+                   // System.out.println(Long.toHexString(tailer.index()));
                     assertEquals("world", dc.wire().read("hello").text());
                 }
             }
@@ -58,12 +58,12 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
 
             {
                 ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD);
-                System.out.println(Long.toHexString(tailer.index()));
+               // System.out.println(Long.toHexString(tailer.index()));
                 tailer.toEnd();
                 assertEquals(cycle, tailer.cycle());
-                System.out.println(Long.toHexString(tailer.index()));
+               // System.out.println(Long.toHexString(tailer.index()));
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    System.out.println(Long.toHexString(tailer.index()));
+                   // System.out.println(Long.toHexString(tailer.index()));
                     assertTrue(dc.isPresent());
                     assertEquals("world", dc.wire().read("hello").text());
                 }

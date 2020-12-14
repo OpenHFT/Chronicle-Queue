@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public final class PublisherMain {
     public static void main(String[] args) throws Exception {
-//        MlockAll.doMlockall();
+       // MlockAll.doMlockall();
         if (args.length != 1) {
             throw new IllegalArgumentException("Usage: <program> [resource-name]");
         }
@@ -60,7 +60,7 @@ public final class PublisherMain {
                     Thread.sleep(1);
                     final long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
                     if (durationMillis > 50L) {
-                        System.out.println("Schedule jitter: " + durationMillis + "ms at " + Instant.now());
+                       // System.out.println("Schedule jitter: " + durationMillis + "ms at " + Instant.now());
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();

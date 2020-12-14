@@ -49,7 +49,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throw new UnsupportedOperationException("Read only");
     }
 
-@Override
+    @Override
     public <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
         throw new UnsupportedOperationException("Read only");
     }
@@ -103,7 +103,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        ;
+
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
         read_only.printStackTrace();
         throw read_only;

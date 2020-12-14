@@ -133,13 +133,13 @@ public class BytesRingBufferTest {
     @Test
     public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-            System.out.println(nativeStore.realCapacity());
-            System.out.println(nativeStore.capacity());
-            System.out.println(nativeStore.limit());
+           // System.out.println(nativeStore.realCapacity());
+           // System.out.println(nativeStore.capacity());
+           // System.out.println(nativeStore.limit());
             assert !nativeStore.isElastic();
 
             Bytes<Void> bytes = nativeStore.bytes();
-            System.out.println(bytes);
+           // System.out.println(bytes);
 
             for (int j = 23 + 34; j < 100; j++) {
                 final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
@@ -161,9 +161,9 @@ public class BytesRingBufferTest {
             assert nativeStore.bytes().capacity() < (1 << 12);
             for (int i = 0; i < 100; i++) {
                 bytesRingBuffer.offer(data());
-                //      bytesRingBuffer.offer(data());
-                //        bytesRingBuffer.offer(data());
-                //   assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ());
+                     // bytesRingBuffer.offer(data());
+                       // bytesRingBuffer.offer(data());
+                  // assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ());
 
                 Bytes bytes = bytesRingBuffer.take(maxSize -> {
                     Bytes<ByteBuffer> clear = input.clear();
@@ -174,11 +174,11 @@ public class BytesRingBufferTest {
 
                     String s = bytes.readUTFΔ();
                 } catch (AssertionError e) {
-                    System.out.println(Bytes.toHex(bytes));
+                   // System.out.println(Bytes.toHex(bytes));
                 }
 
-                //   System.out.println("hex="+Bytes.toHex(bytes));
-                //   assertEquals(EXPECTED, bytes.readUTFΔ());
+                  // System.out.println("hex="+Bytes.toHex(bytes));
+                  // assertEquals(EXPECTED, bytes.readUTFΔ());
             }
         }
     }
@@ -186,7 +186,7 @@ public class BytesRingBufferTest {
     // @Ignore("works in lang-bytes")
     @Test
     public void testMultiThreadedCheckAllEntriesReturnedAreValidText() throws InterruptedException {
-        System.out.println("Hello World");
+       // System.out.println("Hello World");
         try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
 
@@ -209,7 +209,7 @@ public class BytesRingBufferTest {
                             do {
                                 offer = bytesRingBuffer.offer(out);
                             } while (!offer);
-                            System.out.println("+");
+                           // System.out.println("+");
                         } catch (Throwable e) {
                             e.printStackTrace();
                         }
@@ -218,7 +218,7 @@ public class BytesRingBufferTest {
             }
 
             CountDownLatch count = new CountDownLatch(iterations);
-            System.out.println(count);
+           // System.out.println(count);
 
             //reader
             {
@@ -242,7 +242,7 @@ public class BytesRingBufferTest {
 
                             if (actual.startsWith(EXPECTED_VALUE))
                                 count.countDown();
-                            System.out.println("-");
+                           // System.out.println("-");
                         } catch (Throwable e) {
                             e.printStackTrace();
                         }
@@ -256,7 +256,7 @@ public class BytesRingBufferTest {
 
     // @Ignore("works in lang-bytes, appears to be a visibility issue that can be fixed by adding
     // a" +
-    //        " synchronized to ringbuffer.poll() and ringbuffer.offer()")
+           // " synchronized to ringbuffer.poll() and ringbuffer.offer()")
     @Test
     public void testMultiThreadedWithIntValues() {
 

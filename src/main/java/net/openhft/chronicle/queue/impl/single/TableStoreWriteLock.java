@@ -94,11 +94,9 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @NotNull
     protected String getLockedBy(long value) {
-        final String lockedBy =
-                value == Long.MIN_VALUE ? "unknown" :
-                        value == PID ? "me"
-                                : Long.toString((int) value);
-        return lockedBy;
+        return value == Long.MIN_VALUE ? "unknown" :
+                value == PID ? "me"
+                        : Long.toString((int) value);
     }
 
     private boolean checkNotAlreadyLocked() {
