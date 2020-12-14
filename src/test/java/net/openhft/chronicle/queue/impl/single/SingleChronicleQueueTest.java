@@ -44,6 +44,7 @@ import org.junit.runners.Parameterized.Parameters;
 import java.io.*;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -52,6 +53,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
@@ -3208,8 +3210,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
         }
 
-        Files.list(queueDir.toPath())
-                .forEach(p -> assertTrue(p.toFile().setReadOnly()));
+        try (Stream<Path> list = Files.list(queueDir.toPath())) {
+            list.forEach(p -> assertTrue(p.toFile().setReadOnly()));
+        }
 
         try (final ChronicleQueue queue = builder(queueDir, wireType).
                 readOnly(true).
@@ -3523,17 +3526,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
-            long fileCount = Files.list(queueFolder.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).count();
-            if (fileCount <= 10L) {
-                passed = false;
-                builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, fileCount));
-            }
+            try (Stream<Path> list = Files.list(queueFolder.toPath())) {
+                long fileCount = list.filter(p -> p.toString().endsWith(SUFFIX)).count();
+                if (fileCount <= 10L) {
+                    passed = false;
+                    builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, fileCount));
+                }
 
-            if (passed) {
-                builder.append(String.format("Test for time %s passed!%n", time));
-            }
+                if (passed) {
+                    builder.append(String.format("Test for time %s passed!%n", time));
+                }
 
-            return passed;
+                return passed;
+            }
         }
     }
 
