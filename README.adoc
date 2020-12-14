@@ -1419,10 +1419,12 @@ try (DocumentContext dc = appender.writingDocument()) {
 ==== Padding added to the end of Excerpts
 
 If you are writing bytes to a Chronicle-Queue you will find that it occasionally adds padding to the end of each message.
-This is to ensure that each message starts on a 4-byte boundary which is a requirement for ARM architectures. NOTE: Intel also requires that messages don’t straggle 64-byte cash lines.
+This is to ensure that each message starts on a 4-byte boundary which is a requirement for ARM architectures. NOTE: Intel requires that messages don’t straggle 64-byte cash lines.
 but aligning to 4 bytes also ensures 64-byte alignment and allows your Chronicle Queues to be shared between various different platforms.
 
-For Chronicle Queue, the 4-byte alignment is now enforced, so there is now, no way to turn this feature on or off. This behavour was changed on 21 April 2020 as part of https://github.com/OpenHFT/Chronicle-Queue/issues/656
+For Chronicle Queue, the 4-byte alignment is now enforced, so there is now, no way to turn this feature on or off.
+This behaviour was changed on 21 April 2020 as part of https://github.com/OpenHFT/Chronicle-Queue/issues/656
+
 
 ==== Ensure long Running tasks are not performed with a writingDocument()
 
