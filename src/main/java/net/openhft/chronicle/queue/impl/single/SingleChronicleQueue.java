@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
+import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
@@ -57,6 +58,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.wire.Wires.*;
@@ -196,6 +199,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
 
             sourceId = builder.sourceId();
+
+            Announcer.announce("net.openhft", "chronicle-queue",
+                    AnalyticsFacade.isEnabled()
+                            ? singletonMap("Analytics", "Chronicle Queue reports usage statistics. Learn more or turn off: https://github.com/OpenHFT/Chronicle-Queue/blob/master/DISCLAIMER.adoc")
+                            : emptyMap());
 
             final Map<String, String> additionalEventParameters = AnalyticsFacade.standardAdditionalProperties();
             additionalEventParameters.put("wire_type", wireType.toString());
