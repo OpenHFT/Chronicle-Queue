@@ -34,6 +34,9 @@ The following library-specific properties are also conveyed:
 Knowing how our products are used allows us to focus our resources more efficiently in our effort to improve our libraries and
 provide better and more widely adopted solutions for the community.
 
+== System Resources
+Data collection is using a separate thread for sending information. The thread itself will not consume CPU resources when idle.
+
 == Open Data Pledge
 Chronicle pledges to make aggregated data reports (using collected data) available to the general public at no cost.
 Contact info@chronicle.software to obtain a link to these reports.
