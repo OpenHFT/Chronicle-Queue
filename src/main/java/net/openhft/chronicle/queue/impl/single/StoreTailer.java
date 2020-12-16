@@ -278,8 +278,9 @@ class StoreTailer extends AbstractCloseable
                     break;
 
                 case NOT_REACHED_IN_CYCLE:
-                    boolean found = moveToIndexInternal(index);
-                    return found;
+                    if (!moveToIndexInternal(index))
+                        return false;
+                    break;
 
                 case FOUND_IN_CYCLE: {
                     try {

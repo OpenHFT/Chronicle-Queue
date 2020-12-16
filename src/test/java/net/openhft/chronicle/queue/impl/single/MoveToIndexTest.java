@@ -4,6 +4,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -14,6 +15,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public final class MoveToIndexTest extends QueueTestCommon {
     @Rule
@@ -67,6 +69,60 @@ public final class MoveToIndexTest extends QueueTestCommon {
                 assertEquals(messageByIndex.get(randomIndex), capturedMessage.get());
                 tailer.readDocument(w -> w.read("message").object());
             }
+        }
+    }
+
+    /**
+     * Performs series of moveToIndex in order to bring tailer in NOT_REACHED_IN_CYCLE state
+     * and check that it's correctly handled.
+     * https://github.com/OpenHFT/Chronicle-Queue/issues/781
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNotReachedInCycle() throws Exception {
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpFolder.newFolder()).build()) {
+            ExcerptAppender appender = q.acquireAppender();
+            ExcerptTailer tailer = q.createTailer();
+
+            final int versionByte = 7;
+
+            for (int i = 0; i < 5; i++) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().getValueOut().writeByte((byte) versionByte);
+                    dc.wire().write("contentKey").text("contentValue");
+                }
+            }
+
+            long index;
+            try (DocumentContext dc = tailer.readingDocument()) {
+                if (dc.wire().getValueIn().readByte() != versionByte)
+                    throw new IllegalStateException("Illegal version bytes: " + dc.wire().bytes().readSkip(-1).toDebugString());
+
+                index = dc.index();
+            }
+
+            int cycle = q.rollCycle().toCycle(index);
+            long seq = q.rollCycle().toSequenceNumber(index);
+
+            index = q.rollCycle().toIndex(cycle + 1, seq);
+            assertFalse(tailer.moveToIndex(index));
+
+            index = q.rollCycle().toIndex(cycle, seq + 6);
+            assertFalse(tailer.moveToIndex(index));
+
+            for (int i = 0; i < 5; i++) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().getValueOut().writeByte((byte) versionByte);
+                    dc.wire().write("contentKey").text("contentValue");
+                }
+            }
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                if (dc.wire().getValueIn().readByte() != versionByte)
+                    throw new IllegalStateException("Illegal version bytes: " + dc.wire().bytes().readSkip(-1).toDebugString());
+            }
+
         }
     }
 
