@@ -27,7 +27,6 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -45,7 +44,6 @@ import static org.junit.Assert.*;
  */
 public class NotCompleteTest extends ChronicleQueueTestBase {
 
-    @Ignore("TODO FIX NotCompleteTest fails for generated code #779")
     @Test
     public void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
 
@@ -104,8 +102,7 @@ public class NotCompleteTest extends ChronicleQueueTestBase {
 
                 try (final ChronicleQueue queue = createQueue(tmpDir)) {
                     String dump = cleanQueueDump(queue.dump());
-
-                    assertEquals("queue should be unchanged by the failed write", cleanedQueueDump, dump);
+                    assertEquals("queue should be unchanged by the failed (exception) write", cleanedQueueDump, dump);
                     System.err.println(queue.dump());
                 }
 
@@ -119,7 +116,7 @@ public class NotCompleteTest extends ChronicleQueueTestBase {
                 wd.close();
                 // check queue unchanged
                 String dump = cleanQueueDump(queueWriter.dump());
-                assertEquals("queue should be unchanged by the failed write", cleanedQueueDump, dump);
+                assertEquals("queue should be unchanged by the failed (rollback) write", cleanedQueueDump, dump);
                 // check nothing else written
                 assertFalse(reader.readOne());
 
