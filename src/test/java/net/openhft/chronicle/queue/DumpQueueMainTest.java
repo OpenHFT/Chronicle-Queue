@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.main.DumpMain;
 import org.junit.Test;
 
 import java.io.*;
@@ -11,8 +12,7 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class DumpQueueMainTest extends ChronicleQueueTestBase {
 
@@ -38,9 +38,9 @@ public class DumpQueueMainTest extends ChronicleQueueTestBase {
                 assertTrue(queueFile.toFile().setWritable(false));
 
                 final CountingOutputStream countingOutputStream = new CountingOutputStream();
-                DumpQueueMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
+                DumpMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
 
-                assertThat(countingOutputStream.bytes, is(not(0L)));
+                assertNotEquals(0L, countingOutputStream.bytes);
             }
         }
     }
@@ -57,12 +57,13 @@ public class DumpQueueMainTest extends ChronicleQueueTestBase {
             excerptAppender.writeText("last");
 
             final ByteArrayOutputStream capture = new ByteArrayOutputStream();
-            DumpQueueMain.dump(dataDir, new PrintStream(capture), Long.MAX_VALUE);
+            DumpMain.dump(dataDir, new PrintStream(capture), Long.MAX_VALUE);
 
             final String capturedOutput = new String(capture.toByteArray());
 
-            assertThat(capturedOutput, containsString("listing.highestCycle"));
-            assertThat(capturedOutput, containsString("listing.lowestCycle"));
+            assertTrue(capturedOutput.contains("listing.highestCycle"));
+            assertTrue(capturedOutput.contains("listing.lowestCycle"));
+
         }
     }
 

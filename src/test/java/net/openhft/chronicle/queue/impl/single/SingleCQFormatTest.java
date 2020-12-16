@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -126,7 +127,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         dir.mkdirs();
         final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
         file.createNewFile();
-        final MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
+        final MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize());
         try {
             bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
         } finally {
@@ -135,7 +136,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue queue = binary(dir).timeoutMS(500L)
                 .testBlockSize()
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .blockSize(QueueUtil.testBlockSize())
                 .build()) {
             testQueue(queue);
         } finally {
@@ -165,7 +166,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         Wire wire;
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE * 2);
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize() * 2L);
              SCQIndexing marshallable = new SCQIndexing(WireType.BINARY, 32, 4)) {
             wire = new BinaryWire(bytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
@@ -216,7 +217,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
 
-        final MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE * 2);
+        final MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), QueueUtil.testBlockSize() * 2L);
 
         final Wire wire = new BinaryWire(bytes);
         try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
@@ -259,7 +260,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE)) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), QueueUtil.testBlockSize())) {
             final Wire wire = new BinaryWire(bytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName("header")
@@ -270,7 +271,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST4_DAILY)
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .blockSize(QueueUtil.testBlockSize())
                 .build()) {
             testQueue(queue);
             fail();
