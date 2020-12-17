@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -62,10 +63,12 @@ public class Issue720Test extends ChronicleQueueTestBase {
         final File dir = getTmpDir();
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
-        // write first message
+
         try (ChronicleQueue queue0 = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build()) {
             final ExcerptAppender excerptAppender = queue0.acquireAppender();
+            // write first message
             excerptAppender.writeText("Text " + cnt.getAndIncrement());
+            // Affects the appender!
             printIndex(excerptAppender);
 
             try (ChronicleQueue queue1 = binary(dir).rollCycle(rollCycle).build()) {
@@ -88,16 +91,22 @@ public class Issue720Test extends ChronicleQueueTestBase {
 
         }
 
+        System.out.println("READING");
+
         try (ChronicleQueue queue = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build()) {
             final ExcerptTailer tailer = queue.createTailer();
 
             int readCnt = 0;
             for (String s = tailer.readText(); s != null; s = tailer.readText()) {
+                // Fails!
                 //assertEquals("Text "+readCnt++, s);
                 System.out.println(s);
             }
 
         }
+
+        int a = 0;
+        //Jvm.pause(1000_000);
 
     }
 
@@ -111,7 +120,6 @@ public class Issue720Test extends ChronicleQueueTestBase {
         final File dir = getTmpDir();
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
-        // write first message
         try (ChronicleQueue queue0 = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build()) {
             final ExcerptAppender excerptAppender = queue0.acquireAppender();
             excerptAppender.writeText("Text " + cnt.getAndIncrement());
@@ -120,7 +128,6 @@ public class Issue720Test extends ChronicleQueueTestBase {
             excerptAppender.writeText("Text " + cnt.getAndIncrement());
             printIndex(excerptAppender);
 
-            // write second message
             for (int i = 0; i < 5; i++) {
                 excerptAppender.writeText("Text " + cnt.getAndIncrement());
                 printIndex(excerptAppender);
