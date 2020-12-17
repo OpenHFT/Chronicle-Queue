@@ -2816,7 +2816,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
                 timeProvider.advanceMillis(1100);
                 try (ChronicleQueue queue2 = binary(dir)
-                        .rollCycle(rollCycle).build()) {
+                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
             });
