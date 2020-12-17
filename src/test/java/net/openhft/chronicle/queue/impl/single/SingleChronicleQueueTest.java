@@ -180,6 +180,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCleanupDir() {
+        FlakyTestRunner.run(OS.isWindows(), this::testCleanupDir0);
+    }
+
+    private void testCleanupDir0() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue =
                      builder(tmpDir, wireType)
