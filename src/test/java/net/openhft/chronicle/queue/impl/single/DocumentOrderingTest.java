@@ -31,7 +31,7 @@ public final class DocumentOrderingTest extends ChronicleQueueTestBase {
             assertTrue(documentContext.isPresent());
             assertEquals(expectedValue, documentContext.wire().getValueIn().int32());
         }
- }
+    }
 
     Thread thread;
 
