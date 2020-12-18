@@ -124,7 +124,9 @@ public class ReadWriteTest extends QueueTestCommon {
     @Test
     public void testNonWriteableFilesSetToReadOnly() {
         assumeFalse(OS.isWindows());
-        expectException("Failback to readonly tablestore");
+        final String expectedException = "Failback to readonly tablestore";
+        expectException(expectedException);
+        System.out.println("This test will produce a " + expectedException);
 
         Arrays.stream(chroniclePath.list()).forEach(s ->
                 assertTrue(new File(chroniclePath, s).setWritable(false)));
