@@ -3,7 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.DumpQueueMain;
+import net.openhft.chronicle.queue.main.DumpMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
@@ -79,7 +79,7 @@ public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
 
         } finally {
             if (fail.get()) {
-                DumpQueueMain.dump(tmpDir.getAbsolutePath());
+                DumpMain.dump(tmpDir.getAbsolutePath());
             }
         }
     }

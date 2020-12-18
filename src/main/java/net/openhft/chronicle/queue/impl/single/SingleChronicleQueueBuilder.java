@@ -42,6 +42,7 @@ import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
+import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.threads.MediumEventLoop;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
@@ -66,7 +67,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
-import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
@@ -607,7 +607,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public SingleChronicleQueueBuilder blockSize(long blockSize) {
-        this.blockSize = Math.max(TEST_BLOCK_SIZE, blockSize);
+        this.blockSize = Math.max(QueueUtil.testBlockSize(), blockSize);
         return this;
     }
 
@@ -620,10 +620,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public long blockSize() {
 
-        long bs = blockSize == null ? OS.is64Bit() ? 64L << 20 : TEST_BLOCK_SIZE : blockSize;
+        long bs = blockSize == null ? OS.is64Bit() ? 64L << 20 : QueueUtil.testBlockSize() : blockSize;
 
         // can add an index2index & an index in one go.
-        long minSize = Math.max(TEST_BLOCK_SIZE, 32L * indexCount());
+        long minSize = Math.max(QueueUtil.testBlockSize(), 32L * indexCount());
         return Math.max(minSize, bs);
     }
 

@@ -180,6 +180,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCleanupDir() {
+        FlakyTestRunner.run(OS.isWindows(), this::testCleanupDir0);
+    }
+
+    private void testCleanupDir0() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue =
                      builder(tmpDir, wireType)
@@ -191,11 +195,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
         IOTools.deleteDirWithFiles(tmpDir);
-        if (OS.isWindows()) { // TODO: retest
-            System.err.println("#460 Directory clean up not supported on Windows");
-        } else {
-            assertFalse(tmpDir.exists());
-        }
+        assertFalse(tmpDir.exists());
     }
 
     @Test
@@ -2816,7 +2816,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
                 timeProvider.advanceMillis(1100);
                 try (ChronicleQueue queue2 = binary(dir)
-                        .rollCycle(rollCycle).build()) {
+                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
             });
