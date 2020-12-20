@@ -880,7 +880,10 @@ class StoreAppender extends AbstractCloseable
                         wire = StoreAppender.this.wire;
                     }
                 }
-            } catch (StreamCorruptedException | UnrecoverableTimeoutException | InterruptedException e) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
                 isClosed = true;

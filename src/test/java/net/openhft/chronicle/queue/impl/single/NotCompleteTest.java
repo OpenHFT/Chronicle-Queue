@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -40,8 +41,10 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.*;
 
 /**
- *
+ * test for exceptions during serialisation out of messages, or for thread interrupts.
+ * We want to ensure that messages are completely written or not written - no half measures.
  */
+@RequiredForClient
 public class NotCompleteTest extends ChronicleQueueTestBase {
 
     @Test
