@@ -10,6 +10,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 public class CheckHalfWrittenMsgNotSeenByTailerTest {
+    static {
+        // load the lass
+        HalfWriteAMessage.class.getName();
+    }
 
     public static class HalfWriteAMessage {
 
@@ -53,13 +57,12 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
     }
 
 
-
     @Test
     public void checkTailerOnlyReadsTwoMessage() throws IOException, InterruptedException, ClassNotFoundException {
 
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
-        final String command = String.format("mvn -X exec:java -Dexec.classpathScope=test " +
+        final String command = String.format("mvn compile exec:java -Dexec.classpathScope=test " +
                 "-Dexec.mainClass=%s -Dexec.args=\"%s\"", HalfWriteAMessage.class.getName(), queueDirectory.getAbsoluteFile());
         runCommand(command);
 
@@ -87,7 +90,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
     }
 
 
-    public void isPresent(DocumentContext dc){
+    public void isPresent(DocumentContext dc) {
 
     }
 
@@ -104,7 +107,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         //      System.out.println("Here is the standard output of the command:\n");
         while ((s = stdInput.readLine()) != null) {
 
-             System.out.println(s);
+            System.out.println(s);
 
             // wait for Replication Started
             if ("== FINISHED WRITING DATA ==".equals(s))
