@@ -438,7 +438,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         if (readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
-        return strongExcerptAppenderThreadLocal.get();
+        ExcerptAppender res = strongExcerptAppenderThreadLocal.get();
+
+        if (res.isClosing())
+            strongExcerptAppenderThreadLocal.set(res = newAppender());
+
+        return res;
     }
 
     /**

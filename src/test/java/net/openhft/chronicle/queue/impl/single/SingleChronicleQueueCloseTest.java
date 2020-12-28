@@ -17,13 +17,9 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.TestKey;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
@@ -43,16 +39,31 @@ public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/743")
     @Test
     public void reacquireAppenderAfterClose() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
             final ExcerptAppender appender = queue.acquireAppender();
+            appender.writeText("hello1");
             appender.close();
 
-            // should be reopened? Or we get a new appender?
             final ExcerptAppender appender2 = queue.acquireAppender();
-            appender2.writeText("hello");
+            appender2.writeText("hello2");
+            appender.close();
+
+            final ExcerptAppender appender3 = queue.acquireAppender();
+            appender2.writeText("hello3");
+
+            final ExcerptAppender appender4 = queue.acquireAppender();
+            appender2.writeText("hello4");
+
+            Assert.assertSame(appender3, appender4);
+
+            final ExcerptTailer tailer = queue.createTailer();
+
+            Assert.assertEquals("hello1", tailer.readText());
+            Assert.assertEquals("hello2", tailer.readText());
+            Assert.assertEquals("hello3", tailer.readText());
+            Assert.assertEquals("hello4", tailer.readText());
         }
     }
 }
