@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
@@ -64,6 +65,22 @@ public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
             Assert.assertEquals("hello2", tailer.readText());
             Assert.assertEquals("hello3", tailer.readText());
             Assert.assertEquals("hello4", tailer.readText());
+        }
+    }
+
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/788")
+    @Test
+    public void reacquireTailerAfterClose() {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+            appender.writeText("hello1");
+
+            final ExcerptTailer tailer = queue.acquireTailer();
+            Assert.assertEquals("hello1", tailer.readText());
+            tailer.close();
+
+            final ExcerptTailer tailer2 = queue.acquireTailer();
+            Assert.assertEquals("hello1", tailer2.readText());
         }
     }
 }
