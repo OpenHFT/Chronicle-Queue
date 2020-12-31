@@ -305,7 +305,6 @@
                             <goal>enforcer</goal>
                         </goals>
                         <configuration>
-                            <referenceVersion>5.20.121</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                         </configuration>
                     </execution>
