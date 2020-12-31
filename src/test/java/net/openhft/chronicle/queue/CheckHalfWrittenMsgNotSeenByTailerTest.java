@@ -1,7 +1,9 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -59,7 +61,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
 
     @Test
     public void checkTailerOnlyReadsTwoMessage() throws IOException, InterruptedException, ClassNotFoundException {
-
+        Assume.assumeTrue(!OS.isWindows());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
         final String command = String.format("mvn compile exec:java -Dexec.classpathScope=test " +
