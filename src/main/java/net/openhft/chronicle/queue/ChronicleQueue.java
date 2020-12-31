@@ -190,15 +190,6 @@ public interface ChronicleQueue extends Closeable {
     ExcerptAppender acquireAppender();
 
     /**
-     * @deprecated to be remove in version 4.6 or later use {@link ChronicleQueue#acquireAppender()}
-     */
-    @NotNull
-    @Deprecated(/* remove in x.21*/)
-    default ExcerptAppender createAppender() {
-        return acquireAppender();
-    }
-
-    /**
      * Returns the lowest valid index available for this ChronicleQueue, or {@link Long#MAX_VALUE}
      * if no such index exists.
      *

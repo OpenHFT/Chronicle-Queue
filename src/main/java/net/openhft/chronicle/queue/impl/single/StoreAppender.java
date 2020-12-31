@@ -1,6 +1,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.NativeBytesStore;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -9,7 +12,6 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueSystemProperties;
-import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
@@ -185,50 +187,6 @@ class StoreAppender extends AbstractCloseable
     @Override
     public Wire wire() {
         return wire;
-    }
-
-    @Override
-    public long batchAppend(final int timeoutMS, final BatchAppender batchAppender) {
-        throwExceptionIfClosed();
-
-        long maxMsgSize = this.queue.blockSize() / 4;
-        long startTime = System.currentTimeMillis();
-        long count = 0;
-        long lastIndex = -1;
-        do {
-            int defaultIndexSpacing = this.queue.rollCycle().defaultIndexSpacing();
-            Wire wire = wire();
-            int writeCount = Math.min(128 << 10,
-                    (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1));
-
-            if (wire != null && writeCount > 0) {
-                MappedBytes bytes = (MappedBytes) wire.bytes();
-                long address = bytes.addressForWrite(bytes.writePosition());
-                long bstart = bytes.start();
-                long bcap = bytes.realCapacity();
-                long canWrite = bcap - (bytes.writePosition() - bstart);
-                long lengthCount = batchAppender.writeMessages(address, canWrite, writeCount);
-                bytes.writeSkip((int) lengthCount);
-                lastIndex += lengthCount >> 32;
-                count += lengthCount >> 32;
-
-            } else {
-                if (batchTmp == null) {
-                    batchTmp = NativeBytesStore.lazyNativeBytesStoreWithFixedCapacity(maxMsgSize);
-                }
-
-                try (DocumentContext dc = writingDocument()) {
-                    long lengthCount = batchAppender.writeMessages(batchTmp.addressForWrite(0), maxMsgSize, 1);
-                    int len = (int) lengthCount;
-                    dc.wire().bytes().write(batchTmp, (long) Integer.BYTES, (long) len - Integer.BYTES);
-                }
-                lastIndex = lastIndexAppended();
-                count++;
-            }
-        }
-        while (startTime + timeoutMS > System.currentTimeMillis());
-
-        return count;
     }
 
     @Nullable

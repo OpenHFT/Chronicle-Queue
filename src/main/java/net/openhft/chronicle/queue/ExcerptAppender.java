@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.queue.batch.BatchAppender;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
@@ -135,19 +134,5 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @return a raw wire for low level direct access
      */
     Wire wire();
-
-    /**
-     * Appends a number of excerpts in a single batch operation.
-     *
-     * @param timeoutMS     time out in miliseconds
-     * @param batchAppender to apply for the batch append
-     * @return the number of messages written in call the batches
-     * @see BatchAppender
-     * @deprecated This method is not recommended unless you really
-     * know what you are doing. Misuse of this API could corrupt your data or even
-     * worst cause the JVM or your application to crash.
-     */
-    @Deprecated(/* to be removed in x.22 */)
-    long batchAppend(int timeoutMS, BatchAppender batchAppender);
 
 }

@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.internal.util;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.main.RemovableRollFileCandidatesMain;
 import net.openhft.chronicle.queue.util.FileState;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,17 +26,6 @@ public final class InternalFileUtil {
     private static final Comparator<File> EARLIEST_FIRST = comparing(File::getName);
 
     private InternalFileUtil() {}
-
-    /**
-     * Produces a list of removable roll file candidates and prints
-     * their absolute path to standard out row-by-row.
-     *
-     * @param args the directory. If no directory is given, "." is assumed
-     */
-    @Deprecated /* For removal, Use RemovableRollFileCandidatesMain.main instead */
-    public static void main(String[] args) {
-        RemovableRollFileCandidatesMain.main(args);
-    }
 
     /**
      * Returns a Stream of roll Queue files that are likely removable
