@@ -814,10 +814,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
+     * default value is {@code false} since 5.21ea0
      * @return if ring buffer reader processes can invoke the CQ drainer, otherwise only writer processes can
      */
     public boolean ringBufferReaderCanDrain() {
-        return ringBufferReaderCanDrain == null ? true : ringBufferReaderCanDrain;
+        return ringBufferReaderCanDrain == null ? false : ringBufferReaderCanDrain;
     }
 
     public SingleChronicleQueueBuilder ringBufferReaderCanDrain(boolean ringBufferReaderCanDrain) {
