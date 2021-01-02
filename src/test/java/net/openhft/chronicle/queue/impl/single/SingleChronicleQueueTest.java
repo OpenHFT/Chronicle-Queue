@@ -194,8 +194,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 dc.wire().write("hello").text("world");
             }
         }
-        IOTools.deleteDirWithFiles(tmpDir);
-        assertFalse(tmpDir.exists());
+        // explicitly call so as to clean and release everything
+        afterChecks();
+        IOTools.deleteDirWithFilesOrThrow(tmpDir);
     }
 
     @Test
