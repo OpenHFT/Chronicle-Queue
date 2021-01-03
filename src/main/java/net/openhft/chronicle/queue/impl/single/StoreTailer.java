@@ -264,7 +264,8 @@ class StoreTailer extends AbstractCloseable
         }
     }
 
-    private boolean next0(final boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
+    // throws UnrecoverableTimeoutException
+    private boolean next0(final boolean includeMetaData) throws StreamCorruptedException {
         for (int i = 0; i < 1000; i++) {
             switch (state) {
                 case UNINITIALISED:
@@ -276,8 +277,9 @@ class StoreTailer extends AbstractCloseable
                     break;
 
                 case NOT_REACHED_IN_CYCLE:
-                    boolean found = moveToIndexInternal(index);
-                    return found;
+                    if (!moveToIndexInternal(index))
+                        return false;
+                    break;
 
                 case FOUND_IN_CYCLE: {
                     try {
@@ -843,7 +845,13 @@ class StoreTailer extends AbstractCloseable
             // fixes #378
             if (sequenceNumber == -1L) {
                 // nothing has been written yet, so point to start of cycle
-                return originalToEnd();
+                try {
+                    return originalToEnd();
+                } catch (NotReachedException e) {
+                    // due to a race condition, where the queue rolls as we are processing toEnd()
+                    // we may get a NotReachedException hence are are just going to retry.
+                    return originalToEnd();
+                }
             }
 
             final Bytes<?> bytes = privateWire().bytes();

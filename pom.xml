@@ -27,7 +27,7 @@
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.20.114</version>
+    <version>5.20.114.1</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -47,7 +47,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>2.20.178</version>
+                <version>2.20.182.1</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -350,7 +350,7 @@
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
         </developerConnection>
-        <tag>chronicle-queue-5.20.114</tag>
+        <tag>chronicle-queue-5.20.114.1</tag>
     </scm>
 
 </project>
