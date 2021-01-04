@@ -305,6 +305,7 @@
                             <goal>enforcer</goal>
                         </goals>
                         <configuration>
+                          <referenceVersion>5.21ea0<referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                         </configuration>
                     </execution>
@@ -398,7 +399,7 @@
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
         </developerConnection>
-        <tag>chronicle-queue-5.20.2</tag>
+        <tag>develop</tag>
     </scm>
 
 </project>
