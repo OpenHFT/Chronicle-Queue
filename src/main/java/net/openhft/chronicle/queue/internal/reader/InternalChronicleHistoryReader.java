@@ -7,10 +7,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.reader.HistoryReader;
 import net.openhft.chronicle.queue.util.ToolsUtil;
-import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
-import net.openhft.chronicle.wire.VanillaMethodReader;
-import net.openhft.chronicle.wire.WireParselet;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
@@ -120,8 +117,9 @@ public final class InternalChronicleHistoryReader implements HistoryReader {
         try (final ChronicleQueue q = createQueue()) {
             final ExcerptTailer tailer = q.createTailer();
             final WireParselet parselet = parselet();
+            final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(Long.toString(methodId), wire.read());
             MessageHistory.set(new VanillaMessageHistory());
-            try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, null, parselet)) {
+            try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, fieldNumberParselet, null, parselet)) {
 
                 while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
                     ++counter;
