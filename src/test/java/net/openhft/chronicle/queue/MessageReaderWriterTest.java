@@ -27,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -50,7 +51,7 @@ public class MessageReaderWriterTest extends ChronicleQueueTestBase {
                      .binary(path2)
                      .testBlockSize()
                      .build()) {
-            MethodReader reader2 = queue1.createTailer().methodReader(ObjectUtils.printAll(MessageListener.class));
+            MethodReader reader2 = queue1.createTailer().methodReader(printAll(MessageListener.class));
             MessageListener writer2 = queue2.acquireAppender().methodWriter(MessageListener.class);
             MessageListener processor = new MessageProcessor(writer2);
             MethodReader reader1 = queue1.createTailer().methodReader(processor);
@@ -71,8 +72,17 @@ public class MessageReaderWriterTest extends ChronicleQueueTestBase {
                 assertTrue(reader2.readOne());
                 assertFalse(reader2.readOne());
             }
-           // System.out.println(queue1.dump());
+            // System.out.println(queue1.dump());
         }
+    }
+
+
+    private static <T> T printAll(@NotNull Class<T> tClass, Class... additional) throws IllegalArgumentException {
+        return ObjectUtils.onMethodCall((method, args) -> {
+            @NotNull String argsStr = args == null ? "()" : Arrays.toString(args);
+            System.out.println(method.getName() + " " + argsStr);
+            return ObjectUtils.defaultValue(method.getReturnType());
+        }, tClass, additional);
     }
 
     interface MessageListener {
