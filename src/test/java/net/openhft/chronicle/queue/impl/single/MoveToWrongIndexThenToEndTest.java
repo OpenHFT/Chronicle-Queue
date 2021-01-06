@@ -125,7 +125,7 @@ public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
 
     private long getLastIndex(Path queuePath) {
         try (SingleChronicleQueue chronicle = createChronicle(queuePath);
-             StoreTailer tailer = chronicle.acquireTailer()) {
+             ExcerptTailer tailer = chronicle.createTailer()) {
 
             int firstCycle = chronicle.firstCycle();
             int lastCycle = chronicle.lastCycle();
@@ -135,7 +135,7 @@ public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
 
             if (firstCycle != Integer.MAX_VALUE && lastCycle != Integer.MIN_VALUE) {
                 for (int cycle = firstCycle; cycle <= lastCycle; ++cycle) {
-                    long lastIndex = approximateLastIndex(cycle, chronicle, tailer);
+                    long lastIndex = approximateLastIndex(cycle, chronicle, (StoreTailer) tailer);
                     if (lastIndex != noIndex) {
                         lastKnownIndex = lastIndex;
                         ++numFiles;

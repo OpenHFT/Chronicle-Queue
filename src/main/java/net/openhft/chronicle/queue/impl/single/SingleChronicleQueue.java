@@ -222,6 +222,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return DefaultCycleCalculator.INSTANCE;
     }
 
+    /**
+     * @deprecated call {@link #createTailer()} instead
+     * @return tailer
+     */
+    @Deprecated
     @NotNull
     StoreTailer acquireTailer() {
         return ThreadLocalHelper.getTL(tlTailer, this, q -> new StoreTailer(q, q.pool));
@@ -509,7 +514,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     public long exceptsPerCycle(int cycle) {
         throwExceptionIfClosed();
-
+        // TODO: this function may require some re-work now that acquireTailer has been deprecated
         StoreTailer tailer = acquireTailer();
         try {
             long index = rollCycle.toIndex(cycle, 0);
