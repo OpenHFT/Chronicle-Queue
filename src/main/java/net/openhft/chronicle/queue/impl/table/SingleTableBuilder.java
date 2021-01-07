@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.util.Builder;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
@@ -38,7 +39,7 @@ import java.util.Objects;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 
-public class SingleTableBuilder<T extends Metadata> {
+public class SingleTableBuilder<T extends Metadata> implements Builder<TableStore<T>> {
 
     static {
         CLASS_ALIASES.addAlias(WireType.class);
