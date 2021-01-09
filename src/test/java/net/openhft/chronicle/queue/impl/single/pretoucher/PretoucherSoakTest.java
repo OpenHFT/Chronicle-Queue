@@ -21,9 +21,8 @@ public class PretoucherSoakTest extends QueueTestCommon {
 
         HeartbeatListener heartbeatWriter = outQueueAppender.methodWriterBuilder(HeartbeatListener.class).methodWriterListener((m, a) -> ValidFields.validateAll(a)).get();
 
-        Monitor.addPeriodicUpdateSource(10, () -> currentTimeMillis -> {
-            outQueueAppender.pretouch();
-        });
+        long periodicUpdateUS = (long) 10 * 1000;
+        Monitor.loop.addHandler(new PeriodicUpdateEventHandler(() -> currentTimeMillis -> outQueueAppender.pretouch(), 0, periodicUpdateUS));
 
         long lastHB = 0;
         while (true) {
