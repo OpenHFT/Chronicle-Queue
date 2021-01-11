@@ -31,8 +31,11 @@ import static java.util.Arrays.stream;
 
 /**
  * Display records in a Chronicle in a text form.
+ *
+ * New code should use net.openhft.chronicle.queue.main.ReaderMain instead
+ * as this class might get deprecated in the future.
+ *
  */
-@Deprecated /* For removal in x.22, use net.openhft.chronicle.queue.main.ReaderMain instead */
 public class ChronicleReaderMain {
 
     public static void main(@NotNull String[] args) {
