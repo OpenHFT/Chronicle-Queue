@@ -31,6 +31,7 @@ import net.openhft.chronicle.core.threads.HandlerPriority;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.core.util.Builder;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
@@ -71,7 +72,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
-public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable {
+public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
     @Deprecated /* For removal in x.22, Use QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY instead*/
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
