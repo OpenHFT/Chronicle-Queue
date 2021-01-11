@@ -306,6 +306,7 @@
                         </goals>
                         <configuration>
                             <referenceVersion>5.21ea0</referenceVersion>
+                            <binaryCompatibilityPercentageRequired>99.4</binaryCompatibilityPercentageRequired>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                         </configuration>
                     </execution>
