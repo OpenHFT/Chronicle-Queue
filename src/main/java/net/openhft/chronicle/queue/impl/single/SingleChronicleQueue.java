@@ -689,6 +689,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return rollCycle().toIndex(cycle, 0);
     }
 
+    /**
+     * This method creates a tailer and count the number of messages between the start of the queue ( see @link firstIndex() )  and the end.
+     * @return the number of messages in the queue
+     */
     @Override
     public long entryCount() {
         final ExcerptTailer tailer = createTailer();
