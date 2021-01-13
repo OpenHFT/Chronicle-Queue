@@ -8,12 +8,10 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-@Ignore("TODO: jerry to fix")
 @RequiredForClient
 public class MethodReaderObjectReuseTest extends QueueTestCommon {
     @Test
@@ -34,8 +32,9 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
             MethodReader reader = cq.createTailer()
                     .methodReader(
                             (Pinger) pingDTO -> sb.append("ping ").append(pingDTO));
-            assertEquals(PingDTO.constructionExpected, PingDTO.constructionCounter);
             while (reader.readOne()) ;
+            // moved this assert below the readOne as object may be constructed lazily
+            assertEquals(PingDTO.constructionExpected, PingDTO.constructionCounter);
             assertEquals("ping !PingDTO {\n" +
                     "  bytes: \"\"\n" +
                     "}\n" +
