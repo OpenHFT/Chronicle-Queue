@@ -32,9 +32,8 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
             MethodReader reader = cq.createTailer()
                     .methodReader(
                             (Pinger) pingDTO -> sb.append("ping ").append(pingDTO));
-            while (reader.readOne()) ;
-            // moved this assert below the readOne as object may be constructed lazily
             assertEquals(PingDTO.constructionExpected, PingDTO.constructionCounter);
+            while (reader.readOne()) ;
             assertEquals("ping !PingDTO {\n" +
                     "  bytes: \"\"\n" +
                     "}\n" +
