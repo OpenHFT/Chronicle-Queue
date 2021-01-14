@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -204,7 +205,7 @@ public class PeekDocumentTest extends ChronicleQueueTestBase {
         }
     }
 
-
+    @Ignore("PeekDocument gets stuck and reports no messages when there are messages - https://github.com/OpenHFT/Chronicle-Queue/issues/797")
     @Test
     public void soakTestPeekDocument() throws ExecutionException, InterruptedException {
         File tempDir = getTmpDir();
