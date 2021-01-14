@@ -89,6 +89,7 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * check the appendLock
+     *
      * @param allowMyProcess this will only be true for any writes coming from the sink replicator
      */
     private void checkAppendLock(boolean allowMyProcess) {
@@ -106,9 +107,9 @@ class StoreAppender extends AbstractCloseable
             boolean myPID = lockedBy == Jvm.getProcessId();
             if (allowMyProcess && myPID)
                 return;
-            throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + (myPID ? "me" : lockedBy));
+            throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + (myPID ? "me" : lockedBy) + ", file=" + queue.file());
         } else
-            throw new IllegalStateException("locked: unable to append");
+            throw new IllegalStateException("locked: unable to append, file=" + queue.file());
     }
 
     private static void releaseBytesFor(Wire w) {
@@ -312,7 +313,7 @@ class StoreAppender extends AbstractCloseable
     @NotNull
     @Override
     // throws UnrecoverableTimeoutException
-    public DocumentContext writingDocument()  {
+    public DocumentContext writingDocument() {
         return writingDocument(false); // avoid overhead of a default method.
     }
 
@@ -454,7 +455,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public void writeBytes(@NotNull final BytesStore bytes)  {
+    public void writeBytes(@NotNull final BytesStore bytes) {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
