@@ -10,7 +10,11 @@ import net.openhft.chronicle.wire.Wire;
 import org.junit.Test;
 
 import java.io.File;
+import java.text.DecimalFormat;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 
+import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static net.openhft.chronicle.bytes.Bytes.from;
 import static org.junit.Assert.*;
 
@@ -32,7 +36,7 @@ public class PeekDocumentTest extends ChronicleQueueTestBase {
                     try (DocumentContext documentContext = appender.writingDocument()) {
                         documentContext.wire().write("value").text("hello" + i);
                     }
- }
+                }
 
                 ExcerptTailer tailer = queue.createTailer();
 
@@ -92,7 +96,7 @@ public class PeekDocumentTest extends ChronicleQueueTestBase {
 
                 String result = wire.read("value").text();
                 assertEquals("hello", result);
-               // System.out.println(result);
+                // System.out.println(result);
 
             }
 
@@ -200,4 +204,52 @@ public class PeekDocumentTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    public void soakTestPeekDocument() throws ExecutionException, InterruptedException {
+        File tempDir = getTmpDir();
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(tempDir).rollCycle(RollCycles.MINUTELY).build();) {
+
+            final long maxMessagesPerCycle = RollCycles.MINUTELY.maxMessagesPerCycle();
+            System.out.println("maxMessagesPerCycle = " + DecimalFormat.getInstance().format(maxMessagesPerCycle));
+
+            final ScheduledExecutorService es2 = newSingleThreadScheduledExecutor();
+            es2.submit(() -> {
+                try (final ExcerptAppender appender = q.acquireAppender()) {
+                    for (int i = 0; i < maxMessagesPerCycle; i++) {
+                        try (final DocumentContext documentContext = appender.writingDocument()) {
+                            documentContext.wire().write("value").int64(i);
+                        }
+                    }
+                }
+            });
+
+            final ScheduledExecutorService es = newSingleThreadScheduledExecutor();
+            es.submit(() -> {
+                try (final ExcerptTailer excerptTailer = q.createTailer()) {
+                    long count = 0;
+                    Thread.yield();
+                    OUTER:
+                    for (; ; ) {
+                        while (excerptTailer.peekDocument()) {
+
+                            try (DocumentContext dc = excerptTailer.readingDocument()) {
+                                if (!dc.isPresent())
+                                    continue OUTER;
+                                assertEquals(count, dc.wire().read("value").int64());
+                                count++;
+                                if (count % 1_000_000 == 0)
+                                    System.out.println("count = " + DecimalFormat.getInstance().format(count));
+                                if (count == maxMessagesPerCycle)
+                                    return null;
+                            }
+                        }
+                    }
+                }
+            }).get();
+            es.shutdownNow();
+            es2.shutdownNow();
+        }
+    }
 }
