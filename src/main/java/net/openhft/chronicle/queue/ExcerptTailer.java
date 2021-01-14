@@ -68,9 +68,13 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * For the best performance you should only use this method once a message has been found by toStart() or readingDocument(). Otherwise {@link #readingDocument()} is called and then rolled back, which is not optimal.
      * For the same reason, this method should also be avoided when reading documents backwards.
      *
+     * WARNING : THIS METHOD CAN NOT BE RELIED UPON, IT WILL SOMETIME WILL RETURN FALSE WHEN THERE ARE MESSAGES,
+     * YOU SHOULD ONLY CALL IT PERIODICALLY AND NOT RELY TO MUCH UPON ITS RESULTS INSTEAD CALL READING DOCUMENT ! ( FOR THIS REASON - WE HAVE DECIDED TO DEPRECATE IT ! )
+     *
      * @return if {@link #readingDocument()} would return a DocumentContext
      *         that provides excerpts to read.
      */
+    @Deprecated(/* remove in x.23* and make internal to StoreTailer as it is used by chronicle services - removed because sometimes it will report false when there are messages*/)
     @Override
     default boolean peekDocument() {
         return true;
