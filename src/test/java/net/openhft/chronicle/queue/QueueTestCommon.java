@@ -74,7 +74,7 @@ public class QueueTestCommon {
 
         // find any discarded resources.
         System.gc();
-        Jvm.pause(10);
+        Jvm.pause(Jvm.isAzulZing() ? 100 : 10);
 
         assertReferencesReleased();
         checkThreadDump();
