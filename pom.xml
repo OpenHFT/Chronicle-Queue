@@ -166,6 +166,16 @@
 
     <repositories>
         <repository>
+            <id>third-party-release</id>
+            <name>ThirdParty Repository</name>
+            <url>
+                https://nexus.chronicle.software/content/repositories/thirdparty/
+            </url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+        <repository>
             <id>chronicle-enterprise-snapshots</id>
             <name>Snapshot Repository</name>
             <url>
