@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.main.DumpMain;
@@ -52,7 +53,7 @@ public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("TODO FIX")
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/799")
     public void test() throws FileNotFoundException {
 
         File tmpDir = getTmpDir();
@@ -60,18 +61,20 @@ public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
 
             methodWriter = q.methodWriter(I.class);
 
-            ExcerptTailer tailer = q.createTailer();
-            MethodReader methodReader = tailer.methodReader(newReader());
-
             IntStream.range(0, 1000)
                     .parallel()
                     .forEach(i -> {
-                        creates();
-                        amends();
-                        synchronized (methodReader) {
+                        final ExcerptTailer tailer = q.createTailer();
+                        try {
+                            creates();
+                            amends();
+                            final MethodReader methodReader = tailer.methodReader(newReader());
                             for (int j = 0; j < 2 && !fail.get(); )
                                 if (methodReader.readOne())
                                     j++;
+                        } finally {
+                            // close appender acquired by creates above
+                            Closeable.closeQuietly(q.acquireAppender(), tailer);
                         }
                         if (fail.get())
                             fail();
@@ -119,25 +122,25 @@ public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 
-    public interface I {
+    interface I {
         void amend(Amend q);
 
         void create(Create q);
     }
 
-    public static class Amend extends SelfDescribingMarshallable {
+    static class Amend extends SelfDescribingMarshallable {
         int type;
 
-        public Amend type(final int type) {
+        Amend type(final int type) {
             this.type = type;
             return this;
         }
     }
 
-    public static class Create extends SelfDescribingMarshallable {
+    static class Create extends SelfDescribingMarshallable {
         int type;
 
-        public Create type(final int type) {
+        Create type(final int type) {
             this.type = type;
             return this;
         }
