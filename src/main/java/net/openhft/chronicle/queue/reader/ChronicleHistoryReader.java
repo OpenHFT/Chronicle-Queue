@@ -17,12 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-@Deprecated /* For removal in x.22, Use HistoryReader.create instead */
 public class ChronicleHistoryReader implements HistoryReader {
-
-    // Because the class is not final and contains protected methods
-    // we cannot provide a delegator. So, this class remains as it is
-    // and will be removed in 5.22
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
     protected Path basePath;

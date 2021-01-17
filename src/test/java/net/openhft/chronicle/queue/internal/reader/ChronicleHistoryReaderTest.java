@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
@@ -99,7 +100,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
 
-            InternalChronicleHistoryReader chronicleHistoryReader = new InternalChronicleHistoryReader()
+            ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
                     .withBasePath(queuePath3.toPath())
                     .withTimeUnit(TimeUnit.MICROSECONDS)
                     .withMessageSink(System.out::println);

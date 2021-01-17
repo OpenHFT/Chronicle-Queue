@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Jerry Shea
  */
-@Deprecated /* For removal in x.22, use net.openhft.chronicle.queue.main.HistoryMain instead */
 public class ChronicleHistoryReaderMain {
 
     public static void main(@NotNull String[] args) {
