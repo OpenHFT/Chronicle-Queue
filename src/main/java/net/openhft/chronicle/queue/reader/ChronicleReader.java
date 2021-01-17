@@ -172,7 +172,7 @@ public final class ChronicleReader {
         return true;
     }
 
-    ChronicleReader withReadOnly(boolean readOnly) {
+    public ChronicleReader withReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
         return this;
     }
@@ -243,7 +243,7 @@ public final class ChronicleReader {
     }
 
     // visible for testing
-    ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
+    public ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
         this.pollMethod = pollMethod;
         return this;
     }

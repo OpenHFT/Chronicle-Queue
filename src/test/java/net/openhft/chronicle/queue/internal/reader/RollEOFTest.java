@@ -33,6 +33,7 @@ import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
+import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -92,7 +93,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
             assertEquals(2, getNumberOfQueueFiles(path));
 
             List<String> l = new LinkedList<>();
-            new InternalChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
+            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
             // 2 entries per message
             assertEquals(4, l.size());
         } finally {
@@ -125,7 +126,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
             removeEOF(firstQueueFile.get());
 
             List<String> l = new LinkedList<>();
-            new InternalChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
+            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
             // 2 entries per message
             assertEquals(4, l.size());
         } finally {
@@ -159,7 +160,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
             removeEOF(firstQueueFile.get());
 
             List<String> l = new LinkedList<>();
-            new InternalChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).withReadOnly(false).execute();
+            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).withReadOnly(false).execute();
             // 2 entries per message
             assertEquals(4, l.size());
         } finally {

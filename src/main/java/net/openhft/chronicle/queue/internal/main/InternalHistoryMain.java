@@ -27,7 +27,7 @@ import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
-import static net.openhft.chronicle.queue.internal.main.InternalReaderMain.addOption;
+import static net.openhft.chronicle.queue.ChronicleReaderMain.addOption;
 
 /**
  * Reads @see MessageHistory from a chronicle and outputs histograms for
