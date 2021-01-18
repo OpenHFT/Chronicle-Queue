@@ -12,6 +12,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -23,8 +24,11 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
 
     @Test
-    public void shouldDetermineQueueDirectoryFromQueueFile() {
+    public void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
+        final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");
+        if (metadata.toFile().exists())
+            Files.delete(metadata);
         try (final ChronicleQueue queue =
                      ChronicleQueue.singleBuilder(path)
                              .testBlockSize()
