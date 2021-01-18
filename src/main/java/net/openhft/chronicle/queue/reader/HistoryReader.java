@@ -1,11 +1,14 @@
 package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.core.util.Histogram;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public interface HistoryReader {
 
@@ -30,4 +33,26 @@ public interface HistoryReader {
     Map<String, Histogram> readChronicle();
 
     void outputData();
+
+    /**
+     * Creates and returns a new history reader that will use
+     * the queue located at {@link #withBasePath } provided later.
+     *
+     * @return a new history reader that will use
+     * the queue located at {@link #withBasePath } provided later
+     */
+    static HistoryReader create() {
+        return new ChronicleHistoryReader();
+    }
+
+    /**
+     * Creates and returns a new history reader that will use
+     * the provided {@code queueSupplier } to provide the queue.
+     *
+     * @return a new history reader that will use
+     *         the provided {@code queueSupplier } to provide the queue.
+     */
+    static HistoryReader create(@NotNull final Supplier<? extends ChronicleQueue> queueSupplier) {
+        throw new UnsupportedOperationException("TODO");
+    }
 }

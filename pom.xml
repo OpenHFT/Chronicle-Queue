@@ -305,24 +305,23 @@
 
             </plugin>
 
-<!--            <plugin>-->
-<!--                <groupId>net.openhft</groupId>-->
-<!--                <artifactId>binary-compatibility-enforcer-plugin</artifactId>-->
-<!--                <version>1.0.7</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <phase>verify</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>enforcer</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <referenceVersion>5.21ea0</referenceVersion>-->
-<!--                            <binaryCompatibilityPercentageRequired>91.7</binaryCompatibilityPercentageRequired>-->
-<!--                            <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
+            <plugin>
+                <groupId>net.openhft</groupId>
+                <artifactId>binary-compatibility-enforcer-plugin</artifactId>
+                <version>1.0.7</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>enforcer</goal>
+                        </goals>
+                        <configuration>
+                            <referenceVersion>5.21ea0</referenceVersion>
+                            <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
             <!-- Enable again once TC works-->
             <!--

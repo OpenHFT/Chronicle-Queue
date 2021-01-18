@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
-public final class ChronicleReader {
+public final class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
     private final List<Pattern> inclusionRegex = new ArrayList<>();
