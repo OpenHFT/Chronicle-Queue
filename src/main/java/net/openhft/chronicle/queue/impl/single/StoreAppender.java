@@ -364,7 +364,7 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
-        if (!CHECK_THREAD_SAFETY)
+        if (!DISABLE_THREAD_SAFETY)
             this.threadSafetyCheck(true);
         if (wire != null && writeContext.isOpen() && writeContext.chainedElement())
             return writeContext;
