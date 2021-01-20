@@ -72,4 +72,9 @@ public enum NoMessageHistory implements MessageHistory {
         return -1;
     }
 
+    @Override
+    public boolean isDirtyAndQueueChanged(int sourceId) {
+        return false;
+    }
+
 }
