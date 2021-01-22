@@ -326,9 +326,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         final long knownIndex = Long.decode(findAnExistingIndex());
         basicReader().withStartIndex(knownIndex).execute();
 
-        assertEquals(25, capturedOutput.size());
-        // discard first message
-        capturedOutput.poll();
+        assertEquals(24, capturedOutput.size());
         assertTrue(capturedOutput.poll().contains(Long.toHexString(knownIndex)));
     }
 
