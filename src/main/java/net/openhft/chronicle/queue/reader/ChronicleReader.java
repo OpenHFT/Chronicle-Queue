@@ -260,8 +260,12 @@ public final class ChronicleReader implements Reader {
                         startIndex, ic.firstIndex()));
             }
 
-            messageSink.accept("Waiting for startIndex " + startIndex);
+            boolean firstTime = true;
             while (!tailer.moveToIndex(startIndex)) {
+                if (firstTime) {
+                    messageSink.accept("Waiting for startIndex " + Long.toHexString(startIndex));
+                    firstTime = false;
+                }
                 Jvm.pause(100);
             }
         }
