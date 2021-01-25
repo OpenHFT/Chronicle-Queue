@@ -41,15 +41,15 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitial() {
-        checkWithQueueHistoryRecordHistoryInitial(false);
+        checkWithQueueHistoryRecordHistoryInitial(DummyListener.class);
     }
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitialMethodIds() {
-        checkWithQueueHistoryRecordHistoryInitial(true);
+        checkWithQueueHistoryRecordHistoryInitial(DummyListenerId.class);
     }
 
-    private void checkWithQueueHistoryRecordHistoryInitial(boolean methodIds) {
+    private void checkWithQueueHistoryRecordHistoryInitial(Class<? extends DummyListener> dummyClass) {
         MessageHistory.set(null);
 
         int extraTiming = 1;
@@ -59,7 +59,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         try {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out.acquireAppender()
-                        .methodWriterBuilder(DummyListener.class).useMethodIds(methodIds)
+                        .methodWriterBuilder(dummyClass)
                         .get();
                 // this will write the 1st timestamps
                 writer.say("hello");
@@ -68,7 +68,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             try (ChronicleQueue in = queue(queuePath1, 1);
                  ChronicleQueue out = queue(queuePath2, 2)) {
                 DummyListener writer = out.acquireAppender()
-                        .methodWriterBuilder(DummyListener.class).useMethodIds(methodIds)
+                        .methodWriterBuilder(dummyClass)
                         .get();
                 DummyListener dummy = msg -> {
                     MessageHistory history = MessageHistory.get();
@@ -86,7 +86,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             try (ChronicleQueue in = queue(queuePath2, 2);
                  ChronicleQueue out = queue(queuePath3, 3)) {
                 DummyListener writer = out.acquireAppender()
-                        .methodWriterBuilder(DummyListener.class).useMethodIds(methodIds)
+                        .methodWriterBuilder(dummyClass)
                         .get();
                 DummyListener dummy = msg -> {
                     MessageHistory history = MessageHistory.get();
@@ -121,6 +121,12 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @FunctionalInterface
     interface DummyListener {
+        void say(String what);
+    }
+
+    @FunctionalInterface
+    interface DummyListenerId extends DummyListener {
+        @Override
         @MethodId(1)
         void say(String what);
     }
