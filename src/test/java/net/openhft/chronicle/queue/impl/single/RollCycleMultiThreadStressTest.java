@@ -72,7 +72,7 @@ public class RollCycleMultiThreadStressTest {
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
         PRETOUCH = Jvm.getBoolean("pretouch");
         READERS_READ_ONLY = Jvm.getBoolean("read_only");
-        DUMP_QUEUE = Jvm.getBoolean("dump_queue");
+        DUMP_QUEUE = true;
         SHARED_WRITE_QUEUE = Jvm.getBoolean("sharedWriteQ");
         DOUBLE_BUFFER = Jvm.getBoolean("double_buffer");
 
@@ -115,7 +115,8 @@ public class RollCycleMultiThreadStressTest {
                 new NamedThreadFactory("reader"));
 
         final AtomicInteger wrote = new AtomicInteger();
-        final int expectedNumberOfMessages = (int) (TEST_TIME * 1e9 / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
+        final double expectedPerSecond = Jvm.isAzulZing() ? 3e8 : 1e9;
+        final int expectedNumberOfMessages = (int) (TEST_TIME * expectedPerSecond / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
 
        // System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
                // numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
