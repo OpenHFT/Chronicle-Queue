@@ -179,6 +179,20 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
+        DocumentContext documentContext = readingDocument0(includeMetaData);
+        checkReadRemaining(documentContext);
+        return documentContext;
+    }
+
+    @Deprecated(/* to do remove in x.22 */)
+    private void checkReadRemaining(DocumentContext documentContext) {
+        // this check was added after a strange behaviour seen by one client. I should be impossible.
+        if (documentContext.wire() != null)
+            if (documentContext.wire().bytes().readRemaining() >= 1 << 30)
+                throw new AssertionError("readRemaining " + documentContext.wire().bytes().readRemaining());
+    }
+
+    DocumentContext readingDocument0(final boolean includeMetaData) {
         throwExceptionIfClosed();
 
         try {
@@ -1159,6 +1173,12 @@ class StoreTailer extends AbstractCloseable
         return store;
     }
 
+    @Override
+    public File currentFile() {
+        SingleChronicleQueueStore store = this.store;
+        return store == null ? null : store.currentFile();
+    }
+
     private static final class MoveToState {
         private long lastMovedToIndex = Long.MIN_VALUE;
         private TailerDirection directionAtLastMoveTo = TailerDirection.NONE;
@@ -1268,11 +1288,5 @@ class StoreTailer extends AbstractCloseable
         public void metaData(boolean metaData) {
             this.metaData = metaData;
         }
-    }
-
-    @Override
-    public File currentFile() {
-        SingleChronicleQueueStore store = this.store;
-        return store == null ? null : store.currentFile();
     }
 }
