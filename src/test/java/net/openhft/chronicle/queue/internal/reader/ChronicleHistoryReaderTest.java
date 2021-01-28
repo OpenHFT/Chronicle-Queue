@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Ignore
+@Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/802")
 public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
