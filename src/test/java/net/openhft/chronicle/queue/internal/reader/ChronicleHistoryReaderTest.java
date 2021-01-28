@@ -60,6 +60,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(dummyClass)
+                        .useMethodIds(true)
                         .get();
                 // this will write the 1st timestamps
                 writer.say("hello");
@@ -69,6 +70,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                  ChronicleQueue out = queue(queuePath2, 2)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(dummyClass)
+                        .useMethodIds(true)
                         .get();
                 DummyListener dummy = msg -> {
                     MessageHistory history = MessageHistory.get();
@@ -87,6 +89,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                  ChronicleQueue out = queue(queuePath3, 3)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(dummyClass)
+                        .useMethodIds(true)
                         .get();
                 DummyListener dummy = msg -> {
                     MessageHistory history = MessageHistory.get();
