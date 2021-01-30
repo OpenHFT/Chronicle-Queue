@@ -132,6 +132,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private StoreFileListener storeFileListener;
 
     private Boolean readOnly;
+    @Deprecated(/* to be removed in x.23 */)
     private Boolean strongAppenders;
     private boolean checkInterrupts;
 
@@ -1038,18 +1039,21 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * @param strongAppenders by default, we create the appenders as a weak reference, these can get garbage collected. To avoid them becoming unnecessarily garbage collected, set this to {@code true}
-     * @return that
+     * @deprecated appenders are now always strongly referenced
+     * @param strongAppenders strongAppenders
+     * @return this
      */
+    @Deprecated(/* to be removed in x.23 */)
     public SingleChronicleQueueBuilder strongAppenders(boolean strongAppenders) {
         this.strongAppenders = strongAppenders;
         return this;
     }
 
     /**
-     * @return {@code true} if we are using strong appender, by default, we create the appenders in a thread-local, weak reference, these can get
-     * garbage collected. * Setting them to strong will ensure they are created using a strong reference.
+     * @deprecated appenders are now always strongly referenced
+     * @return strongAppenders
      */
+    @Deprecated(/* to be removed in x.23 */)
     public boolean strongAppenders() {
         return Boolean.TRUE.equals(strongAppenders);
     }
