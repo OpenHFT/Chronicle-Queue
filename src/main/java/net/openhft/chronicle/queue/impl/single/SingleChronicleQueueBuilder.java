@@ -288,7 +288,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                     } else {
                         @SuppressWarnings("unchecked")
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
-                        Object instance = ObjectUtils.valueOf(eClass, rollCyclePropertyParts[1]);
+                        Object instance = Enum.valueOf(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
                             return (RollCycle) instance;
                         } else {
