@@ -430,6 +430,9 @@ class StoreTailer extends AbstractCloseable
 //        Jvm.optionalSafepoint();
 
         final Wire wire = privateWire();
+        if (wire == null)
+            throwExceptionIfClosed();
+
         final Bytes<?> bytes = wire.bytes();
         return inACycle2(includeMetaData, wire, bytes);
     }
