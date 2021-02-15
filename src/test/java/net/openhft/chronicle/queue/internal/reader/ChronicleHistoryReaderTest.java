@@ -28,17 +28,15 @@ import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
-@Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/802")
 public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
@@ -72,9 +70,11 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                  ChronicleQueue out = queue(queuePath2, 2)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(dummyClass)
-                        .useMethodIds(true)
                         .get();
-                DummyListener dummy = msg -> {
+                final AtomicInteger numberRead = new AtomicInteger();
+                // if this listener is a DummyListener then messages with methodId won't be routed to it
+                DummyListenerId dummy = msg -> {
+                    numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
                     Assert.assertEquals(1, history.sources());
                     // written 1st then received by me
@@ -84,6 +84,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
                 assertTrue(reader.readOne());
+                assertEquals("check routed to correct dest", 1, numberRead.get());
                 assertFalse(reader.readOne());
             }
 
@@ -91,9 +92,10 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                  ChronicleQueue out = queue(queuePath3, 3)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(dummyClass)
-                        .useMethodIds(true)
                         .get();
-                DummyListener dummy = msg -> {
+                final AtomicInteger numberRead = new AtomicInteger();
+                DummyListenerId dummy = msg -> {
+                    numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
                     Assert.assertEquals(2, history.sources());
                     Assert.assertEquals(3 + extraTiming, history.timings());
@@ -102,6 +104,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
                 assertTrue(reader.readOne());
+                assertEquals("check routed to correct dest", 1, numberRead.get());
                 assertFalse(reader.readOne());
             }
 
