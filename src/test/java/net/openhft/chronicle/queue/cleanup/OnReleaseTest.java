@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.cleanup;
 
+import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
@@ -18,6 +19,10 @@ import static org.junit.Assert.assertNotNull;
 public class OnReleaseTest {
     @Test
     public void onRelease() {
+        FlakyTestRunner.run(this::onRelease0);
+    }
+
+    public void onRelease0() {
         String path = OS.getTarget() + "/onRelease-" + Time.uniqueId();
         SetTimeProvider stp = new SetTimeProvider();
         AtomicInteger writeRoll = new AtomicInteger();
@@ -27,7 +32,7 @@ public class OnReleaseTest {
                 .rollCycle(RollCycles.MINUTELY)
                 .timeProvider(stp)
                 .storeFileListener((c, f) -> {
-                   // System.out.println("write released " + f);
+                    // System.out.println("write released " + f);
                     writeRoll.incrementAndGet();
                 })
                 .build();
@@ -36,13 +41,13 @@ public class OnReleaseTest {
                      .rollCycle(RollCycles.MINUTELY)
                      .timeProvider(stp)
                      .storeFileListener((c, f) -> {
-                        // System.out.println("read released " + f);
+                         // System.out.println("read released " + f);
                          readRoll.incrementAndGet();
                      })
                      .build()) {
             ExcerptAppender appender = writeQ.acquireAppender();
             ExcerptTailer tailer = readQ.createTailer();
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 500; i++) {
                 appender.writeText("hello-" + i);
                 assertNotNull(tailer.readText());
                 assertEquals(i, writeRoll.get());
