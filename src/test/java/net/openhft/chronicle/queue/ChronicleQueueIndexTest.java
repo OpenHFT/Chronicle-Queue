@@ -2,12 +2,10 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -211,13 +209,8 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         }
     }
 
-    @After
-    public void checkRegisteredBytes() {
-        AbstractReferenceCounted.assertReferencesReleased();
-    }
-
     @Test
-    public void read5thMessageTest() throws InterruptedException {
+    public void read5thMessageTest() {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(CLOCK.currentTimeMillis());
         try (final ChronicleQueue queue = ChronicleQueue
