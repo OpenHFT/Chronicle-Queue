@@ -114,7 +114,7 @@ class StoreAppender extends AbstractCloseable
 
     private static void releaseBytesFor(Wire w) {
         if (w != null) {
-            w.bytes().releaseLast();
+            w.bytes().release(INIT);
         }
     }
 

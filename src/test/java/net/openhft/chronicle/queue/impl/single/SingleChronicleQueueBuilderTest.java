@@ -25,6 +25,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
+        expectException("reading control code as text");
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");
         if (metadata.toFile().exists())
@@ -69,6 +70,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadMarshallable() {
+        expectException("Overriding roll epoch from existing metadata");
         SingleChronicleQueueBuilder builder = Marshallable.fromString("!net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder {\n" +
                 "  writeBufferMode: None,\n" +
                 "  readBufferMode: None,\n" +
@@ -119,6 +121,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test
     public void tryOverrideSourceId() {
+        expectException("inconsistency with of source ids, existing sourceId=1, requested sourceId=2");
         final File tmpDir = getTmpDir();
         final int firstSourceId = 1;
         try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId).build()) {

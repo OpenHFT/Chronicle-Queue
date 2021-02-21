@@ -648,8 +648,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     writeLock,
                     appendLock,
                     pool,
-                    metaStore,
-                    storeSupplier);
+                    metaStore);
+            closeQuietly(storeSupplier);
         }
 
         // close it if we created it.
@@ -968,7 +968,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
 
                 SingleChronicleQueueStore wireStore;
-                Bytes<?> bytes = wire.bytes();
                 try {
                     if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
@@ -987,7 +986,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
                         } catch (TimeoutException e) {
 
-                            headerRecovery(that, mappedBytes, wire, bytes, cycle);
+                            headerRecovery(that, mappedBytes, wire, mappedBytes, cycle);
                             return acquire(cycle, createIfAbsent);
                         }
 
@@ -1006,7 +1005,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         }
                     }
                 } catch (InternalError e) {
-                    long pos = Objects.requireNonNull(bytes.bytesStore()).addressForRead(0);
+                    long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
                     String s = Long.toHexString(pos);
                     System.err.println("pos=" + s);
                     try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {

@@ -133,7 +133,7 @@ class StoreTailer extends AbstractCloseable
         context.wire(null);
         final Wire w0 = wireForIndex;
         if (w0 != null)
-            w0.bytes().releaseLast();
+            w0.bytes().release(INIT);
         wireForIndex = null;
         releaseStore();
     }

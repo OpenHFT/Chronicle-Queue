@@ -19,13 +19,11 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
@@ -1163,9 +1161,9 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
         }
     }
 
-    @After
-    public void checkRegisteredBytes() {
+    @Override
+    public void assertReferencesReleased(){
         outgoingBytes.releaseLast();
-        AbstractReferenceCounted.assertReferencesReleased();
+        super.assertReferencesReleased();
     }
 }

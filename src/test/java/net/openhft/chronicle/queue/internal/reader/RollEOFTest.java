@@ -77,6 +77,9 @@ public class RollEOFTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 5000L)
     public void testRollWritesEOF() throws IOException {
+        expectException("Overriding roll length from existing metadata");
+        expectException("Overriding roll cycle from");
+
         final File path = getTmpDir();
         try {
             path.mkdirs();
@@ -103,6 +106,9 @@ public class RollEOFTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOFDoesntBlowup() throws IOException {
+        expectException("Overriding roll length from existing metadata");
+        expectException("Overriding roll cycle from");
+
         final File path = getTmpDir();
         try {
             path.mkdirs();
@@ -137,6 +143,9 @@ public class RollEOFTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOF() throws IOException {
+        expectException("Overriding roll length from existing metadata");
+        expectException("Overriding roll cycle from");
+
         final File path = getTmpDir();
         try {
             path.mkdirs();
