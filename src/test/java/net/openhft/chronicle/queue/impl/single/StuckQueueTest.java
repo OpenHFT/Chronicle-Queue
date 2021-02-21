@@ -24,6 +24,8 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
         Path tmpDir = getTmpDir().toPath();
 
         expectException("Failback to readonly tablestore");
+        expectException("reading control code as text");
+        expectException("Unable to copy TimedStoreRecovery safely will try anyway");
         expectException("Unable to copy SCQStore safely will try anyway");
         expectException("Unable to copy SCQSRoll safely");
         expectException("Unable to copy SCQSIndexing safely");

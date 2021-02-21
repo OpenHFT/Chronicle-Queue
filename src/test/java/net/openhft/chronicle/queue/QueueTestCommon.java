@@ -6,9 +6,9 @@ import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.core.threads.ThreadDump;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.LinkedHashMap;
@@ -18,7 +18,7 @@ import java.util.function.Predicate;
 public class QueueTestCommon {
     protected ThreadDump threadDump;
     protected Map<ExceptionKey, Integer> exceptions;
-    private Map<Predicate<ExceptionKey>, String> expectedExceptions = new LinkedHashMap<>();
+    private final Map<Predicate<ExceptionKey>, String> expectedExceptions = new LinkedHashMap<>();
 
     @Before
     public void clearMessageHistory() {
@@ -49,7 +49,7 @@ public class QueueTestCommon {
     }
 
     public void expectException(String message) {
-        expectException(k -> k.message.contains(message), message);
+        expectException(k -> k.message.contains(message) || (k.throwable != null && k.throwable.getMessage().contains(message)), message);
     }
 
     public void expectException(Predicate<ExceptionKey> predicate, String description) {
@@ -61,11 +61,17 @@ public class QueueTestCommon {
             if (!exceptions.keySet().removeIf(expectedException.getKey()))
                 Slf4jExceptionHandler.WARN.on(getClass(), "No error for " + expectedException.getValue());
         }
+        expectedExceptions.clear();
         if (Jvm.hasException(exceptions)) {
             Jvm.dumpException(exceptions);
             Jvm.resetExceptionHandlers();
-            Assert.fail();
+            throw new AssertionError(exceptions.keySet());
         }
+    }
+
+    @After
+    public void resetClock() {
+        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
     }
 
     @After

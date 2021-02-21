@@ -29,6 +29,9 @@ public class QueueLockTest extends ChronicleQueueTestBase {
     }
 
     private void check(boolean shouldThrowException) throws InterruptedException {
+        expectException("Couldn't acquire write lock");
+        expectException("Forced unlock for the lock");
+
         try {
             System.setProperty("queue.dont.recover.lock.timeout", Boolean.toString(shouldThrowException));
 

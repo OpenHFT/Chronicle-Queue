@@ -28,6 +28,9 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     @Test
     public void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         Assume.assumeFalse(OS.isWindows());
+        expectException("Couldn't acquire write lock");
+        expectException("Forced unlock for the lock");
+
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         try (final RollingChronicleQueue queue =
                      ChronicleQueue.singleBuilder(tmpFolder.newFolder()).

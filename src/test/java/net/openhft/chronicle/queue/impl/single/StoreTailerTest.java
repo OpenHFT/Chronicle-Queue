@@ -126,8 +126,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
             append.writeDocument(w -> w.write("test").text("text"));
 
             if (!tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals))) {
-               // System.out.println("dump chronicle:\n" + chronicle.dump());
-               // System.out.println("dump chronicle2:\n" + chronicle2.dump());
+                // System.out.println("dump chronicle:\n" + chronicle.dump());
+                // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");
             }
         }
@@ -191,6 +191,9 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @Test
     public void disableThreadSafety() throws InterruptedException {
+        expectException(e -> e.throwable != null
+                        && e.throwable.getMessage().contains("component which is not thread safes used by Thread["),
+                "component which is not thread safes used by Thread[");
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
             BlockingQueue<ExcerptTailer> tq = new LinkedBlockingQueue<>();
             Thread t = new Thread(() -> {

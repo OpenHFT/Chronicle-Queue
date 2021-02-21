@@ -123,6 +123,8 @@ public final class DocumentOrderingTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
+        expectException("Couldn't acquire write lock");
+        expectException("Forced unlock for the lock");
         // as below, but don't actually close the initial context
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 1_000L).build()) {

@@ -22,13 +22,13 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         StoreFileListener sfl = new StoreFileListener() {
             @Override
             public void onAcquired(int cycle, File file) {
-                   // System.out.println("onAcquired(): " + file);
+                // System.out.println("onAcquired(): " + file);
                 acount.incrementAndGet();
             }
 
             @Override
             public void onReleased(int cycle, File file) {
-                   // System.out.println("onReleased(): " + file);
+                // System.out.println("onReleased(): " + file);
                 qcount.incrementAndGet();
             }
         };
@@ -42,16 +42,18 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
                 .build()) {
 
             int iter = 4;
-            for (int i = 0; i < iter; i++) {
-                queue.acquireAppender().writeDocument(w -> {
-                    w.write("a").marshallable(m -> {
-                        m.write("b").text("c");
+            try (ExcerptAppender excerptAppender = queue.acquireAppender()) {
+                for (int i = 0; i < iter; i++) {
+                    excerptAppender.writeDocument(w -> {
+                        w.write("a").marshallable(m -> {
+                            m.write("b").text("c");
+                        });
                     });
-                });
+                }
             }
 
             Assert.assertEquals(iter, acount.get());
-            Assert.assertEquals(iter - 1, qcount.get());
+            Assert.assertEquals(iter , qcount.get());
         }
     }
 

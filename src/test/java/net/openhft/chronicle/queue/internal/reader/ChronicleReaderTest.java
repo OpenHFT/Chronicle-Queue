@@ -2,8 +2,6 @@ package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -76,6 +74,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         if (OS.isWindows())
             return;
 
+        expectException("Overriding roll length from existing metadata");
+        expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
@@ -126,6 +126,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         // TODO FIX
 //        AbstractCloseable.disableCloseableTracing();
 
+        expectException("Overriding roll length from existing metadata");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
 
@@ -376,21 +377,6 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     @After
     public void clearInterrupt() {
         Thread.interrupted();
-    }
-
-    @After
-    public void checkRegisteredBytes() {
-        try {
-            AbstractCloseable.assertCloseablesClosed();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        // TODO FIX
-        try {
-            AbstractReferenceCounted.assertReferencesReleased();
-        } catch (IllegalStateException todoFix) {
-            todoFix.printStackTrace();
-        }
     }
 
     private static final class RecordCounter implements Consumer<String> {

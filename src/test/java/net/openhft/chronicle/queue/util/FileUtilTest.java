@@ -69,8 +69,11 @@ public class FileUtilTest extends ChronicleQueueTestBase {
 
     @Test(expected = UnsupportedOperationException.class)
     public void stateWindows(){
-        AbstractCloseable.disableCloseableTracing();
         assumeTrue(OS.isWindows());
+
+        expectException("£closable tracing disabled");
+        AbstractCloseable.disableCloseableTracing();
+
         FileUtil.state(new File("foo"));
     }
 

@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -12,7 +11,6 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -205,12 +203,17 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         Assert.assertTrue(isFileHandleClosed(file));
     }
 
-    @After
-    public void checkRegisteredBytes() throws InterruptedException {
+    @Override
+    public void assertReferencesReleased()  {
         threadPool.shutdownNow();
-        assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
-        AbstractReferenceCounted.assertReferencesReleased();
+        try {
+            assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
+        super.assertReferencesReleased();
     }
+
 
     private static boolean isFileHandleClosed(File file) throws IOException {
         Process plsof = null;

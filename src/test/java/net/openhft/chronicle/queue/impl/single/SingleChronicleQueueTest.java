@@ -292,6 +292,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalStateException.class)
     public void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle() {
+        expectException("Overriding roll length from existing metadata");
+
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
@@ -305,6 +307,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCanAppendMetadataIfAppendLockIsSet() {
+        expectException(SingleChronicleQueueTest::isThrowingIllegalStateException, "threw ISE");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
@@ -313,25 +316,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = appender.writingDocument(true)) {
                 dc.wire().write("Hello World");
             }
-        } finally {
-            exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
         }
     }
 
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSet() {
+        expectException(SingleChronicleQueueTest::isThrowingIllegalStateException, "threw ISE");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
             final ExcerptAppender appender = queue.acquireAppender();
             appender.writeText("Hello World");
-        } finally {
-            exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
         }
     }
 
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSetInDifferentQueue() {
+        expectException(SingleChronicleQueueTest::isThrowingIllegalStateException, "threw ISE");
+        expectException("Overriding roll length from existing metadata");
+        expectException("Overriding roll cycle from");
+
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
@@ -339,8 +343,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
             queue.acquireAppender().writeText("hello");
-        } finally {
-            exceptions.keySet().stream().filter(SingleChronicleQueueTest::isThrowingIllegalStateException).forEach(exceptions::remove);
         }
     }
 
@@ -361,6 +363,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
+        expectException("Overriding roll length from existing metadata");
+        expectException("Overriding roll cycle from");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(DEFAULT).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
@@ -378,6 +382,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldOverrideDifferentEpoch() {
+        expectException("Overriding roll epoch from existing metadata, was 10, overriding to 100");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).epoch(100).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
@@ -3028,6 +3033,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testExistingRollCycleIsMaintained() {
+        expectException("Overriding roll cycle from ");
+        expectException("Overriding roll length from ");
 
         RollCycles[] values = values();
         for (int i = 0; i < values.length - 1; i++) {

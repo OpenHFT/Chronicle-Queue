@@ -155,6 +155,8 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
     // "see https://github.com/OpenHFT/Chronicle-Queue/issues/719")
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
+        expectException("reading control code as text");
+        expectException("closable tracing disabled");
 
         // too many hacks are required to make the (artificial) code below release resources correctly
         AbstractCloseable.disableCloseableTracing();
@@ -276,7 +278,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
             testQueue(queue);
             fail();
         } catch (Exception e) {
-           // e.printStackTrace();
+            // e.printStackTrace();
             assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required",
                     e.toString());
         }

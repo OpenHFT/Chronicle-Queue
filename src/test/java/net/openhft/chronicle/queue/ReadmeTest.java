@@ -18,10 +18,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -51,10 +49,5 @@ public class ReadmeTest extends QueueTestCommon {
 
             assertEquals("TestMessage", tailer.readText());
         }
-    }
-
-    @After
-    public void checkRegisteredBytes() {
-        AbstractReferenceCounted.assertReferencesReleased();
     }
 }
