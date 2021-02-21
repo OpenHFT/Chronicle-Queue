@@ -106,8 +106,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     private LongArrayValuesHolder newLogArrayValuesHolder(Supplier<LongArrayValues> las) {
-        LongArrayValuesHolder longArrayValuesHolder = new LongArrayValuesHolder(las.get());
-        closeables.add(longArrayValuesHolder);
+        LongArrayValues values = las.get();
+        LongArrayValuesHolder longArrayValuesHolder = new LongArrayValuesHolder(values);
+        closeables.add(values);
         return longArrayValuesHolder;
     }
 
@@ -159,7 +160,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             return;
         LongArrayValuesHolder holder = weakReference.get();
         if (holder != null)
-            closeQuietly(holder.values);
+            closeQuietly(holder.values());
     }
 
     @Override
@@ -173,12 +174,12 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     @NotNull
     private LongArrayValues arrayForAddress(@NotNull Wire wire, long secondaryAddress) {
         LongArrayValuesHolder holder = getIndexArray();
-        if (holder.address == secondaryAddress)
-            return holder.values;
-        holder.address = secondaryAddress;
+        if (holder.address() == secondaryAddress)
+            return holder.values();
+        holder.address(secondaryAddress);
         wire.bytes().readPositionRemaining(secondaryAddress, 4); // to read the header.
         wire.readMetaDataHeader();
-        return array(wire, holder.values, false);
+        return array(wire, holder.values(), false);
     }
 
     @NotNull
@@ -569,7 +570,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     private LongArrayValues getIndex2index(@NotNull Wire wire) {
 
         LongArrayValuesHolder holder = getIndex2IndexArray();
-        LongArrayValues values = holder.values;
+        LongArrayValues values = holder.values();
         if (((Byteable) values).bytesStore() != null)
             return values;
         final long indexToIndex = index2Index.getVolatileValue();
@@ -737,18 +738,25 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         lastIndex // NOTE: the nextEntryToBeIndexed
     }
 
-    static class LongArrayValuesHolder extends AbstractCloseable {
-        final LongArrayValues values;
-        long address;
+    static class LongArrayValuesHolder {
+        private final LongArrayValues values;
+        private long address;
 
         LongArrayValuesHolder(LongArrayValues values) {
             this.values = values;
             address = Long.MIN_VALUE;
         }
 
-        @Override
-        protected void performClose() {
-            values.close();
+        public long address() {
+            return address;
+        }
+
+        public void address(long address) {
+            this.address = address;
+        }
+
+        public LongArrayValues values() {
+            return values;
         }
     }
 }

@@ -179,6 +179,9 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testRestartingAService() throws FileNotFoundException {
+        expectException("Overriding roll length from existing metadata");
+        expectException("Overriding roll cycle from");
+
         File queuePath = new File(OS.getTarget(), "testRestartingAService-" + Time.uniqueId());
         File queuePath2 = new File(OS.getTarget(), "testRestartingAService-down-" + Time.uniqueId());
         try {

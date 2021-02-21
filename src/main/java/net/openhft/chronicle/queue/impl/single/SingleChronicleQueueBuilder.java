@@ -288,7 +288,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                     } else {
                         @SuppressWarnings("unchecked")
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
-                        Object instance = Enum.valueOf(eClass, rollCyclePropertyParts[1]);
+                        Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
                             return (RollCycle) instance;
                         } else {
@@ -458,6 +458,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                         DateTimeFormatter.ofPattern(cycle.format())
                                 .parse(filename.substring(0, filename.length() - 4));
                         overrideRollCycle(cycle);
+                        break;
                     } catch (Exception expected) {
                     }
                 }
@@ -476,7 +477,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private void overrideRollCycle(RollCycles cycle) {
-        LOGGER.warn("Overriding roll cycle from {} to {}", rollCycle, cycle);
+        if (rollCycle != cycle)
+            LOGGER.warn("Overriding roll cycle from {} to {}", rollCycle, cycle);
         rollCycle = cycle;
     }
 
@@ -817,6 +819,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * default value is {@code false} since 5.21ea0
+     *
      * @return if ring buffer reader processes can invoke the CQ drainer, otherwise only writer processes can
      */
     public boolean ringBufferReaderCanDrain() {
@@ -1039,9 +1042,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * @deprecated appenders are now always strongly referenced
      * @param strongAppenders strongAppenders
      * @return this
+     * @deprecated appenders are now always strongly referenced
      */
     @Deprecated(/* to be removed in x.23 */)
     public SingleChronicleQueueBuilder strongAppenders(boolean strongAppenders) {
@@ -1050,8 +1053,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * @deprecated appenders are now always strongly referenced
      * @return strongAppenders
+     * @deprecated appenders are now always strongly referenced
      */
     @Deprecated(/* to be removed in x.23 */)
     public boolean strongAppenders() {

@@ -74,7 +74,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         }
         if (retained.isEmpty() || !Jvm.isResourceTracing())
             return;
-        for (int i = 1; i <= 2_000; i++) {
+        for (int i = 1; i <= 2_500; i++) {
             Jvm.pause(1);
             if (retained.stream().noneMatch(v -> v.refCount() > 0)) {
                 if (i > 1)
@@ -82,8 +82,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
                 return;
             }
         }
-        Jvm.warn().on(getClass(), "STILL retained " + retained);
-
+        retained.forEach(Closeable::warnAndCloseIfNotClosed);
     }
 
     @Override
