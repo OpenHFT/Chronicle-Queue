@@ -292,7 +292,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalStateException.class)
     public void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle() {
-        expectException("Overriding roll length from existing metadata, was 3600000, overriding to 1000");
+        expectException("Overriding roll length from existing metadata");
+
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build()) {
             try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
@@ -3032,8 +3033,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testExistingRollCycleIsMaintained() {
-expectException("Overriding roll length from existing metadata");
-expectException("Overriding roll cycle from");
+        expectException("Overriding roll cycle from ");
+        expectException("Overriding roll length from ");
+
         RollCycles[] values = values();
         for (int i = 0; i < values.length - 1; i++) {
             final File tmpDir = getTmpDir();

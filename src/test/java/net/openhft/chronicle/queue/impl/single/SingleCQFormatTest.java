@@ -157,6 +157,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
     public void testCompleteHeader() throws FileNotFoundException {
         expectException("reading control code as text");
         expectException("closable tracing disabled");
+
         // too many hacks are required to make the (artificial) code below release resources correctly
         AbstractCloseable.disableCloseableTracing();
 

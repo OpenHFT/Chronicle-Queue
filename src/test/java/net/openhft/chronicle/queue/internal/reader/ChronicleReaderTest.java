@@ -126,6 +126,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         // TODO FIX
 //        AbstractCloseable.disableCloseableTracing();
 
+        expectException("Overriding roll length from existing metadata");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
 
