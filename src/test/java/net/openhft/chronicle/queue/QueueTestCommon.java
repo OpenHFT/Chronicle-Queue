@@ -9,7 +9,6 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.LinkedHashMap;
@@ -66,7 +65,7 @@ public class QueueTestCommon {
         if (Jvm.hasException(exceptions)) {
             Jvm.dumpException(exceptions);
             Jvm.resetExceptionHandlers();
-            Assert.fail();
+            throw new AssertionError(exceptions.keySet());
         }
     }
 
