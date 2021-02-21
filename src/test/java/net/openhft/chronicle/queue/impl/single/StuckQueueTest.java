@@ -19,11 +19,18 @@ import static org.junit.Assume.assumeFalse;
 public class StuckQueueTest extends ChronicleQueueTestBase {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
+    // [ExceptionKey{level=PERF, clazz=class net.openhft.chronicle.bytes.MappedFile, message='Allocation of 0 chunk in /home/teamcity/agents/chronicle1-b/work/54cbf5be7dd772a/Chronicle-Queue/target/test-1-fw3dssa9uw/20180508-1249.cq4 took 2.393 ms.', throwable=}, ExceptionKey{level=PERF, clazz=class net.openhft.chronicle.bytes.MappedFile, message='Took 2 ms to add mapping for /home/teamcity/agents/chronicle1-b/work/54cbf5be7dd772a/Chronicle-Queue/target/test-1-fw3dssa9uw/20180508-1249.cq4', throwable=}, ExceptionKey{level=DEBUG, clazz=class net.openhft.chronicle.core.Jvm, message='Adding /home/teamcity/agents/chronicle1-b/work/54cbf5be7dd772a/Chronicle-Queue/target/surefire/surefirebooter7006712238730317051.jar to the classpath', throwable=},
+    // ExceptionKey{level=WARN, clazz=class net.openhft.chronicle.wire.BinaryWire, message='Unable to copy SCQStore safely will try anyway java.lang.ClassNotFoundException: SCQStore', throwable=},
+    // ExceptionKey{level=WARN, clazz=class net.openhft.chronicle.wire.BinaryWire, message='Unable to copy SCQSRoll safely will try anyway java.lang.ClassNotFoundException: SCQSRoll', throwable=},
+    // ExceptionKey{level=WARN, clazz=class net.openhft.chronicle.wire.BinaryWire, message='Unable to copy SCQSIndexing safely will try anyway java.lang.ClassNotFoundException: SCQSIndexing', throwable=}, ExceptionKey{level=PERF, clazz=class net.openhft.chronicle.threads.DiskSpaceMonitor, message='Took 1.043 ms to pollDiskSpace for /home/teamcity/agents/chronicle1-b/work/54cbf5be7dd772a/Chronicle-Queue/target/test-1-fw3dssa9uw', throwable=}, ExceptionKey{level=PERF, clazz=class net.openhft.chronicle.queue.impl.single.SCQIndexing, message='Took 122 us to linearScan by position from 0 to 0 = (0x0-0x0)=0', throwable=}, ExceptionKey{level=DEBUG, clazz=class net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder, message='File released /home/teamcity/agents/chronicle1-b/work/54cbf5be7dd772a/Chronicle-Queue/target/test-1-fw3dssa9uw/20210221-2039.cq4', throwable=}, ExceptionKey{level=DEBUG, clazz=class net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder, message='File released /home/teamcity/agents/chronicle1-b/work/54cbf5be7dd772a/Chronicle-Queue/target/test-1-fw3dssa9uw/20180508-1249.cq4', throwable=}]
     @Test
     public void test() throws IOException {
         Path tmpDir = getTmpDir().toPath();
 
         expectException("Failback to readonly tablestore");
+        expectException("Unable to copy SCQStore safely will try anyway");
+        expectException("Unable to copy SCQSRoll safely");
+        expectException("Unable to copy SCQSIndexing safely");
 
         tmpDir.toFile().mkdirs();
         // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
@@ -42,18 +49,18 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
 
             try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
                 String absolutePath = wireStore.file().getAbsolutePath();
-                   // System.out.println(absolutePath);
+                // System.out.println(absolutePath);
                 Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
             }
 
-              // Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
+            // Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
 
             try (DocumentContext dc = tailer.readingDocument()) {
-               // Assert.assertTrue(!dc.isPresent());
-                   // System.out.println(Long.toHexString(dc.index()));
+                // Assert.assertTrue(!dc.isPresent());
+                // System.out.println(Long.toHexString(dc.index()));
             }
 
-             // Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
+            // Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
             try (final SingleChronicleQueue q2 = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).build()) {
                 try (DocumentContext dc = q2.acquireAppender().writingDocument()) {
                     dc.wire().write("hello").text("world");
@@ -64,7 +71,7 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
                 Assert.assertTrue(dc.isPresent());
                 String actual = dc.wire().read("hello").text();
                 Assert.assertEquals("world", actual);
-                   // System.out.println(Long.toHexString(dc.index()));
+                // System.out.println(Long.toHexString(dc.index()));
             }
         }
     }
