@@ -27,7 +27,7 @@ import net.openhft.chronicle.queue.BufferMode;
  * was 0.34 / 0.42  0.44 / 0.78  2.1 / 5.2  7.0 / 9.5  12 / 68  176 / 500 - 34,600
  */
 public class Main {
-    static final int time = Integer.getInteger("time", 20);
+    static final int time = Integer.getInteger("time", 5);
     static final int size = Integer.getInteger("size", 60);
     static final String path = System.getProperty("path", OS.TMP);
     static final int throughput = Integer.getInteger("throughput", 1_000_000);
@@ -37,17 +37,6 @@ public class Main {
     static final boolean SAMPLING = Jvm.getBoolean("sampling");
     static final int interations = Integer.getInteger("iterations", 300_000_000);
     static final BufferMode BUFFER_MODE = getBufferMode();
-
-    static {
-       // System.out.println("Testing with " +
-                "-Dtime=" + time + " " +
-                "-Dthreads=" + threads + " " +
-                "-Dsize=" + size + " " +
-                "-Dpath=" + path + " " +
-                "-Dthroughput=" + throughput + " " +
-                "-Dinterations=" + interations + " " +
-                "-DbufferMode=" + BUFFER_MODE);
-    }
 
     static final int WARMUP = 500_000;
 
