@@ -123,6 +123,14 @@ public class LatencyDistributionMain {
 
     public static void main(String[] args) throws InterruptedException {
         assert false : "test runs slower with assertions on";
+
+        System.out.println("Testing with " +
+                "-Dtime=" + time + " " +
+                "-Dthreads=" + threads + " " +
+                "-Dsize=" + size + " " +
+                "-Dpath=" + path + " " +
+                "-Dthroughput=" + throughput + " " +
+                "-Dinterations=" + iterations);
         new LatencyDistributionMain().run(args);
     }
 
@@ -183,9 +191,9 @@ public class LatencyDistributionMain {
                 int counter = 0;
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
-                       // if (SAMPLING)
-                           // sampler.thread(Thread.currentThread());
-                       // boolean found = tailer.readDocument(myReadMarshallable);
+                        // if (SAMPLING)
+                        // sampler.thread(Thread.currentThread());
+                        // boolean found = tailer.readDocument(myReadMarshallable);
                         boolean found;
                         try (DocumentContext dc = tailer.readingDocument()) {
                             found = dc.isPresent();
@@ -243,7 +251,7 @@ public class LatencyDistributionMain {
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
                 NativeBytesStore bytes24 = NativeBytesStore.from(new byte[Main.size - 16]);
-                for (int i = -WARMUP; i < interations; i++) {
+                for (int i = -WARMUP; i < iterations; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
                         do ; while (System.nanoTime() < next);
@@ -303,8 +311,8 @@ public class LatencyDistributionMain {
         tailerThread.interrupt();
         tailerThread.join();
 
-System.out.println("wr: " + histogramWr.toLongMicrosFormat());
-       // System.out.println("in: " + histogramIn.toLongMicrosFormat());
-       // System.out.println("co: " + histogramCo.toLongMicrosFormat());
+        System.out.println("wr: " + histogramWr.toLongMicrosFormat());
+        System.out.println("in: " + histogramIn.toLongMicrosFormat());
+        System.out.println("co: " + histogramCo.toLongMicrosFormat());
     }
 }
