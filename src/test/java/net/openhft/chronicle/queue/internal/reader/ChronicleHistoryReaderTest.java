@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodId;
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -41,11 +42,17 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitial() {
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+
         checkWithQueueHistoryRecordHistoryInitial(DummyListener.class);
     }
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitialMethodIds() {
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+
         checkWithQueueHistoryRecordHistoryInitial(DummyListenerId.class);
     }
 

@@ -35,7 +35,6 @@ import static org.junit.Assume.assumeFalse;
 
 public class ChronicleReaderTest extends ChronicleQueueTestBase {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
-    private static final String LAST_MESSAGE = "LAST_MESSAGE";
 
     static {
         Arrays.fill(ONE_KILOBYTE, (byte) 7);
@@ -187,7 +186,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         expectException("Failback to readonly tablestore");
-        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
+        basicReader().execute();
         assertTrue(capturedOutput.isEmpty());
     }
 
@@ -368,6 +367,9 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     }
 
     private ChronicleReader basicReader() {
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+
         return new ChronicleReader()
                 .withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add);

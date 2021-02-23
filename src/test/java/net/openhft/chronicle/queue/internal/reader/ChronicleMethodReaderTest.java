@@ -92,6 +92,9 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
     @NotNull
     private ChronicleReader basicReader(Path path) {
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+
         return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
     }
 
