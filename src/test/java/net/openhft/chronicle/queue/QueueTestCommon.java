@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
@@ -80,7 +81,7 @@ public class QueueTestCommon {
 
         // find any discarded resources.
         System.gc();
-        Jvm.pause(Jvm.isAzulZing() ? 100 : 10);
+        AbstractCloseable.waitForCloseablesToClose(100);
 
         assertReferencesReleased();
         checkThreadDump();
