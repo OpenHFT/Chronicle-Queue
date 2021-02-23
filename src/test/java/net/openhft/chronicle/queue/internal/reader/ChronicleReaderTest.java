@@ -185,8 +185,11 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     public void shouldNotFailOnEmptyQueue() {
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        expectException("Failback to readonly tablestore");
-        basicReader().execute();
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+        else
+            expectException("Failback to readonly tablestore");
+        new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertTrue(capturedOutput.isEmpty());
     }
 
