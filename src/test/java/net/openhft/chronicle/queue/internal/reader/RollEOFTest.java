@@ -54,6 +54,7 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 public class RollEOFTest extends ChronicleQueueTestBase {
 
@@ -77,6 +78,8 @@ public class RollEOFTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 5000L)
     public void testRollWritesEOF() throws IOException {
+        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
 
@@ -106,6 +109,8 @@ public class RollEOFTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOFDoesntBlowup() throws IOException {
+        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
 

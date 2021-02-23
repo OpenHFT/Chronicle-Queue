@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.service.HelloWorld;
@@ -19,6 +20,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 public class StoreTailerTest extends ChronicleQueueTestBase {
     private final Path dataDirectory = getTmpDir().toPath();
@@ -38,6 +40,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldHandleCycleRollWhenInReadOnlyMode() {
+        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
         try (ChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
                 timeProvider(timeProvider))) {

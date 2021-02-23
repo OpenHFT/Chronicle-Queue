@@ -108,6 +108,7 @@ public class ReadWriteTest extends QueueTestCommon {
 
     @Test
     public void testToEndOnReadOnly() {
+        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
 
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)

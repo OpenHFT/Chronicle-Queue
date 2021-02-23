@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import static net.openhft.chronicle.queue.impl.single.GcControls.waitForGcCycle;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 public class ChronicleReaderTest extends ChronicleQueueTestBase {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
@@ -96,8 +97,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
-        if (OS.isWindows())
-            return;
+        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+
         expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
@@ -252,10 +253,8 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
 
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
-        if (OS.isWindows()) {
-            System.err.println("#460 read-only not supported on Windows");
-            return;
-        }
+        assumeFalse("#460 read-only not supported on Windows", OS.isWindows());
+
         final Path queueFile = Files.list(dataDir).
                 filter(f -> f.getFileName().toString().endsWith(SingleChronicleQueue.SUFFIX)).findFirst().
                 orElseThrow(() ->

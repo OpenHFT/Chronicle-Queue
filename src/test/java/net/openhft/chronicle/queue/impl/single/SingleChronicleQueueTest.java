@@ -3587,6 +3587,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
      */
     @Test
     public void testReadUsingReadOnly() {
+        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+
         File tmpDir = getTmpDir();
         String expected = "hello world";
         try (ChronicleQueue out = SingleChronicleQueueBuilder
