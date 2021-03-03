@@ -223,8 +223,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * @deprecated call {@link #createTailer()} instead
      * @return tailer
+     * @deprecated call {@link #createTailer()} instead
      */
     @Deprecated(/* to be removed in x.23 */)
     @NotNull
@@ -484,11 +484,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         LongValue index = id == null
                 ? null
-                : metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("index." + id, 0));
+                : indexForId(id);
         final StoreTailer storeTailer = new StoreTailer(this, pool, index);
         directoryListing.refresh(true);
         storeTailer.clearUsedByThread();
         return storeTailer;
+    }
+
+    @Override
+    @NotNull
+    public LongValue indexForId(@NotNull String id) {
+        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
     }
 
     @NotNull
@@ -691,6 +697,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     /**
      * This method creates a tailer and count the number of messages between the start of the queue ( see @link firstIndex() )  and the end.
+     *
      * @return the number of messages in the queue
      */
     @Override

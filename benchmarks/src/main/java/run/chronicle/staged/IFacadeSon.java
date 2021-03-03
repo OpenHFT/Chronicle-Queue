@@ -31,9 +31,9 @@ interface IFacadeSon extends IFacadeBase {
 
     void setValue25(double value);
 
-    byte getValue26();
+    int getValue26();
 
-    void setValue26(byte value);
+    void setValue26(int value);
 
     double getValue27();
 

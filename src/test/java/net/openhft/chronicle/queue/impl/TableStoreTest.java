@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,10 +26,9 @@ public class TableStoreTest extends QueueTestCommon {
         final File tempFile = Files.createTempFile((Path) file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
 
 
-        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build()) {
-
-            LongValue a = table.acquireValueFor("a");
-            LongValue b = table.acquireValueFor("b");
+        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
+             LongValue a = table.acquireValueFor("a");
+             LongValue b = table.acquireValueFor("b")) {
             assertEquals(Long.MIN_VALUE, a.getVolatileValue());
             assertTrue(a.compareAndSwapValue(Long.MIN_VALUE, 1));
             assertEquals(Long.MIN_VALUE, b.getVolatileValue());
@@ -47,13 +45,11 @@ public class TableStoreTest extends QueueTestCommon {
                     "b: 2\n" +
                     "...\n" +
                     "# 130972 bytes remaining\n", table.dump());
-            closeQuietly(a, b);
         }
 
-        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build()) {
-
-            LongValue c = table.acquireValueFor("c");
-            LongValue b = table.acquireValueFor("b");
+        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
+             LongValue c = table.acquireValueFor("c");
+             LongValue b = table.acquireValueFor("b")) {
             assertEquals(Long.MIN_VALUE, c.getVolatileValue());
             assertTrue(c.compareAndSwapValue(Long.MIN_VALUE, 3));
             assertEquals(2, b.getVolatileValue());
@@ -74,7 +70,6 @@ public class TableStoreTest extends QueueTestCommon {
                     "...\n" +
                     "# 130956 bytes remaining\n", table.dump());
            // System.out.println(table.dump());
-            closeQuietly(c, b);
         }
     }
 }

@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
@@ -170,6 +171,10 @@ public interface ChronicleQueue extends Closeable {
     @NotNull
     default ExcerptTailer createTailer(String id) {
         throw new UnsupportedOperationException("not currently supported in this implementation.");
+    }
+
+    default LongValue indexForId(String id) {
+        throw new UnsupportedOperationException("Not supported");
     }
 
     /**
