@@ -53,7 +53,15 @@
     <dependencies>
         <dependency>
             <groupId>net.openhft</groupId>
+            <artifactId>chronicle-bytes</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.openhft</groupId>
             <artifactId>chronicle-queue</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-values</artifactId>
         </dependency>
 
         <dependency>
