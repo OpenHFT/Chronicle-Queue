@@ -19,12 +19,11 @@ import java.util.List;
 
 public class PerformanceMain {
     static final String PATH = System.getProperty("path", OS.TMP);
-    static final int COUNT = Integer.getInteger("count", 10_000_000);
     static final int THROUGHPUT = Integer.getInteger("throughput", 500_000);
+    public static final int REPORT_INTERVAL = 5_000_000;
     static final int INTERVAL = 1_000_000_000 / THROUGHPUT;
     static String DIR;
-
-    public static final int REPORT_INTERVAL = 10_000_000;
+    static final int COUNT = Integer.getInteger("count", 30 * THROUGHPUT);
     static final int STAGES;
     static boolean WARMUP;
 
@@ -121,8 +120,10 @@ public class PerformanceMain {
             while (true) {
                 final long index;
                 try (final DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent())
+                    if (!dc.isPresent()) {
+                        Thread.yield();
                         continue;
+                    }
 
                     String event = dc.wire().readEvent(String.class);
                     if (!event.equals("data"))
@@ -166,8 +167,10 @@ public class PerformanceMain {
             while (true) {
                 final long index;
                 try (final DocumentContext dcP = tailerP.readingDocument()) {
-                    if (!dcP.isPresent())
+                    if (!dcP.isPresent()) {
+                        Thread.yield();
                         continue;
+                    }
 
                     index = dcP.wire().bytes().readLong();
                     boolean found = tailer.moveToIndex(index);
