@@ -229,7 +229,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Deprecated(/* to be removed in x.23 */)
     @NotNull
     StoreTailer acquireTailer() {
-        return ThreadLocalHelper.getTL(tlTailer, this, q -> new StoreTailer(q, q.pool));
+        throwExceptionIfClosed();
+        StoreTailer tl = ThreadLocalHelper.getTL(tlTailer, this, q -> new StoreTailer(q, q.pool));
+
+        if (tl.isClosing()) {
+            tl = new StoreTailer(this, pool);
+            tlTailer.set(new WeakReference<>(tl));
+        }
+
+        return tl;
     }
 
     @NotNull
