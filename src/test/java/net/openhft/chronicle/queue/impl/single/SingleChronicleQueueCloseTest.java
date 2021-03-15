@@ -68,7 +68,6 @@ public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/788")
     @Test
     public void reacquireTailerAfterClose() {
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
