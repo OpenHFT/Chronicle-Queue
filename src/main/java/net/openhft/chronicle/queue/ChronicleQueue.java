@@ -140,7 +140,8 @@ public interface ChronicleQueue extends Closeable {
     /**
      * Creates and returns a new ExcerptTailer for this ChronicleQueue.
      * <b>
-     * Tailers are NOT thread-safe. Sharing a Tailer across threads will lead to errors and unpredictable behaviour.
+     * A Tailer is <em>NOT thread-safe</em> and, in addition to that, confined to be used <em>by the creating thread only.</em>.
+     * Sharing a Tailer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>
      * The tailor is created at the start, so unless you are using named tailors,
@@ -158,7 +159,8 @@ public interface ChronicleQueue extends Closeable {
      * The id is used to persistently store the latest index for the trailer. Any new Trailer with
      * a previously used id will continue where the old one left off.
      * <b>
-     * Tailers are NOT thread-safe. Sharing a Tailer across threads will lead to errors and unpredictable behaviour.
+     * A Tailer is <em>NOT thread-safe</em> and, in addition to that, confined to be used <em>by the creating thread only.</em>.
+     * Sharing a Tailer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>
      * If the provided {@code id} is {@code null}, the Trailer will be unnamed and this is
@@ -183,7 +185,8 @@ public interface ChronicleQueue extends Closeable {
      * An Appender can be used to store new excerpts sequentially to the queue.
      * <p>
      * <b>
-     * Appenders are NOT thread-safe. Sharing an Appender across threads will lead to errors and unpredictable behaviour.
+     * An Appender is <em>NOT thread-safe</em> and, in addition to that, confined to be used <em>by the creating thread only.</em>.
+     * Sharing an Appender across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>
      * This method returns a {@link ThreadLocal} appender, so does not produce any garbage, hence it's safe to simply call
@@ -288,7 +291,8 @@ public interface ChronicleQueue extends Closeable {
      * <p>
      * When methods are invoked on the returned T object, messages will be put in the queue.
      * <b>
-     * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
+     * A method writer is <em>NOT thread-safe</em> and, in addition to that, confined to be used <em>by the creating thread only.</em>.
+     * Sharing a method writer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      *
      * @param tClass     of the main interface to be implemented
@@ -310,7 +314,8 @@ public interface ChronicleQueue extends Closeable {
      * When methods are invoked on the returned T object, messages will be put in the queue.
      * <p>
      * <b>
-     * Writers are NOT thread-safe. Sharing a Writer across threads will lead to errors and unpredictable behaviour.
+     * A method writer is <em>NOT thread-safe</em> and, in addition to that, confined to be used <em>by the creating thread only.</em>.
+     * Sharing a method writer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      *
      * @param tClass of the main interface to be implemented
