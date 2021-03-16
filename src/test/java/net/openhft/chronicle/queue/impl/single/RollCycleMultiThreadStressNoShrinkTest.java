@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import org.junit.Test;
 
 public class RollCycleMultiThreadStressNoShrinkTest extends RollCycleMultiThreadStressTest {
@@ -15,6 +14,6 @@ public class RollCycleMultiThreadStressNoShrinkTest extends RollCycleMultiThread
     }
 
     public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressDoubleBufferTest().stress();
+        new RollCycleMultiThreadStressTest().stress();
     }
 }
