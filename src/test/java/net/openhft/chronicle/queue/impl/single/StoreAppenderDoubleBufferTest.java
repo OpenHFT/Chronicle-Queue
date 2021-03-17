@@ -51,7 +51,9 @@ public class StoreAppenderDoubleBufferTest {
                 new Object[]{3, RawBlockedWriterScenario.class},
                 new Object[]{1, MethodWriterBlockedWriterScenario.class},
                 new Object[]{2, MethodWriterBlockedWriterScenario.class},
-                new Object[]{3, MethodWriterBlockedWriterScenario.class});
+                new Object[]{3, MethodWriterBlockedWriterScenario.class},
+                new Object[]{5, RollbackBlockedWriterScenario.class}
+        );
     }
 
     @Test(timeout = 10000L)
@@ -73,7 +75,7 @@ public class StoreAppenderDoubleBufferTest {
                     assertEquals("blocker-before", dc.wire().read().text());
                     assertEquals("blocker-after", dc.wire().read().text());
                 }
-                blockedWriterScenario.readBlockeeRecords(tailer);
+                blockedWriterScenario.readBlockeeRecords(tailer, i);
             }
             // Test we're at the end
             try (DocumentContext dc = tailer.readingDocument()) {
@@ -142,7 +144,7 @@ public class StoreAppenderDoubleBufferTest {
 
         abstract public void runBlockee();
 
-        abstract public void readBlockeeRecords(ExcerptTailer tailer);
+        abstract public void readBlockeeRecords(ExcerptTailer tailer, int iteration);
     }
 
     /**
@@ -150,8 +152,8 @@ public class StoreAppenderDoubleBufferTest {
      */
     static class MethodWriterBlockedWriterScenario extends BlockedWriterScenario {
 
-        public MethodWriterBlockedWriterScenario(ChronicleQueue queue, Integer timesToBlock) {
-            super(queue, timesToBlock);
+        public MethodWriterBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+            super(queue, iterations);
         }
 
         public void runBlockee() {
@@ -181,7 +183,7 @@ public class StoreAppenderDoubleBufferTest {
         }
 
         @Override
-        public void readBlockeeRecords(ExcerptTailer tailer) {
+        public void readBlockeeRecords(ExcerptTailer tailer, int iteration) {
             CountingFoo countingFoo = new CountingFoo();
             try (MethodReader methodReader = tailer.methodReaderBuilder().build(countingFoo)) {
                 assertTrue(methodReader.readOne());
@@ -216,8 +218,8 @@ public class StoreAppenderDoubleBufferTest {
      */
     static class RawBlockedWriterScenario extends BlockedWriterScenario {
 
-        public RawBlockedWriterScenario(ChronicleQueue queue, Integer timesToBlock) {
-            super(queue, timesToBlock);
+        public RawBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+            super(queue, iterations);
         }
 
         @Override
@@ -239,10 +241,60 @@ public class StoreAppenderDoubleBufferTest {
         }
 
         @Override
-        public void readBlockeeRecords(ExcerptTailer tailer) {
+        public void readBlockeeRecords(ExcerptTailer tailer, int iteration) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertEquals("blocked!", dc.wire().read().text());
             }
+        }
+    }
+
+    /**
+     * The blocked rolls back every second write, to test double-buffered
+     * rollback and its impact on subsequent writes.
+     */
+    static class RollbackBlockedWriterScenario extends BlockedWriterScenario {
+
+        public RollbackBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+            super(queue, iterations);
+            if (iterations < 3) {
+                throw new IllegalArgumentException("This test is only meaningful with at least three iterations");
+            }
+        }
+
+        @Override
+        public void runBlockee() {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                everyoneHasAppenders.await();
+                for (int i = 0; i < iterations; i++) {
+                    blockerHasDocumentContext.await();
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        blockeeHasDocumentContext.await();
+                        dc.wire().write().text("blocked!");
+                        if (shouldRollBack(i)) {
+                            dc.rollbackOnClose();
+                        }
+                    }
+                    iterationFinished.await();
+                }
+                LOGGER.info("Blockee finished");
+            } catch (InterruptedException | BrokenBarrierException e) {
+                fail();
+            }
+        }
+
+        @Override
+        public void readBlockeeRecords(ExcerptTailer tailer, int iteration) {
+            if (shouldRollBack(iteration)) {
+                // Nothing should have been written for this iteration
+                return;
+            }
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertEquals("blocked!", dc.wire().read().text());
+            }
+        }
+
+        private boolean shouldRollBack(int iteration) {
+            return iteration % 2 == 0;
         }
     }
 }

@@ -859,12 +859,17 @@ class StoreAppender extends AbstractCloseable
         }
 
         private void doRollback() {
-            // zero out all contents...
-            for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
-                wire.bytes().writeByte(i, (byte) 0);
-            long lastPosition = StoreAppender.this.lastPosition;
-            position0(lastPosition, lastPosition);
-            ((AbstractWire) wire).forceNotInsideHeader();
+            if (buffered) {
+                assert wire != StoreAppender.this.wire;
+                wire.clear();
+            } else {
+                // zero out all contents...
+                for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
+                    wire.bytes().writeByte(i, (byte) 0);
+                long lastPosition = StoreAppender.this.lastPosition;
+                position0(lastPosition, lastPosition);
+                ((AbstractWire) wire).forceNotInsideHeader();
+            }
         }
 
         @Override
