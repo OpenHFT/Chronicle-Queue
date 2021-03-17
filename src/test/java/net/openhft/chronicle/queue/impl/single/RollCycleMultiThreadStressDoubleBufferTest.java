@@ -64,14 +64,10 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
             for (int i = 0; i < NUMBER_OF_INTS; i++) {
                 int v = valueIn.int32();
                 if (i == 0 && v != expected) {
-                    if (unexpectedValues.contains(expected)) {
-                        unexpectedValues.remove(expected);
-                    } else {
+                    if (!unexpectedValues.remove(expected)) {
                         skippedValue.add(expected);
                     }
-                    if (skippedValue.contains(v)) {
-                        skippedValue.remove(v);
-                    } else {
+                    if (!skippedValue.remove(v)) {
                         unexpectedValues.add(v);
                     }
                     outOfOrderCount++;
