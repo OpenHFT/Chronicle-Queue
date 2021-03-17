@@ -357,7 +357,7 @@ class StoreAppender extends AbstractCloseable
             // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);
 
-            // there is nothing to read.
+            // Move readPosition to the start of the context. i.e. readRemaining() == 0
             wire.bytes().readPosition(wire.bytes().writePosition());
         }
 
