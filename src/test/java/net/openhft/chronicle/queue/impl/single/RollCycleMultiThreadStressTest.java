@@ -521,6 +521,13 @@ public class RollCycleMultiThreadStressTest {
                 final long documentAcquireTimestamp = System.nanoTime();
                 value = wrote.getAndIncrement();
                 if (value >= expectedNumberOfMessages) {
+                    /*
+                        Mutual exclusion was previously relied on to ensure
+                        we didn't write more than expectedNumberOfMessages
+                        however when double buffering is turned on multiple
+                        threads can get in here and end up writing more.
+                        Exit early and rollback if that's the case.
+                     */
                     writingDocument.rollbackOnClose();
                     return value;
                 }
