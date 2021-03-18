@@ -874,6 +874,9 @@ class StoreAppender extends AbstractCloseable
 
         @Override
         public long index() {
+            if (buffered) {
+                throw new IndexNotAvailableException("Index is unavailable when double buffering");
+            }
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));

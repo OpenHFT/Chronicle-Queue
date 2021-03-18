@@ -52,7 +52,8 @@ public class StoreAppenderDoubleBufferTest {
                 new Object[]{1, MethodWriterBlockedWriterScenario.class},
                 new Object[]{2, MethodWriterBlockedWriterScenario.class},
                 new Object[]{3, MethodWriterBlockedWriterScenario.class},
-                new Object[]{5, RollbackBlockedWriterScenario.class}
+                new Object[]{5, RollbackBlockedWriterScenario.class},
+                new Object[]{1, CallIndexWhileBlockedWriterScenario.class}
         );
     }
 
@@ -295,6 +296,44 @@ public class StoreAppenderDoubleBufferTest {
 
         private boolean shouldRollBack(int iteration) {
             return iteration % 2 == 0;
+        }
+    }
+
+    static class CallIndexWhileBlockedWriterScenario extends BlockedWriterScenario {
+
+        public CallIndexWhileBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+            super(queue, iterations);
+        }
+
+        @Override
+        public void runBlockee() {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                everyoneHasAppenders.await();
+                for (int i = 0; i < iterations; i++) {
+                    blockerHasDocumentContext.await();
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        try {
+                            dc.index();
+                            fail();
+                        } catch (IndexNotAvailableException e) {
+                            // Expect index to not be available when double buffered
+                            dc.wire().write().text("blocked!");
+                        }
+                        blockeeHasDocumentContext.await();
+                    }
+                    iterationFinished.await();
+                }
+                LOGGER.info("Blockee finished");
+            } catch (InterruptedException | BrokenBarrierException e) {
+                fail();
+            }
+        }
+
+        @Override
+        public void readBlockeeRecords(ExcerptTailer tailer, int iteration) {
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertEquals("blocked!", dc.wire().read().text());
+            }
         }
     }
 }
