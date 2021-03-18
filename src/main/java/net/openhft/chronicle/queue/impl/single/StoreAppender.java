@@ -356,9 +356,11 @@ class StoreAppender extends AbstractCloseable
 
             // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);
+
+            // Move readPosition to the start of the context. i.e. readRemaining() == 0
+            wire.bytes().readPosition(wire.bytes().writePosition());
         }
-        // there is nothing to read.
-        wire.bytes().readPosition(wire.bytes().writePosition());
+
         return writeContext;
     }
 
@@ -366,7 +368,7 @@ class StoreAppender extends AbstractCloseable
     public DocumentContext acquireWritingDocument(boolean metaData) {
         if (!DISABLE_THREAD_SAFETY)
             this.threadSafetyCheck(true);
-        if (wire != null && writeContext.isOpen() && writeContext.chainedElement())
+        if (writeContext.wire != null && writeContext.isOpen() && writeContext.chainedElement())
             return writeContext;
         return writingDocument(metaData);
     }
@@ -834,6 +836,7 @@ class StoreAppender extends AbstractCloseable
                     if (buffered) {
                         writeBytes(wire.bytes());
                         unlock = false;
+                        wire.clear();
                     } else {
                         writeBytesInternal(wire.bytes(), metaData);
                         wire = StoreAppender.this.wire;
@@ -856,16 +859,24 @@ class StoreAppender extends AbstractCloseable
         }
 
         private void doRollback() {
-            // zero out all contents...
-            for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
-                wire.bytes().writeByte(i, (byte) 0);
-            long lastPosition = StoreAppender.this.lastPosition;
-            position0(lastPosition, lastPosition);
-            ((AbstractWire) wire).forceNotInsideHeader();
+            if (buffered) {
+                assert wire != StoreAppender.this.wire;
+                wire.clear();
+            } else {
+                // zero out all contents...
+                for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
+                    wire.bytes().writeByte(i, (byte) 0);
+                long lastPosition = StoreAppender.this.lastPosition;
+                position0(lastPosition, lastPosition);
+                ((AbstractWire) wire).forceNotInsideHeader();
+            }
         }
 
         @Override
         public long index() {
+            if (buffered) {
+                throw new IndexNotAvailableException("Index is unavailable when double buffering");
+            }
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
