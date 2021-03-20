@@ -11,6 +11,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import static org.junit.Assert.fail;
+
 public class CheckHalfWrittenMsgNotSeenByTailerTest {
     static {
         // load the lass
@@ -22,7 +24,6 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         // writes three messages the third messas is half written
         public static void main(String[] args) throws InterruptedException {
             System.out.println("half writing a message to " + args[0]);
-
 
             try (final ChronicleQueue single = ChronicleQueue.single(args[0]);
                  final ExcerptAppender excerptAppender = single.acquireAppender()) {
@@ -54,7 +55,6 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         }
     }
 
-
     @Test
     public void checkTailerOnlyReadsTwoMessage() throws IOException, InterruptedException {
         Assume.assumeTrue(!OS.isWindows());
@@ -67,13 +67,11 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
 
-
             try (final DocumentContext dc = tailer.readingDocument()) {
                 Assert.assertTrue(dc.isPresent());
                 Assert.assertEquals("hello world 1", dc.wire().read("key1").text());
                 Assert.assertEquals("hello world 2", dc.wire().read("key2").text());
             }
-
 
             try (final DocumentContext dc = tailer.readingDocument()) {
                 Assert.assertTrue(dc.isPresent());
@@ -83,7 +81,11 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
 
             try (final DocumentContext dc = tailer.readingDocument()) {
                 final boolean present = dc.isPresent();
-                Assert.assertFalse(present);
+                if (present) {
+                    String key = dc.wire().readEvent(String.class);
+                    String value = dc.wire().getValueIn().text();
+                    fail("key: " + key + ", value: " + value);
+                }
             }
         }
     }
@@ -116,5 +118,4 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         }
         p.waitFor();
     }
-
 }
