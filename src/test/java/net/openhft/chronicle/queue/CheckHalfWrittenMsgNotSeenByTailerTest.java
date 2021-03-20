@@ -65,8 +65,10 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
         HalfWriteAMessage.writeIncompleteMessage(queueDirectory.toString(), false);
-        System.gc();
-        Jvm.pause(250);
+        for (int i = 0; i < 3; i++) {
+            System.gc();
+            Jvm.pause(50);
+        }
 
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
