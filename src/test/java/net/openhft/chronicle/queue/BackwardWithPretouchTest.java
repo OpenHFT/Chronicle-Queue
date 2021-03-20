@@ -70,5 +70,4 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
             }
         }
     }
-
 }

@@ -138,5 +138,4 @@ public enum BinarySearch {
             key.bytes().readPosition(readPosition);
         }
     }
-
 }

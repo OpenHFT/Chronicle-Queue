@@ -214,7 +214,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         super.assertReferencesReleased();
     }
 
-
     private static boolean isFileHandleClosed(File file) throws IOException {
         Process plsof = null;
         try {

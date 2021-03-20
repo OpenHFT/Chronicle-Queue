@@ -101,5 +101,4 @@ public final class InternalPingPongMain {
     private static ChronicleQueue createQueue(String path) {
         return ChronicleQueue.single(path);
     }
-
 }

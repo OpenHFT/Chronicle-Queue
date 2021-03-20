@@ -137,5 +137,4 @@ public class LastIndexAppendedTest extends ChronicleQueueTestBase {
         assertEquals(expected, i[0]);
         return t_index;
     }
-
 }

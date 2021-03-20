@@ -240,5 +240,4 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
     }
-
 }

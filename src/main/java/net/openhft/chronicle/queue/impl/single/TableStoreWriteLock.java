@@ -143,7 +143,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             forceUnlock(lockedBy());
     }
 
-
     /**
      * Don't use this - for internal use only
      * Does not warn when force unlocked
@@ -151,5 +150,4 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     public void forceUnlockQuietly() {
         lock.setValue(UNLOCKED);
     }
-
 }

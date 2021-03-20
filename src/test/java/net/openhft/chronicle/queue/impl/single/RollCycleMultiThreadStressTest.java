@@ -138,7 +138,6 @@ public class RollCycleMultiThreadStressTest {
         if (SHARED_WRITE_QUEUE)
             sharedWriterQueue = createQueue(file);
 
-
         if (PRETOUCH) {
             pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);

@@ -3611,5 +3611,4 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertEquals(expected, sb.toString());
         }
     }
-
 }

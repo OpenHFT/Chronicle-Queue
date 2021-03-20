@@ -29,7 +29,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-
 @RunWith(Parameterized.class)
 public class StoreAppenderDoubleBufferTest {
 

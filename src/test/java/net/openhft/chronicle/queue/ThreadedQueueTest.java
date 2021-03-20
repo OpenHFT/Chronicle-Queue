@@ -131,5 +131,4 @@ public class ThreadedQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
-
 }

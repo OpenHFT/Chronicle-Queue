@@ -55,7 +55,6 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
      */
     E disableThreadSafetyCheck(boolean disableThreadSafetyCheck);
 
-
     /**
      * @return the current file being worked on or null if not known.
      */

@@ -186,5 +186,4 @@ public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
         builder.rollCycle(rollCycle);
         return builder.build();
     }
-
 }

@@ -149,5 +149,4 @@ public class PretoucherStateTest extends QueueTestCommon {
             first = true;
         }
     }
-
 }

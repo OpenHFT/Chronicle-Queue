@@ -12,5 +12,4 @@ public enum ValidFields {
                 ((Validatable) object).validate();
         }
     }
-
 }

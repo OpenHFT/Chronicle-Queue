@@ -42,7 +42,6 @@ public interface ServiceWrapper extends Closeable {
         return InternalServiceWrapperBuilder.serviceBuilder(inputPath, outputPath, outClass, serviceFunction);
     }
 
-
     interface Builder<O> extends Supplier<ServiceWrapper> {
         @NotNull
         List<String> inputPath();
@@ -105,5 +104,4 @@ public interface ServiceWrapper extends Closeable {
 
         void closeQueues();
     }
-
 }

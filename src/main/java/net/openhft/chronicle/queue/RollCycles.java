@@ -230,5 +230,4 @@ public enum RollCycles implements RollCycle {
 
         return Math.min(sequenceMask0, indexCount * indexCount * indexSpacing);
     }
-
 }

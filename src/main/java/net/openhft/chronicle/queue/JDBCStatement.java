@@ -33,5 +33,4 @@ public interface JDBCStatement {
     static JDBCStatement create(@NotNull ThrowingSupplier<Connection, SQLException> connectionSupplier, JDBCResult resul) throws SQLException {
         return new InternalJDBCComponent(connectionSupplier,resul);
     }
-
 }

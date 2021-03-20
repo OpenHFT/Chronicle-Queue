@@ -30,5 +30,4 @@ public final class ReaderMain {
     public static void main(@NotNull String[] args) {
         ChronicleReaderMain.main(args);
     }
-
 }

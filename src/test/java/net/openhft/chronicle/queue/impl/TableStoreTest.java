@@ -25,7 +25,6 @@ public class TableStoreTest extends QueueTestCommon {
 
         final File tempFile = Files.createTempFile((Path) file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
 
-
         try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue a = table.acquireValueFor("a");
              LongValue b = table.acquireValueFor("b")) {

@@ -77,5 +77,4 @@ public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestC
             assertNull(tailer.readText());
         }
  }
-
 }

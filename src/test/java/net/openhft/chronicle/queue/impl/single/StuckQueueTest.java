@@ -73,6 +73,5 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
-
 }
 

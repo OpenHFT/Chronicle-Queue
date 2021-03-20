@@ -9,7 +9,6 @@ image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
 
-
 image::images/Queue_line.png[]
 
 == Contents
@@ -1426,7 +1425,6 @@ but aligning to 4 bytes also ensures 64-byte alignment and allows your Chronicle
 
 For Chronicle Queue, the 4-byte alignment is now enforced, so there is now, no way to turn this feature on or off.
 This behaviour was changed on 21 April 2020 as part of https://github.com/OpenHFT/Chronicle-Queue/issues/656
-
 
 ==== Ensure long Running tasks are not performed with a writingDocument()
 

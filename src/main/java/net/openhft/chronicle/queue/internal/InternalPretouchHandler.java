@@ -35,5 +35,4 @@ public final class InternalPretouchHandler implements EventHandler {
     public void shutdown() {
         pretoucher.shutdown();
     }
-
 }

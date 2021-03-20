@@ -324,5 +324,4 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         // TableStore are thread safe
         return true;
     }
-
 }

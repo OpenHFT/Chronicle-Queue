@@ -13,5 +13,4 @@ public final class PingPongMain {
     public static void main(String[] args) {
         InternalPingPongMain.main(args);
     }
-
 }
