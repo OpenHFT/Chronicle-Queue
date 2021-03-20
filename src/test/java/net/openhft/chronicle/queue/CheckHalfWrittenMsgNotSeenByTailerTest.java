@@ -5,7 +5,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -14,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 
 public class CheckHalfWrittenMsgNotSeenByTailerTest {
     static {
@@ -99,7 +99,6 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
     }
 
 
-    @Ignore("TODO FIX")
     @Test
     public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
         Assume.assumeTrue(!OS.isWindows());
@@ -145,12 +144,15 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         BufferedReader stdError = new BufferedReader(new
                 InputStreamReader(p.getErrorStream()));
 
+        boolean buildFailure = false;
         String s;
         // read the output from the command
         //      System.out.println("Here is the standard output of the command:\n");
         while ((s = stdInput.readLine()) != null) {
 
             System.out.println(s);
+            if (s.contains("BUILD FAILURE"))
+                buildFailure = true;
 
             // wait for Replication Started
             if ("== FINISHED WRITING DATA ==".equals(s))
@@ -164,5 +166,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
             System.out.println(s);
         }
         p.waitFor();
+        // test can't be run this way.
+        assumeFalse(buildFailure);
     }
 }
