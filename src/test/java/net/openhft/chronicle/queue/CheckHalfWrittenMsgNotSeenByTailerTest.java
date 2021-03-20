@@ -99,7 +99,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
 
 
     @Test
-    public void checkTailerOnlyReadsTwoMessage() throws IOException, InterruptedException {
+    public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
         Assume.assumeTrue(!OS.isWindows());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
