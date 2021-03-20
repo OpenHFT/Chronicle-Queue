@@ -50,17 +50,13 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
 
                     dc.wire().write("key2").text("hello world 6");
                 }
-
-
             }
-
         }
-
     }
 
 
     @Test
-    public void checkTailerOnlyReadsTwoMessage() throws IOException, InterruptedException, ClassNotFoundException {
+    public void checkTailerOnlyReadsTwoMessage() throws IOException, InterruptedException {
         Assume.assumeTrue(!OS.isWindows());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
@@ -86,17 +82,13 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
             }
 
             try (final DocumentContext dc = tailer.readingDocument()) {
-                Assert.assertFalse(dc.isPresent());
+                final boolean present = dc.isPresent();
+                Assert.assertFalse(present);
             }
         }
     }
 
-
-    public void isPresent(DocumentContext dc) {
-
-    }
-
-    private static void runCommand(String command) throws IOException {
+    private static void runCommand(String command) throws IOException, InterruptedException {
         Process p = Runtime.getRuntime().exec(command);
         BufferedReader stdInput = new BufferedReader(new
                 InputStreamReader(p.getInputStream()));
@@ -122,6 +114,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         while ((s = stdError.readLine()) != null) {
             System.out.println(s);
         }
+        p.waitFor();
     }
 
 }
