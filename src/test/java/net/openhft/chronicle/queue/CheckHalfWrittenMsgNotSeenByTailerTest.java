@@ -82,6 +82,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
             try (final DocumentContext dc = tailer.readingDocument()) {
                 final boolean present = dc.isPresent();
                 if (present) {
+                    System.out.println(dc.wire().bytes().toHexString());
                     String key = dc.wire().readEvent(String.class);
                     String value = dc.wire().getValueIn().text();
                     fail("key: " + key + ", value: " + value);
