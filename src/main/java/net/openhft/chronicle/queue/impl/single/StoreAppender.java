@@ -736,6 +736,7 @@ class StoreAppender extends AbstractCloseable
         @Override
         protected void finalize() throws Throwable {
             super.finalize();
+            writeContext.rollbackOnClose();
             warnAndCloseIfNotClosed();
         }
     }
