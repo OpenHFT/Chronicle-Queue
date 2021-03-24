@@ -1,9 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -586,7 +583,7 @@ class StoreAppender extends AbstractCloseable
         if (position > store.writePosition() + queue.blockSize())
             throw new IllegalArgumentException("pos: " + position + ", store.writePosition()=" +
                     store.writePosition() + " queue.blockSize()=" + queue.blockSize());
-        position0(position, startOfMessage);
+        position0(position, startOfMessage, wire.bytes());
     }
 
     @Override
@@ -709,9 +706,9 @@ class StoreAppender extends AbstractCloseable
                 '}';
     }
 
-    void position0(final long position, final long startOfMessage) {
+    void position0(final long position, final long startOfMessage, Bytes<?> bytes) {
         this.positionOfHeader = position;
-        wire.bytes().writePosition(startOfMessage);
+        bytes.writePosition(startOfMessage);
     }
 
     @Override
@@ -865,11 +862,20 @@ class StoreAppender extends AbstractCloseable
                 wire.clear();
             } else {
                 // zero out all contents...
-                for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
-                    wire.bytes().writeByte(i, (byte) 0);
-                long lastPosition = StoreAppender.this.lastPosition;
-                position0(lastPosition, lastPosition);
-                ((AbstractWire) wire).forceNotInsideHeader();
+                final Bytes<?> bytes = wire.bytes();
+                try {
+                    for (long i = positionOfHeader; i <= bytes.writePosition(); i++)
+                        bytes.writeByte(i, (byte) 0);
+                    long lastPosition = StoreAppender.this.lastPosition;
+                    position0(lastPosition, lastPosition, bytes);
+                    ((AbstractWire) wire).forceNotInsideHeader();
+                } catch (BufferOverflowException | IllegalStateException e) {
+                    if (bytes instanceof MappedBytes && ((MappedBytes) bytes).isClosed()) {
+                        Jvm.warn().on(getClass(), "Unable to roll back excerpt as it is closed.");
+                        return;
+                    }
+                    throw e;
+                }
             }
         }
 
