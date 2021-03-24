@@ -70,13 +70,12 @@ public class MethodReaderBenchmark implements JLBHTask {
 
         System.out.println("Throughput: " + throughput);
 
+        // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(100_000)
                 .iterations(iterations)
                 .throughput(throughput)
-                .recordOSJitter(false)
-                // disable as otherwise single GC event skews results heavily
-                .accountForCoordinatedOmmission(true)
+                .recordOSJitter(false).accountForCoordinatedOmission(true)
                 .skipFirstRun(true)
                 .runs(5)
                 .jlbhTask(new MethodReaderBenchmark());
