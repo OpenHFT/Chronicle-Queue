@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -56,7 +57,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         private final RollCycle delegate = RollCycles.TEST_SECONDLY;
 
         @Override
-        public String format() {
+        public @NotNull String format() {
             return "xyz";
         }
 

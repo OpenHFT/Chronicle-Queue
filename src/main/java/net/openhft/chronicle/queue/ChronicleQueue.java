@@ -77,7 +77,8 @@ public interface ChronicleQueue extends Closeable {
      * in the directory given by the provided {@code pathName}
      * @throws NullPointerException if the provided {@code pathName} is {@code null}.
      */
-    static ChronicleQueue single(@NotNull String pathName) {
+    @NotNull
+    static ChronicleQueue single(@NotNull final String pathName) {
         return SingleChronicleQueueBuilder.single(pathName).build();
     }
 
@@ -88,6 +89,7 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return a new {@link SingleChronicleQueueBuilder}
      */
+    @NotNull
     static SingleChronicleQueueBuilder singleBuilder() {
         return SingleChronicleQueueBuilder.single();
     }
@@ -103,7 +105,8 @@ public interface ChronicleQueue extends Closeable {
      * provided {@code pathName}
      * @throws NullPointerException if the provided {@code pathName} is {@code null}.
      */
-    static SingleChronicleQueueBuilder singleBuilder(@NotNull String pathName) {
+    @NotNull
+    static SingleChronicleQueueBuilder singleBuilder(@NotNull final String pathName) {
         return SingleChronicleQueueBuilder.binary(pathName);
     }
 
@@ -118,7 +121,8 @@ public interface ChronicleQueue extends Closeable {
      * provided {@code pathName}
      * @throws NullPointerException if the provided {@code path} is {@code null}.
      */
-    static SingleChronicleQueueBuilder singleBuilder(@NotNull File path) {
+    @NotNull
+    static SingleChronicleQueueBuilder singleBuilder(@NotNull final File path) {
         return SingleChronicleQueueBuilder.binary(path);
     }
 
@@ -133,7 +137,8 @@ public interface ChronicleQueue extends Closeable {
      * provided {@code pathName}
      * @throws NullPointerException if the provided {@code path} is {@code null}.
      */
-    static SingleChronicleQueueBuilder singleBuilder(@NotNull Path path) {
+    @NotNull
+    static SingleChronicleQueueBuilder singleBuilder(@NotNull final Path path) {
         return SingleChronicleQueueBuilder.binary(path);
     }
 
@@ -302,7 +307,8 @@ public interface ChronicleQueue extends Closeable {
      * interfaces
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
-    default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
+    @NotNull
+    default <T> T methodWriter(@NotNull final Class<T> tClass, Class... additional) {
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
         Stream.of(additional).forEach(builder::addInterface);
         return builder.build();
@@ -324,7 +330,7 @@ public interface ChronicleQueue extends Closeable {
      * @throws NullPointerException if the provided parameter is {@code null}.
      */
     @NotNull
-    default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull Class<T> tClass) {
+    default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull final Class<T> tClass) {
         VanillaMethodWriterBuilder<T> builder = new VanillaMethodWriterBuilder<>(tClass,
                 wireType(),
                 () -> new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
@@ -338,6 +344,7 @@ public interface ChronicleQueue extends Closeable {
      * @return the {@link RollCycle} for this ChronicleQueue
      * @see RollCycle
      */
+    @NotNull
     RollCycle rollCycle();
 
     /**

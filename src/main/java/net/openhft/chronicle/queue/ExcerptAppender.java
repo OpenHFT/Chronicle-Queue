@@ -24,6 +24,7 @@ import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.</p>
@@ -133,6 +134,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      *
      * @return a raw wire for low level direct access
      */
+    @Nullable
     Wire wire();
 
 }

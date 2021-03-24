@@ -90,7 +90,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     @Override
-    public ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+    public @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
     }

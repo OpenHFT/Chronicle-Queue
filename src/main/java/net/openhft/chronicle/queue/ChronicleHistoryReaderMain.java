@@ -50,7 +50,7 @@ public class ChronicleHistoryReaderMain {
         chronicleHistoryReader.execute();
     }
 
-    protected void setup(CommandLine commandLine, ChronicleHistoryReader chronicleHistoryReader) {
+    protected void setup(@NotNull final CommandLine commandLine, @NotNull final ChronicleHistoryReader chronicleHistoryReader) {
         chronicleHistoryReader.
                 withMessageSink(System.out::println).
                 withProgress(commandLine.hasOption('p')).
@@ -71,7 +71,7 @@ public class ChronicleHistoryReaderMain {
         return new ChronicleHistoryReader();
     }
 
-    protected CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {
+    protected CommandLine parseCommandLine(@NotNull final String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
         try {

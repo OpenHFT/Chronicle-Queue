@@ -715,7 +715,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+    public @NotNull ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
     }
