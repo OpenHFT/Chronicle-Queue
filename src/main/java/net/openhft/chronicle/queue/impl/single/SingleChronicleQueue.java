@@ -460,7 +460,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * @return the {@link QueueLock} that is used to lock changes to queue state e.g. the addition of a new appender
+     * @return the {@link QueueLock} This lock is held by an appender while the queue replication cluster is back-filling.
+     * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
+     * hence we need to back copy data from the sinks to the source upon startup.
+     * While we are doing this we lock the queue so that you cannot write data to this queue. So we lock it with a queue lock.
+     *
+     * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
      */
     @Override
     @NotNull
