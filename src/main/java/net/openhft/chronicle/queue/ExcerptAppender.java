@@ -135,4 +135,10 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     Wire wire();
 
+    /**
+     * Ensure all already-rolled cq4 files are correctly ended with EOF
+     * Used by replication sinks on startup to cover off any edge cases where the replicated EOF was not received/applied
+     * Can also be used on any appender, but this is not currently done automatically
+     */
+    default void normaliseEOFs() {}
 }
