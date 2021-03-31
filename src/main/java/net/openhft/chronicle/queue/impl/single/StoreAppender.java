@@ -370,6 +370,27 @@ class StoreAppender extends AbstractCloseable
         return writingDocument(metaData);
     }
 
+    public void normaliseEOFs() {
+        final WriteLock writeLock = queue.writeLock();
+        writeLock.lock();
+        try {
+            normaliseEOFs0();
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    private void normaliseEOFs0() {
+        int last = queue.lastCycle();
+        int first = queue.firstCycle();
+
+        for(int cycle = first; cycle < last; ++cycle) {
+            setCycle2(cycle, false);
+            if(wire != null)
+                store.writeEOF(wire, timeoutMS());
+        }
+    }
+
     private void setWireIfNull(final int cycle) {
         int lastCycle = queue.lastCycle();
         if (lastCycle == Integer.MIN_VALUE)
