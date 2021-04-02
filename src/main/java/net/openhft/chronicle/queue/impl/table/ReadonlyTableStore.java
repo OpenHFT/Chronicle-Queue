@@ -57,7 +57,6 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @Override
     public <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code) {
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
         throw read_only;
     }
 
@@ -67,7 +66,6 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throwExceptionIfClosed();
 
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
         throw read_only;
     }
 
@@ -77,7 +75,6 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throwExceptionIfClosed();
 
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
         throw read_only;
     }
 
@@ -87,7 +84,6 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throwExceptionIfClosed();
 
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
         throw read_only;
     }
 
@@ -97,7 +93,6 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throwExceptionIfClosed();
 
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
         throw read_only;
     }
 
@@ -105,7 +100,6 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     public void writeMarshallable(@NotNull WireOut wire) {
 
         UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        read_only.printStackTrace();
         throw read_only;
     }
 

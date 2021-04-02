@@ -458,7 +458,6 @@ class StoreAppender extends AbstractCloseable
                         " seq1: " + seq1 +
                         " seq2: " + seq2;
                 AssertionError ae = new AssertionError(message);
-                ae.printStackTrace();
                 throw ae;
             }
         } catch (Exception e) {
