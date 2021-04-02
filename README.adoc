@@ -526,13 +526,24 @@ long index = appender.lastIndexAppended();
 
 will only give you the last index appended by this appender; not the last index appended by any appender.
 
-If you wish to find the index of the last record written, then you have to call:
+If you wish to find the index of the last record written to the queue, then you have to call:
 
 ```
-long index = queue.createTailer().toEnd().index() - 1;
+ExcerptTailer tailer = queue.createTailer().toEnd().direction(TailerDirection.BACKWARD);
+try (DocumentContext dc = tailer.readingDocument()) {
+    if (dc.isPresent()) {
+        lastIndex = tailer.index());
+    }
+}
 ```
 
 (note that `tailer.toEnd()` puts the tailer just past the last index written)
+
+Previously, we advised to call
+```
+lastIndex = queue.createTailer().toEnd().index() - 1;
+```
+But if the queue has rolled and there is no data in the new cycle, this will not work.
 
 === How to determine how many messages are between two indexes
 
