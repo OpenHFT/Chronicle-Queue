@@ -340,7 +340,6 @@ class StoreAppender extends AbstractCloseable
         } else {
             writeLock.lock();
             int cycle = queue.cycle();
-
             if (wire == null)
                 setWireIfNull(cycle);
 
@@ -536,10 +535,10 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
-
         if (wire == null)
-            setCycle2(cycle, true);
-        else if (queue.rollCycle().toCycle(wire.headerNumber()) != cycle)
+            setWireIfNull(cycle);
+
+        if (this.cycle != cycle)
             rollCycleTo(cycle);
 
         long headerNumber = wire.headerNumber();
