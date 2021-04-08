@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -83,45 +84,6 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
             assertFalse(hasEOFAtEndOfFile(file1));
 
             writer2.accept(appender);
-
-            // Simulate the end of the day i.e the queue closes the day rolls
-            // (note the change of index from 18264 to 18265)
-
-            assertTrue(hasEOFAtEndOfFile(file1));
-        }
-    }
-
-    private void checkTheEOFisWrittenToPreQueueFileInner2(Consumer<InternalAppender> writer) {
-        SetTimeProvider tp = new SetTimeProvider(1_000_000_000);
-
-        File file1 = getTmpDir();
-        RollCycles rollCycle = RollCycles.DEFAULT;
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .testBlockSize()
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
-
-            writer.accept(appender);
-
-            Assert.assertFalse(hasEOFAtEndOfFile(file1));
-        }
-
-        tp.advanceMillis(2 * rollCycle.lengthInMillis());
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .testBlockSize()
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
-
-            assertFalse(hasEOFAtEndOfFile(file1));
-
-            writer.accept(appender);
 
             // Simulate the end of the day i.e the queue closes the day rolls
             // (note the change of index from 18264 to 18265)
@@ -305,6 +267,27 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
                 String s5 = dc.wire().read("hello").text();
                // System.out.println(s5);
                 assertEquals(msg + 4, s5);
+            }
+        }
+    }
+
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/822")
+    @Test
+    public void writeReadMetadata() {
+        try (final ChronicleQueue queue = ChronicleQueue
+                .singleBuilder(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build()) {
+
+            final ExcerptAppender appender = queue.acquireAppender();
+            final ExcerptTailer tailer = queue.createTailer();
+
+            boolean metadata = true;
+            try (DocumentContext dc = appender.writingDocument(metadata)) {
+                dc.wire().write("a").text("hello");
+            }
+            try (DocumentContext dc = tailer.readingDocument(metadata)) {
+                Assert.assertTrue(dc.isPresent());
             }
         }
     }
