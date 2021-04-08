@@ -304,7 +304,7 @@ class StoreAppender extends AbstractCloseable
         }
         int header = bytes.readVolatileInt(positionOfHeader);
         // ready or an incomplete message header?
-        return isReadyData(header) || isNotComplete(header);
+        return isReadyData(header) || isReadyMetaData(header) || isNotComplete(header);
     }
 
     @NotNull
@@ -682,7 +682,6 @@ class StoreAppender extends AbstractCloseable
 
     // throws UnrecoverableTimeoutException
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
-
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
     }
@@ -840,6 +839,8 @@ class StoreAppender extends AbstractCloseable
                     }
 
                     lastPosition = positionOfHeader;
+
+                    boolean newCycle = (lastCycle != cycle);
                     lastCycle = cycle;
 
                     if (!metaData) {
@@ -847,6 +848,13 @@ class StoreAppender extends AbstractCloseable
                         store.writePosition(positionOfHeader);
                         if (lastIndex != Long.MIN_VALUE)
                             writeIndexForPosition(lastIndex, positionOfHeader);
+                    }else if(newCycle){
+                        // if rolling to a new cycle, and the first message is metadata, a dummy index entry is required
+                        long l = queue.rollCycle().toIndex(cycle, 0);
+                        lastIndex(l);
+                        store.writePosition(positionOfHeader);
+                        if (lastIndex != Long.MIN_VALUE)
+                            writeIndexForPosition(l, positionOfHeader);
                     }
 
                 } else if (wire != null) {
