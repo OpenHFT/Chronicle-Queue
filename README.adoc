@@ -7,7 +7,7 @@ image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-que
 image:https://javadoc-badge.appspot.com/net.openhft/chronicle-queue.svg?label=javadoc[JavaDoc, link=https://www.javadoc.io/doc/net.openhft/chronicle-queue]
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
-image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
+//image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
 
 
 image::images/Queue_line.png[]
@@ -1960,10 +1960,22 @@ Buffer Mode::
 - `None` - The default (and the only one available for open source users), no buffering; - `Copy` - used in conjunction with encryption; - `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer Capacity::
 Ring buffer capacity when using `bufferMode: Asynchronous`
 
+=== Running under Docker
+If you are running Chronicle Queue or Chronicle Queue Enterprise under Docker, the best
+practice is to use the following command:
+
+[source,text]
+----
+--ipc=host
+----
+This feature lets processes running on a host computer communicate with each other
+immediately, therefore the latency associated with network or pipe-based IPC does not degrade
+the Chronicle Queue (Enterprise) performance.
+
 === The Maximum number of messages per cycle
 
 |===
-| RollCyle Name | Max Number of messages in each cycle in Decimal | Max Number of messages in each cycle in Hexadecimal | maximum messages per seconds over the length of the cycle  ( on average )
+| RollCycle Name | Max Number of messages in each cycle in Decimal | Max Number of messages in each cycle in Hexadecimal | maximum messages per seconds over the length of the cycle  ( on average )
 
 | FIVE_MINUTELY | 1,073,741,824| 0x40000000 | 3,579,139
 | TEN_MINUTELY | 1,073,741,824| 0x40000000 | 1,789,569
