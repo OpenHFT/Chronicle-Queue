@@ -83,7 +83,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     /**
      * Returns the current index of this Trailer.
      * <p>
-     * If this method is invoked within a {@code try (tailer.readingDocument){ }} block, returns the index of
+     * If this method is invoked within a {@code try (tailer.readingDocument(){ }} block, returns the index of
      * the current reading document. Otherwise, returns the next index to read.
      * <p>
      * The index includes the cycle and the sequence number within that cycle.
