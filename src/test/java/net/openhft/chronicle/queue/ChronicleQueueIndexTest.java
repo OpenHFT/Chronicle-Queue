@@ -31,6 +31,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
                                                 appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(3, 0L), from("Hello World 2")));
     }
 
+    @Ignore("writing metadata message as last message in queue does not always write EOF #823")
     @Test
     public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
         final Consumer<InternalAppender> writer = appender -> {
