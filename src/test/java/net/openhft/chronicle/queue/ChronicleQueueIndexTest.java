@@ -8,12 +8,15 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.bytes.Bytes.from;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
@@ -23,51 +26,70 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFile() {
+        checkTheEOFisWrittenToPreQueueFileInner(appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(1, 0L), from("Hello World 1")),
+                                                (tp, rc) -> { /* not required as we are increasing cycle in next write */ },
+                                                appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(3, 0L), from("Hello World 2")));
+    }
 
+    @Ignore("writing metadata message as last message in queue does not always write EOF #823")
+    @Test
+    public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
+        final Consumer<InternalAppender> writer = appender -> {
+            try (DocumentContext wd = appender.writingDocument(true)) {
+                wd.wire().write("key").writeDouble(1);
+            }
+        };
+        checkTheEOFisWrittenToPreQueueFileInner(writer, (tp, rollCycle) -> tp.advanceMillis(2 * rollCycle.lengthInMillis()), writer);
+    }
+
+    @Test
+    public void checkTheEOFisWrittenToPreQueueFileWritingDocument() {
+        final Consumer<InternalAppender> writer = appender -> {
+            try (DocumentContext wd = appender.writingDocument()) {
+                wd.wire().write("key").writeDouble(1);
+            }
+        };
+        checkTheEOFisWrittenToPreQueueFileInner(writer, (tp, rollCycle) -> tp.advanceMillis(2 * rollCycle.lengthInMillis()), writer);
+    }
+
+    private void checkTheEOFisWrittenToPreQueueFileInner(Consumer<InternalAppender> writer1,
+                                                         BiConsumer<SetTimeProvider, RollCycle> tpConsumer,
+                                                         Consumer<InternalAppender> writer2) {
         SetTimeProvider tp = new SetTimeProvider(1_000_000_000);
 
         File file1 = getTmpDir();
-        try {
-            RollCycles rollCycle = RollCycles.DEFAULT;
-            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                    .path(file1)
-                    .rollCycle(rollCycle)
-                    .timeProvider(tp)
-                    .testBlockSize()
-                    .build()) {
-                InternalAppender appender = (InternalAppender) queue.acquireAppender();
+        RollCycles rollCycle = RollCycles.DEFAULT;
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                .path(file1)
+                .rollCycle(rollCycle)
+                .timeProvider(tp)
+                .testBlockSize()
+                .build()) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-                appender.writeBytes(rollCycle.toIndex(1, 0L), from("Hello World 1"));
+            writer1.accept(appender);
 
-                Assert.assertFalse(hasEOFAtEndOfFile(file1));
-            } catch (Exception e) {
-                e.printStackTrace();
-                fail();
-            }
+            Assert.assertFalse(hasEOFAtEndOfFile(file1));
+        }
 
-            tp.advanceMillis(2 * rollCycle.lengthInMillis());
+        tpConsumer.accept(tp, rollCycle);
 
-            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                    .path(file1)
-                    .rollCycle(rollCycle)
-                    .timeProvider(tp)
-                    .testBlockSize()
-                    .build()) {
-                InternalAppender appender = (InternalAppender) queue.acquireAppender();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                .path(file1)
+                .rollCycle(rollCycle)
+                .timeProvider(tp)
+                .testBlockSize()
+                .build()) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-                appender.writeBytes(rollCycle.toIndex(3, 0L), from("Hello World 2"));
+            assertFalse(hasEOFAtEndOfFile(file1));
 
-                // Simulate the end of the day i.e the queue closes the day rolls
-                // (note the change of index from 18264 to 18265)
+            writer2.accept(appender);
 
-                assertTrue(hasEOFAtEndOfFile(file1));
+            // Simulate the end of the day i.e the queue closes the day rolls
+            // (note the change of index from 18264 to 18265)
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                fail();
-            }
-        } finally {
-            file1.deleteOnExit();
+            assertTrue(hasEOFAtEndOfFile(file1));
         }
     }
 
@@ -77,71 +99,57 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         SetTimeProvider tp = new SetTimeProvider(1);
 
         File file1 = getTmpDir();
-        try {
-            RollCycles rollCycle = RollCycles.DEFAULT;
-            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+        RollCycles rollCycle = RollCycles.DEFAULT;
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                .path(file1)
+                .rollCycle(rollCycle)
+                .timeProvider(tp)
+                .testBlockSize()
+                .build()) {
+            ExcerptAppender appender = queue.acquireAppender();
+
+            appender.writeText("Hello World 1");
+
+            Assert.assertFalse(hasEOFAtEndOfFile(file1));
+        }
+
+        tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
+
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                .path(file1)
+                .rollCycle(rollCycle)
+                .timeProvider(tp)
+                .testBlockSize()
+                .build()) {
+
+            queue.acquireAppender().pretouch();
+        }
+
+        tp.advanceMillis(rollCycle.lengthInMillis());
+
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                .path(file1)
+                .rollCycle(rollCycle)
+                .timeProvider(tp)
+                .build()) {
+
+            ExcerptAppender appender = queue.acquireAppender();
+
+            appender.writeText("Hello World 2");
+
+            // Simulate the end of the day i.e the queue closes the day rolls
+            // (note the change of index from 18264 to 18265)
+
+            assertTrue(hasEOFAtEndOfFile(file1));
+            try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                     .path(file1)
                     .rollCycle(rollCycle)
                     .timeProvider(tp)
-                    .testBlockSize()
                     .build()) {
-                ExcerptAppender appender = queue.acquireAppender();
-
-                appender.writeText("Hello World 1");
-
-                Assert.assertFalse(hasEOFAtEndOfFile(file1));
-            } catch (Exception e) {
-                e.printStackTrace();
-                fail();
+                final ExcerptTailer tailer = queue123.createTailer();
+                assertEquals("Hello World 1", tailer.readText());
+                assertEquals("Hello World 2", tailer.readText());
             }
-
-            tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
-
-            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                    .path(file1)
-                    .rollCycle(rollCycle)
-                    .timeProvider(tp)
-                    .testBlockSize()
-                    .build()) {
-
-                queue.acquireAppender().pretouch();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                fail();
-            }
-
-            tp.advanceMillis(rollCycle.lengthInMillis());
-
-            try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                    .path(file1)
-                    .rollCycle(rollCycle)
-                    .timeProvider(tp)
-                    .build()) {
-
-                ExcerptAppender appender = queue.acquireAppender();
-
-                appender.writeText("Hello World 2");
-
-                // Simulate the end of the day i.e the queue closes the day rolls
-                // (note the change of index from 18264 to 18265)
-
-                assertTrue(hasEOFAtEndOfFile(file1));
-                try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
-                        .path(file1)
-                        .rollCycle(rollCycle)
-                        .timeProvider(tp)
-                        .build()) {
-                    final ExcerptTailer tailer = queue123.createTailer();
-                    assertEquals("Hello World 1", tailer.readText());
-                    assertEquals("Hello World 2", tailer.readText());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                fail();
-            }
-        } finally {
-            file1.deleteOnExit();
         }
     }
 
@@ -260,6 +268,27 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
                 String s5 = dc.wire().read("hello").text();
                // System.out.println(s5);
                 assertEquals(msg + 4, s5);
+            }
+        }
+    }
+
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/822")
+    @Test
+    public void writeReadMetadata() {
+        try (final ChronicleQueue queue = ChronicleQueue
+                .singleBuilder(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build()) {
+
+            final ExcerptAppender appender = queue.acquireAppender();
+            final ExcerptTailer tailer = queue.createTailer();
+
+            boolean metadata = true;
+            try (DocumentContext dc = appender.writingDocument(metadata)) {
+                dc.wire().write("a").text("hello");
+            }
+            try (DocumentContext dc = tailer.readingDocument(metadata)) {
+                Assert.assertTrue(dc.isPresent());
             }
         }
     }

@@ -1,9 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -343,7 +340,6 @@ class StoreAppender extends AbstractCloseable
         } else {
             writeLock.lock();
             int cycle = queue.cycle();
-
             if (wire == null)
                 setWireIfNull(cycle);
 
@@ -356,9 +352,11 @@ class StoreAppender extends AbstractCloseable
 
             // sets the writeLimit based on the safeLength
             openContext(metaData, safeLength);
+
+            // Move readPosition to the start of the context. i.e. readRemaining() == 0
+            wire.bytes().readPosition(wire.bytes().writePosition());
         }
-        // there is nothing to read.
-        wire.bytes().readPosition(wire.bytes().writePosition());
+
         return writeContext;
     }
 
@@ -366,9 +364,30 @@ class StoreAppender extends AbstractCloseable
     public DocumentContext acquireWritingDocument(boolean metaData) {
         if (!DISABLE_THREAD_SAFETY)
             this.threadSafetyCheck(true);
-        if (wire != null && writeContext.isOpen() && writeContext.chainedElement())
+        if (writeContext.wire != null && writeContext.isOpen() && writeContext.chainedElement())
             return writeContext;
         return writingDocument(metaData);
+    }
+
+    public void normaliseEOFs() {
+        final WriteLock writeLock = queue.writeLock();
+        writeLock.lock();
+        try {
+            normaliseEOFs0();
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    private void normaliseEOFs0() {
+        int last = queue.lastCycle();
+        int first = queue.firstCycle();
+
+        for(int cycle = first; cycle < last; ++cycle) {
+            setCycle2(cycle, false);
+            if(wire != null)
+                store.writeEOF(wire, timeoutMS());
+        }
     }
 
     private void setWireIfNull(final int cycle) {
@@ -438,7 +457,6 @@ class StoreAppender extends AbstractCloseable
                         " seq1: " + seq1 +
                         " seq2: " + seq2;
                 AssertionError ae = new AssertionError(message);
-                ae.printStackTrace();
                 throw ae;
             }
         } catch (Exception e) {
@@ -517,10 +535,10 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
-
         if (wire == null)
-            setCycle2(cycle, true);
-        else if (queue.rollCycle().toCycle(wire.headerNumber()) != cycle)
+            setWireIfNull(cycle);
+
+        if (this.cycle != cycle)
             rollCycleTo(cycle);
 
         long headerNumber = wire.headerNumber();
@@ -584,7 +602,7 @@ class StoreAppender extends AbstractCloseable
         if (position > store.writePosition() + queue.blockSize())
             throw new IllegalArgumentException("pos: " + position + ", store.writePosition()=" +
                     store.writePosition() + " queue.blockSize()=" + queue.blockSize());
-        position0(position, startOfMessage);
+        position0(position, startOfMessage, wire.bytes());
     }
 
     @Override
@@ -707,13 +725,13 @@ class StoreAppender extends AbstractCloseable
                 '}';
     }
 
-    void position0(final long position, final long startOfMessage) {
+    void position0(final long position, final long startOfMessage, Bytes<?> bytes) {
         this.positionOfHeader = position;
-        wire.bytes().writePosition(startOfMessage);
+        bytes.writePosition(startOfMessage);
     }
 
     @Override
-    public ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+    public @NotNull ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
     }
@@ -734,6 +752,7 @@ class StoreAppender extends AbstractCloseable
         @Override
         protected void finalize() throws Throwable {
             super.finalize();
+            writeContext.rollbackOnClose();
             warnAndCloseIfNotClosed();
         }
     }
@@ -834,6 +853,7 @@ class StoreAppender extends AbstractCloseable
                     if (buffered) {
                         writeBytes(wire.bytes());
                         unlock = false;
+                        wire.clear();
                     } else {
                         writeBytesInternal(wire.bytes(), metaData);
                         wire = StoreAppender.this.wire;
@@ -856,16 +876,33 @@ class StoreAppender extends AbstractCloseable
         }
 
         private void doRollback() {
-            // zero out all contents...
-            for (long i = positionOfHeader; i <= wire.bytes().writePosition(); i++)
-                wire.bytes().writeByte(i, (byte) 0);
-            long lastPosition = StoreAppender.this.lastPosition;
-            position0(lastPosition, lastPosition);
-            ((AbstractWire) wire).forceNotInsideHeader();
+            if (buffered) {
+                assert wire != StoreAppender.this.wire;
+                wire.clear();
+            } else {
+                // zero out all contents...
+                final Bytes<?> bytes = wire.bytes();
+                try {
+                    for (long i = positionOfHeader; i <= bytes.writePosition(); i++)
+                        bytes.writeByte(i, (byte) 0);
+                    long lastPosition = StoreAppender.this.lastPosition;
+                    position0(lastPosition, lastPosition, bytes);
+                    ((AbstractWire) wire).forceNotInsideHeader();
+                } catch (BufferOverflowException | IllegalStateException e) {
+                    if (bytes instanceof MappedBytes && ((MappedBytes) bytes).isClosed()) {
+                        Jvm.warn().on(getClass(), "Unable to roll back excerpt as it is closed.");
+                        return;
+                    }
+                    throw e;
+                }
+            }
         }
 
         @Override
         public long index() {
+            if (buffered) {
+                throw new IndexNotAvailableException("Index is unavailable when double buffering");
+            }
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));

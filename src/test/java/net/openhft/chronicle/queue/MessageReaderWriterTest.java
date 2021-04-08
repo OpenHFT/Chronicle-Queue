@@ -76,7 +76,6 @@ public class MessageReaderWriterTest extends ChronicleQueueTestBase {
         }
     }
 
-
     private static <T> T printAll(@NotNull Class<T> tClass, Class... additional) throws IllegalArgumentException {
         return ObjectUtils.onMethodCall((method, args) -> {
             @NotNull String argsStr = args == null ? "()" : Arrays.toString(args);

@@ -79,5 +79,4 @@ public enum QueueFileShrinkManager {
             break;
         }
     }
-
 }

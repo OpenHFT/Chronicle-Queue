@@ -36,6 +36,5 @@ public class ValueStringArrayTest extends ChronicleQueueTestBase {
  }
 
     }
-
 }
 

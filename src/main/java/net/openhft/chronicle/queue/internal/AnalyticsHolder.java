@@ -16,5 +16,4 @@ public enum AnalyticsHolder {;
     public static AnalyticsFacade instance() {
         return ANALYTICS;
     }
-
 }

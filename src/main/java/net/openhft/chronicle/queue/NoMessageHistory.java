@@ -76,6 +76,4 @@ public enum NoMessageHistory implements MessageHistory {
     public boolean isDirty() {
         return false;
     }
-
-
 }

@@ -36,5 +36,4 @@ public final class HistoryMain {
     public static void main(@NotNull String[] args) {
         ChronicleHistoryReaderMain.main(args);
     }
-
 }

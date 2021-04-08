@@ -41,6 +41,5 @@ public class IgnoreMethodBasedOnFirstArgTest {
             mr.readOne();
         }
     }
-
 }
 

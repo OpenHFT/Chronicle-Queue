@@ -68,5 +68,4 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
             assertEquals("42", read);
         }
  }
-
 }

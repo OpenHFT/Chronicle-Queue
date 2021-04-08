@@ -135,5 +135,4 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
             }
         }
     }
-
 }

@@ -29,5 +29,4 @@ public interface QueueEntryHandler extends BiConsumer<WireIn, Consumer<String>>,
     static QueueEntryHandler methodReader(@NotNull final String methodReaderInterface) {
         return new InternalMethodReaderQueueEntryHandler(methodReaderInterface);
     }
-
 }

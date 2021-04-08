@@ -12,5 +12,4 @@ public interface Validatable {
     default void validate() throws IllegalStateException {
 
     }
-
 }

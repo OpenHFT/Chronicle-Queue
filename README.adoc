@@ -9,7 +9,6 @@ image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 //image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
 
-
 image::images/Queue_line.png[]
 
 == Contents
@@ -527,13 +526,24 @@ long index = appender.lastIndexAppended();
 
 will only give you the last index appended by this appender; not the last index appended by any appender.
 
-If you wish to find the index of the last record written, then you have to call:
+If you wish to find the index of the last record written to the queue, then you have to call:
 
 ```
-long index = queue.createTailer().toEnd().index() - 1;
+ExcerptTailer tailer = queue.createTailer().toEnd().direction(TailerDirection.BACKWARD);
+try (DocumentContext dc = tailer.readingDocument()) {
+    if (dc.isPresent()) {
+        lastIndex = tailer.index());
+    }
+}
 ```
 
 (note that `tailer.toEnd()` puts the tailer just past the last index written)
+
+Previously, we advised to call
+```
+lastIndex = queue.createTailer().toEnd().index() - 1;
+```
+But if the queue has rolled and there is no data in the new cycle, this will not work.
 
 === How to determine how many messages are between two indexes
 
@@ -1041,6 +1051,8 @@ is called, appender tries to acquire the write lock on the queue, and if it fail
 
 When double-buffering is enabled, if appender sees that the write lock is acquired upon call to `ExcerptAppender#writingDocument()` call, it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block), allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
 
+NOTE: During a write that is buffered, `DocumentContext.index()` will throw an `IndexNotAvailableException`. This is because it is impossible to know the index until the buffer is written back to the queue, which only happens when the `DocumentContext` is closed.
+
 This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
 Below are the benchmark results for various data sizes at the frequency of 10 KHz for a cumbersome message (see `net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark`), YMMV - always do your own benchmarks:
 
@@ -1424,7 +1436,6 @@ but aligning to 4 bytes also ensures 64-byte alignment and allows your Chronicle
 
 For Chronicle Queue, the 4-byte alignment is now enforced, so there is now, no way to turn this feature on or off.
 This behaviour was changed on 21 April 2020 as part of https://github.com/OpenHFT/Chronicle-Queue/issues/656
-
 
 ==== Ensure long Running tasks are not performed with a writingDocument()
 

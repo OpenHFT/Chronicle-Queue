@@ -145,5 +145,4 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
     private boolean isChronicleQueue(@NotNull File file) {
         return file.getName().endsWith("cq4");
     }
-
 }

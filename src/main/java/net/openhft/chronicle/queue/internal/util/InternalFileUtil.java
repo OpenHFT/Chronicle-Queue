@@ -157,5 +157,4 @@ public final class InternalFileUtil {
             throw new UnsupportedOperationException("This operation is not supported under Windows.");
         }
     }
-
 }

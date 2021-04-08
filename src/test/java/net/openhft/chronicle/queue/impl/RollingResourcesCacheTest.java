@@ -293,5 +293,4 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         RollingResourcesCache.Resource resource = cache.resourceFor(cycle);
         assertEquals(expectedLong, cache.toLong(resource.path));
     }
-
 }

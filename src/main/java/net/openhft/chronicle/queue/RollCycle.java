@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.TimeProvider;
+import org.jetbrains.annotations.NotNull;
 
 public interface RollCycle {
 
@@ -32,6 +33,7 @@ public interface RollCycle {
      *
      * @return the format that is to be applied when file names are calculated for a new roll cycle
      */
+    @NotNull
     String format();
 
     /**

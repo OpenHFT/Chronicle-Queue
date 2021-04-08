@@ -325,5 +325,4 @@ public class ToEndTest extends ChronicleQueueTestBase {
     public void assertCloseablesClosed() {
         AbstractCloseable.assertCloseablesClosed();
     }
-
 }

@@ -44,5 +44,4 @@ public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
             }
  }
     }
-
 }

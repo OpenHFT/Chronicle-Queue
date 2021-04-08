@@ -37,5 +37,4 @@ public interface JDBCServiceProvider extends Closeable {
     static JDBCServiceProvider create(@NotNull ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
         return new InternalJDBCService(in, out, connectionSupplier);
     }
-
 }

@@ -18,5 +18,4 @@ public class AnalyticsTest {
             new File(fileName).delete();
         }
     }
-
 }

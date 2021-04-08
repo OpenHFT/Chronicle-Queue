@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 
@@ -53,12 +54,13 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
      * @param disableThreadSafetyCheck true to turn off the thread safety check
      * @return this.
      */
+    @NotNull
     E disableThreadSafetyCheck(boolean disableThreadSafetyCheck);
-
 
     /**
      * @return the current file being worked on or null if not known.
      */
+    @Nullable
     default File currentFile() {
         return null;
     }

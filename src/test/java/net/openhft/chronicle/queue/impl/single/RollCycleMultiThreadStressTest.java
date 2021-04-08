@@ -117,6 +117,7 @@ public class RollCycleMultiThreadStressTest {
         final AtomicInteger wrote = new AtomicInteger();
         final double expectedPerSecond = Jvm.isAzulZing() ? 3e8 : 1e9;
         final int expectedNumberOfMessages = (int) (TEST_TIME * expectedPerSecond / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
+        LOG.info("Expecting {} messages", expectedNumberOfMessages);
 
        // System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
                // numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
@@ -137,7 +138,6 @@ public class RollCycleMultiThreadStressTest {
         if (SHARED_WRITE_QUEUE)
             sharedWriterQueue = createQueue(file);
 
-
         if (PRETOUCH) {
             pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);
@@ -150,7 +150,7 @@ public class RollCycleMultiThreadStressTest {
             }
         }
         for (int i = 0; i < numThreads - numWriters; i++) {
-            final Reader reader = new Reader(file, expectedNumberOfMessages);
+            final Reader reader = new Reader(file, expectedNumberOfMessages, getReaderCheckingStrategy());
             readers.add(reader);
             results.add(executorServiceRead.submit(reader));
         }
@@ -286,6 +286,10 @@ public class RollCycleMultiThreadStressTest {
        // System.out.println("Test complete");
     }
 
+    protected ReaderCheckingStrategy getReaderCheckingStrategy() {
+        return new DefaultReaderCheckingStrategy();
+    }
+
     private boolean warnIfAssertsAreOn() {
         Jvm.warn().on(getClass(), "Reminder: asserts are on");
         return true;
@@ -334,16 +338,70 @@ public class RollCycleMultiThreadStressTest {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
+    interface ReaderCheckingStrategy {
+
+        /**
+         * Executed for each queue entry, validates the contents of the entry,
+         * assuming timestamp has already been read and validated
+         */
+        void checkDocument(DocumentContext dc, ExcerptTailer tailer, RollingChronicleQueue queue,
+                           int lastTailerCycle, int lastQueueCycle, int expected, ValueIn valueIn);
+
+        /**
+         * Executed after all documents have been read
+         */
+        void postReadCheck(RollingChronicleQueue queue);
+    }
+
+    /**
+     * This is the existing check the reader was doing, it ensures
+     * all the values in the document are the same as the expected
+     * value
+     */
+    class DefaultReaderCheckingStrategy implements ReaderCheckingStrategy {
+
+        @Override
+        public void checkDocument(DocumentContext dc, ExcerptTailer tailer, RollingChronicleQueue queue,
+                                  int lastTailerCycle, int lastQueueCycle, int expected, ValueIn valueIn) {
+            for (int i = 0; i < NUMBER_OF_INTS; i++) {
+                int v = valueIn.int32();
+                if (v != expected) {
+                    // System.out.println(dc.wire());
+                    String failureMessage = "Expected: " + expected +
+                            ", actual: " + v + ", pos: " + i + ", index: " + Long
+                            .toHexString(dc.index()) +
+                            ", cycle: " + tailer.cycle();
+                    if (lastTailerCycle != -1) {
+                        failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
+                                " (current: " + (tailer.cycle()) +
+                                "), queue cycle at last read: " + lastQueueCycle +
+                                " (current: " + queue.cycle() + ")";
+                    }
+                    if (DUMP_QUEUE)
+                        DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
+                    throw new AssertionError(failureMessage);
+                }
+            }
+        }
+
+        @Override
+        public void postReadCheck(RollingChronicleQueue queue) {
+            // Do nothing
+        }
+    }
+
     final class Reader implements Callable<Throwable> {
         final File path;
         final int expectedNumberOfMessages;
+        final ReaderCheckingStrategy readerCheckingStrategy;
         volatile int lastRead = -1;
         volatile Throwable exception;
         int readSequenceAtLastProgressCheck = -1;
 
-        Reader(final File path, final int expectedNumberOfMessages) {
+        Reader(final File path, final int expectedNumberOfMessages, ReaderCheckingStrategy readerCheckingStrategy) {
             this.path = path;
             this.expectedNumberOfMessages = expectedNumberOfMessages;
+            this.readerCheckingStrategy = readerCheckingStrategy;
         }
 
         boolean isMakingProgress() {
@@ -383,37 +441,21 @@ public class RollCycleMultiThreadStressTest {
                             }
                             continue;
                         }
-                        int v = -1;
 
                         final ValueIn valueIn = dc.wire().getValueIn();
                         final long documentAcquireTimestamp = valueIn.int64();
                         if (documentAcquireTimestamp == 0L) {
                             throw new AssertionError("No timestamp");
                         }
-                        for (int i = 0; i < NUMBER_OF_INTS; i++) {
-                            v = valueIn.int32();
-                            if (lastRead + 1 != v) {
-                                   // System.out.println(dc.wire());
-                                String failureMessage = "Expected: " + (lastRead + 1) +
-                                        ", actual: " + v + ", pos: " + i + ", index: " + Long
-                                        .toHexString(dc.index()) +
-                                        ", cycle: " + tailer.cycle();
-                                if (lastTailerCycle != -1) {
-                                    failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
-                                            " (current: " + (tailer.cycle()) +
-                                            "), queue cycle at last read: " + lastQueueCycle +
-                                            " (current: " + queue.cycle() + ")";
-                                }
-                                if (DUMP_QUEUE)
-                                    DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
-                                throw new AssertionError(failureMessage);
-                            }
-                        }
-                        lastRead = v;
+                        int expected = lastRead + 1;
+                        readerCheckingStrategy.checkDocument(
+                                dc, tailer, queue, lastTailerCycle, lastQueueCycle, expected, valueIn);
+                        lastRead = expected;
                         lastTailerCycle = tailer.cycle();
                         lastQueueCycle = queue.cycle();
                     }
                 }
+                readerCheckingStrategy.postReadCheck(queue);
             } catch (Throwable e) {
                 exception = e;
                 LOG.info("Finished reader", e);
@@ -477,6 +519,17 @@ public class RollCycleMultiThreadStressTest {
             try (DocumentContext writingDocument = appender.writingDocument()) {
                 final long documentAcquireTimestamp = System.nanoTime();
                 value = wrote.getAndIncrement();
+                if (value >= expectedNumberOfMessages) {
+                    /*
+                        Mutual exclusion was previously relied on to ensure
+                        we didn't write more than expectedNumberOfMessages
+                        however when double buffering is turned on multiple
+                        threads can get in here and end up writing more.
+                        Exit early and rollback if that's the case.
+                     */
+                    writingDocument.rollbackOnClose();
+                    return value;
+                }
                 ValueOut valueOut = writingDocument.wire().getValueOut();
                 // make the message longer
                 valueOut.int64(documentAcquireTimestamp);

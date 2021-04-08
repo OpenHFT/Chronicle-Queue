@@ -46,13 +46,12 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     private final Datum datum2 = new Datum();
 
     public static void main(String[] args) {
+        // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50_000)
                 .iterations(100_000)
                 .throughput(10_000)
-                .recordOSJitter(false)
-                // disable as otherwise single GC event skews results heavily
-                .accountForCoordinatedOmmission(false)
+                .recordOSJitter(false).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
                 .runs(3)
                 .jlbhTask(new QueueContendedWritesJLBHBenchmark());

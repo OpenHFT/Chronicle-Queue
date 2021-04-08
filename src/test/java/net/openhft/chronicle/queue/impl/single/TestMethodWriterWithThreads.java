@@ -9,7 +9,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -53,7 +52,6 @@ public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/799")
     public void test() throws FileNotFoundException {
 
         File tmpDir = getTmpDir();

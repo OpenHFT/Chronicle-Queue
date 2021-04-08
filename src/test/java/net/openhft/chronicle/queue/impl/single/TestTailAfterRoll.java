@@ -69,5 +69,4 @@ public class TestTailAfterRoll extends ChronicleQueueTestBase {
             Assert.assertEquals(EXPECTED, excerptTailer.readText());
         }
     }
-
 }

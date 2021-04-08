@@ -98,5 +98,4 @@ public class QueuePingPongMain {
     private static ChronicleQueue createQueue(String path) {
         return ChronicleQueue.single(path);
     }
-
 }

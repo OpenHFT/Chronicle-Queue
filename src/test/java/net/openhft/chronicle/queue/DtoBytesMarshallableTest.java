@@ -103,5 +103,4 @@ public class DtoBytesMarshallableTest extends ChronicleQueueTestBase {
             bytes.writeUtf8(name);
         }
     }
-
 }

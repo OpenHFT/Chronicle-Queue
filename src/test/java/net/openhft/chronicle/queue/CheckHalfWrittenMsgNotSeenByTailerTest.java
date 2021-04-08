@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
@@ -11,6 +12,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
+
 public class CheckHalfWrittenMsgNotSeenByTailerTest {
     static {
         // load the lass
@@ -21,46 +25,82 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
 
         // writes three messages the third messas is half written
         public static void main(String[] args) throws InterruptedException {
-            System.out.println("half writing a message to " + args[0]);
-
-
-            try (final ChronicleQueue single = ChronicleQueue.single(args[0]);
-                 final ExcerptAppender excerptAppender = single.acquireAppender()) {
-
-                try (final DocumentContext dc = excerptAppender.writingDocument()) {
-                    dc.wire().write("key1").text("hello world 1");
-                    dc.wire().write("key2").text("hello world 2");
-                }
-
-                try (final DocumentContext dc = excerptAppender.writingDocument()) {
-                    dc.wire().write("key1").text("hello world 3");
-                    dc.wire().write("key2").text("hello world 4");
-                }
-
-                try (final DocumentContext dc = excerptAppender.writingDocument()) {
-                    dc.wire().write("key1").text("hello world 5");
-
-                    // give time to flush
-                    Thread.sleep(1);
-
-                    System.out.println("== FINISHED WRITING DATA ==");
-
-                    // this will create a half written message, as we are going to system exit
-                    System.exit(-1);
-
-                    dc.wire().write("key2").text("hello world 6");
-                }
-
-
-            }
-
+            writeIncompleteMessage(args[0], true);
         }
 
+        private static void writeIncompleteMessage(String arg, boolean exit) throws InterruptedException {
+            System.out.println("half writing a message to " + arg);
+
+            final ChronicleQueue single = ChronicleQueue.single(arg);
+            final ExcerptAppender excerptAppender = single.acquireAppender();
+
+            try (final DocumentContext dc = excerptAppender.writingDocument()) {
+                dc.wire().write("key1").text("hello world 1");
+                dc.wire().write("key2").text("hello world 2");
+            }
+
+            try (final DocumentContext dc = excerptAppender.writingDocument()) {
+                dc.wire().write("key1").text("hello world 3");
+                dc.wire().write("key2").text("hello world 4");
+            }
+
+            DocumentContext dc = excerptAppender.writingDocument();
+            dc.wire().write("key1").text("hello world 5");
+
+            // give time to flush
+            Thread.sleep(1);
+
+            System.out.println("== FINISHED WRITING DATA ==");
+
+            // this will create a half written message, as we are going to system exit
+            if (exit)
+                System.exit(-1);
+
+            dc.wire().write("key2").text("hello world 6");
+        }
+    }
+
+    @Test
+    public void checkTailerOnlyReadsTwoMessageOneProcess() throws InterruptedException {
+        Assume.assumeTrue(!OS.isWindows());
+        final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
+
+        HalfWriteAMessage.writeIncompleteMessage(queueDirectory.toString(), false);
+        for (int i = 0; i < 3; i++) {
+            System.gc();
+            Jvm.pause(50);
+        }
+
+        try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
+             final ExcerptTailer tailer = single.createTailer()) {
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                Assert.assertTrue(dc.isPresent());
+                Assert.assertEquals("hello world 1", dc.wire().read("key1").text());
+                Assert.assertEquals("hello world 2", dc.wire().read("key2").text());
+            }
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                Assert.assertTrue(dc.isPresent());
+                Assert.assertEquals("hello world 3", dc.wire().read("key1").text());
+                Assert.assertEquals("hello world 4", dc.wire().read("key2").text());
+            }
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                final boolean present = dc.isPresent();
+                if (present) {
+                    System.out.println(dc.wire().bytes().toHexString());
+                    String key = dc.wire().readEvent(String.class);
+                    String value = dc.wire().getValueIn().text();
+                    fail("key: " + key + ", value: " + value);
+                }
+            }
+        }
     }
 
 
     @Test
-    public void checkTailerOnlyReadsTwoMessage() throws IOException, InterruptedException, ClassNotFoundException {
+    public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
         Assume.assumeTrue(!OS.isWindows());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
@@ -71,13 +111,11 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
 
-
             try (final DocumentContext dc = tailer.readingDocument()) {
                 Assert.assertTrue(dc.isPresent());
                 Assert.assertEquals("hello world 1", dc.wire().read("key1").text());
                 Assert.assertEquals("hello world 2", dc.wire().read("key2").text());
             }
-
 
             try (final DocumentContext dc = tailer.readingDocument()) {
                 Assert.assertTrue(dc.isPresent());
@@ -86,17 +124,19 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
             }
 
             try (final DocumentContext dc = tailer.readingDocument()) {
-                Assert.assertFalse(dc.isPresent());
+                final boolean present = dc.isPresent();
+                if (present) {
+                    Jvm.error().on(getClass(), "Found an excerpt " + dc.wire().bytes().toHexString());
+
+                    String key = dc.wire().readEvent(String.class);
+                    String value = dc.wire().getValueIn().text();
+                    fail("key: " + key + ", value: " + value);
+                }
             }
         }
     }
 
-
-    public void isPresent(DocumentContext dc) {
-
-    }
-
-    private static void runCommand(String command) throws IOException {
+    private static void runCommand(String command) throws IOException, InterruptedException {
         Process p = Runtime.getRuntime().exec(command);
         BufferedReader stdInput = new BufferedReader(new
                 InputStreamReader(p.getInputStream()));
@@ -104,12 +144,15 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         BufferedReader stdError = new BufferedReader(new
                 InputStreamReader(p.getErrorStream()));
 
+        boolean buildFailure = false;
         String s;
         // read the output from the command
         //      System.out.println("Here is the standard output of the command:\n");
         while ((s = stdInput.readLine()) != null) {
 
             System.out.println(s);
+            if (s.contains("BUILD FAILURE"))
+                buildFailure = true;
 
             // wait for Replication Started
             if ("== FINISHED WRITING DATA ==".equals(s))
@@ -122,6 +165,8 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         while ((s = stdError.readLine()) != null) {
             System.out.println(s);
         }
+        p.waitFor();
+        // test can't be run this way.
+        assumeFalse(buildFailure);
     }
-
 }

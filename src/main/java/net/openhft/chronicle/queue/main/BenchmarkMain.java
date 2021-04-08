@@ -14,5 +14,4 @@ public final class BenchmarkMain {
     public static void main(String[] args) {
         InternalBenchmarkMain.main(args);
     }
-
 }
