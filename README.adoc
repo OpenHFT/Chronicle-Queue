@@ -1022,6 +1022,35 @@ Excerpt is the main data container in a Chronicle queue.
 Each Chronicle queue is composed of excerpts.
 Putting data to a Chronicle queue means starting a new excerpt, writing data into it, and finishing the excerpt at the end.
 
+=== Pretoucher configuration
+
+`Pretoucher` is a class designed to be called from a long-lived thread. The purpose of Pretoucher
+is to accelerate writing in a queue. Upon invocation of the `execute()` method, this object will pre-touch
+pages in the queue's underlying store file, so that they are resident in the page-cache (i.e. loaded from
+storage) before they are required by appenders to the queue. Resources held by this object will be released when the underlying
+queue is closed. Alternatively, the `shutdown()` method can be called to close the supplied queue and
+release any other resources. Invocation of the `execute()` method after `shutdown()` has been called with
+cause an `IllegalStateException` to be thrown.
+
+The configuration parameters of the Pretoucher is as follows:
+
+- `earlyAcquireNextCycle` (defaults to false): Causes the Pretoucher to create the next cycle file while the queue
+is still writing to the current one in order to mitigate the impact of stalls in the OS when creating new files.
+
+*Note:* `earlyAcquireNextCycle` is off by default and if it is going to be turned on, you should very carefully
+stress test before and after turning it on. Basically what you experience is related to your system.
+
+- `pretoucherPrerollTimeMs` (defaults to 2,000 milliseconds) The pretoucher will create new cycle files
+this amount of time in advanced of them being written to. Effectively moves the Pretoucher's notion
+of which cycle is "current" into the future by `pretoucherPrerollTimeMs`.
+
+- `dontWrite` (defaults to false): Tells the Pretoucher to never create cycle files that do not already
+exist. As opposed to the default behaviour where if the Pretoucher runs inside a cycle where no excerpts
+have been written, it will create the "current" cycle file. Obviously enabling this will prevent
+`earlyAcquireNextCycle` from working.
+
+- `queue`: The queue that this Pretoucher is assigned to.
+
 === File Rolling
 
 Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
