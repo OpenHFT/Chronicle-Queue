@@ -65,10 +65,10 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
             appenderExecutor.awaitTermination(1, TimeUnit.SECONDS);
 
             final SingleChronicleQueueStore firstCycleStore = queue.storeForCycle(startCycle, 0, false, null);
-            assertNull(firstCycleStore);
-           // final long firstCycleWritePosition = firstCycleStore.writePosition();
+
+            final long firstCycleWritePosition = firstCycleStore.writePosition();
             // assert that no write was completed
-           // assertEquals(0L, firstCycleWritePosition) ;
+            assertEquals(0L, firstCycleWritePosition) ;
            // firstCycleStore.release(test);
 
             final ExcerptTailer tailer = queue.createTailer();
