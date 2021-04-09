@@ -1949,8 +1949,7 @@ console output:
 
 [source]
 ----
-[main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY.
-    Overriding this queue to use HOURLY
+[main] WARN SingleChronicleQueueBuilder - Overriding roll cycle from HOURLY to MINUTELY.
 ----
 
 ==== WireType
