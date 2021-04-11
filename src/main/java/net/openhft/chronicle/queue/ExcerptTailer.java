@@ -74,7 +74,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return if {@link #readingDocument()} would return a DocumentContext
      *         that provides excerpts to read.
      */
-    @Deprecated(/* remove in x.23* and make internal to StoreTailer as it is used by chronicle services - removed because sometimes it will report false when there are messages*/)
+    @Deprecated(/* remove in x.23 - this is no longer a performance optimisation */)
     @Override
     default boolean peekDocument() {
         return true;
