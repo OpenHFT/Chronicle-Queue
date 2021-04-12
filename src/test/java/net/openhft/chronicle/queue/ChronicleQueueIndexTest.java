@@ -298,11 +298,8 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
 
         assert (strings.length == meta.length);
 
-        File tmp = new File("/dev/shm/Issue882");
-        IOTools.deleteDirWithFiles(tmp);
-
         try (final ChronicleQueue queue = ChronicleQueue
-                .singleBuilder(tmp)
+                .singleBuilder(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .build()) {
 
