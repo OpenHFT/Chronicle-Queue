@@ -282,8 +282,8 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> bytes = wire.bytes();
             assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
-            final long headerNumber = store.lastSequenceNumber(this);
-            wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
+            final long lastSequenceNumber = store.lastSequenceNumber(this);
+            wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
             assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
 
@@ -505,11 +505,12 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Write bytes at an index, but only if the index is at the end of the chronicle. If index is after the end of the chronicle, throw an
-     * IllegalStateException. If the index is before the end of the chronicle then do not change the state of the chronicle.
+     * Write bytes at an index, but only if the index is at the end of the queue (*or* end of cycle).
+     * If index is after the end of the queue (or cycle), throw an IllegalStateException.
+     * If the index is before the end of the chronicle then do not overwrite the contents of the chronicle.
      * <p>Thread-safe</p>
      *
-     * @param index index to write at. Only if index is at the end of the chronicle will the bytes get written
+     * @param index index to write at. Only if index is at the end of the queue (or cycle) will the bytes get written
      * @param bytes payload
      */
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
