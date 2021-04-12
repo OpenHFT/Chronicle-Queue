@@ -852,7 +852,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     if (store == null)
                         break;
                     if (store.writePosition() == 0 && store.file().exists()) {
-                        // couldn't delete? Let's try writing EOF
+                        // try writing EOF
                         // if this blows up we should blow up too so don't catch anything
                         MappedBytes bytes = store.bytes();
                         try {
