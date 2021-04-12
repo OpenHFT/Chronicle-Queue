@@ -12,6 +12,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Map;
@@ -70,6 +71,28 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
             expectException("Trying to overwrite index 0 which is before the end of the queue");
             // try to overwrite - will not overwrite
+            ((InternalAppender) appender).writeBytes(0, Bytes.from("HELLO WORLD"));
+
+            ExcerptTailer tailer = q.createTailer();
+            tailer.readBytes(result);
+            Assert.assertEquals(test, result);
+            Assert.assertEquals(1, tailer.index());
+        }
+    }
+
+    @Ignore("TODO: FIX")
+    @Test
+    public void dontOverwriteExistingDifferentQueue() {
+        @NotNull Bytes<byte[]> test = Bytes.from("hello world");
+        Bytes result = Bytes.elasticHeapByteBuffer();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
+            ExcerptAppender appender = q.acquireAppender();
+            appender.writeBytes(test);
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
+            ExcerptAppender appender = q.acquireAppender();
+            // TODO: this overwrites because the appender's wire's headerNumber is positioned at the start
             ((InternalAppender) appender).writeBytes(0, Bytes.from("HELLO WORLD"));
 
             ExcerptTailer tailer = q.createTailer();
