@@ -33,6 +33,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     @Before
     public void expectExceptions() {
         expectException("File released");
+        expectException(/* Adding ... surefire....jar */ " to the classpath");
     }
 
     @Test
@@ -165,7 +166,11 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             // here we try and write to previous cycle file. We will overwrite the EOF in doing so
             expectException("Incomplete header found at pos: 33048: c0000000, overwriting");
             ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
+            // TODO: if we are going to support this use case we need to fix EOF
             Assert.assertFalse(hasEOF(q, firstCycle));
+
+            // TODO: as EOF has not been written, the queue is now sick. For now we have to manually fix
+            appender.normaliseEOFs();
 
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
@@ -174,10 +179,8 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             tailer.readBytes(result);
             Assert.assertEquals(test1, result);
             result.clear();
-
-            // TODO: as EOF has not been written, the queue is now sick - readBytes will return ""
-            //tailer.readBytes(result);
-            //Assert.assertEquals(test2, result);
+            tailer.readBytes(result);
+            Assert.assertEquals(test2, result);
         }
     }
 
