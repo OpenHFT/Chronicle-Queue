@@ -189,10 +189,9 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             // here we try and write to previous cycle file. We will overwrite the EOF in doing so
             expectException("Incomplete header found at pos: 33048: c0000000, overwriting");
             ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
-            // TODO: if we are going to support this use case we need to fix EOF
             Assert.assertFalse(hasEOF(q, firstCycle));
 
-            // TODO: as EOF has not been written, the queue is now sick. For now we have to manually fix
+            // we have to manually fix. This is done by CQE at the end of backfilling
             appender.normaliseEOFs();
 
             ExcerptTailer tailer = q.createTailer();
