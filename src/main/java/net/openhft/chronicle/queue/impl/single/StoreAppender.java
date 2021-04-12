@@ -369,6 +369,9 @@ class StoreAppender extends AbstractCloseable
         return writingDocument(metaData);
     }
 
+    /**
+     * Ensure any missing EOF markers are added back to previous cycles
+     */
     public void normaliseEOFs() {
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
@@ -507,8 +510,11 @@ class StoreAppender extends AbstractCloseable
     /**
      * Write bytes at an index, but only if the index is at the end of the queue (*or* end of cycle).
      * If index is after the end of the queue (or cycle), throw an IllegalStateException.
-     * If the index is before the end of the chronicle then do not overwrite the contents of the chronicle.
-     * <p>Thread-safe</p>
+     * If the index is before the end of the queue then do not overwrite the contents of the queue.
+     * <p>If the index is at the end of a cycle (but not the queue) this will overwrite the EOF marker
+     * of that cycle. It is the caller's responsibility to call {@link #normaliseEOFs()} after.
+     * <p>Users are advised that the behaviour of this method may change in the future
+     * <p>Thread-safe
      *
      * @param index index to write at. Only if index is at the end of the queue (or cycle) will the bytes get written
      * @param bytes payload

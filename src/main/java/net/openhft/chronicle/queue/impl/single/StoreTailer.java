@@ -704,7 +704,6 @@ class StoreTailer extends AbstractCloseable
      */
     private long approximateLastIndex() {
 
-        final RollCycle rollCycle = queue.rollCycle();
         final int lastCycle = queue.lastCycle();
         try {
             if (lastCycle == Integer.MIN_VALUE)
