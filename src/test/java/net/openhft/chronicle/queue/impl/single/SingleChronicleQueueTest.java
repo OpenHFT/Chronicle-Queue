@@ -1022,7 +1022,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             assertTrue(tailer.moveToIndex(robIndex));
-            try (DocumentContext dc = tailer.readingDocument(true)) {
+            try (DocumentContext dc = tailer.readingDocument(false)) {
                 assertTrue(dc.isData());
                 dc.wire().read("FirstName").text("Rob", Assert::assertEquals);
             }
@@ -1938,7 +1938,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    544,\n" +
-                    "    2336462209024\n" +
+                    "    2336462209025\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 16,\n" +
@@ -1957,7 +1957,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 16, used: 1\n" +
-                    "  544,\n" +
+                    "  520,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!meta-data #binary\n" +

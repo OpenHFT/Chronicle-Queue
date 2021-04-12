@@ -31,32 +31,33 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         private static void writeIncompleteMessage(String arg, boolean exit) throws InterruptedException {
             System.out.println("half writing a message to " + arg);
 
-            final ChronicleQueue single = ChronicleQueue.single(arg);
-            final ExcerptAppender excerptAppender = single.acquireAppender();
+            try( final ChronicleQueue single = ChronicleQueue.single(arg) ) {
+                final ExcerptAppender excerptAppender = single.acquireAppender();
 
-            try (final DocumentContext dc = excerptAppender.writingDocument()) {
-                dc.wire().write("key1").text("hello world 1");
-                dc.wire().write("key2").text("hello world 2");
+                try (final DocumentContext dc = excerptAppender.writingDocument()) {
+                    dc.wire().write("key1").text("hello world 1");
+                    dc.wire().write("key2").text("hello world 2");
+                }
+
+                try (final DocumentContext dc = excerptAppender.writingDocument()) {
+                    dc.wire().write("key1").text("hello world 3");
+                    dc.wire().write("key2").text("hello world 4");
+                }
+
+                DocumentContext dc = excerptAppender.writingDocument();
+                dc.wire().write("key1").text("hello world 5");
+
+                // give time to flush
+                Thread.sleep(1);
+
+                System.out.println("== FINISHED WRITING DATA ==");
+
+                // this will create a half written message, as we are going to system exit
+                if (exit)
+                    System.exit(-1);
+
+                dc.wire().write("key2").text("hello world 6");
             }
-
-            try (final DocumentContext dc = excerptAppender.writingDocument()) {
-                dc.wire().write("key1").text("hello world 3");
-                dc.wire().write("key2").text("hello world 4");
-            }
-
-            DocumentContext dc = excerptAppender.writingDocument();
-            dc.wire().write("key1").text("hello world 5");
-
-            // give time to flush
-            Thread.sleep(1);
-
-            System.out.println("== FINISHED WRITING DATA ==");
-
-            // this will create a half written message, as we are going to system exit
-            if (exit)
-                System.exit(-1);
-
-            dc.wire().write("key2").text("hello world 6");
         }
     }
 

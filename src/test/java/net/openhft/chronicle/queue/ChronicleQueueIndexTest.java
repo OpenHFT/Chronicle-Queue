@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -27,11 +28,10 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     @Test
     public void checkTheEOFisWrittenToPreQueueFile() {
         checkTheEOFisWrittenToPreQueueFileInner(appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(1, 0L), from("Hello World 1")),
-                                                (tp, rc) -> { /* not required as we are increasing cycle in next write */ },
-                                                appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(3, 0L), from("Hello World 2")));
+                (tp, rc) -> { /* not required as we are increasing cycle in next write */ },
+                appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(3, 0L), from("Hello World 2")));
     }
 
-    @Ignore("writing metadata message as last message in queue does not always write EOF #823")
     @Test
     public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
         final Consumer<InternalAppender> writer = appender -> {
@@ -158,7 +158,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                 .path(file).build()) {
             String dump = queue123.dump();
-           // System.out.println(dump);
+            // System.out.println(dump);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data! #binary");
         }
     }
@@ -234,7 +234,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
             for (int j = 0; j < 8; j++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("hello").text(msg + (i++));
-                   // long indexWritten = dc.index();
+                    // long indexWritten = dc.index();
                 }
                 stp.advanceMillis(1500);
             }
@@ -266,13 +266,13 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
                 String s5 = dc.wire().read("hello").text();
-               // System.out.println(s5);
+                // System.out.println(s5);
                 assertEquals(msg + 4, s5);
             }
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/822")
+    // https://github.com/OpenHFT/Chronicle-Queue/issues/822
     @Test
     public void writeReadMetadata() {
         try (final ChronicleQueue queue = ChronicleQueue
@@ -291,5 +291,155 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
                 Assert.assertTrue(dc.isPresent());
             }
         }
+    }
+
+    // https://github.com/OpenHFT/Chronicle-Queue/issues/822
+    private void driver0(String[] strings, boolean[] meta, long millis) {
+
+        assert (strings.length == meta.length);
+
+        try (final ChronicleQueue queue = ChronicleQueue
+                .singleBuilder(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build()) {
+
+            final ExcerptAppender appender = queue.acquireAppender();
+            final ExcerptTailer withMetaTailer = queue.createTailer();
+            final ExcerptTailer withoutMetaTailer = queue.createTailer();
+
+            for (int i = 0; i < strings.length; ++i) {
+                try (DocumentContext dc = appender.writingDocument(meta[i])) {
+                    dc.wire().write("key").text(strings[i]);
+                }
+                Thread.sleep(millis);
+            }
+
+            // read all (meta + data)
+            int allReads = 0;
+            for (String string : strings) {
+                try (DocumentContext dc = withMetaTailer.readingDocument(true)) {
+                    if (!dc.isPresent())
+                        break;
+
+                    ++allReads;
+                    String str = dc.wire().read("key").text();
+                    System.out.println("M+D Read: " + str + ", vs " + string + ", index = " + dc.index());
+
+                    Assert.assertTrue(str.equals(string));
+                }
+            }
+            Assert.assertTrue(allReads == strings.length);
+
+            // just data
+            int dataReads = 0;
+            for (int i = 0; i < strings.length; ++i) {
+                if (meta[i])
+                    continue;
+
+                try (DocumentContext dc = withoutMetaTailer.readingDocument(false)) {
+                    if (!dc.isPresent())
+                        break;
+
+                    ++dataReads;
+
+                    String str = dc.wire().read("key").text();
+                    System.out.println("D Read: " + str + ", vs " + strings[i] + ", index = " + dc.index());
+
+                    Assert.assertTrue(str.equals(strings[i]));
+                }
+            }
+            int expectedData = 0;
+            for( boolean b : meta ) if(!b) ++expectedData;
+            Assert.assertTrue(expectedData == dataReads);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void driver(String[] strings, boolean[] meta) {
+        // run each test twice - once with all entries in the same cycle, and again with just one entry per cycle
+        driver0(strings, meta, 0);
+        driver0(strings, meta, 1500);
+    }
+
+    @Test
+    public void D() {
+        driver(
+                new String[]{"data-1"},
+                new boolean[]{  false}
+        );
+    }
+
+    @Test
+    public void M() {
+        driver(
+                new String[]{"data-1"},
+                new boolean[]{   true}
+        );
+    }
+
+    @Test
+    public void DDD() {
+        driver(
+                new String[]{"data-1", "data-2", "data-3"},
+                new boolean[]{  false,    false,    false}
+        );
+    }
+
+    @Test
+    public void DDM() {
+        driver(
+                new String[]{"data-1", "data-2", "meta-1"},
+                new boolean[]{  false,    false,     true}
+        );
+    }
+
+    @Test
+    public void DMD() {
+        driver(
+                new String[]{"data-1", "meta-1", "data-2"},
+                new boolean[]{  false,     true,    false}
+        );
+    }
+
+    @Test
+    public void DMM() {
+        driver(
+                new String[]{"data-1", "meta-1", "meta-2"},
+                new boolean[]{  false,     true,     true}
+        );
+    }
+
+    @Test
+    public void MMM() {
+        driver(
+                new String[]{"meta-1", "meta-2", "meta-3"},
+                new boolean[]{   true,     true,     true}
+        );
+    }
+
+    @Test
+    public void MMD() {
+        driver(
+                new String[]{"meta-1", "meta-2", "data-1"},
+                new boolean[]{   true,     true,    false}
+        );
+    }
+
+    @Test
+    public void MDM() {
+        driver(
+                new String[]{"meta-1", "data-1", "meta-2"},
+                new boolean[]{   true,    false,     true}
+        );
+    }
+
+    @Test
+    public void MDD() {
+        driver(
+                new String[]{"meta-1", "data-1", "data-2"},
+                new boolean[]{   true,    false,     false}
+        );
     }
 }
