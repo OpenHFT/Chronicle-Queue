@@ -63,11 +63,15 @@ public class QueueTestCommon {
                 Slf4jExceptionHandler.WARN.on(getClass(), "No error for " + expectedException.getValue());
         }
         expectedExceptions.clear();
-        if (Jvm.hasException(exceptions)) {
+        if (hasExceptions(exceptions)) {
             Jvm.dumpException(exceptions);
             Jvm.resetExceptionHandlers();
             throw new AssertionError(exceptions.keySet());
         }
+    }
+
+    protected boolean hasExceptions(Map<ExceptionKey, Integer> exceptions) {
+        return Jvm.hasException(this.exceptions);
     }
 
     @After
