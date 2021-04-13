@@ -3611,4 +3611,49 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertEquals(expected, sb.toString());
         }
     }
+
+    @Test
+    public void lastIndexShouldReturnLastIndexForPopulatedQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            long actualLastIndex;
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                appender.writeText("Hello!");
+                actualLastIndex = appender.lastIndexAppended();
+            }
+            assertEquals(actualLastIndex, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void lastIndexShouldReturnNegativeOneForEmptyQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            assertEquals(-1, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void lastIndexShouldReturnNegativeOneForMetadataOnlyQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
+                    documentContext.wire().write().text("Hello!");
+                }
+            }
+            assertEquals(-1, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void lastIndexShouldReturnNegativeOneForEmptyPretouchedQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                appender.pretouch();
+            }
+            assertEquals(-1, queue.lastIndex());
+        }
+    }
 }
