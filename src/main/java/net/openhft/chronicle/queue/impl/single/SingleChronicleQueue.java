@@ -61,6 +61,7 @@ import java.util.function.*;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.wire.Wires.*;
 
@@ -706,6 +707,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return Long.MAX_VALUE;
 
         return rollCycle().toIndex(cycle, 0);
+    }
+
+    @Override
+    public long lastIndex() {
+        // This is a slow implementation that gets a Tailer/DocumentContext to find the last index
+        try (final ExcerptTailer tailer = createTailer().direction(BACKWARD).toEnd()) {
+            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                if (documentContext.isPresent()) {
+                    return documentContext.index();
+                } else {
+                    return -1;
+                }
+            }
+        }
     }
 
     /**
