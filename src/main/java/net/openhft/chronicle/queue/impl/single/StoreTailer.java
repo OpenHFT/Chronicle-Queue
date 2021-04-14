@@ -677,13 +677,22 @@ class StoreTailer extends AbstractCloseable
             if (found)
                 state = FOUND_IN_CYCLE;
         }
-        index(queue.rollCycle().toIndex(cycle, 0));
+        final long index = queue.rollCycle().toIndex(cycle, 0);
+        // Check that there is actually an excerpt in the cycle
+        // This will fix the case of a solitary empty cycle
+        // If there were populated ones after it it probably
+        // would break
+        if (moveToIndex(index)) {
+            index(index);
 
-        state = FOUND_IN_CYCLE;
-        Wire wire = privateWire();
-        if (wire != null) {
-            wire.bytes().readPosition(0);
-            address = wire.bytes().addressForRead(0);
+            state = FOUND_IN_CYCLE;
+            Wire wire = privateWire();
+            if (wire != null) {
+                wire.bytes().readPosition(0);
+                address = wire.bytes().addressForRead(0);
+            }
+        } else {
+            index(0);
         }
         return this;
     }
@@ -739,6 +748,12 @@ class StoreTailer extends AbstractCloseable
         if (sequenceNumber == -1L) {
             // nothing has been written yet, so point to start of cycle
             long prevCycle = queue.firstCycle;
+
+            // There is a single cycle and nothing is in it
+            if (prevCycle == lastCycle) {
+                return Long.MIN_VALUE;
+            }
+
             while (prevCycle < lastCycle) {
                 lastCycle--;
                 try {
