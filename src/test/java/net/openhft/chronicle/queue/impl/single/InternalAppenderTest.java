@@ -19,24 +19,16 @@ public class InternalAppenderTest {
             final long index = queue.rollCycle().toIndex(queue.cycle(), 0);
             final InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
-            // First, we replicate a message, using the InternalAppender
+            // First, we "replicate" a message, using the InternalAppender
             // interface because we need to preserve index numbers.
             appender.writeBytes(index, Bytes.from("Replicated"));
 
-            // Next, a message is written locally by another app (usually a
-            // different process).
+            // Next, a message is written locally by another app (usually a different process).
             try (final SingleChronicleQueue app = SingleChronicleQueueBuilder.single(file).build()) {
                 app.acquireAppender().writeBytes(Bytes.from("Written locally"));
             }
 
-            // The other app exits, and at some point later we need to start
-            // replicating again.
-            //
-            // BUG!! This throws IllegalStateException because the Wire instance
-            // in the appender caches the old header number.
-
-            // Uncomment the next line as a work-around:
-            //appender.wire().headerNumber(queue.createTailer().toEnd().index() - 1);
+            // The other app exits, and at some point later we need to start replicating again.
 
             appender.writeBytes(index + 2, Bytes.from("Replicated 2"));
 

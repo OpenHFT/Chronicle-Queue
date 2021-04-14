@@ -3281,23 +3281,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 ExcerptAppender appender0 = queue.acquireAppender();
 
-                if (!(appender0 instanceof InternalAppender))
-                    return;
+                assumeTrue(appender0 instanceof InternalAppender);
                 InternalAppender appender = (InternalAppender) appender0;
+                assumeTrue(appender instanceof StoreAppender);
 
-                if (!(appender instanceof StoreAppender))
-                    return;
                 List<BytesWithIndex> bytesWithIndies = new ArrayList<>();
                 try {
                     for (int i = 0; i < 5; i++) {
                         bytesWithIndies.add(bytes(tailer));
                     }
 
+                    // ... and try and overwrite starting at beginning
+                    // TODO: if you step in here it looks like it is overwriting
+                    // and DOES NOT output debug log "Trying to overwrite index..."
                     for (int i = 0; i < 4; i++) {
                         BytesWithIndex b = bytesWithIndies.get(i);
                         appender.writeBytes(b.index, b.bytes);
                     }
 
+                    // this will output debug log "Trying to overwrite index..." as expected
                     for (int i = 0; i < 4; i++) {
                         BytesWithIndex b = bytesWithIndies.get(i);
                         appender.writeBytes(b.index, b.bytes);
@@ -3307,7 +3309,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     appender.writeBytes(b.index, b.bytes);
 
                     ((StoreAppender) appender).checkWritePositionHeaderNumber();
-                    appender0.writeText("hello");
+                    appender0.writeText("goodbye");
                 } finally {
                     closeQuietly(bytesWithIndies);
                 }
@@ -3325,7 +3327,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                                 "--- !!data #binary\n" +
                                 "hello: world4\n" +
                                 "--- !!data #binary\n" +
-                                "hello\n"));
+                                "goodbye\n"));
 
             }
         }
