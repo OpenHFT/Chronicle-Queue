@@ -36,9 +36,11 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.*;
 
 public class ToEndTest extends ChronicleQueueTestBase {
+    private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
@@ -144,14 +146,14 @@ public class ToEndTest extends ChronicleQueueTestBase {
             Field storeF1 = StoreAppender.class.getDeclaredField("store");
             Jvm.setAccessible(storeF1);
             SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
-           // System.out.println(store1);
+            // System.out.println(store1);
 
             appender.writeDocument(wire -> wire.write("msg").int32(1));
 
             final StoreTailer tailer = (StoreTailer) queue.createTailer();
-           // System.out.println(tailer);
+            // System.out.println(tailer);
             tailer.toEnd();
-           // System.out.println(tailer);
+            // System.out.println(tailer);
 
             Field storeF2 = StoreTailer.class.getDeclaredField("store");
             Jvm.setAccessible(storeF2);
@@ -289,6 +291,115 @@ public class ToEndTest extends ChronicleQueueTestBase {
         }
         System.gc();
         pathsToDelete.add(file);
+    }
+
+    @Test
+    public void shouldReturnZeroForEmptyQueue() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            assertEquals(0, getNextWriteIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnZeroForEmptyPretouchedQueue() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            pretouchQueue(queue);
+            assertEquals(0, getNextWriteIndex(queue));
+        }
+    }
+
+    /**
+     * This seems more like something that would only arise in testing,
+     * but the behaviour is slightly different at index 0
+     */
+    @Test
+    public void shouldReturnZeroForEmptyPretouchedQueueAtIndexZero() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            pretouchQueue(queue);
+            assertEquals(0, getNextWriteIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnZeroForQueueWithOnlyMetadata() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            writeMetadataToQueue(queue);
+            assertEquals(0, getNextWriteIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnNextWriteIndexForNonEmptyRolledByPretouch() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            writeExcerptToQueue(queue);
+            long nextIndex = getNextWriteIndex(queue);
+
+            timeProvider.advanceMicros(FIVE_SECONDS);
+
+            pretouchQueue(queue);
+            assertEquals(nextIndex, getNextWriteIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnNextWriteIndexForNonEmptyRolledByMetadata() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            writeExcerptToQueue(queue);
+            long nextIndex = getNextWriteIndex(queue);
+
+            timeProvider.advanceMicros(FIVE_SECONDS);
+
+            writeMetadataToQueue(queue);
+            assertEquals(nextIndex, getNextWriteIndex(queue));
+        }
+    }
+
+    private long getNextWriteIndex(SingleChronicleQueue queue) {
+        try (final ExcerptTailer tailer = queue.createTailer().toEnd()) {
+            return tailer.index();
+        }
+    }
+
+    private void writeExcerptToQueue(SingleChronicleQueue queue) {
+        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+            excerptAppender.writeText("hello!");
+        }
+    }
+
+    private void writeMetadataToQueue(SingleChronicleQueue queue) {
+        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+            try (final DocumentContext documentContext = excerptAppender.writingDocument(true)) {
+                documentContext.wire().write().text("hello!");
+            }
+        }
+    }
+
+    private void pretouchQueue(SingleChronicleQueue queue) {
+        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+            excerptAppender.pretouch();
+        }
+    }
+
+    private SingleChronicleQueue createQueue(SetTimeProvider timeProvider) {
+        final File queueDir = getTmpDir();
+        pathsToDelete.add(queueDir);
+        return SingleChronicleQueueBuilder
+                .binary(queueDir)
+                .testBlockSize()
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(timeProvider)
+                .build();
     }
 
     private void checkOneFile(@NotNull File baseDir) {
