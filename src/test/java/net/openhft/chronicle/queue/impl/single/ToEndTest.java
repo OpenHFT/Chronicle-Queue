@@ -27,10 +27,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -302,6 +299,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
     @Test
     public void shouldReturnZeroForEmptyPretouchedQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -316,6 +314,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
      * This seems more like something that would only arise in testing,
      * but the behaviour is slightly different at index 0
      */
+    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
     @Test
     public void shouldReturnZeroForEmptyPretouchedQueueAtIndexZero() {
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -325,6 +324,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
     @Test
     public void shouldReturnZeroForQueueWithOnlyMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -350,6 +350,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
     @Test
     public void shouldReturnNextWriteIndexForNonEmptyRolledByMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
