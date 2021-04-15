@@ -59,7 +59,7 @@ public final class ChronicleReader implements Reader {
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
     private WireType wireType = WireType.TEXT;
-    private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
+    private Supplier<QueueEntryHandler> entryHandlerFactory = () -> QueueEntryHandler.messageToText(wireType);
     private boolean displayIndex = true;
     private Class<?> methodReaderInterface;
     private volatile boolean running = true;
@@ -223,7 +223,7 @@ public final class ChronicleReader implements Reader {
 
     public ChronicleReader asMethodReader(String methodReaderInterface) {
         if (methodReaderInterface == null)
-            entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
+            entryHandlerFactory = () -> QueueEntryHandler.dummy(wireType);
         else try {
             this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {
