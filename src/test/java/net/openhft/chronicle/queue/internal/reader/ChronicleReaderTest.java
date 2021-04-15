@@ -35,6 +35,7 @@ import static org.junit.Assume.assumeFalse;
 
 public class ChronicleReaderTest extends ChronicleQueueTestBase {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
+    private static final long TOTAL_EXCERPTS_IN_QUEUE = 24;
 
     static {
         Arrays.fill(ONE_KILOBYTE, (byte) 7);
@@ -63,7 +64,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
-            for (int i = 0; i < 24; i++) {
+            for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
@@ -85,7 +86,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
-            for (int i = 0; i < 24; i++) {
+            for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
@@ -108,7 +109,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
-            for (int i = 0; i < 24; i++) {
+            for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
@@ -147,7 +148,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
             methodWriterBuilder.recordHistory(true);
             final StringEvents events = methodWriterBuilder.build();
 
-            for (int i = 0; i < 24; i++) {
+            for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
@@ -279,7 +280,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     public void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
-        assertEquals(24, capturedOutput.size());
+        assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
                 forEach(msg -> assertThat(msg, containsString("goodbye")));
     }
@@ -288,7 +289,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     public void shouldFilterByMultipleInclusionRegex() {
         basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
 
-        assertEquals(24, capturedOutput.size());
+        assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
                 forEach(msg -> assertThat(msg, containsString("goodbye")));
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
@@ -304,7 +305,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
-        assertEquals(24, capturedOutput.size());
+        assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
@@ -319,8 +320,16 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReader().historyRecords(5).execute();
 
-        assertThat(capturedOutput.stream().
-                filter(msg -> !msg.startsWith("0x")).count(), is(5L));
+        assertEquals(5L, capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count());
+    }
+
+    @Test
+    public void shouldCombineIncludeFilterAndMaxRecords() {
+        basicReader().historyRecords(5).withInclusionRegex("hello").execute();
+
+        assertEquals(2L, capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test
@@ -328,7 +337,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         final long knownIndex = Long.decode(findAnExistingIndex());
         basicReader().withStartIndex(knownIndex).execute();
 
-        assertEquals(24, capturedOutput.size());
+        assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
         assertTrue(capturedOutput.poll().contains(Long.toHexString(knownIndex)));
     }
 
@@ -342,7 +351,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
         assertThat(capturedOutput.stream().
-                filter(msg -> !msg.startsWith("0x")).count(), is(24L));
+                filter(msg -> !msg.startsWith("0x")).count(), is(TOTAL_EXCERPTS_IN_QUEUE));
     }
 
     @Test
