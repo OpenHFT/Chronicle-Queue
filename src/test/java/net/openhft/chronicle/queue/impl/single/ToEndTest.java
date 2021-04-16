@@ -34,6 +34,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
 public class ToEndTest extends ChronicleQueueTestBase {
@@ -61,7 +62,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build()) {
 
@@ -135,7 +136,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(time)
                 .build()) {
 
@@ -168,9 +169,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         List<Integer> results = new ArrayList<>();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
-                .indexCount(8)
-                .indexSpacing(1)
+                .rollCycle(TEST_DAILY)
                 .build()) {
 
             checkOneFile(baseDir);
@@ -211,6 +210,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
+                .rollCycle(TEST_DAILY)
                 .build()) {
             checkOneFile(baseDir);
 
@@ -251,7 +251,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         try (ChronicleQueue wqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
             ExcerptAppender appender = wqueue.acquireAppender();
@@ -269,7 +269,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
 
@@ -293,7 +293,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
     @Test
     public void shouldReturnZeroForEmptyQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
-        timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             assertEquals(0, getNextWriteIndex(queue));
         }
@@ -303,24 +302,13 @@ public class ToEndTest extends ChronicleQueueTestBase {
     @Test
     public void shouldReturnZeroForEmptyPretouchedQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
-        timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             pretouchQueue(queue);
-            assertEquals(0, getNextWriteIndex(queue));
-        }
-    }
+            assertEquals(Long.MIN_VALUE, lastWriteIndex(queue));
 
-    /**
-     * This seems more like something that would only arise in testing,
-     * but the behaviour is slightly different at index 0
-     */
-    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
-    @Test
-    public void shouldReturnZeroForEmptyPretouchedQueueAtIndexZero() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            timeProvider.advanceMicros(FIVE_SECONDS);
             pretouchQueue(queue);
-            assertEquals(0, getNextWriteIndex(queue));
+            assertEquals(Long.MIN_VALUE, lastWriteIndex(queue));
         }
     }
 
@@ -331,7 +319,71 @@ public class ToEndTest extends ChronicleQueueTestBase {
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             writeMetadataToQueue(queue);
-            assertEquals(0, getNextWriteIndex(queue));
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !short 1000, format: yyyyMMdd-HHmmss'T4', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 180, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 5\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 5\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.append.lock: -9223372036854775808\n" +
+                    "# position: 368, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 416, header: 6\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 130596 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  writePosition: [\n" +
+                    "    0,\n" +
+                    "    0\n" +
+                    "  ],\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 32,\n" +
+                    "    indexSpacing: 4,\n" +
+                    "    index2Index: 196,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  dataFormat: 1\n" +
+                    "}\n" +
+                    "# position: 196, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 32, used: 1\n" +
+                    "  488,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 32, used: 0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 776, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "\"\": hello!\n" +
+                    "...\n" +
+                    "# 130280 bytes remaining\n", queue.dump());
+            assertEquals(Long.MIN_VALUE, lastWriteIndex(queue));
         }
     }
 
@@ -357,18 +409,25 @@ public class ToEndTest extends ChronicleQueueTestBase {
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             writeExcerptToQueue(queue);
-            long nextIndex = getNextWriteIndex(queue);
+            long nextIndex = lastWriteIndex(queue);
 
             timeProvider.advanceMicros(FIVE_SECONDS);
 
             writeMetadataToQueue(queue);
-            assertEquals(nextIndex, getNextWriteIndex(queue));
+            assertEquals(nextIndex, lastWriteIndex(queue));
         }
     }
 
     private long getNextWriteIndex(SingleChronicleQueue queue) {
         try (final ExcerptTailer tailer = queue.createTailer().toEnd()) {
             return tailer.index();
+        }
+    }
+
+    private long lastWriteIndex(SingleChronicleQueue queue) {
+        try (final ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
+        DocumentContext dc = tailer.readingDocument()) {
+            return dc.index();
         }
     }
 
@@ -398,7 +457,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build();
     }

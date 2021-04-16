@@ -72,7 +72,7 @@ public class RollCycleMultiThreadStressTest {
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
         PRETOUCH = Jvm.getBoolean("pretouch");
         READERS_READ_ONLY = Jvm.getBoolean("read_only");
-        DUMP_QUEUE = true;
+        DUMP_QUEUE = false;
         SHARED_WRITE_QUEUE = Jvm.getBoolean("sharedWriteQ");
         DOUBLE_BUFFER = Jvm.getBoolean("double_buffer");
 

@@ -114,10 +114,23 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * <p>
      * If the index is not a valid index, the operation is undefined.
      *
-     * @param index index to move to.
+     * @param index to move to.
      * @return if this is a valid index.
      */
     boolean moveToIndex(long index);
+
+    /**
+     * Tries to move to the start of a cycle for this Trailer to the provided {@code cycle}.
+     * <p>
+     * In order for the operation to succeed, the roll file, corresponding to
+     * the cycle number, must be present.
+     * <p>
+     * If the cycle is not a valid cycle, the operation is undefined.
+     *
+     * @param cycle to move to.
+     * @return if this is a valid cycle.
+     */
+    boolean moveToCycle(int cycle);
 
     /**
      * Moves the index for this Trailer to the first existing excerpt in the queue.

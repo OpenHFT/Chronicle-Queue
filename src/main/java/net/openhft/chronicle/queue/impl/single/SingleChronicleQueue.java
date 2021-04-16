@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
@@ -537,8 +538,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // TODO: this function may require some re-work now that acquireTailer has been deprecated
         StoreTailer tailer = acquireTailer();
         try {
-            long index = rollCycle.toIndex(cycle, 0);
-            if (tailer.moveToIndex(index)) {
+            if (tailer.moveToCycle(cycle)) {
                 return tailer.store.lastSequenceNumber(tailer) + 1;
             } else {
                 return -1;

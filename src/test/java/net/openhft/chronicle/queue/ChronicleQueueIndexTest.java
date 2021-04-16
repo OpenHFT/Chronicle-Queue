@@ -2,22 +2,25 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static net.openhft.chronicle.bytes.Bytes.from;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
@@ -244,7 +247,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
             final ExcerptTailer tailer = queue.createTailer();
             try (DocumentContext documentContext = tailer.readingDocument()) {
                 long index = documentContext.index();
-                cycle = queue.rollCycle().toCycle(index);
+                cycle = queue.rollCycle().toCycle(index + 1);
             }
 
             long index = queue.rollCycle().toIndex(cycle, 5);
@@ -262,6 +265,8 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
             for (int j = 0; j < 4; j++)
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
+                    final String hello = dc.wire().read("hello").text();
+                    System.out.println(hello);
                 }
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
@@ -277,7 +282,8 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void writeReadMetadata() {
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -293,81 +299,73 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         }
     }
 
-    // https://github.com/OpenHFT/Chronicle-Queue/issues/822
-    private void driver0(String[] strings, boolean[] meta, long millis) {
+    private void driver0(String[] strings, boolean[] meta, SetTimeProvider stp, long millis) {
 
         assert (strings.length == meta.length);
 
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .timeProvider(stp)
+                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
-            final ExcerptTailer withMetaTailer = queue.createTailer();
-            final ExcerptTailer withoutMetaTailer = queue.createTailer();
 
             for (int i = 0; i < strings.length; ++i) {
                 try (DocumentContext dc = appender.writingDocument(meta[i])) {
                     dc.wire().write("key").text(strings[i]);
                 }
-                Thread.sleep(millis);
+                stp.advanceMillis(millis);
             }
+//            System.out.println(queue.dump());
 
             // read all (meta + data)
-            int allReads = 0;
-            for (String string : strings) {
-                try (DocumentContext dc = withMetaTailer.readingDocument(true)) {
-                    if (!dc.isPresent())
-                        break;
-
-                    ++allReads;
-                    String str = dc.wire().read("key").text();
-                    System.out.println("M+D Read: " + str + ", vs " + string + ", index = " + dc.index());
-
-                    Assert.assertTrue(str.equals(string));
-                }
-            }
-            Assert.assertTrue(allReads == strings.length);
+            List<String> allReads = readKeyed(queue, true);
+            assertEquals(Arrays.asList(strings), allReads);
 
             // just data
-            int dataReads = 0;
-            for (int i = 0; i < strings.length; ++i) {
-                if (meta[i])
-                    continue;
+            List<String> dataReads = readKeyed(queue, false);
+            final List<String> expectedData = IntStream.range(0, strings.length)
+                    .filter(i -> !meta[i])
+                    .mapToObj(i -> strings[i])
+                    .collect(Collectors.toList());
+            assertEquals(expectedData, dataReads);
+        }
+    }
 
-                try (DocumentContext dc = withoutMetaTailer.readingDocument(false)) {
+    @NotNull
+    private List<String> readKeyed(ChronicleQueue queue, boolean includeMetaData) {
+        try (ExcerptTailer tailer = queue.createTailer()) {
+            List<String> allReads = new ArrayList<>();
+            for (; ; ) {
+                try (DocumentContext dc = tailer.readingDocument(includeMetaData)) {
                     if (!dc.isPresent())
-                        break;
+                        return allReads;
 
-                    ++dataReads;
-
-                    String str = dc.wire().read("key").text();
-                    System.out.println("D Read: " + str + ", vs " + strings[i] + ", index = " + dc.index());
-
-                    Assert.assertTrue(str.equals(strings[i]));
+                    final Wire wire = dc.wire();
+                    final String key = wire.readEvent(String.class);
+                    if (!key.equals("key"))
+                        continue;
+                    String str = wire.getValueIn().text();
+                    allReads.add(str);
                 }
             }
-            int expectedData = 0;
-            for( boolean b : meta ) if(!b) ++expectedData;
-            Assert.assertTrue(expectedData == dataReads);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
-
     }
 
     private void driver(String[] strings, boolean[] meta) {
         // run each test twice - once with all entries in the same cycle, and again with just one entry per cycle
-        driver0(strings, meta, 0);
-        driver0(strings, meta, 1500);
+        SetTimeProvider stp = new SetTimeProvider(1000_000_000L);
+        driver0(strings, meta, stp, 0);
+        driver0(strings, meta, stp, 1500);
     }
 
     @Test
     public void D() {
         driver(
                 new String[]{"data-1"},
-                new boolean[]{  false}
+                new boolean[]{false}
         );
     }
 
@@ -375,7 +373,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void M() {
         driver(
                 new String[]{"data-1"},
-                new boolean[]{   true}
+                new boolean[]{true}
         );
     }
 
@@ -383,7 +381,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void DDD() {
         driver(
                 new String[]{"data-1", "data-2", "data-3"},
-                new boolean[]{  false,    false,    false}
+                new boolean[]{false, false, false}
         );
     }
 
@@ -391,7 +389,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void DDM() {
         driver(
                 new String[]{"data-1", "data-2", "meta-1"},
-                new boolean[]{  false,    false,     true}
+                new boolean[]{false, false, true}
         );
     }
 
@@ -399,7 +397,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void DMD() {
         driver(
                 new String[]{"data-1", "meta-1", "data-2"},
-                new boolean[]{  false,     true,    false}
+                new boolean[]{false, true, false}
         );
     }
 
@@ -407,7 +405,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void DMM() {
         driver(
                 new String[]{"data-1", "meta-1", "meta-2"},
-                new boolean[]{  false,     true,     true}
+                new boolean[]{false, true, true}
         );
     }
 
@@ -415,7 +413,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void MMM() {
         driver(
                 new String[]{"meta-1", "meta-2", "meta-3"},
-                new boolean[]{   true,     true,     true}
+                new boolean[]{true, true, true}
         );
     }
 
@@ -423,7 +421,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void MMD() {
         driver(
                 new String[]{"meta-1", "meta-2", "data-1"},
-                new boolean[]{   true,     true,    false}
+                new boolean[]{true, true, false}
         );
     }
 
@@ -431,7 +429,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void MDM() {
         driver(
                 new String[]{"meta-1", "data-1", "meta-2"},
-                new boolean[]{   true,    false,     true}
+                new boolean[]{true, false, true}
         );
     }
 
@@ -439,7 +437,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void MDD() {
         driver(
                 new String[]{"meta-1", "data-1", "data-2"},
-                new boolean[]{   true,    false,     false}
+                new boolean[]{true, false, false}
         );
     }
 }

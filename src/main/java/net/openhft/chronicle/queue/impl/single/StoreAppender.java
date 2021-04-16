@@ -848,8 +848,6 @@ class StoreAppender extends AbstractCloseable
                     }
 
                     lastPosition = positionOfHeader;
-
-                    boolean newCycle = (lastCycle != cycle);
                     lastCycle = cycle;
 
                     if (!metaData) {
@@ -857,13 +855,6 @@ class StoreAppender extends AbstractCloseable
                         store.writePosition(positionOfHeader);
                         if (lastIndex != Long.MIN_VALUE)
                             writeIndexForPosition(lastIndex, positionOfHeader);
-                    }else if(newCycle){
-                        // if rolling to a new cycle, and the first message is metadata, a dummy index entry is required
-                        long l = queue.rollCycle().toIndex(cycle, 0);
-                        lastIndex(l);
-                        store.writePosition(positionOfHeader);
-                        if (lastIndex != Long.MIN_VALUE)
-                            writeIndexForPosition(l, positionOfHeader);
                     }
 
                 } else if (wire != null) {

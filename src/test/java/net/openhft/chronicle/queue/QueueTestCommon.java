@@ -58,6 +58,9 @@ public class QueueTestCommon {
     }
 
     public void checkExceptions() {
+        for (String msg : "Allocation of , ms to add mapping for ,jar to the classpath, ms to pollDiskSpace for , us to linearScan by position from ,File released ".split(",")) {
+            exceptions.keySet().removeIf(e -> e.message.contains(msg));
+        }
         for (Map.Entry<Predicate<ExceptionKey>, String> expectedException : expectedExceptions.entrySet()) {
             if (!exceptions.keySet().removeIf(expectedException.getKey()))
                 Slf4jExceptionHandler.WARN.on(getClass(), "No error for " + expectedException.getValue());
