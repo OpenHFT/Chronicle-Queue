@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -11,16 +12,17 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.RollCycles.MINUTELY;
+import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static org.junit.Assert.assertEquals;
 
 public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
@@ -29,12 +31,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
         // as we check for DEBUG exceptions in this test, don't call the standard Jvm.hasExceptions
         exceptions.keySet().removeIf(k -> k.level == LogLevel.PERF);
         return !exceptions.isEmpty();
-    }
-
-    @Before
-    public void expectExceptions() {
-        expectException("File released");
-        expectException(/* Adding ... surefire....jar */ " to the classpath");
     }
 
     @Test
@@ -52,11 +48,11 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = q.createTailer();
 
             tailer.readBytes(result);
-            Assert.assertEquals(test, result);
+            assertEquals(test, result);
             result.clear();
 
             tailer.readBytes(result);
-            Assert.assertEquals(test2, result);
+            assertEquals(test2, result);
             result.clear();
         }
     }
@@ -75,31 +71,110 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
-            Assert.assertEquals(test, result);
-            Assert.assertEquals(1, tailer.index());
+            assertEquals(test, result);
+            assertEquals(1, tailer.index());
         }
     }
 
-    @Ignore("TODO: FIX")
     @Test
-    public void dontOverwriteExistingDifferentQueue() {
+    public void dontOverwriteExistingDifferentQueueInstance() {
+        expectException("Trying to overwrite index 0 which is before the end of the queue");
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         Bytes result = Bytes.elasticHeapByteBuffer();
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
+        long index;
+        final File tmpDir = getTmpDir();
+        final String expected = "" +
+                "--- !!meta-data #binary\n" +
+                "header: !STStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  metadata: !SCQMeta {\n" +
+                "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T4', epoch: 0 },\n" +
+                "    deltaCheckpointInterval: 64,\n" +
+                "    sourceId: 0\n" +
+                "  }\n" +
+                "}\n" +
+                "# position: 176, header: 0\n" +
+                "--- !!data #binary\n" +
+                "listing.highestCycle: 0\n" +
+                "# position: 216, header: 1\n" +
+                "--- !!data #binary\n" +
+                "listing.lowestCycle: 0\n" +
+                "# position: 256, header: 2\n" +
+                "--- !!data #binary\n" +
+                "listing.modCount: 1\n" +
+                "# position: 288, header: 3\n" +
+                "--- !!data #binary\n" +
+                "chronicle.write.lock: -9223372036854775808\n" +
+                "# position: 328, header: 4\n" +
+                "--- !!data #binary\n" +
+                "chronicle.append.lock: -9223372036854775808\n" +
+                "# position: 368, header: 5\n" +
+                "--- !!data #binary\n" +
+                "chronicle.lastIndexReplicated: -1\n" +
+                "# position: 416, header: 6\n" +
+                "--- !!data #binary\n" +
+                "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                "...\n" +
+                "# 130596 bytes remaining\n" +
+                "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  writePosition: [\n" +
+                "    776,\n" +
+                "    3332894621696\n" +
+                "  ],\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 32,\n" +
+                "    indexSpacing: 4,\n" +
+                "    index2Index: 196,\n" +
+                "    lastIndex: 4\n" +
+                "  },\n" +
+                "  dataFormat: 1\n" +
+                "}\n" +
+                "# position: 196, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 32, used: 1\n" +
+                "  488,\n" +
+                "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 488, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 32, used: 1\n" +
+                "  776,\n" +
+                "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 776, header: 0\n" +
+                "--- !!data\n" +
+                "hello world\n" +
+                "...\n" +
+                "# 130276 bytes remaining\n";
+        try (SingleChronicleQueue q = createQueue(tmpDir)) {
             ExcerptAppender appender = q.acquireAppender();
             appender.writeBytes(test);
+            index = appender.lastIndexAppended();
+            assertEquals(expected, q.dump());
         }
+        assertEquals(0, index);
 
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
-            ExcerptAppender appender = q.acquireAppender();
-            // TODO: this overwrites because the appender's wire's headerNumber is positioned at the start
-            ((InternalAppender) appender).writeBytes(0, Bytes.from("HELLO WORLD"));
+        // has to be the same tmpDir
+        try (SingleChronicleQueue q = createQueue(tmpDir)) {
+            InternalAppender appender = (InternalAppender) q.acquireAppender();
+            appender.writeBytes(index, Bytes.from("HELLO WORLD"));
+
+            assertEquals(expected, q.dump());
 
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
-            Assert.assertEquals(test, result);
-            Assert.assertEquals(1, tailer.index());
+            assertEquals(test, result);
+            assertEquals(1, tailer.index());
         }
+        IOTools.deleteDirWithFiles(tmpDir);
+    }
+
+    @NotNull
+    private SingleChronicleQueue createQueue(File tmpDir) {
+        return SingleChronicleQueueBuilder.binary(tmpDir).timeProvider(() -> 0).testBlockSize().rollCycle(TEST4_DAILY).build();
     }
 
     @Test(expected = java.lang.IllegalStateException.class)
@@ -131,7 +206,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             }
 
             Assert.assertTrue("hello world".contentEquals(result));
-            Assert.assertEquals(1, tailer.index());
+            assertEquals(1, tailer.index());
             result.clear();
 
             ((InternalAppender) appender).writeBytes(1, test);
@@ -140,7 +215,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
                 dc.rollbackOnClose();
             }
 
-            Assert.assertEquals(1, tailer.index());
+            assertEquals(1, tailer.index());
 
             ((InternalAppender) appender).writeBytes(2, test);
         }
@@ -153,7 +228,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
                 .rollCycle(MINUTELY)
                 .timeProvider(() -> 0).build();
 
-            ExcerptAppender appender = q.acquireAppender()) {
+             ExcerptAppender appender = q.acquireAppender()) {
             appender.writeText("hello");
             appender.writeText("hello2");
             try (final DocumentContext dc = appender.writingDocument()) {
@@ -196,13 +271,13 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
-            Assert.assertEquals(test, result);
+            assertEquals(test, result);
             result.clear();
             tailer.readBytes(result);
-            Assert.assertEquals(test1, result);
+            assertEquals(test1, result);
             result.clear();
             tailer.readBytes(result);
-            Assert.assertEquals(test2, result);
+            assertEquals(test2, result);
         }
     }
 

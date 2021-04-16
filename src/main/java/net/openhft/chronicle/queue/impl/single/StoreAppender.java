@@ -551,7 +551,7 @@ class StoreAppender extends AbstractCloseable
             rollCycleTo(cycle);
 
         long headerNumber = wire.headerNumber();
-        boolean isNextIndex = index == headerNumber + 1;
+        boolean isNextIndex = headerNumber != -1 && index == headerNumber + 1;
         if (!isNextIndex) {
 
             // in case our cached headerNumber is incorrect.
