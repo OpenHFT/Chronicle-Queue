@@ -68,6 +68,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
         }
+        expectException("Overriding sourceId from existing metadata, was 0, overriding to 1");
     }
 
     @Test(timeout = 10_000L)
