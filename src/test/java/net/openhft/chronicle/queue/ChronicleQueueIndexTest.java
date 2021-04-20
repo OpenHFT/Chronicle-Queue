@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
@@ -37,6 +38,10 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
+
+        // todo remove see https://github.com/OpenHFT/Chronicle-Queue/issues/837
+        Assume.assumeTrue(!Jvm.isMacArm());
+
         final Consumer<InternalAppender> writer = appender -> {
             try (DocumentContext wd = appender.writingDocument(true)) {
                 wd.wire().write("key").writeDouble(1);
