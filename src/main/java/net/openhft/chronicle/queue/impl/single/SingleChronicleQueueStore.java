@@ -35,10 +35,7 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.StreamCorruptedException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -228,6 +225,38 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         }
     }
 
+    /**
+     * Moves the position to the start
+     *
+     * @param ec the data structure we are navigating
+     * @return whether the index was found for reading.
+     */
+    @Nullable
+    @Override
+    public ScanResult moveToStartForRead(@NotNull ExcerptContext ec) {
+        throwExceptionIfClosed();
+
+        Wire wire = ec.wire();
+        wire.bytes().readPositionUnlimited(0);
+
+        try {
+            final WireIn.HeaderType headerType = wire.readDataHeader(true);
+            switch (headerType) {
+                case DATA:
+                case META_DATA:
+                    return ScanResult.FOUND;
+                case NONE:
+                    return ScanResult.NOT_REACHED;
+                case EOF:
+                    return ScanResult.END_OF_FILE;
+                default:
+                    throw new AssertionError("headerType=" + headerType);
+            }
+        } catch (EOFException eof) {
+            return ScanResult.END_OF_FILE;
+        }
+    }
+
     @Override
     protected boolean threadSafetyCheck(boolean isUsed) {
         // disable thread safety check
@@ -323,7 +352,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec,
                                              long sequenceNumber,
-                                             long position) throws  StreamCorruptedException {
+                                             long position) throws StreamCorruptedException {
         throwExceptionIfClosedInSetter();
 
         sequence.setSequence(sequenceNumber, position);

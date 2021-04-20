@@ -7,7 +7,7 @@ image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-que
 image:https://javadoc-badge.appspot.com/net.openhft/chronicle-queue.svg?label=javadoc[JavaDoc, link=https://www.javadoc.io/doc/net.openhft/chronicle-queue]
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
-image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
+//image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
 
 image::images/Queue_line.png[]
 
@@ -529,21 +529,11 @@ will only give you the last index appended by this appender; not the last index 
 If you wish to find the index of the last record written to the queue, then you have to call:
 
 ```
-ExcerptTailer tailer = queue.createTailer().toEnd().direction(TailerDirection.BACKWARD);
-try (DocumentContext dc = tailer.readingDocument()) {
-    if (dc.isPresent()) {
-        lastIndex = tailer.index());
-    }
-}
+queue.lastIndex()
 ```
-
-(note that `tailer.toEnd()` puts the tailer just past the last index written)
-
-Previously, we advised to call
-```
-lastIndex = queue.createTailer().toEnd().index() - 1;
-```
-But if the queue has rolled and there is no data in the new cycle, this will not work.
+Which will return the index of the last excerpt present in the queue (or -1 for an empty queue). Note that if the queue is
+being written to concurrently it's possible the value may be an under-estimate, as subsequent entries may have been written
+even before it was returned.
 
 === How to determine how many messages are between two indexes
 
@@ -1021,6 +1011,37 @@ Excerpt is the main data container in a Chronicle queue.
 +
 Each Chronicle queue is composed of excerpts.
 Putting data to a Chronicle queue means starting a new excerpt, writing data into it, and finishing the excerpt at the end.
+
+=== Pretoucher configuration
+
+`Pretoucher` is a class designed to be called from a long-lived thread. The purpose of the Pretoucher
+is to accelerate writing in a queue. Upon invocation of the `execute()` method, this object will pre-touch
+pages in the queue's underlying store file, so that they are resident in the page-cache (i.e. loaded from
+storage) before they are required by appenders to the queue. Resources held by this object will be released when the underlying
+queue is closed. Alternatively, the `shutdown()` method can be called to close the supplied queue and
+release any other resources. Invocation of the `execute()` method after `shutdown()` has been called will
+cause an `IllegalStateException` to be thrown.
+
+The Pretoucher's configuration parameters (set via the system properties) are as follows:
+
+- `SingleChronicleQueueExcerpts.earlyAcquireNextCycle` (defaults to false): Causes the Pretoucher to create the next cycle file while the queue
+is still writing to the current one in order to mitigate the impact of stalls in the OS when creating new files.
+
+*Note:* `earlyAcquireNextCycle` is off by default and if it is going to be turned on, you should very carefully
+stress test before and after turning it on. Basically what you experience is related to your system.
+
+- `SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs` (defaults to 2,000 milliseconds) The pretoucher will create new cycle files
+this amount of time in advanced of them being written to. Effectively moves the Pretoucher's notion
+of which cycle is "current" into the future by `pretoucherPrerollTimeMs`.
+
+- `SingleChronicleQueueExcerpts.dontWrite` (defaults to false): Tells the Pretoucher to never create cycle files that do not already
+exist. As opposed to the default behaviour where if the Pretoucher runs inside a cycle where no excerpts
+have been written, it will create the "current" cycle file. Obviously enabling this will prevent
+`earlyAcquireNextCycle` from working.
+
+The Pretoucher's constructor takes the following parameter:
+
+- `queue`: The queue that this Pretoucher is assigned to.
 
 === File Rolling
 
@@ -1920,8 +1941,7 @@ console output:
 
 [source]
 ----
-[main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY.
-    Overriding this queue to use HOURLY
+[main] WARN SingleChronicleQueueBuilder - Overriding roll cycle from HOURLY to MINUTELY.
 ----
 
 ==== WireType
@@ -1971,10 +1991,22 @@ Buffer Mode::
 - `None` - The default (and the only one available for open source users), no buffering; - `Copy` - used in conjunction with encryption; - `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer Capacity::
 Ring buffer capacity when using `bufferMode: Asynchronous`
 
+=== Running under Docker
+If you are running Chronicle Queue or Chronicle Queue Enterprise under Docker, the best
+practice is to use the following command:
+
+[source,text]
+----
+--ipc=host
+----
+This feature lets processes running on a host computer communicate with each other
+immediately, therefore the latency associated with network or pipe-based IPC does not degrade
+the Chronicle Queue (Enterprise) performance.
+
 === The Maximum number of messages per cycle
 
 |===
-| RollCyle Name | Max Number of messages in each cycle in Decimal | Max Number of messages in each cycle in Hexadecimal | maximum messages per seconds over the length of the cycle  ( on average )
+| RollCycle Name | Max Number of messages in each cycle in Decimal | Max Number of messages in each cycle in Hexadecimal | maximum messages per seconds over the length of the cycle  ( on average )
 
 | FIVE_MINUTELY | 1,073,741,824| 0x40000000 | 3,579,139
 | TEN_MINUTELY | 1,073,741,824| 0x40000000 | 1,789,569

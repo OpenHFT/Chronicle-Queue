@@ -212,6 +212,19 @@ public interface ChronicleQueue extends Closeable {
     long firstIndex();
 
     /**
+     * Returns the index of the last non-metadata excerpt written to this ChronicleQueue,
+     * or -1 if the queue is empty.
+     * <p>
+     * The value returned by this method will not be reliable in the event the queue
+     * is being written to concurrently, as subsequent excerpts may have been written
+     * by the time it is returned.
+     *
+     * @return The highest non-metadata index available for this ChronicleQueue, or -1 if
+     * the queue is empty
+     */
+    long lastIndex();
+
+    /**
      * Returns the {@link WireType} used for this ChronicleQueue.
      * <p>
      * For example, the WireType could be WireTypes.TEXT or WireTypes.BINARY.
@@ -282,7 +295,7 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Returns the source id.
+     * Returns the source id. Source is is used to identify the queue in {@link net.openhft.chronicle.wire.MessageHistory}
      * <p>
      * The source id is non-negative.
      *

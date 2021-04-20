@@ -72,6 +72,8 @@ class StoreAppender extends AbstractCloseable
         queue.addCloseListener(this);
 
         queue.cleanupStoreFilesWithNoData();
+        normaliseEOFs();
+
         int cycle = queue.cycle();
         int lastCycle = queue.lastCycle();
         if (lastCycle != cycle && lastCycle >= 0)
@@ -282,8 +284,8 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> bytes = wire.bytes();
             assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
-            final long headerNumber = store.lastSequenceNumber(this);
-            wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
+            final long lastSequenceNumber = store.lastSequenceNumber(this);
+            wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
             assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
 
@@ -304,7 +306,7 @@ class StoreAppender extends AbstractCloseable
         }
         int header = bytes.readVolatileInt(positionOfHeader);
         // ready or an incomplete message header?
-        return isReadyData(header) || isNotComplete(header);
+        return isReadyData(header) || isReadyMetaData(header) || isNotComplete(header);
     }
 
     @NotNull
@@ -340,7 +342,6 @@ class StoreAppender extends AbstractCloseable
         } else {
             writeLock.lock();
             int cycle = queue.cycle();
-
             if (wire == null)
                 setWireIfNull(cycle);
 
@@ -370,6 +371,9 @@ class StoreAppender extends AbstractCloseable
         return writingDocument(metaData);
     }
 
+    /**
+     * Ensure any missing EOF markers are added back to previous cycles
+     */
     public void normaliseEOFs() {
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
@@ -506,11 +510,15 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Write bytes at an index, but only if the index is at the end of the chronicle. If index is after the end of the chronicle, throw an
-     * IllegalStateException. If the index is before the end of the chronicle then do not change the state of the chronicle.
-     * <p>Thread-safe</p>
+     * Write bytes at an index, but only if the index is at the end of the queue (*or* end of cycle).
+     * If index is after the end of the queue (or cycle), throw an IllegalStateException.
+     * If the index is before the end of the queue then do not overwrite the contents of the queue.
+     * <p>If the index is at the end of a cycle (but not the queue) this will overwrite the EOF marker
+     * of that cycle. It is the caller's responsibility to call {@link #normaliseEOFs()} after.
+     * <p>Users are advised that the behaviour of this method may change in the future
+     * <p>Thread-safe
      *
-     * @param index index to write at. Only if index is at the end of the chronicle will the bytes get written
+     * @param index index to write at. Only if index is at the end of the queue (or cycle) will the bytes get written
      * @param bytes payload
      */
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
@@ -536,14 +544,14 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
-
         if (wire == null)
-            setCycle2(cycle, true);
-        else if (queue.rollCycle().toCycle(wire.headerNumber()) != cycle)
+            setWireIfNull(cycle);
+
+        if (this.cycle != cycle)
             rollCycleTo(cycle);
 
         long headerNumber = wire.headerNumber();
-        boolean isNextIndex = index == headerNumber + 1;
+        boolean isNextIndex = headerNumber != -1 && index == headerNumber + 1;
         if (!isNextIndex) {
 
             // in case our cached headerNumber is incorrect.
@@ -683,7 +691,6 @@ class StoreAppender extends AbstractCloseable
 
     // throws UnrecoverableTimeoutException
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
-
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
     }

@@ -74,7 +74,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return if {@link #readingDocument()} would return a DocumentContext
      *         that provides excerpts to read.
      */
-    @Deprecated(/* remove in x.23* and make internal to StoreTailer as it is used by chronicle services - removed because sometimes it will report false when there are messages*/)
+    @Deprecated(/* remove in x.23 - this is no longer a performance optimisation */)
     @Override
     default boolean peekDocument() {
         return true;
@@ -83,7 +83,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     /**
      * Returns the current index of this Trailer.
      * <p>
-     * If this method is invoked within a {@code try (tailer.readingDocument){ }} block, returns the index of
+     * If this method is invoked within a {@code try (tailer.readingDocument(){ }} block, returns the index of
      * the current reading document. Otherwise, returns the next index to read.
      * <p>
      * The index includes the cycle and the sequence number within that cycle.
@@ -114,10 +114,23 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * <p>
      * If the index is not a valid index, the operation is undefined.
      *
-     * @param index index to move to.
+     * @param index to move to.
      * @return if this is a valid index.
      */
     boolean moveToIndex(long index);
+
+    /**
+     * Tries to move to the start of a cycle for this Trailer to the provided {@code cycle}.
+     * <p>
+     * In order for the operation to succeed, the roll file, corresponding to
+     * the cycle number, must be present.
+     * <p>
+     * If the cycle is not a valid cycle, the operation is undefined.
+     *
+     * @param cycle to move to.
+     * @return if this is a valid cycle.
+     */
+    boolean moveToCycle(int cycle);
 
     /**
      * Moves the index for this Trailer to the first existing excerpt in the queue.

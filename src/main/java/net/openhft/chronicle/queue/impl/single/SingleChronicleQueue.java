@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
@@ -61,6 +62,7 @@ import java.util.function.*;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.wire.Wires.*;
 
@@ -460,10 +462,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * @return the {@link QueueLock} This lock is held by an appender while the queue replication cluster is back-filling.
+     * @return the {@link QueueLock} This lock is held while the queue replication cluster is back-filling.
      * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
      * hence we need to back copy data from the sinks to the source upon startup.
-     * While we are doing this we lock the queue so that you cannot write data to this queue. So we lock it with a queue lock.
+     * While we are doing this we lock the queue so that new appenders can not be created.
      *
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
      */
@@ -475,7 +477,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     /**
      * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to
-     * coordinate writes from multiple threads and processes
+     * coordinate writes from multiple threads and processes.
+     * <p>This is also used to protect rolling to the next cycle
      */
     @NotNull
     WriteLock writeLock() {
@@ -536,8 +539,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // TODO: this function may require some re-work now that acquireTailer has been deprecated
         StoreTailer tailer = acquireTailer();
         try {
-            long index = rollCycle.toIndex(cycle, 0);
-            if (tailer.moveToIndex(index)) {
+            if (tailer.moveToCycle(cycle)) {
                 return tailer.store.lastSequenceNumber(tailer) + 1;
             } else {
                 return -1;
@@ -708,6 +710,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return rollCycle().toIndex(cycle, 0);
     }
 
+    @Override
+    public long lastIndex() {
+        // This is a slow implementation that gets a Tailer/DocumentContext to find the last index
+        try (final ExcerptTailer tailer = createTailer().direction(BACKWARD).toEnd()) {
+            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                if (documentContext.isPresent()) {
+                    return documentContext.index();
+                } else {
+                    return -1;
+                }
+            }
+        }
+    }
+
     /**
      * This method creates a tailer and count the number of messages between the start of the queue ( see @link firstIndex() )  and the end.
      *
@@ -851,8 +867,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     // file not found.
                     if (store == null)
                         break;
-                    if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
-                        // couldn't delete? Let's try writing EOF
+                    if (store.writePosition() == 0 && store.file().exists()) {
+                        // try writing EOF
                         // if this blows up we should blow up too so don't catch anything
                         MappedBytes bytes = store.bytes();
                         try {
