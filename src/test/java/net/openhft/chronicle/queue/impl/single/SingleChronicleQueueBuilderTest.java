@@ -122,7 +122,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test
     public void tryOverrideSourceId() {
-        expectException("inconsistency with of source ids");
+        expectException("Overriding sourceId from existing metadata");
 
         final File tmpDir = getTmpDir();
         final int firstSourceId = 1;

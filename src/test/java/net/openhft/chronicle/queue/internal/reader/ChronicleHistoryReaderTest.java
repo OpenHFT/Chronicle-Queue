@@ -57,6 +57,8 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     private void checkWithQueueHistoryRecordHistoryInitial(Class<? extends DummyListener> dummyClass) {
+        expectException("Overriding sourceId from existing metadata, was 0, overriding to");
+
         MessageHistory.set(null);
 
         int extraTiming = 1;
