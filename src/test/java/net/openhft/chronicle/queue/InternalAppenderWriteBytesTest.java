@@ -79,7 +79,9 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     @Test
     public void dontOverwriteExistingDifferentQueueInstance() {
         expectException("Trying to overwrite index 0 which is before the end of the queue");
+        expectException("Trying to overwrite index 1 which is before the end of the queue");
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
+        @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
         Bytes result = Bytes.elasticHeapByteBuffer();
         long index;
         final File tmpDir = getTmpDir();
@@ -119,8 +121,8 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
-                "    776,\n" +
-                "    3332894621696\n" +
+                "    792,\n" +
+                "    3401614098433\n" +
                 "  ],\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: 32,\n" +
@@ -147,21 +149,27 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
                 "# position: 776, header: 0\n" +
                 "--- !!data\n" +
                 "hello world\n" +
+                "# position: 792, header: 1\n" +
+                "--- !!data\n" +
+                "hello world2\n" +
                 "...\n" +
-                "# 130276 bytes remaining\n";
+                "# 130260 bytes remaining\n";
         try (SingleChronicleQueue q = createQueue(tmpDir)) {
             ExcerptAppender appender = q.acquireAppender();
             appender.writeBytes(test);
+            appender.writeBytes(test2);
             index = appender.lastIndexAppended();
             assertEquals(expected, q.dump());
         }
-        assertEquals(0, index);
+        assertEquals(1, index);
 
         // has to be the same tmpDir
         try (SingleChronicleQueue q = createQueue(tmpDir)) {
             InternalAppender appender = (InternalAppender) q.acquireAppender();
-            appender.writeBytes(index, Bytes.from("HELLO WORLD"));
+            appender.writeBytes(0, Bytes.from("HELLO WORLD"));
+            assertEquals(expected, q.dump());
 
+            appender.writeBytes(1, Bytes.from("HELLO WORLD"));
             assertEquals(expected, q.dump());
 
             ExcerptTailer tailer = q.createTailer();

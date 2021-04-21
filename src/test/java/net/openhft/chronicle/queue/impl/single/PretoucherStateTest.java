@@ -18,8 +18,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.function.BooleanSupplier;
@@ -30,6 +32,10 @@ import static org.junit.Assert.assertEquals;
 public class PretoucherStateTest extends QueueTestCommon {
     @Test
     public void pretouch() {
+
+        // todo remove see https://github.com/OpenHFT/Chronicle-Queue/issues/837
+        Assume.assumeTrue(!Jvm.isMacArm());
+
         long[] pos = {0};
         final StringBuilder record = new StringBuilder();
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 4096, 64 << 10, record, () -> false);
@@ -43,6 +49,10 @@ public class PretoucherStateTest extends QueueTestCommon {
 
     @Test
     public void pretouchLeap() {
+
+        // todo remove see https://github.com/OpenHFT/Chronicle-Queue/issues/837
+        Assume.assumeTrue(!Jvm.isMacArm());
+
         long[] pos = {1 << 20};
         final StringBuilder record = new StringBuilder();
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 4 << 10, 16 << 10, record, () -> true);
@@ -75,6 +85,9 @@ public class PretoucherStateTest extends QueueTestCommon {
 
     @Test
     public void pretouchLongBreak() {
+        // todo remove see https://github.com/OpenHFT/Chronicle-Queue/issues/837
+        Assume.assumeTrue(!Jvm.isMacArm());
+        
         long[] pos = {0};
         final StringBuilder record = new StringBuilder();
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 2 * 1024, 16 << 10, record, () -> true);

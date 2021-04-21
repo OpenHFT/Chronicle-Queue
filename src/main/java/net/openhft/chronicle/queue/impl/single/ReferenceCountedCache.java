@@ -1,10 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.ReferenceCounted;
+import net.openhft.chronicle.core.io.*;
 import net.openhft.chronicle.core.util.ThrowingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -82,7 +79,10 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
                 return;
             }
         }
-        retained.forEach(Closeable::warnAndCloseIfNotClosed);
+        retained.stream()
+                .filter(o -> o instanceof ManagedCloseable)
+                .map(o -> (ManagedCloseable) o)
+                .forEach(ManagedCloseable::warnAndCloseIfNotClosed);
     }
 
     @Override

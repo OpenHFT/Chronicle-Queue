@@ -95,10 +95,15 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         if (readOnly && !file.exists())
             throw new IORuntimeException("File not found in readOnly mode");
 
+        MappedBytes bytes = null;
         try {
-            if (!readOnly && file.createNewFile() && !file.canWrite())
+            if (!readOnly && file.createNewFile() && !file.canWrite()) {
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
-            MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);
+            }
+            bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);
+            // these MappedBytes are shared, but the assumption is they shouldn't grow. Supports 2K entries.
+            bytes.disableThreadSafetyCheck(true);
+
             // eagerly initialize backing MappedFile page - otherwise wire.writeFirstHeader() will try to lock the file
             // to allocate the first byte store and that will cause lock overlap
             bytes.readVolatileInt(0);
@@ -111,11 +116,12 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                         throw Jvm.rethrow(ex);
                     }
                 }, () -> null);
-            else
+            else {
+                MappedBytes finalBytes = bytes;
                 return SingleTableStore.doWithExclusiveLock(file, v -> {
                     try {
                         if (wire.writeFirstHeader()) {
-                            return writeTableStore(bytes, wire);
+                            return writeTableStore(finalBytes, wire);
                         } else {
                             return readTableStore(wire);
                         }
@@ -123,8 +129,12 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                         throw Jvm.rethrow(ex);
                     }
                 }, () -> null);
+            }
         } catch (IOException e) {
             throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
+        } finally {
+            if (bytes != null)
+                bytes.clearUsedByThread();
         }
     }
 

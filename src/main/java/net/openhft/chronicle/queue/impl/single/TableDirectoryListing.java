@@ -3,8 +3,10 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ManagedCloseable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +69,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
         while (true) {
             throwExceptionIfClosed();
-            tableStore.throwExceptionIfClosed();
+            ((ManagedCloseable) tableStore).throwExceptionIfClosed();
             Jvm.safepoint();
             final long currentMax = maxCycleValue.getVolatileValue();
             Jvm.safepoint();
