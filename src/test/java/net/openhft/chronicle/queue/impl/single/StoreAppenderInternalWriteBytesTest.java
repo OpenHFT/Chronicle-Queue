@@ -22,22 +22,23 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.String.format;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 @Ignore("Broken https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise/issues/211")
 public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreAppenderInternalWriteBytesTest.class);
 
-    private static final int MESSAGES_TO_WRITE = 10_000;
+    private static final int MESSAGES_TO_WRITE = 20;
 
     @Test
     public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
-        testInternalWriteBytes(3, true);
+        testInternalWriteBytes(7, true);
     }
 
     @Test
     public void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
-        testInternalWriteBytes(3, false);
+        testInternalWriteBytes(5, false);
     }
 
     public void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
@@ -56,7 +57,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
         try {
             List<Future<?>> copierFutures = new ArrayList<>();
             for (int i = 0; i < numCopiers; i++) {
-                copierFutures.add(es.submit(new QueueCopier(sourceDir, destinationDir)));
+                copierFutures.add(es.submit(new QueueCopier(sourceDir, destinationDir, i)));
             }
             copierFutures.forEach(future -> {
                 try {
@@ -74,7 +75,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
     private void assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
         try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
              final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
-
+            System.out.println(destinationQueue.dump());
             /*
              * Normalise destination EOFs first
              *
@@ -95,8 +96,9 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                     long destinationIndex = destinationTailer.index();
                     assert sourceTailer.readBytes(sourceBuffer) : "Source queue is shorter than expected";
                     assert destinationTailer.readBytes(destinationBuffer) : "Destination queue is shorter than expected";
-                    assertEquals(format("Mismatch at index %s/%s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex)),
-                            sourceBuffer.toString(), destinationBuffer.toString());
+                    final String s = destinationBuffer.toString();
+                    assertEquals(format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s),
+                            sourceBuffer.toString(), s.replaceAll(" - .*", ""));
                 }
             }
         }
@@ -106,10 +108,12 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
 
         private final Path sourceDir;
         private final Path destinationDir;
+        private final int copyId;
 
-        public QueueCopier(Path sourceDir, Path destinationDir) {
+        public QueueCopier(Path sourceDir, Path destinationDir, int copyId) {
             this.sourceDir = sourceDir;
             this.destinationDir = destinationDir;
+            this.copyId = copyId;
         }
 
         @Override
@@ -120,6 +124,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
                      final ExcerptAppender destinationAppender = destinationQueue.acquireAppender()) {
                     Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
+                    Bytes<?> prev = Bytes.allocateElasticOnHeap(1024);
                     long index;
                     while (true) {
                         buffer.clear();
@@ -127,7 +132,11 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                         if (!sourceTailer.readBytes(buffer)) {
                             break;
                         }
+                        if (prev.contentEquals(buffer))
+                            fail("duplicate "+buffer);
+                        buffer.append(" - ").append(copyId);
                         ((InternalAppender) destinationAppender).writeBytes(index, buffer);
+                        prev.clear().append(buffer);
                     }
                 }
             }
@@ -167,7 +176,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
     private SingleChronicleQueue createQueue(Path queueDir, TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build();
     }
