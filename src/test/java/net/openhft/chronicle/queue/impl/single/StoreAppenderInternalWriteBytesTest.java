@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -137,13 +138,22 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                             fail("duplicate " + buffer);
                         buffer.append(" - ").append(copyId);
                         ((InternalAppender) destinationAppender).writeBytes(index, buffer);
-                        if (!destinationTailer.readBytes(prev)) {
-                            fail("no write " + buffer);
+
+                        try (@NotNull DocumentContext dc = destinationTailer.readingDocument()) {
+                            if (!dc.isPresent()) {
+                                fail("no write " + buffer);
+                            }
+                            final long dtIndex = destinationTailer.index();
+                            if (dtIndex != index)
+                                assertEquals(Long.toHexString(index), Long.toHexString(dtIndex));
                         }
-                        final long dtIndex = destinationTailer.index();
-                        if (dtIndex != index)
-                            assertEquals(Long.toHexString(dtIndex), Long.toHexString(index));
                         prev.clear().append(buffer);
+//                        if (index %17 == 0) {
+                        try (final ChronicleQueue dq = createQueue(destinationDir, null);
+                             final ExcerptAppender da = dq.acquireAppender()) {
+
+                        }
+//                        }
                     }
                 }
             }

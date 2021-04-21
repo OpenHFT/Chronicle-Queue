@@ -570,6 +570,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         writeBytesInternal(bytes, metadata);
+//        assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;

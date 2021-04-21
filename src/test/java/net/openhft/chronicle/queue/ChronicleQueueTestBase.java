@@ -41,7 +41,7 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
     private List<File> tmpDirs = new ArrayList<>();
 
     static {
-//        System.setProperty("queue.check.index", "true");
+        System.setProperty("queue.check.index", "true");
     }
 
     // *************************************************************************
