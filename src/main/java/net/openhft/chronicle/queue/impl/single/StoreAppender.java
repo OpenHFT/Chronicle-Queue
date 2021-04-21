@@ -297,7 +297,6 @@ class StoreAppender extends AbstractCloseable
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
             throw new AssertionError(e);
         }
-
     }
 
     private boolean checkPositionOfHeader(final Bytes<?> bytes) {
@@ -388,9 +387,9 @@ class StoreAppender extends AbstractCloseable
         int last = queue.lastCycle();
         int first = queue.firstCycle();
 
-        for(int cycle = first; cycle < last; ++cycle) {
+        for (int cycle = first; cycle < last; ++cycle) {
             setCycle2(cycle, false);
-            if(wire != null)
+            if (wire != null)
                 store.writeEOF(wire, timeoutMS());
         }
     }
@@ -540,6 +539,8 @@ class StoreAppender extends AbstractCloseable
         writeBytesInternal(index, bytes, false);
     }
 
+
+
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         checkAppendLock(true);
 
@@ -547,44 +548,33 @@ class StoreAppender extends AbstractCloseable
         if (wire == null)
             setWireIfNull(cycle);
 
+        // in case our cached headerNumber is incorrect.
+        resetPosition();
+
+        /// if the header number has changed then we will have roll
         if (this.cycle != cycle)
             rollCycleTo(cycle);
 
         long headerNumber = wire.headerNumber();
-        boolean isNextIndex = headerNumber != -1 && index == headerNumber + 1;
+
+        boolean isNextIndex = index == headerNumber + 1;
         if (!isNextIndex) {
+            if (index > headerNumber + 1)
+                throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber) );
 
-            // in case our cached headerNumber is incorrect.
-            if (resetPosition()) {
-
-                headerNumber = wire.headerNumber();
-
-                /// if the header number has changed then we will have roll
-                if (queue.rollCycle().toCycle(headerNumber) != cycle) {
-                    rollCycleTo(cycle);
-                    headerNumber = wire.headerNumber();
-                }
-            }
-
-            isNextIndex = index == headerNumber + 1;
-            if (!isNextIndex) {
-                if (index > headerNumber + 1)
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
-
-                // this can happen when using queue replication when we are back filling from a number of sinks at them same time
-                // its normal behaviour in the is use case so should not be a WARN
-                if (Jvm.isDebugEnabled(getClass()))
-                    Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
-                return;
-            }
+            // this can happen when using queue replication when we are back filling from a number of sinks at them same time
+            // its normal behaviour in the is use case so should not be a WARN
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+            return;
         }
+
         writeBytesInternal(bytes, metadata);
 
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
         if (!isIndex) {
-            writeBytesInternal(bytes, metadata);
-            Thread.yield();
+            throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
     }
 
