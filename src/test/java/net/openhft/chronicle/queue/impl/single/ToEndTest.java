@@ -26,7 +26,10 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -38,6 +41,9 @@ import static org.junit.Assert.*;
 
 public class ToEndTest extends ChronicleQueueTestBase {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
+    private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
+    private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
+    private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
 
     @Test
@@ -278,30 +284,33 @@ public class ToEndTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void shouldReturnZeroForEmptyQueue() {
+    public void shouldReturnExpectedValuesForEmptyQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            assertEquals(0, getNextWriteIndex(queue));
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
         }
     }
 
-    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
     @Test
-    public void shouldReturnZeroForEmptyPretouchedQueue() {
+    public void shouldReturnExpectedValuesForEmptyPretouchedQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             pretouchQueue(queue);
-            assertEquals(Long.MIN_VALUE, lastWriteIndex(queue));
+
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
 
             timeProvider.advanceMicros(FIVE_SECONDS);
             pretouchQueue(queue);
-            assertEquals(Long.MIN_VALUE, lastWriteIndex(queue));
+
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
         }
     }
 
-    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
     @Test
-    public void shouldReturnZeroForQueueWithOnlyMetadata() {
+    public void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
@@ -370,51 +379,55 @@ public class ToEndTest extends ChronicleQueueTestBase {
                     "\"\": hello!\n" +
                     "...\n" +
                     "# 130280 bytes remaining\n", queue.dump());
-            assertEquals(Long.MIN_VALUE, lastWriteIndex(queue));
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
         }
     }
 
     @Test
-    public void shouldReturnNextWriteIndexForNonEmptyRolledByPretouch() {
+    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByPretouch() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             writeExcerptToQueue(queue);
-            long nextIndex = getNextWriteIndex(queue);
+            String lastWriteIndexBefore = lastWriteIndex(queue);
+            String tailerToEndIndexBefore = tailerToEndIndex(queue);
 
             timeProvider.advanceMicros(FIVE_SECONDS);
-
             pretouchQueue(queue);
-            assertEquals(nextIndex, getNextWriteIndex(queue));
+
+            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
+            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
         }
     }
 
-    @Ignore("Broken by https://github.com/OpenHFT/Chronicle-Queue/issues/825")
     @Test
-    public void shouldReturnNextWriteIndexForNonEmptyRolledByMetadata() {
+    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             writeExcerptToQueue(queue);
-            long nextIndex = lastWriteIndex(queue);
+            String lastWriteIndexBefore = lastWriteIndex(queue);
+            String tailerToEndIndexBefore = tailerToEndIndex(queue);
 
             timeProvider.advanceMicros(FIVE_SECONDS);
-
             writeMetadataToQueue(queue);
-            assertEquals(nextIndex, lastWriteIndex(queue));
+
+            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
+            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
         }
     }
 
-    private long getNextWriteIndex(SingleChronicleQueue queue) {
+    private String tailerToEndIndex(SingleChronicleQueue queue) {
         try (final ExcerptTailer tailer = queue.createTailer().toEnd()) {
-            return tailer.index();
+            return Long.toHexString(tailer.index());
         }
     }
 
-    private long lastWriteIndex(SingleChronicleQueue queue) {
+    private String lastWriteIndex(SingleChronicleQueue queue) {
         try (final ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
-        DocumentContext dc = tailer.readingDocument()) {
-            return dc.index();
+             DocumentContext dc = tailer.readingDocument()) {
+            return Long.toHexString(dc.index());
         }
     }
 
