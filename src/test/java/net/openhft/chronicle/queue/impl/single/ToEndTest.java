@@ -21,7 +21,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
@@ -39,16 +38,7 @@ import static org.junit.Assert.*;
 
 public class ToEndTest extends ChronicleQueueTestBase {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
-    private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
-    private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
-
-    @AfterClass
-    public static void afterClass() {
-        for (File file : pathsToDelete) {
-            IOTools.shallowDeleteDirWithFiles(file);
-        }
-    }
 
     @Test
     public void missingCyclesToEndTest() {
@@ -200,7 +190,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
             checkOneFile(baseDir);
         }
         System.gc();
-        pathsToDelete.add(baseDir);
     }
 
     @Test
@@ -237,7 +226,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
             final int j = i;
             appender.writeDocument(wire -> wire.write("msg").int32(j));
         }*/
-        pathsToDelete.add(baseDir);
     }
 
     @Test
@@ -287,7 +275,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
             assertNull(excerptTailer.readText());
         }
         System.gc();
-        pathsToDelete.add(file);
     }
 
     @Test
@@ -453,7 +440,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     private SingleChronicleQueue createQueue(SetTimeProvider timeProvider) {
         final File queueDir = getTmpDir();
-        pathsToDelete.add(queueDir);
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
                 .testBlockSize()
