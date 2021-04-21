@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -12,8 +13,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -45,6 +48,13 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
     public void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
+
+        /**
+        final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
+        final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
+        IOTools.deleteDirWithFiles(sourceDir.toFile());
+        IOTools.deleteDirWithFiles(destinationDir.toFile());
+        */
 
         populateSourceQueue(sourceDir);
 
@@ -168,8 +178,9 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
             try (final ExcerptAppender appender = queue.acquireAppender()) {
                 Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
                 for (int i = 0; i < MESSAGES_TO_WRITE; i++) {
-                    if (i % 32 == 0) {
-                        tp.advanceMillis(TimeUnit.SECONDS.toMillis(1));
+                    if (i == MESSAGES_TO_WRITE/2) {
+                        Jvm.pause(1000);
+//                        tp.advanceMillis(TimeUnit.SECONDS.toMillis(1));
                     }
                     buffer.clear();
                     buffer.write(messageForIndex(i));
