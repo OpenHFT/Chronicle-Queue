@@ -380,7 +380,10 @@ public class ToEndTest extends ChronicleQueueTestBase {
                     "...\n" +
                     "# 130280 bytes remaining\n", queue.dump());
             assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
-            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
+            // toEnd().index() should be where it expects the next excerpt in an existing cycle to be written.
+            final String actual = tailerToEndIndex(queue);
+            writeExcerptToQueue(queue);
+            assertEquals(actual, lastWriteIndex(queue));
         }
     }
 
