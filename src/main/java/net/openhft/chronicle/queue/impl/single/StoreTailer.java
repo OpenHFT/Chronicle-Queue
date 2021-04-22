@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.PackageLocal;
@@ -90,6 +91,9 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        if (store != null) {
+            store.bytes().disableThreadSafetyCheck(disableThreadSafetyCheck);
+        }
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
     }
@@ -816,7 +820,9 @@ class StoreTailer extends AbstractCloseable
     private void resetWires() {
         final WireType wireType = queue.wireType();
 
-        final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
+        final MappedBytes bytes = store.bytes();
+        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck);
+        final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(bytes));
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
