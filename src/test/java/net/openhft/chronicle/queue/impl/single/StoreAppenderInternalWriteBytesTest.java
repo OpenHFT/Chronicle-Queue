@@ -168,12 +168,12 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                                 assertEquals(Long.toHexString(index), Long.toHexString(dtIndex));
                         }
                         prev.clear().append(buffer);
-                        if (false && index %17 == 0) {
+//                        if (false && index %17 == 0) {
                             try (final ChronicleQueue dq = createQueue(destinationDir, null);
                                  final ExcerptAppender da = dq.acquireAppender()) {
 
                             }
-                        }
+  //                      }
                     }
                 }
             }

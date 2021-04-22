@@ -71,22 +71,7 @@ class StoreAppender extends AbstractCloseable
         // always put references to "this" last.
         queue.addCloseListener(this);
 
-        final WriteLock writeLock = queue.writeLock();
-        writeLock.lock();
-        try {
-            queue.cleanupStoreFilesWithNoData0();
-            normaliseEOFs0();
-            int cycle = queue.cycle();
-            int lastCycle = queue.lastCycle();
-            if (lastCycle != cycle && lastCycle >= 0) {
-                // ensure that the EOF is written on the last cycle
-                setCycle2(lastCycle, false);
-            }
-        } finally {
-            writeLock.unlock();
-        }
-
-        /**
+        queue.cleanupStoreFilesWithNoData();
         normaliseEOFs();
 
         int cycle = queue.cycle();
@@ -101,7 +86,6 @@ class StoreAppender extends AbstractCloseable
                 writeLock.unlock();
             }
         }
-         */
         finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
@@ -239,7 +223,6 @@ class StoreAppender extends AbstractCloseable
     }
 
     void lastIndex(long index) {
-//        System.out.println("StoreAppender.lastIndex: index = " + index + ", was " + this.lastIndex);
         this.lastIndex = index;
     }
 
@@ -423,9 +406,6 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void normaliseEOFs0() {
-        if(true)
-            return;
-
         int last = queue.lastCycle();
         int first = queue.firstCycle();
 
@@ -528,7 +508,6 @@ class StoreAppender extends AbstractCloseable
         writeLock.lock();
         try {
             int cycle = queue.cycle();
-//            System.out.println("StoreAppender.writeBytes: cycle = " + cycle + ", (current = " + this.cycle + ")");
             if (wire == null)
                 setWireIfNull(cycle);
 
@@ -591,22 +570,16 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
-//        System.out.println("StoreAppender.writeBytesInternal: index = " + index + ", cycle = " + cycle + ", (current = " + this.cycle + ")");
 
         if (wire == null)
             setWireIfNull(cycle);
-
-        System.out.println("wire pointing to " + ((MappedBytes)wire.bytes()).mappedFile().file().getName());
 
         // in case our cached headerNumber is incorrect.
         resetPosition();
 
         /// if the header number has changed then we will have roll
-        if (this.cycle != cycle) {
-            System.out.println("this.cycle " + this.cycle + " != cycle " + cycle);
-            System.out.println("wire pointing to " + ((MappedBytes)wire.bytes()).mappedFile().file().getName());
+        if (this.cycle != cycle)
             rollCycleTo(cycle, this.cycle > cycle);
-        }
 
         long headerNumber = wire.headerNumber();
 
@@ -623,7 +596,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         writeBytesInternal(bytes, metadata);
-//        assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+        //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
@@ -746,7 +719,6 @@ class StoreAppender extends AbstractCloseable
     // throws UnrecoverableTimeoutException
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-//        System.out.println("Writing index " + index + ", seq# " + sequenceNumber + ", @ position " + position);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
     }
 

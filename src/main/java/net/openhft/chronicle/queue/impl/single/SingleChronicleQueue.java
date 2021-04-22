@@ -861,36 +861,31 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         writeLock.lock();
 
         try {
-            cleanupStoreFilesWithNoData0();
+            int cycle = cycle();
+            for (int lastCycle = lastCycle(); lastCycle < cycle && lastCycle >= 0; lastCycle--) {
+                try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false, null)) {
+                    // file not found.
+                    if (store == null)
+                        break;
+                    if (store.writePosition() == 0 && store.file().exists()) {
+                        // try writing EOF
+                        // if this blows up we should blow up too so don't catch anything
+                        MappedBytes bytes = store.bytes();
+                        try {
+                            store.writeEOFAndShrink(wireType.apply(bytes), timeoutMS);
+                        } finally {
+                            bytes.releaseLast();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+            }
+            directoryListing.refresh(true);
+            firstAndLastCycleTime = 0;
         } finally {
             writeLock.unlock();
         }
-    }
-
-    void cleanupStoreFilesWithNoData0() {
-
-        int cycle = cycle();
-        for (int lastCycle = lastCycle(); lastCycle < cycle && lastCycle >= 0; lastCycle--) {
-            try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false, null)) {
-                // file not found.
-                if (store == null)
-                    break;
-                if (store.writePosition() == 0 && store.file().exists()) {
-                    // try writing EOF
-                    // if this blows up we should blow up too so don't catch anything
-                    MappedBytes bytes = store.bytes();
-                    try {
-                        store.writeEOFAndShrink(wireType.apply(bytes), timeoutMS);
-                    } finally {
-                        bytes.releaseLast();
-                    }
-                    continue;
-                }
-                break;
-            }
-        }
-        directoryListing.refresh(true);
-        firstAndLastCycleTime = 0;
     }
 
     @Override
