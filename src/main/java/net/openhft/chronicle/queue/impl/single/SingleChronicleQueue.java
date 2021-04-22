@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
@@ -346,35 +345,36 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
-            ExcerptTailer tailer = createTailer();
-            if (!tailer.moveToIndex(fromIndex)) {
-                if (firstIndex > fromIndex) {
-                    tailer.toStart();
-                } else {
-                    return;
-                }
-            }
-            Bytes bytes = acquireBytes();
-            TextWire text = new TextWire(bytes);
-            while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent()) {
-                        writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+            try (ExcerptTailer tailer = createTailer()){
+                if (!tailer.moveToIndex(fromIndex)) {
+                    if (firstIndex > fromIndex) {
+                        tailer.toStart();
+                    } else {
                         return;
                     }
-                    if (dc.index() > toIndex)
-                        return;
-                    writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
-                    Wire wire = dc.wire();
-                    long start = wire.bytes().readPosition();
-                    try {
-                        text.clear();
-                        wire.copyTo(text);
-                        writer.append(bytes.toString());
+                }
+                Bytes bytes = acquireBytes();
+                TextWire text = new TextWire(bytes);
+                while (true) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent()) {
+                            writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+                            return;
+                        }
+                        if (dc.index() > toIndex)
+                            return;
+                        writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
+                        Wire wire = dc.wire();
+                        long start = wire.bytes().readPosition();
+                        try {
+                            text.clear();
+                            wire.copyTo(text);
+                            writer.append(bytes.toString());
 
-                    } catch (Exception e) {
-                        wire.bytes().readPosition(start);
-                        writer.append(wire.bytes()).append("\n");
+                        } catch (Exception e) {
+                            wire.bytes().readPosition(start);
+                            writer.append(wire.bytes()).append("\n");
+                        }
                     }
                 }
             }
@@ -466,7 +466,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
      * hence we need to back copy data from the sinks to the source upon startup.
      * While we are doing this we lock the queue so that new appenders can not be created.
-     *
+     * <p>
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
      */
     @Override
@@ -731,12 +731,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long entryCount() {
-        final ExcerptTailer tailer = createTailer();
-        tailer.toEnd();
-        long lastIndex = tailer.index();
-        if (lastIndex == 0)
-            return 0;
-        return countExcerpts(firstIndex(), lastIndex);
+        try (final ExcerptTailer tailer = createTailer()) {
+            tailer.toEnd();
+            long lastIndex = tailer.index();
+            if (lastIndex == 0)
+                return 0;
+            return countExcerpts(firstIndex(), lastIndex);
+        }
     }
 
     @Nullable
