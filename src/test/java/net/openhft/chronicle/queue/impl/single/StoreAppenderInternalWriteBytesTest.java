@@ -28,7 +28,7 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-@Ignore("Broken https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise/issues/211")
+//@Ignore("Broken https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise/issues/211")
 public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreAppenderInternalWriteBytesTest.class);
@@ -46,15 +46,15 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
     }
 
     public void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
-        final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
-        final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
-
         /**
+         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
+         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
+         */
+
         final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
         final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
         IOTools.deleteDirWithFiles(sourceDir.toFile());
         IOTools.deleteDirWithFiles(destinationDir.toFile());
-        */
 
         populateSourceQueue(sourceDir);
 
@@ -129,6 +129,8 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
 
         @Override
         public void run() {
+            if(false) run2();
+
 //            LOGGER.info("Starting copier...");
             try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
                  final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
@@ -141,14 +143,22 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                     while (true) {
                         buffer.clear();
                         index = sourceTailer.index();
+//                        System.out.println("Read source tailer index: " + index);
                         if (!sourceTailer.readBytes(buffer)) {
                             break;
                         }
+                        index = sourceTailer.lastReadIndex();
+
                         if (prev.contentEquals(buffer))
                             fail("duplicate " + buffer);
                         buffer.append(" - ").append(copyId);
                         ((InternalAppender) destinationAppender).writeBytes(index, buffer);
-
+                        /**
+                        try { ((InternalAppender) destinationAppender).writeBytes(index, buffer); }catch(IllegalStateException e){
+                            System.out.println("EOF caught");
+                            continue;
+                        };
+*/
                         try (@NotNull DocumentContext dc = destinationTailer.readingDocument()) {
                             if (!dc.isPresent()) {
                                 fail("no write " + buffer);
@@ -158,12 +168,42 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                                 assertEquals(Long.toHexString(index), Long.toHexString(dtIndex));
                         }
                         prev.clear().append(buffer);
-//                        if (index %17 == 0) {
-                        try (final ChronicleQueue dq = createQueue(destinationDir, null);
-                             final ExcerptAppender da = dq.acquireAppender()) {
+                        if (false && index %17 == 0) {
+                            try (final ChronicleQueue dq = createQueue(destinationDir, null);
+                                 final ExcerptAppender da = dq.acquireAppender()) {
 
+                            }
                         }
-//                        }
+                    }
+                }
+            }
+//            LOGGER.info("Copier finished");
+        }
+
+        public void run2() {
+//            LOGGER.info("Starting copier...");
+            try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
+                 final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
+                try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
+                     final ExcerptTailer destinationTailer = destinationQueue.createTailer();
+                     final ExcerptAppender destinationAppender = destinationQueue.acquireAppender()) {
+                    Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
+                    Bytes<?> prev = Bytes.allocateElasticOnHeap(1024);
+                    long index;
+                    while (true) {
+                        buffer.clear();
+                        index = sourceTailer.index();
+//                        System.out.println("Read source tailer index: " + index);
+                        if (!sourceTailer.readBytes(buffer)) {
+                            break;
+                        }
+//                        System.out.println("Read source tailer index (after): " + sourceTailer.index() + ", last read = " + sourceTailer.lastReadIndex());
+                        if (prev.contentEquals(buffer))
+                            fail("duplicate " + buffer);
+                        buffer.append(" - ").append(copyId);
+//                        System.out.println("Read: " + buffer.toString());
+
+                        prev.clear().append(buffer);
                     }
                 }
             }
@@ -178,7 +218,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
             try (final ExcerptAppender appender = queue.acquireAppender()) {
                 Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
                 for (int i = 0; i < MESSAGES_TO_WRITE; i++) {
-                    if (i == MESSAGES_TO_WRITE/2) {
+                    if (i == MESSAGES_TO_WRITE / 3 || i == 2*MESSAGES_TO_WRITE/3) {
                         Jvm.pause(1000);
 //                        tp.advanceMillis(TimeUnit.SECONDS.toMillis(1));
                     }
