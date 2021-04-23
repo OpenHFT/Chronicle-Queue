@@ -91,8 +91,9 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        if (store != null) {
-            store.bytes().disableThreadSafetyCheck(disableThreadSafetyCheck);
+        final Wire privateWire = privateWire();
+        if (privateWire != null) {
+            ((MappedBytes)privateWire.bytes()).disableThreadSafetyCheck(disableThreadSafetyCheck);
         }
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
