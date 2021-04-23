@@ -86,9 +86,6 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     default void pretouch() {
     }
 
-    default void pretouch(long length) {
-    }
-
     /**
      * Creates and returns a new writer proxy for the given interface {@code tclass} and the given {@code additional }
      * interfaces.

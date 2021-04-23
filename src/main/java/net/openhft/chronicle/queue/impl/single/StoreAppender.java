@@ -190,21 +190,6 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    @Override
-    public void pretouch(long length0) {
-        // limit to 64kB
-        final long length = Math.min(length0, 64 * 1024L);
-
-        DocumentContext dc = writingDocument(false);
-        {
-            // touch every 64th byte (typical cache line spacing)
-            Bytes bytes = dc.wire().bytes();
-            for (int k = 0; k < 64 + length; k += 64)
-                bytes.writeByte((byte) 0);
-        }
-        writeContext.prewriteClose();
-    }
-
     @Nullable
     @Override
     public Wire wire() {
@@ -803,7 +788,6 @@ class StoreAppender extends AbstractCloseable
         private boolean alreadyClosedFound;
         private StackTrace closedHere;
         private boolean chainedElement;
-        private boolean suppressZeroOnRollback = false;
 
         @Override
         public int sourceId() {
@@ -911,18 +895,6 @@ class StoreAppender extends AbstractCloseable
             }
         }
 
-        public void prewriteClose() {
-            try {
-                rollbackOnClose = true;
-                suppressZeroOnRollback = true;
-                close(true);
-            } finally {
-                suppressZeroOnRollback = false;
-                rollbackOnClose = false;
-            }
-        }
-
-
         private void doRollback() {
             if (buffered) {
                 assert wire != StoreAppender.this.wire;
@@ -931,10 +903,8 @@ class StoreAppender extends AbstractCloseable
                 // zero out all contents...
                 final Bytes<?> bytes = wire.bytes();
                 try {
-                    if(!suppressZeroOnRollback) {
-                        for (long i = positionOfHeader; i <= bytes.writePosition(); i++)
-                            bytes.writeByte(i, (byte) 0);
-                    }
+                    for (long i = positionOfHeader; i <= bytes.writePosition(); i++)
+                        bytes.writeByte(i, (byte) 0);
                     long lastPosition = StoreAppender.this.lastPosition;
                     position0(lastPosition, lastPosition, bytes);
                     ((AbstractWire) wire).forceNotInsideHeader();
