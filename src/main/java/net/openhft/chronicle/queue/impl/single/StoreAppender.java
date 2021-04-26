@@ -76,9 +76,16 @@ class StoreAppender extends AbstractCloseable
 
         int cycle = queue.cycle();
         int lastCycle = queue.lastCycle();
-        if (lastCycle != cycle && lastCycle >= 0)
-            // ensure that the EOF is written on the last cycle
-            setCycle2(lastCycle, false);
+        if (lastCycle != cycle && lastCycle >= 0) {
+            final WriteLock writeLock = queue.writeLock();
+            writeLock.lock();
+            try {
+                // ensure that the EOF is written on the last cycle
+                setCycle2(lastCycle, false);
+            } finally {
+                writeLock.unlock();
+            }
+        }
         finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
@@ -389,8 +396,10 @@ class StoreAppender extends AbstractCloseable
 
         for (int cycle = first; cycle < last; ++cycle) {
             setCycle2(cycle, false);
-            if (wire != null)
+            if (wire != null) {
+                assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
+            }
         }
     }
 
@@ -404,6 +413,7 @@ class StoreAppender extends AbstractCloseable
             while (cur >= firstCycle) {
                 setCycle2(cur, false);
                 if (wire != null) {
+                    assert queue.writeLock().locked();
                     if (!store.writeEOF(wire, timeoutMS()))
                         break;
                 }
@@ -545,6 +555,7 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
+
         if (wire == null)
             setWireIfNull(cycle);
 
@@ -553,7 +564,7 @@ class StoreAppender extends AbstractCloseable
 
         /// if the header number has changed then we will have roll
         if (this.cycle != cycle)
-            rollCycleTo(cycle);
+            rollCycleTo(cycle, this.cycle > cycle);
 
         long headerNumber = wire.headerNumber();
 
@@ -570,7 +581,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         writeBytesInternal(bytes, metadata);
-//        assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+        //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
@@ -653,13 +664,21 @@ class StoreAppender extends AbstractCloseable
      * wire must be not null when this method is called
      */
     // throws UnrecoverableTimeoutException
+
     private void rollCycleTo(final int cycle) {
+        rollCycleTo(cycle, false);
+    }
+
+    private void rollCycleTo(final int cycle, boolean suppressEOF) {
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
             throw new AssertionError();
 
-        store.writeEOF(wire, timeoutMS());
+        if(!suppressEOF) {
+            assert queue.writeLock().locked();
+            store.writeEOF(wire, timeoutMS());
+        }
 
         int lastCycle = queue.lastCycle();
 
@@ -676,8 +695,10 @@ class StoreAppender extends AbstractCloseable
      * a new cycle or add a message. Only used by tests.
      */
     void writeEndOfCycleIfRequired() {
-        if (wire != null && queue.cycle() != cycle)
+        if (wire != null && queue.cycle() != cycle) {
+            assert queue.writeLock().locked();
             store.writeEOF(wire, timeoutMS());
+        }
     }
 
     // throws UnrecoverableTimeoutException

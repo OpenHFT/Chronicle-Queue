@@ -47,6 +47,8 @@ class StoreTailer extends AbstractCloseable
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
     long index; // index of the next read.
+    long lastReadIndex; // index of the last read message
+
     @Nullable
     SingleChronicleQueueStore store;
     private int cycle;
@@ -225,6 +227,7 @@ class StoreTailer extends AbstractCloseable
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
                 address = bytes.addressForRead(bytes.readPosition(), 4);
+                this.lastReadIndex = this.index();
 //                Jvm.optionalSafepoint();
                 return context;
             }
@@ -388,6 +391,9 @@ class StoreTailer extends AbstractCloseable
         state = CYCLE_NOT_FOUND;
         return false;
     }
+
+    @Override
+    public long lastReadIndex() { return this.lastReadIndex; }
 
     private boolean beyondStartOfCycleBackward() throws StreamCorruptedException {
         // give the position of the last entry and

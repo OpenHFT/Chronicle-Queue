@@ -93,6 +93,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      */
     @Override
     long index();
+    default long lastReadIndex() { return -1; }
 
     /**
      * Returns the current cycle for this Trailer.
