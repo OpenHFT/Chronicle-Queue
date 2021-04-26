@@ -669,13 +669,13 @@ class StoreAppender extends AbstractCloseable
         rollCycleTo(cycle, false);
     }
 
-    private void rollCycleTo(final int cycle, boolean suppress) {
+    private void rollCycleTo(final int cycle, boolean suppressEOF) {
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
             throw new AssertionError();
 
-        if(!suppress) {
+        if(!suppressEOF) {
             assert queue.writeLock().locked();
             store.writeEOF(wire, timeoutMS());
         }

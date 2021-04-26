@@ -28,7 +28,6 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-//@Ignore("Broken https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise/issues/211")
 public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreAppenderInternalWriteBytesTest.class);
