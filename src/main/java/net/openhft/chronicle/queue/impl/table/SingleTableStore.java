@@ -50,6 +50,13 @@ import static net.openhft.chronicle.core.util.Time.sleep;
 
 public class SingleTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     public static final String SUFFIX = ".cq4t";
+    private static final int EXCLUSIVE_LOCK_SIZE = 1;
+    /**
+     * We need to be able to acquire an "exclusive" lock while fine-grained long-running locks are being held.
+     * For this reason the "exclusive" lock doesn't lock the whole file, but as long as everyone agrees
+     * on what section constitutes an "exclusive" lock this should be fine.
+     */
+    private static final long EXCLUSIVE_LOCK_START = Long.MAX_VALUE - EXCLUSIVE_LOCK_SIZE;
 
     private static final long timeoutMS = Long.getLong("chronicle.table.store.timeoutMS", 10_000);
     @NotNull
@@ -129,7 +136,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
             for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
-                try (FileLock fileLock = channel.tryLock(0L, Long.MAX_VALUE, shared)) {
+                try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
                     }
