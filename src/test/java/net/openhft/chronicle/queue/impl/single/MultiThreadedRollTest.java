@@ -25,6 +25,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -36,6 +37,7 @@ import java.util.concurrent.Future;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
+@Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/842")
 public class MultiThreadedRollTest extends ChronicleQueueTestBase {
 
     final ExecutorService reader = Executors.newSingleThreadExecutor(
