@@ -690,17 +690,6 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    /**
-     * Write an EOF marker on the current cycle if it is about to roll. It would do this any way if a new message was written, but this doesn't create
-     * a new cycle or add a message. Only used by tests.
-     */
-    void writeEndOfCycleIfRequired() {
-        if (wire != null && queue.cycle() != cycle) {
-            assert queue.writeLock().locked();
-            store.writeEOF(wire, timeoutMS());
-        }
-    }
-
     // throws UnrecoverableTimeoutException
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
