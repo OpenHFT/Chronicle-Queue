@@ -56,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
 import java.util.function.*;
 
 import static java.util.Collections.emptyMap;
@@ -131,6 +132,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
+    @NotNull
+    private Condition createAppenderCondition = NoOpCondition.INSTANCE;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -217,6 +220,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             close();
             throw Jvm.rethrow(t);
         }
+    }
+
+    protected void createAppenderCondition(@NotNull Condition createAppenderCondition) {
+        this.createAppenderCondition = createAppenderCondition;
     }
 
     protected CycleCalculator cycleCalculator(ZoneId zoneId) {
@@ -431,7 +438,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     protected ExcerptAppender newAppender() {
 
-        queueLock.waitForLock();
+        createAppenderCondition.awaitUninterruptibly();
 
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, newPool, checkInterrupts);
@@ -662,7 +669,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             closers.clear();
 
             // must be closed after closers.
-            closeQuietly(directoryListing,
+            closeQuietly(
+                    createAppenderCondition,
+                    directoryListing,
                     queueLock,
                     lastAcknowledgedIndexReplicated,
                     lastIndexReplicated,
