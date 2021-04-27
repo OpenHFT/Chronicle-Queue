@@ -31,6 +31,7 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
+import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
@@ -51,6 +52,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -3655,6 +3658,39 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.pretouch();
             }
             assertEquals(-1, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void shouldWaitForConditionWhenAcquiringAppender() throws TimeoutException {
+        File tmpDir = getTmpDir();
+        AtomicBoolean gotAppender = new AtomicBoolean(false);
+        ReentrantLock acquireAppenderLock = new ReentrantLock();
+        final Condition createAppenderCondition = acquireAppenderLock.newCondition();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir)
+                .wireType(wireType)
+                .createAppenderConditionCreator(q -> createAppenderCondition)
+                .build()) {
+            new Thread(() -> {
+                acquireAppenderLock.lock();
+                queue.acquireAppender();
+                gotAppender.set(true);
+            }).start();
+
+            // Assert acquireAppender is blocked
+            Jvm.pause(100L);
+            assertFalse(gotAppender.get());
+
+            // Release
+            acquireAppenderLock.lock();
+            createAppenderCondition.signal();
+            acquireAppenderLock.unlock();
+
+            // Assert appender is acquired
+            TimeoutPauser pauser = new TimeoutPauser(0);
+            while (!gotAppender.get()) {
+                pauser.pause(1, TimeUnit.SECONDS);
+            }
         }
     }
 }

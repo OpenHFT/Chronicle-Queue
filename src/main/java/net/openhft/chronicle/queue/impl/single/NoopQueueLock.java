@@ -17,6 +17,10 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+/**
+ * @deprecated To be removed in .22
+ */
+@Deprecated
 public class NoopQueueLock implements QueueLock {
 
     @Override
@@ -33,6 +37,11 @@ public class NoopQueueLock implements QueueLock {
 
     @Override
     public void quietUnlock() {
+    }
+
+    @Override
+    public boolean isLocked() {
+        return false;
     }
 
     @Override

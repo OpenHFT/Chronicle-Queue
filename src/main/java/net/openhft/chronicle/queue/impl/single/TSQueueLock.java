@@ -30,7 +30,10 @@ import static net.openhft.chronicle.core.Jvm.warn;
 
 /**
  * Implements queue lock via TableStore mechanism.
+ *
+ * @deprecated To be removed in .22
  */
+@Deprecated
 public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
     private static final String LOCK_KEY = "chronicle.queue.lock";
@@ -152,6 +155,11 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 warn().on(getClass(), "Queue lock was locked by another thread, current-thread-tid=" + tid + ", lock value=" + value+", this lock was not removed.");
             }
         }
+    }
+
+    @Override
+    public boolean isLocked() {
+        return lockedBy() != UNLOCKED;
     }
 
     private boolean isLockHeldByCurrentThread(long tid) {
