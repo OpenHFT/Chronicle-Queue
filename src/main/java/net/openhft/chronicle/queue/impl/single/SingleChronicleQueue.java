@@ -161,7 +161,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             indexSpacing = builder.indexSpacing();
             time = builder.timeProvider();
             pauserSupplier = builder.pauserSupplier();
-            // add a 10% random element to make it less likely threads will timeout at the same time.
+            // add a 20% random element to make it less likely threads will timeout at the same time.
             timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * new SecureRandom().nextFloat())); // Not time critical
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
