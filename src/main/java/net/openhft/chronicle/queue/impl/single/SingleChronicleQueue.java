@@ -166,7 +166,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
-            doubleBuffer = builder.doubleBuffer();
+            doubleBuffer = false; //builder.doubleBuffer();
             if (metaStore.readOnly() && !builder.readOnly()) {
                 LOG.warn("Forcing queue to be readOnly");
                 // need to set this on builder as it is used elsewhere
