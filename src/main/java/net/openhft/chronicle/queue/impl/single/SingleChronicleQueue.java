@@ -166,7 +166,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
-            doubleBuffer = builder.doubleBuffer();
+            doubleBuffer = false; //builder.doubleBuffer();
             if (metaStore.readOnly() && !builder.readOnly()) {
                 LOG.warn("Forcing queue to be readOnly");
                 // need to set this on builder as it is used elsewhere
@@ -352,7 +352,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
-            try (ExcerptTailer tailer = createTailer()){
+            try (ExcerptTailer tailer = createTailer()) {
                 if (!tailer.moveToIndex(fromIndex)) {
                     if (firstIndex > fromIndex) {
                         tailer.toStart();
@@ -437,9 +437,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     protected ExcerptAppender newAppender() {
-
-        createAppenderCondition.awaitUninterruptibly();
-
+        try {
+            createAppenderCondition.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted waiting for condition to create appender", e);
+        }
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, newPool, checkInterrupts);
     }

@@ -34,7 +34,7 @@ import static net.openhft.chronicle.core.Jvm.getProcessId;
 
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
     protected static final long PID = getProcessId();
-    public static final long UNLOCKED = Long.MIN_VALUE;
+    public static final long UNLOCKED = 1L << 63;
     protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
 
     protected final LongValue lock;
