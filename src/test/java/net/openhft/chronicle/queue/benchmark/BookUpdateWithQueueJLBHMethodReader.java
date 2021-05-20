@@ -31,21 +31,19 @@ public class BookUpdateWithQueueJLBHMethodReader extends AbstractGeneratedMethod
         String lastEventName = "";
         if (wireIn.bytes().peekUnsignedByte() == BinaryWireCode.FIELD_NUMBER) {
             int methodId = (int) wireIn.readEventNumber();
-            switch (methodId) {
-                case 1: {
-                    ValueIn valueIn = wireIn.getValueIn();
-                    bookUpdatearg0 = valueIn.object(checkRecycle(bookUpdatearg0), net.openhft.chronicle.queue.benchmark.BookUpdate.class);
-                    try {
-                        ((net.openhft.chronicle.queue.benchmark.BookUpdateListener) instance0).bookUpdate(bookUpdatearg0);
-                        return true;
-                    } catch (Exception e) {
-                        throw new InvocationTargetRuntimeException(e);
-                    }
-                }
 
-                default:
-                    return false;
-            }
+            if (methodId == 1) {
+                ValueIn valueIn = wireIn.getValueIn();
+                bookUpdatearg0 = valueIn.object(checkRecycle(bookUpdatearg0), net.openhft.chronicle.queue.benchmark.BookUpdate.class);
+                try {
+                    ((net.openhft.chronicle.queue.benchmark.BookUpdateListener) instance0).bookUpdate(bookUpdatearg0);
+                    return true;
+                } catch (Exception e) {
+                    throw new InvocationTargetRuntimeException(e);
+                }
+            } else
+                return false;
+
         } else {
             lastEventName = wireIn.readEvent(String.class);
         }
