@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -21,6 +22,7 @@ import static org.junit.Assume.assumeFalse;
 public class StuckQueueTest extends ChronicleQueueTestBase {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
+    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Wire/issues/281")
     @Test
     public void test() throws IOException {
 
@@ -44,10 +46,9 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
         Path to = tmpDir.resolve(templatePath.getFileName());
         Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
 
-        DumpQueueMain.dump(tmpDir.toString());
-
         try (RollingChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).readOnly(true).build();
              ExcerptTailer tailer = q.createTailer()) {
+//            System.out.println(q.dump());
 
             int cycle = q.rollCycle().toCycle(0x18406e100000000L);
 

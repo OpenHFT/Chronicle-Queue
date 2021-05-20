@@ -705,23 +705,20 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                     return -1;
 
                 Bytes<?> bytes = wire.bytes();
+                if (wire.usePadding())
+                    endAddress += Wires.padOffset(endAddress);
 
                 bytes.readPosition(endAddress);
 
                 for (; ; ) {
-                    long paddingShift = 0L;
-                    if (wire.usePadding()) {
-                        paddingShift = -endAddress & 0x3;
-
-                        endAddress += paddingShift;
-                    }
                     int header = bytes.readVolatileInt(endAddress);
                     if (header == 0 || Wires.isNotComplete(header))
                         return sequence;
 
                     int len = Wires.lengthOf(header) + 4;
+                    len += Wires.padOffset(len);
 
-                    bytes.readSkip(len + paddingShift);
+                    bytes.readSkip(len );
                     endAddress += len;
 
                     if (Wires.isData(header))

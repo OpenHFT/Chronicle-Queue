@@ -271,8 +271,7 @@ class StoreAppender extends AbstractCloseable
 
     private Wire createWire(@NotNull final WireType wireType) {
         final Wire w = wireType.apply(store.bytes());
-        if (store.dataVersion() > 0)
-            w.usePadding(true);
+        w.usePadding(store.dataVersion() > 0);
         return w;
     }
 
@@ -550,7 +549,6 @@ class StoreAppender extends AbstractCloseable
     }
 
 
-
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         checkAppendLock(true);
 
@@ -571,7 +569,7 @@ class StoreAppender extends AbstractCloseable
         boolean isNextIndex = index == headerNumber + 1;
         if (!isNextIndex) {
             if (index > headerNumber + 1)
-                throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber) );
+                throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
 
             // this can happen when using queue replication when we are back filling from a number of sinks at them same time
             // its normal behaviour in the is use case so should not be a WARN
@@ -675,7 +673,7 @@ class StoreAppender extends AbstractCloseable
         if (this.cycle == cycle)
             throw new AssertionError();
 
-        if(!suppressEOF) {
+        if (!suppressEOF) {
             assert queue.writeLock().locked();
             store.writeEOF(wire, timeoutMS());
         }
@@ -710,7 +708,7 @@ class StoreAppender extends AbstractCloseable
                         " seq2: " + Long.toHexString(seq2) +
                         " seq3: " + Long.toHexString(seq3));
 
-                System.out.println(store.dump());
+//                System.out.println(store.dump());
 
                 assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                 assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
@@ -874,6 +872,7 @@ class StoreAppender extends AbstractCloseable
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
+                wire.bytes().writePositionForHeader(true);
                 isClosed = true;
                 if (unlock)
                     try {

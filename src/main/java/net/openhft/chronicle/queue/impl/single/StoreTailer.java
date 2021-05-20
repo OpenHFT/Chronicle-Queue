@@ -829,7 +829,9 @@ class StoreTailer extends AbstractCloseable
 
         final MappedBytes bytes = store.bytes();
         bytes.disableThreadSafetyCheck(disableThreadSafetyCheck);
-        final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(bytes));
+        final Wire wire2 = wireType.apply(bytes);
+        wire2.usePadding(store.dataVersion()>0);
+        final AbstractWire wire = (AbstractWire) readAnywhere(wire2);
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
@@ -847,8 +849,7 @@ class StoreTailer extends AbstractCloseable
     private Wire readAnywhere(@NotNull final Wire wire) {
         final Bytes<?> bytes = wire.bytes();
         bytes.readLimitToCapacity();
-        if (store.dataVersion() > 0)
-            wire.usePadding(true);
+            wire.usePadding(store.dataVersion() > 0);
         return wire;
     }
 
@@ -896,6 +897,7 @@ class StoreTailer extends AbstractCloseable
                 return this;
             }
 
+            // TODO fix this so it doesn't replace the same store.
             final SingleChronicleQueueStore wireStore = queue.storeForCycle(
                     lastCycle, queue.epoch(), false, this.store);
             this.setCycle(lastCycle);

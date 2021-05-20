@@ -103,13 +103,14 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         final MyData myData = new MyData();
         myData.key = key;
         myData.value = Integer.toString(key);
-        Wire result = WireType.BINARY.apply(Bytes.elasticByteBuffer());
+        Wire wire = WireType.BINARY.apply(Bytes.elasticByteBuffer());
+        wire.usePadding(true);
 
-        try (final DocumentContext dc = result.writingDocument()) {
+        try (final DocumentContext dc = wire.writingDocument()) {
             dc.wire().getValueOut().typedMarshallable(myData);
         }
 
-        return result;
+        return wire;
     }
 
     public static class MyData extends SelfDescribingMarshallable {

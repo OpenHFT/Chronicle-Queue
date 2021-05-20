@@ -885,7 +885,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         // if this blows up we should blow up too so don't catch anything
                         MappedBytes bytes = store.bytes();
                         try {
-                            store.writeEOFAndShrink(wireType.apply(bytes), timeoutMS);
+                            final Wire wire = wireType.apply(bytes);
+                            wire.usePadding(true);
+                            store.writeEOFAndShrink(wire, timeoutMS);
                         } finally {
                             bytes.releaseLast();
                         }
@@ -1022,8 +1024,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         // implicitly reserves the wireStore for this StoreSupplier
                         wireStore = storeFactory.apply(that, wire);
                         wire.updateFirstHeader();
-                        if (wireStore.dataVersion() > 0)
-                            wire.usePadding(true);
+                        wire.usePadding(wireStore.dataVersion() > 0);
 
                         wireStore.initIndex(wire);
                         // do not allow tailer to see the file until it's header is written
@@ -1098,8 +1099,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                     try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
                         wire.updateFirstHeader();
-                        if (wireStore.dataVersion() > 0)
-                            wire.usePadding(true);
+                            wire.usePadding(wireStore.dataVersion() > 0);
                         wireStore.initIndex(wire);
                         directoryListing.onFileCreated(path, cycle);
                         firstAndLastCycleTime = 0;
