@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class IndexForIDTest {
     private int count;
@@ -28,42 +29,47 @@ public class IndexForIDTest {
     }
 
     void producer() {
-        Facade datum = Values.newNativeReference(Facade.class);
-        long datumSize = datum.maxSize();
-        assertEquals(512, datumSize);
+        try {
+            Facade datum = Values.newNativeReference(Facade.class);
+            long datumSize = datum.maxSize();
+            assertEquals(512, datumSize);
 
-        try (ExcerptAppender appender = queue.acquireAppender();
-             LongValue value = queue.indexForId("producer")) {
-            // always go to the end.
-            value.setOrderedValue(Long.MAX_VALUE);
+            try (ExcerptAppender appender = queue.acquireAppender();
+                 LongValue value = queue.indexForId("producer")) {
+                // always go to the end.
+                value.setOrderedValue(Long.MAX_VALUE);
 
-            Thread pretoucher = new Thread(() -> {
-                ExcerptAppender appender0 = queue.acquireAppender();
-                Thread thread = Thread.currentThread();
-                while (!thread.isInterrupted()) {
-                    appender0.pretouch();
-                    Jvm.pause(10);
+                Thread pretoucher = new Thread(() -> {
+                    ExcerptAppender appender0 = queue.acquireAppender();
+                    Thread thread = Thread.currentThread();
+                    while (!thread.isInterrupted()) {
+                        appender0.pretouch();
+                        Jvm.pause(10);
+                    }
+                });
+                pretoucher.setDaemon(true);
+                pretoucher.start();
+
+                for (int i = 0; i < count; i++) {
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        Wire wire = dc.wire();
+                        Bytes<?> bytes = wire.bytes();
+                        datum.bytesStore(bytes, bytes.writePosition(), datumSize);
+                        bytes.writeSkip(datumSize);
+
+                        datum.setProducerTime(System.nanoTime());
+                    }
                 }
-            });
-            pretoucher.setDaemon(true);
-            pretoucher.start();
-
-            for (int i = 0; i < count; i++) {
-                try (DocumentContext dc = appender.writingDocument()) {
-                    Wire wire = dc.wire();
-                    Bytes<?> bytes = wire.bytes();
-                    datum.bytesStore(bytes, bytes.writePosition(), datumSize);
-                    bytes.writeSkip(datumSize);
-
-                    datum.setProducerTime(System.nanoTime());
+                pretoucher.interrupt();
+                try {
+                    pretoucher.join(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-            pretoucher.interrupt();
-            try {
-                pretoucher.join(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        } catch (Throwable t) {
+            t.printStackTrace();
+            throw t;
         }
     }
 
@@ -82,6 +88,7 @@ public class IndexForIDTest {
     private void copy(String fromID, TimeSetter setTime, String toID) {
         Facade datum = Values.newNativeReference(Facade.class);
         long datumSize = datum.maxSize();
+        long end = System.currentTimeMillis() + 30_000;
         try (ExcerptTailer tailer = queue.createTailer();
              LongValue fromIndex = queue.indexForId(fromID);
              LongValue toIndex = queue.indexForId(toID)) {
@@ -92,6 +99,8 @@ public class IndexForIDTest {
                     if (!dc.isPresent()) {
                         Jvm.nanoPause();
                         i--;
+                        if (end < System.currentTimeMillis())
+                            fail("Timed out i: " + i);
                         continue;
                     }
                     index = dc.index();
@@ -106,6 +115,9 @@ public class IndexForIDTest {
                     toIndex.setVolatileValue(index);
                 }
             }
+        } catch (Throwable t) {
+            t.printStackTrace();
+            throw t;
         }
     }
 

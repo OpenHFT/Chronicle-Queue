@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintWriter;
 import java.nio.file.Paths;
+import java.time.ZoneId;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.stream;
@@ -136,6 +137,9 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption('s')) {
             chronicleReader.suppressDisplayIndex();
         }
+        if (commandLine.hasOption('z')) {
+            System.setProperty("mtlc.zoneId", ZoneId.systemDefault().toString());
+        }
     }
 
     @NotNull
@@ -152,6 +156,7 @@ public class ChronicleReaderMain {
         addOption(options, "w", "wire-type", true, "Control output i.e. JSON", false);
         addOption(options, "s", "suppress-index", false, "Display index", false);
         addOption(options, "l", "single-line", false, "Squash each output message into a single line", false);
+        addOption(options, "z", "use-local-timezone", false, "Print timestamps using the local timezone", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
         return options;
     }

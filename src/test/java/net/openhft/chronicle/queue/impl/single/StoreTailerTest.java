@@ -195,9 +195,6 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @Test
     public void disableThreadSafety() throws InterruptedException {
-        expectException(e -> e.throwable != null
-                        && e.throwable.getMessage().contains("component which is not thread safes used by Thread["),
-                "component which is not thread safes used by Thread[");
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
             BlockingQueue<ExcerptTailer> tq = new LinkedBlockingQueue<>();
             Thread t = new Thread(() -> {
@@ -212,8 +209,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 tailer.readText();
                 fail();
             } catch (IllegalStateException expected) {
-                expected.printStackTrace();
-                //
+//                expected.printStackTrace();
             }
             tailer.disableThreadSafetyCheck(true).readText();
 

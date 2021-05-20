@@ -30,7 +30,10 @@ import static net.openhft.chronicle.core.Jvm.warn;
 
 /**
  * Implements queue lock via TableStore mechanism.
+ *
+ * @deprecated To be removed in .22
  */
+@Deprecated
 public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
     private static final String LOCK_KEY = "chronicle.queue.lock";
@@ -42,7 +45,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     /**
-     * Stores current PID to table store, and any other process trying to acquire lock will wait for
+     * Stores current TID and PID to table store, and any other thread trying to acquire lock will wait for
      * <code>chronicle.queue.lock.timeoutMS</code> millis (default is 30000) for the lock to be released, and if it is not
      * able to lock, *overrides the lock*.
      */
@@ -78,8 +81,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     /**
-     * checks if current thread holds lock. If not, it will wait for four times <code>chronicle.queue.lock.timeoutMS</code> millis for the lock to be
-     * released, and if it is not after timeout, throws {@link IllegalStateException}.
+     * checks if current thread holds lock. If not, it will wait for <code>chronicle.queue.lock.timeoutMS</code> millis for the lock to be
+     * released, and if it is not after timeout, forcibly unlocks and continues.
      */
     // TODO combine logic for acquireLock with this method so recovery is consistent.
     @Override
@@ -152,6 +155,11 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 warn().on(getClass(), "Queue lock was locked by another thread, current-thread-tid=" + tid + ", lock value=" + value+", this lock was not removed.");
             }
         }
+    }
+
+    @Override
+    public boolean isLocked() {
+        return lockedBy() != UNLOCKED;
     }
 
     private boolean isLockHeldByCurrentThread(long tid) {

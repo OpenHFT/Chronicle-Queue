@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.PackageLocal;
@@ -46,6 +47,8 @@ class StoreTailer extends AbstractCloseable
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
     long index; // index of the next read.
+    long lastReadIndex; // index of the last read message
+
     @Nullable
     SingleChronicleQueueStore store;
     private int cycle;
@@ -90,6 +93,10 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        final Wire privateWire = privateWire();
+        if (privateWire != null) {
+            ((MappedBytes)privateWire.bytes()).disableThreadSafetyCheck(disableThreadSafetyCheck);
+        }
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
     }
@@ -220,6 +227,7 @@ class StoreTailer extends AbstractCloseable
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
                 address = bytes.addressForRead(bytes.readPosition(), 4);
+                this.lastReadIndex = this.index();
 //                Jvm.optionalSafepoint();
                 return context;
             }
@@ -383,6 +391,9 @@ class StoreTailer extends AbstractCloseable
         state = CYCLE_NOT_FOUND;
         return false;
     }
+
+    @Override
+    public long lastReadIndex() { return this.lastReadIndex; }
 
     private boolean beyondStartOfCycleBackward() throws StreamCorruptedException {
         // give the position of the last entry and
@@ -816,7 +827,9 @@ class StoreTailer extends AbstractCloseable
     private void resetWires() {
         final WireType wireType = queue.wireType();
 
-        final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
+        final MappedBytes bytes = store.bytes();
+        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck);
+        final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(bytes));
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);

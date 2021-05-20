@@ -63,10 +63,10 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.concurrent.locks.Condition;
+import java.util.function.*;
 
+import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
@@ -153,6 +153,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private ZoneId rollTimeZone;
     private QueueOffsetSpec queueOffsetSpec;
     private boolean doubleBuffer;
+    private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -320,10 +321,23 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         boolean needEnterprise = checkEnterpriseFeaturesRequested();
         preBuild();
 
+        SingleChronicleQueue chronicleQueue;
         if (needEnterprise)
-            return buildEnterprise();
+            chronicleQueue = buildEnterprise();
+        else
+            chronicleQueue = new SingleChronicleQueue(this);
 
-        return new SingleChronicleQueue(this);
+        postBuild(chronicleQueue);
+
+        return chronicleQueue;
+    }
+
+    private void postBuild(@NotNull SingleChronicleQueue chronicleQueue) {
+        /*
+            The condition has a circular dependency with the Queue, so we need to add it after the queue is
+            constructed. This is to avoid passing `this` out of the constructor.
+         */
+        chronicleQueue.createAppenderCondition(requireNonNull(createAppenderConditionCreator().apply(chronicleQueue)));
     }
 
     private boolean checkEnterpriseFeaturesRequested() {
@@ -493,9 +507,33 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return storeFilePath;
     }
 
+    /**
+     * @deprecated To be removed in .22
+     */
+    @Deprecated
     @NotNull
     QueueLock queueLock() {
         return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2) : new NoopQueueLock();
+    }
+
+    @NotNull
+    public Function<SingleChronicleQueue, Condition> createAppenderConditionCreator() {
+        if (createAppenderConditionCreator == null) {
+            return QueueLockUnlockedCondition::new;
+        }
+        return createAppenderConditionCreator;
+    }
+
+    /**
+     * @return Factory for the {@link Condition} that will be waited on before a new appender is created
+     * <p>
+     * NOTE: The returned {@link Condition} will not block subsequent calls to acquireAppender from the
+     * same thread, only when the call would result in the creation of a new appender.
+     */
+    @NotNull
+    public SingleChronicleQueueBuilder createAppenderConditionCreator(Function<SingleChronicleQueue, Condition> creator) {
+        createAppenderConditionCreator = creator;
+        return this;
     }
 
     @NotNull

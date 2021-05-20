@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
@@ -57,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
 import java.util.function.*;
 
 import static java.util.Collections.emptyMap;
@@ -132,6 +132,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
+    @NotNull
+    private Condition createAppenderCondition = NoOpCondition.INSTANCE;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -159,12 +161,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             indexSpacing = builder.indexSpacing();
             time = builder.timeProvider();
             pauserSupplier = builder.pauserSupplier();
-            // add a 10% random element to make it less likely threads will timeout at the same time.
+            // add a 20% random element to make it less likely threads will timeout at the same time.
             timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * new SecureRandom().nextFloat())); // Not time critical
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
-            doubleBuffer = builder.doubleBuffer();
+            doubleBuffer = false; //builder.doubleBuffer();
             if (metaStore.readOnly() && !builder.readOnly()) {
                 LOG.warn("Forcing queue to be readOnly");
                 // need to set this on builder as it is used elsewhere
@@ -218,6 +220,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             close();
             throw Jvm.rethrow(t);
         }
+    }
+
+    protected void createAppenderCondition(@NotNull Condition createAppenderCondition) {
+        this.createAppenderCondition = createAppenderCondition;
     }
 
     protected CycleCalculator cycleCalculator(ZoneId zoneId) {
@@ -346,35 +352,36 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
-            ExcerptTailer tailer = createTailer();
-            if (!tailer.moveToIndex(fromIndex)) {
-                if (firstIndex > fromIndex) {
-                    tailer.toStart();
-                } else {
-                    return;
-                }
-            }
-            Bytes bytes = acquireBytes();
-            TextWire text = new TextWire(bytes);
-            while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent()) {
-                        writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+            try (ExcerptTailer tailer = createTailer()) {
+                if (!tailer.moveToIndex(fromIndex)) {
+                    if (firstIndex > fromIndex) {
+                        tailer.toStart();
+                    } else {
                         return;
                     }
-                    if (dc.index() > toIndex)
-                        return;
-                    writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
-                    Wire wire = dc.wire();
-                    long start = wire.bytes().readPosition();
-                    try {
-                        text.clear();
-                        wire.copyTo(text);
-                        writer.append(bytes.toString());
+                }
+                Bytes bytes = acquireBytes();
+                TextWire text = new TextWire(bytes);
+                while (true) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent()) {
+                            writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+                            return;
+                        }
+                        if (dc.index() > toIndex)
+                            return;
+                        writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
+                        Wire wire = dc.wire();
+                        long start = wire.bytes().readPosition();
+                        try {
+                            text.clear();
+                            wire.copyTo(text);
+                            writer.append(bytes.toString());
 
-                    } catch (Exception e) {
-                        wire.bytes().readPosition(start);
-                        writer.append(wire.bytes()).append("\n");
+                        } catch (Exception e) {
+                            wire.bytes().readPosition(start);
+                            writer.append(wire.bytes()).append("\n");
+                        }
                     }
                 }
             }
@@ -430,9 +437,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     protected ExcerptAppender newAppender() {
-
-        queueLock.waitForLock();
-
+        try {
+            createAppenderCondition.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted waiting for condition to create appender", e);
+        }
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, newPool, checkInterrupts);
     }
@@ -466,7 +476,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
      * hence we need to back copy data from the sinks to the source upon startup.
      * While we are doing this we lock the queue so that new appenders can not be created.
-     *
+     * <p>
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
      */
     @Override
@@ -662,7 +672,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             closers.clear();
 
             // must be closed after closers.
-            closeQuietly(directoryListing,
+            closeQuietly(
+                    createAppenderCondition,
+                    directoryListing,
                     queueLock,
                     lastAcknowledgedIndexReplicated,
                     lastIndexReplicated,
@@ -731,12 +743,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long entryCount() {
-        final ExcerptTailer tailer = createTailer();
-        tailer.toEnd();
-        long lastIndex = tailer.index();
-        if (lastIndex == 0)
-            return 0;
-        return countExcerpts(firstIndex(), lastIndex);
+        try (final ExcerptTailer tailer = createTailer()) {
+            tailer.toEnd();
+            long lastIndex = tailer.index();
+            if (lastIndex == 0)
+                return 0;
+            return countExcerpts(firstIndex(), lastIndex);
+        }
     }
 
     @Nullable
@@ -1001,7 +1014,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
                 assert wire.startUse();
                 wire.pauser(pauserSupplier.get());
-                wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
+                wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
                 SingleChronicleQueueStore wireStore;
                 try {
