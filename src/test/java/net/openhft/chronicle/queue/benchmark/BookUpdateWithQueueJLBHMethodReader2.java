@@ -8,7 +8,7 @@ import net.openhft.chronicle.wire.*;
 
 import java.util.function.Supplier;
 
-public class BookUpdateWithQueueJLBHMethodReader extends AbstractGeneratedMethodReader {
+public class BookUpdateWithQueueJLBHMethodReader2 extends AbstractGeneratedMethodReader {
     // instances on which parsed calls are invoked
     private final Object instance0;
 
@@ -21,7 +21,7 @@ public class BookUpdateWithQueueJLBHMethodReader extends AbstractGeneratedMethod
     // bookUpdate
     private net.openhft.chronicle.queue.benchmark.BookUpdate bookUpdatearg0;
 
-    public BookUpdateWithQueueJLBHMethodReader(MarshallableIn in, WireParselet debugLoggingParselet, Supplier<MethodReader> delegateSupplier, MethodReaderInterceptorReturns interceptor, Object... instances) {
+    public BookUpdateWithQueueJLBHMethodReader2(MarshallableIn in, WireParselet debugLoggingParselet, Supplier<MethodReader> delegateSupplier, MethodReaderInterceptorReturns interceptor, Object... instances) {
         super(in, debugLoggingParselet, delegateSupplier);
         instance0 = instances[0];
     }

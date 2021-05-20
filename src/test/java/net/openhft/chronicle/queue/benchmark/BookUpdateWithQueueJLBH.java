@@ -36,7 +36,7 @@ public class BookUpdateWithQueueJLBH implements JLBHTask, BookUpdateListener {
                 .iterations(500_000)
                 .throughput(500_000)
                 .accountForCoordinatedOmission(false)
-                .runs(5)
+                .runs(10)
                 .jlbhTask(new BookUpdateWithQueueJLBH());
         new JLBH(jlbhOptions).start();
         IOTools.deleteDirWithFiles("tmp");
@@ -66,7 +66,7 @@ public class BookUpdateWithQueueJLBH implements JLBHTask, BookUpdateListener {
         out = q.acquireAppender().methodWriter(BookUpdateListener.class);
         final ExcerptTailer tailer = q.createTailer();
 
-        methodReader = new BookUpdateWithQueueJLBHMethodReader(tailer, (s, in) -> {
+        methodReader = new BookUpdateWithQueueJLBHMethodReader2(tailer, (s, in) -> {
         }, () -> null, null, this);
 
 
