@@ -20,6 +20,7 @@ public class BookUpdateWithQueueJLBH implements JLBHTask, BookUpdateListener {
         DtoAlias.init();
         isResourceTracing();
         System.setProperty("dumpCode", "true");
+        System.setProperty("jvm.resource.tracing","true");
     }
 
     private JLBH lth;
