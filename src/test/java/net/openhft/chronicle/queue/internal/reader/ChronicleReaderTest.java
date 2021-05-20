@@ -374,6 +374,8 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
 
     @Test
     public void shouldPrintTimestampsToLocalTime() {
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
         final Path queueDir = IOTools.createTempDirectory("shouldPrintTimestampsToLocalTime");
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
              final ExcerptAppender excerptAppender = queue.acquireAppender()) {
