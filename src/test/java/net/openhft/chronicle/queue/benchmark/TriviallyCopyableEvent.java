@@ -44,13 +44,23 @@ public abstract class TriviallyCopyableEvent<E extends TriviallyCopyableEvent<E>
 
     }
 
+/*
     @Override
     public void writeMarshallable(BytesOut bytes) throws IllegalStateException, BufferOverflowException, BufferUnderflowException, ArithmeticException {
         bytes.writeInt(this.$description());
         final long sourceAddress = VM.current().addressOf(this) + $start();
-        final long targetAddress = bytes.addressForRead(bytes.readPosition());
-        UNSAFE.copyMemory(sourceAddress, targetAddress + $start(), $length());
+        final long targetAddress = bytes.addressForWrite(bytes.writePosition());
+        UNSAFE.copyMemory(sourceAddress, targetAddress, $length());
     }
+*/
+
+
+    @Override
+    public void writeMarshallable(BytesOut bytes) throws IllegalStateException, BufferOverflowException, BufferUnderflowException, ArithmeticException {
+        bytes.writeInt(this.$description());
+        bytes.unsafeWriteObject(this, this.$start(), this.$length());
+    }
+
 
     private void carefulCopy(BytesIn in, int description0) {
         int offset = this.$start();

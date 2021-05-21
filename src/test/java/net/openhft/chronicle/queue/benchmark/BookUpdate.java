@@ -36,12 +36,6 @@ public class BookUpdate extends TriviallyCopyableEvent {
         START = range[0];
     }
 
-
-    public boolean usesSelfDescribingMessage() {
-        return false;
-    }
-
-
     @LongConversion(Base85LongConverter.class)
     public long symbol;
 
