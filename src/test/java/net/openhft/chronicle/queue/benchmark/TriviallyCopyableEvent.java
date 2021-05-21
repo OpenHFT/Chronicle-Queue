@@ -7,9 +7,12 @@ import net.openhft.chronicle.bytes.FieldGroup;
 import net.openhft.chronicle.core.UnsafeMemory;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.*;
+import org.openjdk.jol.vm.VM;
 
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
+
+import static net.openhft.chronicle.core.UnsafeMemory.UNSAFE;
 
 
 public abstract class TriviallyCopyableEvent<E extends TriviallyCopyableEvent<E>> implements Event<E>, BytesMarshallable {
@@ -34,9 +37,19 @@ public abstract class TriviallyCopyableEvent<E extends TriviallyCopyableEvent<E>
         if (description0 != this.$description()) {
             this.carefulCopy(bytes, description0);
         } else {
-            bytes.unsafeReadObject(this, this.$start(), this.$length());
+            final long sourceAddress = bytes.addressForRead(bytes.readPosition());
+            final long targetAddress = VM.current().addressOf(this) + $start();
+            UNSAFE.copyMemory(sourceAddress, targetAddress, $length());
         }
 
+    }
+
+    @Override
+    public void writeMarshallable(BytesOut bytes) throws IllegalStateException, BufferOverflowException, BufferUnderflowException, ArithmeticException {
+        bytes.writeInt(this.$description());
+        final long sourceAddress = VM.current().addressOf(this) + $start();
+        final long targetAddress = bytes.addressForRead(bytes.readPosition());
+        UNSAFE.copyMemory(sourceAddress, targetAddress + $start(), $length());
     }
 
     private void carefulCopy(BytesIn in, int description0) {
@@ -111,11 +124,6 @@ public abstract class TriviallyCopyableEvent<E extends TriviallyCopyableEvent<E>
         }
     }
 
-    @Override
-    public void writeMarshallable(BytesOut bytes) throws IllegalStateException, BufferOverflowException, BufferUnderflowException, ArithmeticException {
-        bytes.writeInt(this.$description());
-        bytes.unsafeWriteObject(this, this.$start(), this.$length());
-    }
 
     public static Event<?> findEvent(final Object[] args) {
         if (args == null) return null;
