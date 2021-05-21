@@ -48,6 +48,7 @@ public class BookUpdateWithQueueJLBH implements JLBHTask, BookUpdateListener {
     public void run(long startTimeNS) {
         bookUpdate.eventTime(System.nanoTime());
         out.bookUpdate(bookUpdate);
+        bookUpdate.eventTime(0);
         methodReader.readOne();
         lth.sample(timeTaken);
     }
