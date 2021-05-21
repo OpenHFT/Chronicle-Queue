@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
+import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 
@@ -60,11 +61,12 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         int count = 0;
         long lockValueFromTid = getLockValueFromTid(tid);
         long value = lock.getVolatileValue();
+        Pauser tlPauser = pauser.get();
         try {
             while (!lock.compareAndSwapValue(UNLOCKED, lockValueFromTid)) {
                 if (count++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
                 value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
@@ -72,7 +74,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             forceUnlock(value);
             acquireLock();
         } finally {
-            pauser.reset();
+            tlPauser.reset();
         }
     }
 
@@ -94,11 +96,12 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
             return;
 
         long value = lock.getVolatileValue();
+        Pauser tlPauser = pauser.get();
         try {
             while (value!=UNLOCKED) {
                 if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted");
-                pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
                 value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
@@ -112,7 +115,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 throw ex;
             throw new IllegalStateException("The table store is closed!", ex);
         } finally {
-            pauser.reset();
+            tlPauser.reset();
         }
     }
 
