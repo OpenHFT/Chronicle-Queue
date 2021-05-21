@@ -37,9 +37,11 @@ public abstract class TriviallyCopyableEvent<E extends TriviallyCopyableEvent<E>
         if (description0 != this.$description()) {
             this.carefulCopy(bytes, description0);
         } else {
-            final long sourceAddress = bytes.addressForRead(bytes.readPosition());
-            final long targetAddress = VM.current().addressOf(this) + $start();
-            UNSAFE.copyMemory(sourceAddress, targetAddress, $length());
+            bytes.unsafeReadObject(this, this.$start(), this.$length());
+
+          //  final long sourceAddress = bytes.addressForRead(bytes.readPosition());
+          //  final long targetAddress = VM.current().addressOf(this) + $start();
+          //  UNSAFE.copyMemory(sourceAddress, targetAddress, $length());
         }
 
     }
