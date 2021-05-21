@@ -16,12 +16,10 @@ import java.io.File;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class DirectoryUtils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryUtils.class);
-    private static final AtomicLong TIMESTAMPER = new AtomicLong(System.currentTimeMillis());
 
     /**
      * Beware, this can give different results depending on whether you are
