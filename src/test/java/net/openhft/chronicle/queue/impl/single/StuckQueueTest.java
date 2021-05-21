@@ -22,7 +22,6 @@ import static org.junit.Assume.assumeFalse;
 public class StuckQueueTest extends ChronicleQueueTestBase {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
-    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Wire/issues/281")
     @Test
     public void test() throws IOException {
 
