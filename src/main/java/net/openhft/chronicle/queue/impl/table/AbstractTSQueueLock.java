@@ -38,15 +38,15 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
 
     protected final LongValue lock;
-    protected final TimingPauser pauser;
+    protected final ThreadLocal<TimingPauser> pauser;
     protected final File path;
     protected final TableStore tableStore;
     private final String lockKey;
 
-    public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauser) {
+    public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauserSupplier) {
         this.tableStore = tableStore;
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(lockKey));
-        this.pauser = pauser.get();
+        this.pauser = ThreadLocal.withInitial(pauserSupplier);
         this.path = tableStore.file();
         this.lockKey = lockKey;
     }
