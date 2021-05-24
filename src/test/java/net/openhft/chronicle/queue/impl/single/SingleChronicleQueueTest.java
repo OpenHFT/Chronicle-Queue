@@ -2852,28 +2852,30 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLongLivingTailerAppenderReAcquiredEachSecond() {
-        FlakyTestRunner.run(OS.isWindows(), this::testLongLivingTailerAppenderReAcquiredEachSecond0);
-    }
-
-    public void testLongLivingTailerAppenderReAcquiredEachSecond0() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         final File dir = getTmpDir();
-        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+        final RollCycles rollCycle = TEST4_SECONDLY;
 
         try (ChronicleQueue queuet = binary(dir)
                 .rollCycle(rollCycle)
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .build();
              final ExcerptTailer tailer = queuet.createTailer()) {
+
+            // The look up of the first and last cycle is cached at this point and won't be checked again for 1 millisecond to reduce overhead.
+            Jvm.pause(1);
 
             // write first message
             try (ChronicleQueue queue =
                          binary(dir)
                                  .rollCycle(rollCycle)
+                                 .testBlockSize()
                                  .timeProvider(timeProvider)
                                  .build()) {
 
                 for (int i = 0; i < 5; i++) {
+                    Jvm.pause(1);
 
                     final ExcerptAppender appender = queue.acquireAppender();
                     timeProvider.advanceMillis(1100);
@@ -2882,10 +2884,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     }
 
                     try (final DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent())
+                            System.out.println(queue.dump());
+
                         assertTrue(dc.isPresent());
                         assertEquals(i, dc.wire().read("some").int32());
                     }
-                    Jvm.pause(1);
                 }
             }
         }
