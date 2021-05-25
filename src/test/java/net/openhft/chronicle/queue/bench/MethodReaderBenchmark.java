@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.bench;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.jlbh.JLBH;
 import net.openhft.chronicle.core.jlbh.JLBHOptions;
@@ -31,7 +32,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.LongConversion;
 import net.openhft.chronicle.wire.MilliTimestampLongConverter;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.eclipse.jetty.io.RuntimeIOException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -98,7 +98,7 @@ public class MethodReaderBenchmark implements JLBHTask {
             try {
                 queue = ChronicleQueue.single(Files.createTempDirectory("temp").toString());
             } catch (IOException e) {
-                throw new RuntimeIOException(e);
+                throw new IORuntimeException(e);
             }
         }
 

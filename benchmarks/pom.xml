@@ -21,7 +21,7 @@
 
     <groupId>net.openhft</groupId>
     <artifactId>chronicle-queue-benchmarks</artifactId>
-    <version>5.21ea0</version>
+    <version>5.21ea60-SNAPSHOT</version>
     <name>OpenHFT/Chronicle-Queue/Benchmarks</name>
     <description>Chronicle-Queue-Benchmarks</description>
 

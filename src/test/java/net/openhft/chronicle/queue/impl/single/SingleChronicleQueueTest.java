@@ -31,6 +31,7 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
+import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
@@ -51,6 +52,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -1022,7 +1025,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             assertTrue(tailer.moveToIndex(robIndex));
-            try (DocumentContext dc = tailer.readingDocument(true)) {
+            try (DocumentContext dc = tailer.readingDocument(false)) {
                 assertTrue(dc.isData());
                 dc.wire().read("FirstName").text("Rob", Assert::assertEquals);
             }
@@ -2798,7 +2801,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTailerSnappingRollWithNewAppender() throws InterruptedException, ExecutionException, TimeoutException {
-        expectException("");
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
         final File dir = getTmpDir();
@@ -2850,28 +2852,30 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLongLivingTailerAppenderReAcquiredEachSecond() {
-        FlakyTestRunner.run(OS.isWindows(), this::testLongLivingTailerAppenderReAcquiredEachSecond0);
-    }
-
-    public void testLongLivingTailerAppenderReAcquiredEachSecond0() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         final File dir = getTmpDir();
-        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+        final RollCycles rollCycle = TEST4_SECONDLY;
 
         try (ChronicleQueue queuet = binary(dir)
                 .rollCycle(rollCycle)
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .build();
              final ExcerptTailer tailer = queuet.createTailer()) {
+
+            // The look up of the first and last cycle is cached at this point and won't be checked again for 1 millisecond to reduce overhead.
+            Jvm.pause(1);
 
             // write first message
             try (ChronicleQueue queue =
                          binary(dir)
                                  .rollCycle(rollCycle)
+                                 .testBlockSize()
                                  .timeProvider(timeProvider)
                                  .build()) {
 
                 for (int i = 0; i < 5; i++) {
+                    Jvm.pause(1);
 
                     final ExcerptAppender appender = queue.acquireAppender();
                     timeProvider.advanceMillis(1100);
@@ -2880,10 +2884,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     }
 
                     try (final DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent())
+                            System.out.println(queue.dump());
+
                         assertTrue(dc.isPresent());
                         assertEquals(i, dc.wire().read("some").int32());
                     }
-                    Jvm.pause(1);
                 }
             }
         }
@@ -3281,23 +3287,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 ExcerptAppender appender0 = queue.acquireAppender();
 
-                if (!(appender0 instanceof InternalAppender))
-                    return;
+                assumeTrue(appender0 instanceof InternalAppender);
                 InternalAppender appender = (InternalAppender) appender0;
+                assumeTrue(appender instanceof StoreAppender);
 
-                if (!(appender instanceof StoreAppender))
-                    return;
                 List<BytesWithIndex> bytesWithIndies = new ArrayList<>();
                 try {
                     for (int i = 0; i < 5; i++) {
                         bytesWithIndies.add(bytes(tailer));
                     }
 
+                    // ... and try and overwrite starting at beginning
+                    // TODO: if you step in here it looks like it is overwriting
+                    // and DOES NOT output debug log "Trying to overwrite index..."
                     for (int i = 0; i < 4; i++) {
                         BytesWithIndex b = bytesWithIndies.get(i);
                         appender.writeBytes(b.index, b.bytes);
                     }
 
+                    // this will output debug log "Trying to overwrite index..." as expected
                     for (int i = 0; i < 4; i++) {
                         BytesWithIndex b = bytesWithIndies.get(i);
                         appender.writeBytes(b.index, b.bytes);
@@ -3307,7 +3315,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     appender.writeBytes(b.index, b.bytes);
 
                     ((StoreAppender) appender).checkWritePositionHeaderNumber();
-                    appender0.writeText("hello");
+                    appender0.writeText("goodbye");
                 } finally {
                     closeQuietly(bytesWithIndies);
                 }
@@ -3325,7 +3333,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                                 "--- !!data #binary\n" +
                                 "hello: world4\n" +
                                 "--- !!data #binary\n" +
-                                "hello\n"));
+                                "goodbye\n"));
 
             }
         }
@@ -3609,6 +3617,84 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             Assert.assertEquals(expected, sb.toString());
+        }
+    }
+
+    @Test
+    public void lastIndexShouldReturnLastIndexForPopulatedQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            long actualLastIndex;
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                appender.writeText("Hello!");
+                actualLastIndex = appender.lastIndexAppended();
+            }
+            assertEquals(actualLastIndex, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void lastIndexShouldReturnNegativeOneForEmptyQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            assertEquals(-1, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void lastIndexShouldReturnNegativeOneForMetadataOnlyQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
+                    documentContext.wire().write().text("Hello!");
+                }
+            }
+            assertEquals(-1, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void lastIndexShouldReturnNegativeOneForEmptyPretouchedQueue() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                appender.pretouch();
+            }
+            assertEquals(-1, queue.lastIndex());
+        }
+    }
+
+    @Test
+    public void shouldWaitForConditionWhenAcquiringAppender() throws TimeoutException {
+        File tmpDir = getTmpDir();
+        AtomicBoolean gotAppender = new AtomicBoolean(false);
+        ReentrantLock acquireAppenderLock = new ReentrantLock();
+        final Condition createAppenderCondition = acquireAppenderLock.newCondition();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir)
+                .wireType(wireType)
+                .createAppenderConditionCreator(q -> createAppenderCondition)
+                .build()) {
+            new Thread(() -> {
+                acquireAppenderLock.lock();
+                queue.acquireAppender();
+                gotAppender.set(true);
+            }).start();
+
+            // Assert acquireAppender is blocked
+            Jvm.pause(100L);
+            assertFalse(gotAppender.get());
+
+            // Release
+            acquireAppenderLock.lock();
+            createAppenderCondition.signal();
+            acquireAppenderLock.unlock();
+
+            // Assert appender is acquired
+            TimeoutPauser pauser = new TimeoutPauser(0);
+            while (!gotAppender.get()) {
+                pauser.pause(1, TimeUnit.SECONDS);
+            }
         }
     }
 }

@@ -58,6 +58,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         assert checkNotAlreadyLocked();
 
         long value = 0;
+        TimingPauser tlPauser = pauser.get();
         try {
             int i = 0;
             value = lock.getVolatileValue();
@@ -65,7 +66,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
                 // add a tiny delay
                 if (i++ > 1000 && Thread.interrupted())
                     throw new IllegalStateException("Interrupted for the lock file:" + path);
-                pauser.pause(timeout, TimeUnit.MILLISECONDS);
+                tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
                 value = lock.getVolatileValue();
             }
 
@@ -85,10 +86,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             warn().on(getClass(), warningMsg + ". Unlocking forcibly");
             forceUnlock(value);
             // we should reset the pauser after a timeout exception
-            pauser.reset();
+            tlPauser.reset();
             lock();
         } finally {
-            pauser.reset();
+            tlPauser.reset();
         }
     }
 

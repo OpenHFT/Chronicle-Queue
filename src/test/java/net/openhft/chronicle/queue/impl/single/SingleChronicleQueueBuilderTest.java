@@ -4,6 +4,8 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
@@ -26,6 +28,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     @Test
     public void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
         expectException("reading control code as text");
+        expectException("Unable to copy TimedStoreRecovery safely");
 
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");
@@ -34,8 +37,12 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue =
                      ChronicleQueue.singleBuilder(path)
                              .testBlockSize()
-                             .build()) {
-            assertFalse(queue.createTailer().readingDocument().isPresent());
+                             .build();
+             final ExcerptTailer tailer = queue.createTailer();
+             final DocumentContext dc = tailer.readingDocument()) {
+//            System.out.println(queue.dump());
+            assertFalse(dc.isPresent());
+
         } finally {
             IOTools.deleteDirWithFiles(path.toFile(), 20);
         }
@@ -99,6 +106,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
         builder.build().close();
         final Wire wire = Wires.acquireBinaryWire();
+        wire.usePadding(true);
         wire.write().typedMarshallable(builder);
 
         System.err.println(wire.bytes().toHexString());
@@ -122,7 +130,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test
     public void tryOverrideSourceId() {
-        expectException("inconsistency with of source ids");
+        expectException("Overriding sourceId from existing metadata");
 
         final File tmpDir = getTmpDir();
         final int firstSourceId = 1;

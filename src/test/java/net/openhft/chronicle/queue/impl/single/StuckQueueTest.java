@@ -1,11 +1,14 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -21,6 +24,10 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void test() throws IOException {
+
+        // todo remove see https://github.com/OpenHFT/Chronicle-Queue/issues/837
+        Assume.assumeTrue(!Jvm.isMacArm());
+
         Path tmpDir = getTmpDir().toPath();
 
         expectException("Failback to readonly tablestore");
@@ -38,10 +45,9 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
         Path to = tmpDir.resolve(templatePath.getFileName());
         Files.copy(templatePath, to, StandardCopyOption.REPLACE_EXISTING);
 
-        DumpQueueMain.dump(tmpDir.toString());
-
         try (RollingChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).rollCycle(RollCycles.MINUTELY).readOnly(true).build();
              ExcerptTailer tailer = q.createTailer()) {
+//            System.out.println(q.dump());
 
             int cycle = q.rollCycle().toCycle(0x18406e100000000L);
 

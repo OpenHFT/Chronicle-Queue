@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.wire.Wire;
 
 import java.util.function.IntConsumer;
 
@@ -87,7 +88,9 @@ public final class Pretoucher extends AbstractCloseable {
             try {
                 if (!EARLY_ACQUIRE_NEXT_CYCLE && currentCycleWireStore != null && CAN_WRITE)
                     try {
-                        currentCycleWireStore.writeEOF(queue.wireType().apply(currentCycleMappedBytes), queue.timeoutMS);
+                        final Wire wire = queue.wireType().apply(currentCycleMappedBytes);
+                        wire.usePadding(currentCycleWireStore.dataVersion() > 0);
+                        currentCycleWireStore.writeEOF(wire, queue.timeoutMS);
                     } catch (Exception ex) {
                         Jvm.warn().on(getClass(), "unable to write the EOF file=" + currentCycleMappedBytes.mappedFile().file(), ex);
                     }

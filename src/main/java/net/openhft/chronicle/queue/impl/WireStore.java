@@ -43,6 +43,9 @@ public interface WireStore extends CommonStore, Closeable {
     @Nullable
     ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index);
 
+    @Nullable
+    ScanResult moveToStartForRead(@NotNull ExcerptContext ec);
+
     /**
      * Reverse look up an index for a position.
      *

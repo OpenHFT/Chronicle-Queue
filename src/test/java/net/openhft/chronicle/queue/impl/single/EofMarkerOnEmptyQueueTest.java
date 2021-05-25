@@ -43,7 +43,6 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
             // start to write a message, but don't close the context - simulates crashed writer
             final long expectedEofMarkerPosition = context.wire().bytes().writePosition() - Wires.SPB_HEADER_SIZE;
             context.wire().write("foo").int32(1);
-
             final int startCycle = queue.cycle();
 
             clock.addAndGet(TimeUnit.SECONDS.toMillis(1L));
@@ -64,30 +63,31 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
             appenderExecutor.shutdown();
             appenderExecutor.awaitTermination(1, TimeUnit.SECONDS);
 
-            final SingleChronicleQueueStore firstCycleStore = queue.storeForCycle(startCycle, 0, false, null);
-            assertNull(firstCycleStore);
-           // final long firstCycleWritePosition = firstCycleStore.writePosition();
-            // assert that no write was completed
-           // assertEquals(0L, firstCycleWritePosition) ;
-           // firstCycleStore.release(test);
+            try (final SingleChronicleQueueStore firstCycleStore = queue.storeForCycle(startCycle, 0, false, null)) {
 
-            final ExcerptTailer tailer = queue.createTailer();
-            int recordCount = 0;
-            int lastItem = -1;
-            while (true) {
-                try (final DocumentContext readCtx = tailer.readingDocument()) {
-                    if (!readCtx.isPresent()) {
-                        break;
+                final long firstCycleWritePosition = firstCycleStore.writePosition();
+                // assert that no write was completed
+                assertEquals(0L, firstCycleWritePosition);
+                // firstCycleStore.release(test);
+
+                final ExcerptTailer tailer = queue.createTailer();
+                int recordCount = 0;
+                int lastItem = -1;
+                while (true) {
+                    try (final DocumentContext readCtx = tailer.readingDocument()) {
+                        if (!readCtx.isPresent()) {
+                            break;
+                        }
+
+                        final StringBuilder name = new StringBuilder();
+                        final ValueIn field = readCtx.wire().readEventName(name);
+                        recordCount++;
+                        lastItem = field.int32();
                     }
-
-                    final StringBuilder name = new StringBuilder();
-                    final ValueIn field = readCtx.wire().readEventName(name);
-                    recordCount++;
-                    lastItem = field.int32();
                 }
+                assertEquals(1, recordCount);
+                assertEquals(7, lastItem);
             }
-            assertEquals(1, recordCount);
-            assertEquals(7, lastItem);
         }
     }
 }

@@ -529,21 +529,11 @@ will only give you the last index appended by this appender; not the last index 
 If you wish to find the index of the last record written to the queue, then you have to call:
 
 ```
-ExcerptTailer tailer = queue.createTailer().toEnd().direction(TailerDirection.BACKWARD);
-try (DocumentContext dc = tailer.readingDocument()) {
-    if (dc.isPresent()) {
-        lastIndex = tailer.index());
-    }
-}
+queue.lastIndex()
 ```
-
-(note that `tailer.toEnd()` puts the tailer just past the last index written)
-
-Previously, we advised to call
-```
-lastIndex = queue.createTailer().toEnd().index() - 1;
-```
-But if the queue has rolled and there is no data in the new cycle, this will not work.
+Which will return the index of the last excerpt present in the queue (or -1 for an empty queue). Note that if the queue is
+being written to concurrently it's possible the value may be an under-estimate, as subsequent entries may have been written
+even before it was returned.
 
 === How to determine how many messages are between two indexes
 
@@ -1024,30 +1014,32 @@ Putting data to a Chronicle queue means starting a new excerpt, writing data int
 
 === Pretoucher configuration
 
-`Pretoucher` is a class designed to be called from a long-lived thread. The purpose of Pretoucher
+`Pretoucher` is a class designed to be called from a long-lived thread. The purpose of the Pretoucher
 is to accelerate writing in a queue. Upon invocation of the `execute()` method, this object will pre-touch
 pages in the queue's underlying store file, so that they are resident in the page-cache (i.e. loaded from
 storage) before they are required by appenders to the queue. Resources held by this object will be released when the underlying
 queue is closed. Alternatively, the `shutdown()` method can be called to close the supplied queue and
-release any other resources. Invocation of the `execute()` method after `shutdown()` has been called with
+release any other resources. Invocation of the `execute()` method after `shutdown()` has been called will
 cause an `IllegalStateException` to be thrown.
 
-The configuration parameters of the Pretoucher is as follows:
+The Pretoucher's configuration parameters (set via the system properties) are as follows:
 
-- `earlyAcquireNextCycle` (defaults to false): Causes the Pretoucher to create the next cycle file while the queue
+- `SingleChronicleQueueExcerpts.earlyAcquireNextCycle` (defaults to false): Causes the Pretoucher to create the next cycle file while the queue
 is still writing to the current one in order to mitigate the impact of stalls in the OS when creating new files.
 
 *Note:* `earlyAcquireNextCycle` is off by default and if it is going to be turned on, you should very carefully
 stress test before and after turning it on. Basically what you experience is related to your system.
 
-- `pretoucherPrerollTimeMs` (defaults to 2,000 milliseconds) The pretoucher will create new cycle files
+- `SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs` (defaults to 2,000 milliseconds) The pretoucher will create new cycle files
 this amount of time in advanced of them being written to. Effectively moves the Pretoucher's notion
 of which cycle is "current" into the future by `pretoucherPrerollTimeMs`.
 
-- `dontWrite` (defaults to false): Tells the Pretoucher to never create cycle files that do not already
+- `SingleChronicleQueueExcerpts.dontWrite` (defaults to false): Tells the Pretoucher to never create cycle files that do not already
 exist. As opposed to the default behaviour where if the Pretoucher runs inside a cycle where no excerpts
 have been written, it will create the "current" cycle file. Obviously enabling this will prevent
 `earlyAcquireNextCycle` from working.
+
+The Pretoucher's constructor takes the following parameter:
 
 - `queue`: The queue that this Pretoucher is assigned to.
 

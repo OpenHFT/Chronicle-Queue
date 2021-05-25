@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.PackageLocal;
@@ -26,8 +27,7 @@ import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
 import static net.openhft.chronicle.core.UnsafeMemory.UNSAFE;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.END_OF_FILE;
-import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
 import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 import static net.openhft.chronicle.wire.Wires.END_OF_DATA;
 import static net.openhft.chronicle.wire.Wires.isEndOfFile;
@@ -47,6 +47,8 @@ class StoreTailer extends AbstractCloseable
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
     long index; // index of the next read.
+    long lastReadIndex; // index of the last read message
+
     @Nullable
     SingleChronicleQueueStore store;
     private int cycle;
@@ -91,6 +93,10 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        final Wire privateWire = privateWire();
+        if (privateWire != null) {
+            ((MappedBytes)privateWire.bytes()).disableThreadSafetyCheck(disableThreadSafetyCheck);
+        }
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
     }
@@ -221,6 +227,7 @@ class StoreTailer extends AbstractCloseable
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
                 address = bytes.addressForRead(bytes.readPosition(), 4);
+                this.lastReadIndex = this.index();
 //                Jvm.optionalSafepoint();
                 return context;
             }
@@ -287,8 +294,15 @@ class StoreTailer extends AbstractCloseable
                     final long firstIndex = queue.firstIndex();
                     if (firstIndex == Long.MAX_VALUE)
                         return false;
-                    if (!moveToIndexInternal(firstIndex))
-                        return false;
+                    if (includeMetaData) {
+                        if (moveToCycle(queue.rollCycle().toCycle(firstIndex))) {
+                            inACycleFound(wire().bytes());
+                            return true;
+                        }
+                    } else {
+                        if (!moveToIndexInternal(firstIndex))
+                            return false;
+                    }
                     break;
 
                 case NOT_REACHED_IN_CYCLE:
@@ -337,7 +351,7 @@ class StoreTailer extends AbstractCloseable
         final long nextIndex = nextIndexWithNextAvailableCycle(currentCycle);
 
         if (nextIndex != Long.MIN_VALUE) {
-            return nextEndOfCycle(nextIndex);
+            return nextEndOfCycle(queue.rollCycle().toCycle(nextIndex));
         } else {
             state = END_OF_CYCLE;
         }
@@ -354,8 +368,8 @@ class StoreTailer extends AbstractCloseable
         throw new AssertionError("direction not set, direction=" + direction);
     }
 
-    private boolean nextEndOfCycle(final long nextIndex) {
-        if (moveToIndexInternal(nextIndex)) {
+    private boolean nextEndOfCycle(final int nextCycle) {
+        if (moveToCycle(nextCycle)) {
             state = FOUND_IN_CYCLE;
 //            Jvm.optionalSafepoint();
             return true;
@@ -373,11 +387,13 @@ class StoreTailer extends AbstractCloseable
         }
         // We are here because we are waiting for an entry to be written to this file.
         // Winding back to the previous cycle results in a re-initialisation of all the objects => garbage
-        int nextCycle = queue.rollCycle().toCycle(nextIndex);
         cycle(nextCycle);
         state = CYCLE_NOT_FOUND;
         return false;
     }
+
+    @Override
+    public long lastReadIndex() { return this.lastReadIndex; }
 
     private boolean beyondStartOfCycleBackward() throws StreamCorruptedException {
         // give the position of the last entry and
@@ -605,6 +621,16 @@ class StoreTailer extends AbstractCloseable
         return moveToIndexInternal(index);
     }
 
+    @Override
+    public boolean moveToCycle(final int cycle) {
+        throwExceptionIfClosed();
+
+        moveToState.indexMoveCount++;
+        final ScanResult scanResult = moveToCycleResult0(cycle);
+        setAddress(scanResult == FOUND);
+        return scanResult == FOUND;
+    }
+
     private boolean setAddress(final boolean found) {
         final Wire wire = privateWire();
         if (wire == null) {
@@ -616,17 +642,42 @@ class StoreTailer extends AbstractCloseable
         return found;
     }
 
-    private ScanResult moveToIndexResult0(final long index) {
-
-        final int cycle = queue.rollCycle().toCycle(index);
-        final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
+    private ScanResult moveToCycleResult0(final int cycle) {
+        if (cycle < 0)
+            return NOT_REACHED;
+        final RollCycle rollCycle = queue.rollCycle();
 //        if (Jvm.isResourceTracing()) {
 //            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
 //        }
 
         // moves to the expected cycle
         if (!cycle(cycle))
-            return ScanResult.NOT_REACHED;
+            return NOT_REACHED;
+
+        long index = rollCycle.toIndex(cycle, 0);
+        index(index);
+        this.store().moveToStartForRead(this);
+        final Bytes<?> bytes = privateWire().bytes();
+
+        state = FOUND_IN_CYCLE;
+        moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
+
+        return FOUND;
+    }
+
+    private ScanResult moveToIndexResult0(final long index) {
+        if (index < 0)
+            return NOT_REACHED;
+        final RollCycle rollCycle = queue.rollCycle();
+        final int cycle = rollCycle.toCycle(index);
+        final long sequenceNumber = rollCycle.toSequenceNumber(index);
+//        if (Jvm.isResourceTracing()) {
+//            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+//        }
+
+        // moves to the expected cycle
+        if (!cycle(cycle))
+            return NOT_REACHED;
 
         index(index);
         final ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
@@ -704,7 +755,6 @@ class StoreTailer extends AbstractCloseable
      */
     private long approximateLastIndex() {
 
-        final RollCycle rollCycle = queue.rollCycle();
         final int lastCycle = queue.lastCycle();
         try {
             if (lastCycle == Integer.MIN_VALUE)
@@ -777,7 +827,11 @@ class StoreTailer extends AbstractCloseable
     private void resetWires() {
         final WireType wireType = queue.wireType();
 
-        final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
+        final MappedBytes bytes = store.bytes();
+        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck);
+        final Wire wire2 = wireType.apply(bytes);
+        wire2.usePadding(store.dataVersion()>0);
+        final AbstractWire wire = (AbstractWire) readAnywhere(wire2);
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
@@ -795,8 +849,7 @@ class StoreTailer extends AbstractCloseable
     private Wire readAnywhere(@NotNull final Wire wire) {
         final Bytes<?> bytes = wire.bytes();
         bytes.readLimitToCapacity();
-        if (store.dataVersion() > 0)
-            wire.usePadding(true);
+            wire.usePadding(store.dataVersion() > 0);
         return wire;
     }
 
@@ -844,6 +897,7 @@ class StoreTailer extends AbstractCloseable
                 return this;
             }
 
+            // TODO fix this so it doesn't replace the same store.
             final SingleChronicleQueueStore wireStore = queue.storeForCycle(
                     lastCycle, queue.epoch(), false, this.store);
             this.setCycle(lastCycle);
@@ -966,6 +1020,10 @@ class StoreTailer extends AbstractCloseable
     void incrementIndex() {
         final RollCycle rollCycle = queue.rollCycle();
         final long index = this.index();
+        if (index == -1 && direction == FORWARD) {
+            index0(0);
+            return;
+        }
         long seq = rollCycle.toSequenceNumber(index);
         final int cycle = rollCycle.toCycle(index);
 
@@ -976,10 +1034,12 @@ class StoreTailer extends AbstractCloseable
             case FORWARD:
                 // if it runs out of seq number it will flow over to tomorrows cycle file
                 if (rollCycle.toSequenceNumber(seq) < seq) {
-                    cycle(cycle + 1);
-                    Jvm.warn().on(getClass(),
-                            "we have run out of sequence numbers, so will start to write to " +
-                                    "the next .cq4 file, the new cycle=" + cycle);
+                    if (this.cycle != cycle + 1) {
+                        cycle(cycle + 1);
+                        Jvm.warn().on(getClass(),
+                                "we have run out of sequence numbers, so will start to write to " +
+                                        "the next .cq4 file, the new cycle=" + cycle);
+                    }
                     seq = 0;
                 }
                 break;
@@ -1182,7 +1242,7 @@ class StoreTailer extends AbstractCloseable
         return store == null ? null : store.currentFile();
     }
 
-    private static final class MoveToState {
+    static final class MoveToState {
         private long lastMovedToIndex = Long.MIN_VALUE;
         private TailerDirection directionAtLastMoveTo = TailerDirection.NONE;
         private long readPositionAtLastMove = Long.MIN_VALUE;

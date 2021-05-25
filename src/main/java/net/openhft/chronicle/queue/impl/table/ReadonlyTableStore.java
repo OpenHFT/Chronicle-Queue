@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,19 +82,13 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @NotNull
     @Override
     public String dump() {
-        throwExceptionIfClosed();
-
-        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        throw read_only;
+        return metadata.toString();
     }
 
     @NotNull
     @Override
     public String shortDump() {
-        throwExceptionIfClosed();
-
-        UnsupportedOperationException read_only = new UnsupportedOperationException("Read only");
-        throw read_only;
+        return metadata.toString();
     }
 
     @Override

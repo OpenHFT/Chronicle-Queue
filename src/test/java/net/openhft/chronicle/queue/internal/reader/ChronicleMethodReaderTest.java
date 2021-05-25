@@ -79,6 +79,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                 i++;
             }
         }
+        expectException("Overriding sourceId from existing metadata, was 0, overriding to");
     }
 
     @Test

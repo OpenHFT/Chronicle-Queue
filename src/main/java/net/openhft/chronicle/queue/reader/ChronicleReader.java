@@ -23,6 +23,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
@@ -42,6 +43,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
 public final class ChronicleReader implements Reader {
@@ -59,7 +61,7 @@ public final class ChronicleReader implements Reader {
     private Consumer<String> messageSink;
     private Function<ExcerptTailer, DocumentContext> pollMethod = ExcerptTailer::readingDocument;
     private WireType wireType = WireType.TEXT;
-    private Supplier<QueueEntryHandler> entryHandlerFactory = () -> new MessageToTextQueueEntryHandler(wireType);
+    private Supplier<QueueEntryHandler> entryHandlerFactory = () -> QueueEntryHandler.messageToText(wireType);
     private boolean displayIndex = true;
     private Class<?> methodReaderInterface;
     private volatile boolean running = true;
@@ -223,7 +225,7 @@ public final class ChronicleReader implements Reader {
 
     public ChronicleReader asMethodReader(String methodReaderInterface) {
         if (methodReaderInterface == null)
-            entryHandlerFactory = () -> new DummyMethodReaderQueueEntryHandler(wireType);
+            entryHandlerFactory = () -> QueueEntryHandler.dummy(wireType);
         else try {
             this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {
@@ -272,10 +274,22 @@ public final class ChronicleReader implements Reader {
 
         if (isSet(maxHistoryRecords) && isFirstIteration) {
             tailer.toEnd();
-            tailer.moveToIndex(Math.max(ic.firstIndex(), tailer.index() - maxHistoryRecords));
+            moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
         } else if (tailInputSource && isFirstIteration) {
             tailer.toEnd();
         }
+    }
+
+    private void moveToIndexNFromTheEnd(ExcerptTailer tailer, long numberOfEntriesFromEnd) {
+        tailer.direction(TailerDirection.BACKWARD).toEnd();
+        for (int i = 0; i < numberOfEntriesFromEnd - 1; i++) {
+            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                if (!documentContext.isPresent()) {
+                    break;
+                }
+            }
+        }
+        tailer.direction(FORWARD);
     }
 
     private long indexOfEnd(ChronicleQueue queue) {

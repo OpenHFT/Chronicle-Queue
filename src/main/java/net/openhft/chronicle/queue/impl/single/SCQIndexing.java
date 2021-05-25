@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.StackTrace;
@@ -705,23 +706,20 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                     return -1;
 
                 Bytes<?> bytes = wire.bytes();
+                if (wire.usePadding())
+                    endAddress += BytesUtil.padOffset(endAddress);
 
                 bytes.readPosition(endAddress);
 
                 for (; ; ) {
-                    long paddingShift = 0L;
-                    if (wire.usePadding()) {
-                        paddingShift = -endAddress & 0x3;
-
-                        endAddress += paddingShift;
-                    }
                     int header = bytes.readVolatileInt(endAddress);
                     if (header == 0 || Wires.isNotComplete(header))
                         return sequence;
 
                     int len = Wires.lengthOf(header) + 4;
+                    len += BytesUtil.padOffset(len);
 
-                    bytes.readSkip(len + paddingShift);
+                    bytes.readSkip(len );
                     endAddress += len;
 
                     if (Wires.isData(header))

@@ -56,11 +56,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
 import java.util.function.*;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.wire.Wires.*;
 
@@ -130,6 +132,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
+    @NotNull
+    private Condition createAppenderCondition = NoOpCondition.INSTANCE;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -157,12 +161,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             indexSpacing = builder.indexSpacing();
             time = builder.timeProvider();
             pauserSupplier = builder.pauserSupplier();
-            // add a 10% random element to make it less likely threads will timeout at the same time.
+            // add a 20% random element to make it less likely threads will timeout at the same time.
             timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * new SecureRandom().nextFloat())); // Not time critical
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
-            doubleBuffer = builder.doubleBuffer();
+            doubleBuffer = false; //builder.doubleBuffer();
             if (metaStore.readOnly() && !builder.readOnly()) {
                 LOG.warn("Forcing queue to be readOnly");
                 // need to set this on builder as it is used elsewhere
@@ -216,6 +220,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             close();
             throw Jvm.rethrow(t);
         }
+    }
+
+    protected void createAppenderCondition(@NotNull Condition createAppenderCondition) {
+        this.createAppenderCondition = createAppenderCondition;
     }
 
     protected CycleCalculator cycleCalculator(ZoneId zoneId) {
@@ -344,35 +352,36 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
-            ExcerptTailer tailer = createTailer();
-            if (!tailer.moveToIndex(fromIndex)) {
-                if (firstIndex > fromIndex) {
-                    tailer.toStart();
-                } else {
-                    return;
-                }
-            }
-            Bytes bytes = acquireBytes();
-            TextWire text = new TextWire(bytes);
-            while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent()) {
-                        writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+            try (ExcerptTailer tailer = createTailer()) {
+                if (!tailer.moveToIndex(fromIndex)) {
+                    if (firstIndex > fromIndex) {
+                        tailer.toStart();
+                    } else {
                         return;
                     }
-                    if (dc.index() > toIndex)
-                        return;
-                    writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
-                    Wire wire = dc.wire();
-                    long start = wire.bytes().readPosition();
-                    try {
-                        text.clear();
-                        wire.copyTo(text);
-                        writer.append(bytes.toString());
+                }
+                Bytes bytes = acquireBytes();
+                TextWire text = new TextWire(bytes);
+                while (true) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent()) {
+                            writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+                            return;
+                        }
+                        if (dc.index() > toIndex)
+                            return;
+                        writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
+                        Wire wire = dc.wire();
+                        long start = wire.bytes().readPosition();
+                        try {
+                            text.clear();
+                            wire.copyTo(text);
+                            writer.append(bytes.toString());
 
-                    } catch (Exception e) {
-                        wire.bytes().readPosition(start);
-                        writer.append(wire.bytes()).append("\n");
+                        } catch (Exception e) {
+                            wire.bytes().readPosition(start);
+                            writer.append(wire.bytes()).append("\n");
+                        }
                     }
                 }
             }
@@ -428,9 +437,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @NotNull
     protected ExcerptAppender newAppender() {
-
-        queueLock.waitForLock();
-
+        try {
+            createAppenderCondition.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted waiting for condition to create appender", e);
+        }
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, newPool, checkInterrupts);
     }
@@ -464,7 +476,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
      * hence we need to back copy data from the sinks to the source upon startup.
      * While we are doing this we lock the queue so that new appenders can not be created.
-     *
+     * <p>
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
      */
     @Override
@@ -475,7 +487,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     /**
      * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to
-     * coordinate writes from multiple threads and processes
+     * coordinate writes from multiple threads and processes.
+     * <p>This is also used to protect rolling to the next cycle
      */
     @NotNull
     WriteLock writeLock() {
@@ -536,8 +549,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // TODO: this function may require some re-work now that acquireTailer has been deprecated
         StoreTailer tailer = acquireTailer();
         try {
-            long index = rollCycle.toIndex(cycle, 0);
-            if (tailer.moveToIndex(index)) {
+            if (tailer.moveToCycle(cycle)) {
                 return tailer.store.lastSequenceNumber(tailer) + 1;
             } else {
                 return -1;
@@ -660,7 +672,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             closers.clear();
 
             // must be closed after closers.
-            closeQuietly(directoryListing,
+            closeQuietly(
+                    createAppenderCondition,
+                    directoryListing,
                     queueLock,
                     lastAcknowledgedIndexReplicated,
                     lastIndexReplicated,
@@ -708,6 +722,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return rollCycle().toIndex(cycle, 0);
     }
 
+    @Override
+    public long lastIndex() {
+        // This is a slow implementation that gets a Tailer/DocumentContext to find the last index
+        try (final ExcerptTailer tailer = createTailer().direction(BACKWARD).toEnd()) {
+            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                if (documentContext.isPresent()) {
+                    return documentContext.index();
+                } else {
+                    return -1;
+                }
+            }
+        }
+    }
+
     /**
      * This method creates a tailer and count the number of messages between the start of the queue ( see @link firstIndex() )  and the end.
      *
@@ -715,12 +743,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long entryCount() {
-        final ExcerptTailer tailer = createTailer();
-        tailer.toEnd();
-        long lastIndex = tailer.index();
-        if (lastIndex == 0)
-            return 0;
-        return countExcerpts(firstIndex(), lastIndex);
+        try (final ExcerptTailer tailer = createTailer()) {
+            tailer.toEnd();
+            long lastIndex = tailer.index();
+            if (lastIndex == 0)
+                return 0;
+            return countExcerpts(firstIndex(), lastIndex);
+        }
     }
 
     @Nullable
@@ -851,12 +880,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     // file not found.
                     if (store == null)
                         break;
-                    if (store.writePosition() == 0 && !store.file().delete() && store.file().exists()) {
-                        // couldn't delete? Let's try writing EOF
+                    if (store.writePosition() == 0 && store.file().exists()) {
+                        // try writing EOF
                         // if this blows up we should blow up too so don't catch anything
                         MappedBytes bytes = store.bytes();
                         try {
-                            store.writeEOFAndShrink(wireType.apply(bytes), timeoutMS);
+                            final Wire wire = wireType.apply(bytes);
+                            wire.usePadding(true);
+                            store.writeEOFAndShrink(wire, timeoutMS);
                         } finally {
                             bytes.releaseLast();
                         }
@@ -985,7 +1016,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
                 assert wire.startUse();
                 wire.pauser(pauserSupplier.get());
-                wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
+                wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
                 SingleChronicleQueueStore wireStore;
                 try {
@@ -993,8 +1024,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         // implicitly reserves the wireStore for this StoreSupplier
                         wireStore = storeFactory.apply(that, wire);
                         wire.updateFirstHeader();
-                        if (wireStore.dataVersion() > 0)
-                            wire.usePadding(true);
+                        wire.usePadding(wireStore.dataVersion() > 0);
 
                         wireStore.initIndex(wire);
                         // do not allow tailer to see the file until it's header is written
@@ -1069,8 +1099,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                     try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
                         wire.updateFirstHeader();
-                        if (wireStore.dataVersion() > 0)
-                            wire.usePadding(true);
+                            wire.usePadding(wireStore.dataVersion() > 0);
                         wireStore.initIndex(wire);
                         directoryListing.onFileCreated(path, cycle);
                         firstAndLastCycleTime = 0;

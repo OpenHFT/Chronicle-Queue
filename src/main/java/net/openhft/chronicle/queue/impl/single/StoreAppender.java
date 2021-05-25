@@ -72,11 +72,20 @@ class StoreAppender extends AbstractCloseable
         queue.addCloseListener(this);
 
         queue.cleanupStoreFilesWithNoData();
+        normaliseEOFs();
+
         int cycle = queue.cycle();
         int lastCycle = queue.lastCycle();
-        if (lastCycle != cycle && lastCycle >= 0)
-            // ensure that the EOF is written on the last cycle
-            setCycle2(lastCycle, false);
+        if (lastCycle != cycle && lastCycle >= 0) {
+            final WriteLock writeLock = queue.writeLock();
+            writeLock.lock();
+            try {
+                // ensure that the EOF is written on the last cycle
+                setCycle2(lastCycle, false);
+            } finally {
+                writeLock.unlock();
+            }
+        }
         finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
@@ -262,8 +271,7 @@ class StoreAppender extends AbstractCloseable
 
     private Wire createWire(@NotNull final WireType wireType) {
         final Wire w = wireType.apply(store.bytes());
-        if (store.dataVersion() > 0)
-            w.usePadding(true);
+        w.usePadding(store.dataVersion() > 0);
         return w;
     }
 
@@ -282,8 +290,8 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> bytes = wire.bytes();
             assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
-            final long headerNumber = store.lastSequenceNumber(this);
-            wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
+            final long lastSequenceNumber = store.lastSequenceNumber(this);
+            wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
             assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
 
@@ -295,7 +303,6 @@ class StoreAppender extends AbstractCloseable
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
             throw new AssertionError(e);
         }
-
     }
 
     private boolean checkPositionOfHeader(final Bytes<?> bytes) {
@@ -304,7 +311,7 @@ class StoreAppender extends AbstractCloseable
         }
         int header = bytes.readVolatileInt(positionOfHeader);
         // ready or an incomplete message header?
-        return isReadyData(header) || isNotComplete(header);
+        return isReadyData(header) || isReadyMetaData(header) || isNotComplete(header);
     }
 
     @NotNull
@@ -369,6 +376,9 @@ class StoreAppender extends AbstractCloseable
         return writingDocument(metaData);
     }
 
+    /**
+     * Ensure any missing EOF markers are added back to previous cycles
+     */
     public void normaliseEOFs() {
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
@@ -383,10 +393,12 @@ class StoreAppender extends AbstractCloseable
         int last = queue.lastCycle();
         int first = queue.firstCycle();
 
-        for(int cycle = first; cycle < last; ++cycle) {
+        for (int cycle = first; cycle < last; ++cycle) {
             setCycle2(cycle, false);
-            if(wire != null)
+            if (wire != null) {
+                assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
+            }
         }
     }
 
@@ -400,6 +412,7 @@ class StoreAppender extends AbstractCloseable
             while (cur >= firstCycle) {
                 setCycle2(cur, false);
                 if (wire != null) {
+                    assert queue.writeLock().locked();
                     if (!store.writeEOF(wire, timeoutMS()))
                         break;
                 }
@@ -505,11 +518,15 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Write bytes at an index, but only if the index is at the end of the chronicle. If index is after the end of the chronicle, throw an
-     * IllegalStateException. If the index is before the end of the chronicle then do not change the state of the chronicle.
-     * <p>Thread-safe</p>
+     * Write bytes at an index, but only if the index is at the end of the queue (*or* end of cycle).
+     * If index is after the end of the queue (or cycle), throw an IllegalStateException.
+     * If the index is before the end of the queue then do not overwrite the contents of the queue.
+     * <p>If the index is at the end of a cycle (but not the queue) this will overwrite the EOF marker
+     * of that cycle. It is the caller's responsibility to call {@link #normaliseEOFs()} after.
+     * <p>Users are advised that the behaviour of this method may change in the future
+     * <p>Thread-safe
      *
-     * @param index index to write at. Only if index is at the end of the chronicle will the bytes get written
+     * @param index index to write at. Only if index is at the end of the queue (or cycle) will the bytes get written
      * @param bytes payload
      */
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
@@ -531,51 +548,43 @@ class StoreAppender extends AbstractCloseable
         writeBytesInternal(index, bytes, false);
     }
 
+
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
+
         if (wire == null)
             setWireIfNull(cycle);
 
+        // in case our cached headerNumber is incorrect.
+        resetPosition();
+
+        /// if the header number has changed then we will have roll
         if (this.cycle != cycle)
-            rollCycleTo(cycle);
+            rollCycleTo(cycle, this.cycle > cycle);
 
         long headerNumber = wire.headerNumber();
+
         boolean isNextIndex = index == headerNumber + 1;
         if (!isNextIndex) {
+            if (index > headerNumber + 1)
+                throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
 
-            // in case our cached headerNumber is incorrect.
-            if (resetPosition()) {
-
-                headerNumber = wire.headerNumber();
-
-                /// if the header number has changed then we will have roll
-                if (queue.rollCycle().toCycle(headerNumber) != cycle) {
-                    rollCycleTo(cycle);
-                    headerNumber = wire.headerNumber();
-                }
-            }
-
-            isNextIndex = index == headerNumber + 1;
-            if (!isNextIndex) {
-                if (index > headerNumber + 1)
-                    throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
-
-                // this can happen when using queue replication when we are back filling from a number of sinks at them same time
-                // its normal behaviour in the is use case so should not be a WARN
-                if (Jvm.isDebugEnabled(getClass()))
-                    Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
-                return;
-            }
+            // this can happen when using queue replication when we are back filling from a number of sinks at them same time
+            // its normal behaviour in the is use case so should not be a WARN
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+            return;
         }
+
         writeBytesInternal(bytes, metadata);
+        //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
         boolean isIndex = index == headerNumber;
         if (!isIndex) {
-            writeBytesInternal(bytes, metadata);
-            Thread.yield();
+            throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
     }
 
@@ -653,13 +662,21 @@ class StoreAppender extends AbstractCloseable
      * wire must be not null when this method is called
      */
     // throws UnrecoverableTimeoutException
+
     private void rollCycleTo(final int cycle) {
+        rollCycleTo(cycle, false);
+    }
+
+    private void rollCycleTo(final int cycle, boolean suppressEOF) {
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
             throw new AssertionError();
 
-        store.writeEOF(wire, timeoutMS());
+        if (!suppressEOF) {
+            assert queue.writeLock().locked();
+            store.writeEOF(wire, timeoutMS());
+        }
 
         int lastCycle = queue.lastCycle();
 
@@ -671,18 +688,8 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    /**
-     * Write an EOF marker on the current cycle if it is about to roll. It would do this any way if a new message was written, but this doesn't create
-     * a new cycle or add a message. Only used by tests.
-     */
-    void writeEndOfCycleIfRequired() {
-        if (wire != null && queue.cycle() != cycle)
-            store.writeEOF(wire, timeoutMS());
-    }
-
     // throws UnrecoverableTimeoutException
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
-
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
     }
@@ -701,7 +708,7 @@ class StoreAppender extends AbstractCloseable
                         " seq2: " + Long.toHexString(seq2) +
                         " seq3: " + Long.toHexString(seq3));
 
-                System.out.println(store.dump());
+//                System.out.println(store.dump());
 
                 assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                 assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
@@ -865,6 +872,7 @@ class StoreAppender extends AbstractCloseable
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
+                wire.bytes().writePositionForHeader(true);
                 isClosed = true;
                 if (unlock)
                     try {

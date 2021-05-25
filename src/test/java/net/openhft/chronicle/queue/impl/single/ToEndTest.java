@@ -21,7 +21,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
@@ -36,19 +35,16 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
 public class ToEndTest extends ChronicleQueueTestBase {
+    private static final long FIVE_SECONDS = SECONDS.toMicros(5);
+    private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
+    private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
     private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
-    private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
-
-    @AfterClass
-    public static void afterClass() {
-        for (File file : pathsToDelete) {
-            IOTools.shallowDeleteDirWithFiles(file);
-        }
-    }
 
     @Test
     public void missingCyclesToEndTest() {
@@ -62,7 +58,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build()) {
 
@@ -136,7 +132,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(time)
                 .build()) {
 
@@ -144,14 +140,14 @@ public class ToEndTest extends ChronicleQueueTestBase {
             Field storeF1 = StoreAppender.class.getDeclaredField("store");
             Jvm.setAccessible(storeF1);
             SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
-           // System.out.println(store1);
+            // System.out.println(store1);
 
             appender.writeDocument(wire -> wire.write("msg").int32(1));
 
             final StoreTailer tailer = (StoreTailer) queue.createTailer();
-           // System.out.println(tailer);
+            // System.out.println(tailer);
             tailer.toEnd();
-           // System.out.println(tailer);
+            // System.out.println(tailer);
 
             Field storeF2 = StoreTailer.class.getDeclaredField("store");
             Jvm.setAccessible(storeF2);
@@ -169,9 +165,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         List<Integer> results = new ArrayList<>();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
-                .indexCount(8)
-                .indexSpacing(1)
+                .rollCycle(TEST_DAILY)
                 .build()) {
 
             checkOneFile(baseDir);
@@ -202,7 +196,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
             checkOneFile(baseDir);
         }
         System.gc();
-        pathsToDelete.add(baseDir);
     }
 
     @Test
@@ -212,6 +205,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
+                .rollCycle(TEST_DAILY)
                 .build()) {
             checkOneFile(baseDir);
 
@@ -238,7 +232,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
             final int j = i;
             appender.writeDocument(wire -> wire.write("msg").int32(j));
         }*/
-        pathsToDelete.add(baseDir);
     }
 
     @Test
@@ -252,7 +245,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         try (ChronicleQueue wqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
             ExcerptAppender appender = wqueue.acquireAppender();
@@ -270,7 +263,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
 
@@ -288,7 +281,187 @@ public class ToEndTest extends ChronicleQueueTestBase {
             assertNull(excerptTailer.readText());
         }
         System.gc();
-        pathsToDelete.add(file);
+    }
+
+    @Test
+    public void shouldReturnExpectedValuesForEmptyQueue() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnExpectedValuesForEmptyPretouchedQueue() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            pretouchQueue(queue);
+
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
+
+            timeProvider.advanceMicros(FIVE_SECONDS);
+            pretouchQueue(queue);
+
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            writeMetadataToQueue(queue);
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !STStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  metadata: !SCQMeta {\n" +
+                    "    roll: !SCQSRoll { length: !short 1000, format: yyyyMMdd-HHmmss'T4', epoch: 0 },\n" +
+                    "    deltaCheckpointInterval: 64,\n" +
+                    "    sourceId: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 180, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycle: 5\n" +
+                    "# position: 216, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "listing.lowestCycle: 5\n" +
+                    "# position: 256, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "listing.modCount: 1\n" +
+                    "# position: 288, header: 3\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.write.lock: -9223372036854775808\n" +
+                    "# position: 328, header: 4\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.append.lock: -9223372036854775808\n" +
+                    "# position: 368, header: 5\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexReplicated: -1\n" +
+                    "# position: 416, header: 6\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "...\n" +
+                    "# 130596 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  writePosition: [\n" +
+                    "    0,\n" +
+                    "    0\n" +
+                    "  ],\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 32,\n" +
+                    "    indexSpacing: 4,\n" +
+                    "    index2Index: 196,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  dataFormat: 1\n" +
+                    "}\n" +
+                    "# position: 196, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 32, used: 1\n" +
+                    "  488,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 32, used: 0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 776, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "\"\": hello!\n" +
+                    "...\n" +
+                    "# 130280 bytes remaining\n", queue.dump());
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
+            // toEnd().index() should be where it expects the next excerpt in an existing cycle to be written.
+            final String actual = tailerToEndIndex(queue);
+            writeExcerptToQueue(queue);
+            assertEquals(actual, lastWriteIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByPretouch() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            writeExcerptToQueue(queue);
+            String lastWriteIndexBefore = lastWriteIndex(queue);
+            String tailerToEndIndexBefore = tailerToEndIndex(queue);
+
+            timeProvider.advanceMicros(FIVE_SECONDS);
+            pretouchQueue(queue);
+
+            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
+            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
+        }
+    }
+
+    @Test
+    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.advanceMicros(FIVE_SECONDS);
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            writeExcerptToQueue(queue);
+            String lastWriteIndexBefore = lastWriteIndex(queue);
+            String tailerToEndIndexBefore = tailerToEndIndex(queue);
+
+            timeProvider.advanceMicros(FIVE_SECONDS);
+            writeMetadataToQueue(queue);
+
+            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
+            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
+        }
+    }
+
+    private String tailerToEndIndex(SingleChronicleQueue queue) {
+        try (final ExcerptTailer tailer = queue.createTailer().toEnd()) {
+            return Long.toHexString(tailer.index());
+        }
+    }
+
+    private String lastWriteIndex(SingleChronicleQueue queue) {
+        try (final ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
+             DocumentContext dc = tailer.readingDocument()) {
+            return Long.toHexString(dc.index());
+        }
+    }
+
+    private void writeExcerptToQueue(SingleChronicleQueue queue) {
+        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+            excerptAppender.writeText("hello!");
+        }
+    }
+
+    private void writeMetadataToQueue(SingleChronicleQueue queue) {
+        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+            try (final DocumentContext documentContext = excerptAppender.writingDocument(true)) {
+                documentContext.wire().write().text("hello!");
+            }
+        }
+    }
+
+    private void pretouchQueue(SingleChronicleQueue queue) {
+        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+            excerptAppender.pretouch();
+        }
+    }
+
+    private SingleChronicleQueue createQueue(SetTimeProvider timeProvider) {
+        final File queueDir = getTmpDir();
+        return SingleChronicleQueueBuilder
+                .binary(queueDir)
+                .testBlockSize()
+                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .timeProvider(timeProvider)
+                .build();
     }
 
     private void checkOneFile(@NotNull File baseDir) {

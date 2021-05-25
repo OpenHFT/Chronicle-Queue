@@ -96,8 +96,9 @@ public class SCQMeta implements Metadata {
             this.roll.rollTimeZone(roll.rollTimeZone());
         }
 
-        if (!(other.sourceId == 0 || sourceId == 0 || other.sourceId == sourceId)) {
-            Jvm.warn().on(getClass(), "inconsistency with of source ids, existing sourceId=" + other.sourceId + ", requested sourceId=" + sourceId);
+        if (other.sourceId != sourceId) {
+            Jvm.warn().on(getClass(), "Overriding sourceId from existing metadata, was " + sourceId + ", overriding to " + other.sourceId);
+            this.sourceId = other.sourceId;
         }
     }
 }
