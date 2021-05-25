@@ -16,9 +16,9 @@ The data includes an embedded timestamp, which is extracted by the tailer and us
 
 Note, the C++ plot uses a linear scale for the latency axis; the Java plot uses a logarithmic scale.
 
-image::../images/cq-performance.png[cq-performance.png]
+image::../docs/images/cq-performance.png[cq-performance.png]
 
-image::../images/cq-performance-java.png[cq-performance-java.png]
+image::../docs/images/cq-performance-java.png[cq-performance-java.png]
 
 === Chronicle Queue Zero
 Chronicle Queue Zero ( abbreviated to Queue Zero ) is a high performance queue which trades some of Chronicle Queue's functionality for significantly higher performance with applicability across a wide range of applications. 
@@ -26,16 +26,16 @@ Plots for equivalent tests using Queue Zero are shown below and demonstrate the 
 
 Further details of Queue Zero are available at the following link https://github.com/ChronicleEnterprise/Chronicle-Queue-Zero-Demo/blob/master/README.adoc or by contacting sales@chronicle.software
 
-image::../images/cqz-performance.png[cqz-performance.png]
+image::../docs/images/cqz-performance.png[cqz-performance.png]
 
-image::../images/cqz-performance-java.png[cqz-performance-java.png]
+image::../docs/images/cqz-performance-java.png[cqz-performance-java.png]
 
 === Chronicle Queue vs Chronicle Queue Zero
 To make the comparison between Chronicle Queue ( abbreviated to Queue ) and Chronicle Queue Zero ( abbreviated to Queue Zero ) performance even clearer, the below plots show the end-to-end latencies for sending a 1024-byte message using Queue and Queue Zero, for C++ and Java respectively. These plots again show both the much reduced latency using Queue Zero, as well as the reduction of outliers at higher percentiles.
 
-image::../images/cq-vs-cqz.png[cq-vs-cqz.png]
+image::../docs/images/cq-vs-cqz.png[cq-vs-cqz.png]
 
-image::../images/cq-vs-cqz-java.png[cq-vs-cqz-java.png]
+image::../docs/images/cq-vs-cqz-java.png[cq-vs-cqz-java.png]
 
 ==== Notes:
 

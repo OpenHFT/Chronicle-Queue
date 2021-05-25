@@ -195,7 +195,7 @@ As you append data, it will add memory mappings transparently. The file grows as
 The key benefit of using memory-mapped files, is that you are no longer limited by the size of your `JVM`, or even the size of your main memory.  You are only limited by the amount of disk space you have. If you want to load `100` TB into a `JVM` for replay the operating system does all the heavy lifting for you.
 
 Another benefit of using a memory-mapped file is the ability to bind a portion of memory to an object.
-The key attributes in the header are bound when first loading, and after that whey work like a normal object, updating off-heap memory and the file in a thread-safe manner.
+The key attributes in the header are bound when first loading, and after that they work like a normal object, updating off-heap memory and the file in a thread-safe manner.
 You can perform operations like `compareAndSet`, `atomic add`, or `set max value` (a set which only ever increases the value).
 As the data access is thread-safe, it can be shared between threads, or processes, as fast as the time it takes for an L2 cache miss; up to `25` nano-seconds.
 
