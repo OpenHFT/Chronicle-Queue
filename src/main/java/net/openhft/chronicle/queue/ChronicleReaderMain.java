@@ -146,7 +146,7 @@ public class ChronicleReaderMain {
     protected Options options() {
         final Options options = new Options();
 
-        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
+        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
         addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
