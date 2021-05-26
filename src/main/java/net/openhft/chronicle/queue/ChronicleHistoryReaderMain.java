@@ -78,13 +78,17 @@ public class ChronicleHistoryReaderMain {
             commandLine = parser.parse(options, args);
 
             if (commandLine.hasOption('h')) {
-                printHelpAndExit(options, 0, null);
+                printHelpAndExit(options, 0);
             }
         } catch (ParseException e) {
             printHelpAndExit(options, 1, e.getMessage());
         }
 
         return commandLine;
+    }
+
+    protected void printHelpAndExit(final Options options, int status) {
+        printHelpAndExit(options, status, null);
     }
 
     protected void printHelpAndExit(final Options options, int status, String message) {
