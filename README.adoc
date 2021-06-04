@@ -1879,6 +1879,33 @@ pauser.unpause();
 To unlock a locked chronicle queue (perhaps an appending process has been abruptly killed), the
 `net.openhft.chronicle.queue.QueueUnlockMain` utility will accomplish this. There is also a script `unlock_queue.sh` to call this.
 
+=== Creating Chronicle Queue on Network File System (NFS) mount
+
+One of the challenges with NFS is the variation in behaviour/functionality from version to version, across Operating Systems, and also differences between how individual deployments have been configured.
+The main concerns with NFS relevant to a Chronicle Queue are:
+
+- support and behaviour of file locks (including fine-grained locking of distinct byte ranges within a file)
+- support and behaviour of memory mapping, and visibility of changes across separate mappings
+
+Crucially, if you are only using the file on one host, then the OS layer for memory mapping comes before the file system, so the fact that the backing file resides on an NFS mount is less of a concern.
+There are however some nuances with NFS around the behaviour of syncs to disk (both in normal operation and importantly if an application crashes) which in turn requires slightly more defensive programming and consequently some degradation in performance is likely.
+
+File locking will generally work provided you are using an up to date version of NFS (4+) and it has been suitably configured. There are additional elements to file locking through NFS which need to be handled (e.g. dealing with network interruptions with an NFS server which can cause locks to go stale/lost), but the basic mechanism works as needed.
+
+So in summary using an NFS mount locally is fine, however care is needed to ensure the environment is correctly configured. The _"local"_ caveat is very important.
+
+NOTE: We would certainly recommend running a series of tests to confirm lock and memory map behaviour. Chronicle Software can work with you to set this up.
+
+In brief, our recommendation is that using local disk rather than NFS is always preferable in cases where appenders and tailers are on the same host.
+One option to consider may be using local disk for the shared appender/tailer data, then replicate this onto an NFS mount if passive copies are needed elsewhere.
+If you only have NFS available then using NFS locally can be fine subject to some caveats as above. Tests would be required to confirm correct behaviour in your specific environment.
+
+NOTE: The above explanation assumes C\++ Queue on Linux. Java Queue has similar functional requirements which should ultimately use similar native calls to C++ via the JVM, but this would need to be confirmed in your environment.
+
+
+
+
+
 === Configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
