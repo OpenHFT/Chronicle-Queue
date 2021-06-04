@@ -15,4 +15,4 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-java -cp "$UBER_JAR" net.openhft.chronicle.queue.DumpQueueMain "$1"
+java -cp "$UBER_JAR" net.openhft.chronicle.queue.main.DumpMain "$1"
