@@ -148,6 +148,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     protected void performClose() {
         closeQuietly(index2Index, nextEntryToBeIndexed);
         closeQuietly(closeables);
+        closeables.clear();
         // Eagerly clean up the contents of thread locals but only for this thread.
         // The contents of the thread local for other threads will be cleaned up in
         // MappedFile.performRelease

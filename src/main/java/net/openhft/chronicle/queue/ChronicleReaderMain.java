@@ -75,25 +75,24 @@ public class ChronicleReaderMain {
             if (commandLine.hasOption('h')) {
                 printHelpAndExit(options, 0);
             }
-
-            if (!commandLine.hasOption('d')) {
-                System.out.println("Please specify the directory with -d\n");
-                printHelpAndExit(options, 1);
-            }
         } catch (ParseException e) {
-            printHelpAndExit(options, 1);
+            printHelpAndExit(options, 1, e.getMessage());
         }
 
         return commandLine;
     }
 
     protected void printHelpAndExit(final Options options, int status) {
+        printHelpAndExit(options, status, null);
+    }
+
+    protected void printHelpAndExit(final Options options, int status, String message) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
                 180,
                 this.getClass().getSimpleName(),
-                null,
+                message,
                 options,
                 HelpFormatter.DEFAULT_LEFT_PAD,
                 HelpFormatter.DEFAULT_DESC_PAD,
@@ -146,7 +145,7 @@ public class ChronicleReaderMain {
     protected Options options() {
         final Options options = new Options();
 
-        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", false);
+        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
         addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);

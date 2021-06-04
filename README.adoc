@@ -626,6 +626,12 @@ $ java -cp chronicle-queue-4.5.5.jar net.openhft.chronicle.queue.DumpQueueMain 1
 
 this will dump the `19700101-02.cq4` file out as text, as shown below:
 
+alternively if you have a project pom file that includes the Chronicle-Queue artifact, you can run:
+
+$mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.DumpQueueMain" -Dexec.args="myqueue"
+
+NOTE: the `myqueue` is the directory containing your .cq4 files
+
 [source,Yaml]
 ----
 !!meta-data #binary

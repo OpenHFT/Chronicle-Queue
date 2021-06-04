@@ -103,6 +103,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
     @Test
     public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
         Assume.assumeTrue(!OS.isWindows());
+        Assume.assumeTrue(!OS.isMacOSX());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
         final String command = String.format("mvn compile exec:java -Dexec.classpathScope=test " +

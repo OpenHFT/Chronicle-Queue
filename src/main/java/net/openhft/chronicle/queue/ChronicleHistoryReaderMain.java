@@ -81,19 +81,23 @@ public class ChronicleHistoryReaderMain {
                 printHelpAndExit(options, 0);
             }
         } catch (ParseException e) {
-            printHelpAndExit(options, 1);
+            printHelpAndExit(options, 1, e.getMessage());
         }
 
         return commandLine;
     }
 
     protected void printHelpAndExit(final Options options, int status) {
+        printHelpAndExit(options, status, null);
+    }
+
+    protected void printHelpAndExit(final Options options, int status, String message) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
                 180,
                 this.getClass().getSimpleName(),
-                null,
+                message,
                 options,
                 HelpFormatter.DEFAULT_LEFT_PAD,
                 HelpFormatter.DEFAULT_DESC_PAD,
