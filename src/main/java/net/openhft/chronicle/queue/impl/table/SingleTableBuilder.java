@@ -92,8 +92,13 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
 
     @NotNull
     public TableStore<T> build() {
-        if (readOnly && !file.exists())
-            throw new IORuntimeException("File not found in readOnly mode");
+        if (readOnly) {
+            if (!file.exists())
+                throw new IORuntimeException("Metadata file not found in readOnly mode");
+
+            if (file.length() < OS.mapAlignment())
+                throw new IORuntimeException("Metadata file found in readOnly mode, but not initialized yet");
+        }
 
         MappedBytes bytes = null;
         try {
