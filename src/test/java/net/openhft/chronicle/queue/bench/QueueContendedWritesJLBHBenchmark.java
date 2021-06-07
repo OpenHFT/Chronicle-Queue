@@ -19,9 +19,9 @@ package net.openhft.chronicle.queue.bench;
 
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.jlbh.JLBH;
-import net.openhft.chronicle.core.jlbh.JLBHOptions;
-import net.openhft.chronicle.core.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.JLBH;
+import net.openhft.chronicle.jlbh.JLBHOptions;
+import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;

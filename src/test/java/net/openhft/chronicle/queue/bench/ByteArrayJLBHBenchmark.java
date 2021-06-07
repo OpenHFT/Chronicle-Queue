@@ -17,9 +17,9 @@
  */
 package net.openhft.chronicle.queue.bench;
 
-import net.openhft.chronicle.core.jlbh.JLBH;
-import net.openhft.chronicle.core.jlbh.JLBHOptions;
-import net.openhft.chronicle.core.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.JLBH;
+import net.openhft.chronicle.jlbh.JLBHOptions;
+import net.openhft.chronicle.jlbh.JLBHTask;
 
 public class ByteArrayJLBHBenchmark implements JLBHTask {
     private static final int MSG_THROUGHPUT = Integer.getInteger("throughput", 100_000_000);
