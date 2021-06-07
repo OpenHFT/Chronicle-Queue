@@ -1132,7 +1132,12 @@ To reduce the creation of the file handles, chronicle queue cashes them lazily a
 
 === Double-buffering for contended writes
 
-Normally, all writes to the queue will be serialized based on the write lock acquisition.
+By default, double-buffering is disabled. You can enable double-buffering by calling
+```
+SingleChronicleQueueBuilder#doubleBuffer(true);
+```
+
+Normally (when double-buffering is disabled), all writes to the queue will be serialized based on the write lock acquisition.
 Each time `ExcerptAppender#writingDocument()`
 is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write lock is unlocked, and in turn locks the queue for itself.
 
