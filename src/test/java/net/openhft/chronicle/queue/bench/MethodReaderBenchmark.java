@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -39,6 +40,8 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MethodReaderBenchmark implements JLBHTask {
+    private static int iterations;
+    private JLBH jlbh;
     private ChronicleQueue queue;
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
@@ -60,14 +63,9 @@ public class MethodReaderBenchmark implements JLBHTask {
     private volatile boolean stopped = false;
 
     public static void main(String[] args) {
-        String benchmarkIterationsString = System.getProperty("benchmarkIterations");
-        int iterations = benchmarkIterationsString == null ? 100_000 : Integer.parseInt(benchmarkIterationsString);
-
+        iterations = Integer.getInteger("benchmarkIterations", 100_000);
         System.out.println("Iterations: " + iterations);
-
-        final String benchmarkThroughputString = System.getProperty("benchmarkThroughput");
-        int throughput = benchmarkThroughputString == null ? 20_000 : Integer.parseInt(benchmarkThroughputString);
-
+        int throughput = Integer.getInteger("benchmarkThroughput", 20_000);
         System.out.println("Throughput: " + throughput);
 
         // disable as otherwise single GC event skews results heavily
@@ -84,6 +82,7 @@ public class MethodReaderBenchmark implements JLBHTask {
 
     @Override
     public void init(JLBH jlbh) {
+        this.jlbh = jlbh;
         String benchmarkQueuePath = System.getProperty("benchmarkQueuePath");
 
         if (benchmarkQueuePath != null) {
@@ -197,6 +196,7 @@ public class MethodReaderBenchmark implements JLBHTask {
     public void complete() {
         stopped = true;
         queue.close();
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
     }
 
     interface AnInterface {

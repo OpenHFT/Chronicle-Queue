@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -33,17 +34,21 @@ import net.openhft.chronicle.wire.DocumentContext;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
+    private static final int ITERATIONS = 1_000_000;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
     private Datum datum = new Datum();
+    private boolean stopped = false;
+    private Thread tailerThread;
+    private JLBH jlbh;
 
     public static void main(String[] args) {
         // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50000)
-                .iterations(1000_000)
+                .iterations(ITERATIONS)
                 .throughput(100_000)
                 .recordOSJitter(false).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
@@ -54,15 +59,16 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
     @Override
     public void init(JLBH jlbh) {
+        this.jlbh = jlbh;
         IOTools.deleteDirWithFiles("replica", 10);
 
         sourceQueue = single("replica").build();
         sinkQueue = single("replica").build();
         appender = sourceQueue.acquireAppender();
         tailer = sinkQueue.createTailer();
-        new Thread(() -> {
+        tailerThread = new Thread(() -> {
             Datum datum2 = new Datum();
-            while (true) {
+            while (!stopped) {
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (dc.wire() == null)
                         continue;
@@ -70,7 +76,8 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
                     jlbh.sample(System.nanoTime() - datum2.ts);
                 }
             }
-        }).start();
+        });
+        tailerThread.start();
     }
 
     @Override
@@ -83,9 +90,15 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
     @Override
     public void complete() {
+        stopped = true;
+        try {
+            tailerThread.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         sinkQueue.close();
         sourceQueue.close();
-        System.exit(0);
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
     }
 
     private static class Datum implements BytesMarshallable {

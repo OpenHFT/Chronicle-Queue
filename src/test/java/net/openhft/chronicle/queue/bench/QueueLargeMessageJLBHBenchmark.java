@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -36,6 +37,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private static final boolean MSG_DIRECT = Jvm.getBoolean("direct");
     static byte[] bytesArr = new byte[MSG_LENGTH];
     static Bytes bytesArr2 = Bytes.allocateDirect(MSG_LENGTH);
+    private static int iterations;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
@@ -45,7 +47,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     public static void main(String[] args) {
         int throughput = MSG_THROUGHPUT / MSG_LENGTH;
         int warmUp = Math.min(50 * throughput, 12_000);
-        int iterations = Math.min(20 * throughput, 100_000);
+        iterations = Math.min(20 * throughput, 100_000);
 
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(warmUp)
@@ -103,6 +105,6 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     public void complete() {
         sinkQueue.close();
         sourceQueue.close();
-        System.exit(0);
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
     }
 }

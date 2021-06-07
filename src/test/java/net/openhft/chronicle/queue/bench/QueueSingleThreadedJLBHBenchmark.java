@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -36,6 +37,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
+    private static final int ITERATIONS = 1_000_000;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
@@ -49,7 +51,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50000)
-                .iterations(1000_000)
+                .iterations(ITERATIONS)
                 .throughput(100_000)
                 .recordOSJitter(false).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
@@ -59,7 +61,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     }
 
     //@SuppressWarnings("unchecked")
-	@Override
+    @Override
     public void init(JLBH jlbh) {
         IOTools.deleteDirWithFiles("replica", 10);
 
@@ -99,7 +101,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     public void complete() {
         sinkQueue.close();
         sourceQueue.close();
-        System.exit(0);
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
     }
 
     //IFacade (at the bottom) is the façade we need tested
