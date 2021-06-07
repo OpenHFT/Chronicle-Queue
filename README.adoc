@@ -585,7 +585,7 @@ public void read5thMessageTest() {
  }
 }
 ```
-=== Dumping a Chronicle Queue, cq4 file as text to the Command Line
+=== Command line tools - reading and writing a Chronicle Queue
 
 Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
 
@@ -694,7 +694,7 @@ usage: ChronicleReaderMain
  -w <wire-type>       Control output i.e. JSON
 ----
 
-Just as with `DumpQueue` you need the classes in the example above present on the class path. This can again be achieved by manuelly adding them and then run:
+Just as with `DumpQueue` you need the classes in the example above present on the class path. This can again be achieved by manually adding them and then run:
 
 ```
 $ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.ChronicleReaderMain -d <directory>
@@ -747,6 +747,46 @@ Lastly, there is a script for running the reader named `queue_reader.sh` which a
 ----
 $ ./bin/queue_reader.sh <options>
 ----
+
+==== ChronicleWriter
+
+If using MethodReaders and MethodWriters (xxxx link) then you can write single-argumnent method calls to a queue
+using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
+
+[source,bash]
+usage: ChronicleWriterMain files.. -d <directory> [-i <interface>] -m <method>
+Missing required options: m, d
+ -d <directory>   Directory containing chronicle queue to write to
+ -i <interface>   Interface to write via
+ -m <method>      Method name
+
+If you want to write to the below method
+
+[source,java]
+public interface MyInterface {
+    void doit(DTO dto);
+}
+public class DTO extends SelfDescribingMarshallable {
+    private int age;
+    private String name;
+}
+
+Then you can call `ChronicleWriterMain -d queue doit x.yaml` with either (or both) of the below Yamls:
+
+[source,yaml]
+{
+  age: 19,
+  name: Henry
+}
+
+or
+[source,yaml]
+!x.y.z.DTO {
+  age: 42,
+  name: Percy
+}
+
+If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
 
 === Reading from a Queue using a Tailer
 
