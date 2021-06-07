@@ -750,7 +750,7 @@ $ ./bin/queue_reader.sh <options>
 
 ==== ChronicleWriter
 
-If using MethodReaders and MethodWriters then you can write single-argumnent method calls to a queue
+If using MethodReaders and MethodWriters then you can write single-argument method calls to a queue
 using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
 
 [source,bash]
