@@ -750,7 +750,7 @@ $ ./bin/queue_reader.sh <options>
 
 ==== ChronicleWriter
 
-If using MethodReaders and MethodWriters (xxxx link) then you can write single-argumnent method calls to a queue
+If using MethodReaders and MethodWriters then you can write single-argumnent method calls to a queue
 using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
 
 [source,bash]
@@ -760,7 +760,7 @@ Missing required options: m, d
  -i <interface>   Interface to write via
  -m <method>      Method name
 
-If you want to write to the below method
+If you want to write to the below "doit" method
 
 [source,java]
 public interface MyInterface {
