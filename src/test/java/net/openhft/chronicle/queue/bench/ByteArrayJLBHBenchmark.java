@@ -20,10 +20,12 @@ package net.openhft.chronicle.queue.bench;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 
 public class ByteArrayJLBHBenchmark implements JLBHTask {
     private static final int MSG_THROUGHPUT = Integer.getInteger("throughput", 100_000_000);
     private static final int MSG_LENGTH = Integer.getInteger("length", 1_000_000);
+    private static int iterations;
     static byte[] bytesArr1 = new byte[MSG_LENGTH];
     static byte[] bytesArr3 = new byte[MSG_LENGTH];
     private JLBH jlbh;
@@ -31,7 +33,7 @@ public class ByteArrayJLBHBenchmark implements JLBHTask {
     public static void main(String[] args) {
         int throughput = MSG_THROUGHPUT / MSG_LENGTH;
         int warmUp = Math.min(20 * throughput, 12_000);
-        int iterations = Math.min(15 * throughput, 100_000);
+        iterations = Math.min(15 * throughput, 100_000);
 
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(warmUp)
@@ -61,6 +63,6 @@ public class ByteArrayJLBHBenchmark implements JLBHTask {
 
     @Override
     public void complete() {
-        System.exit(0);
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
     }
 }

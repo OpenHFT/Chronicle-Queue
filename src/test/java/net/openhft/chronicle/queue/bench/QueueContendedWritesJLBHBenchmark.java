@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
+    public static final int ITERATIONS = 100_000;
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
@@ -44,12 +46,14 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     private AtomicInteger write = new AtomicInteger(0);
     private final Datum datum = new Datum();
     private final Datum datum2 = new Datum();
+    private Thread writerThread1;
+    private Thread writerThread2;
 
     public static void main(String[] args) {
         // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50_000)
-                .iterations(100_000)
+                .iterations(ITERATIONS)
                 .throughput(10_000)
                 .recordOSJitter(false).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
@@ -68,7 +72,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         queue = single("replica").rollCycle(RollCycles.LARGE_DAILY).doubleBuffer(false).build();
         tailer = queue.createTailer();
         tailer.toStart();
-        new Thread(() -> {
+        writerThread1 = new Thread(() -> {
             AffinityLock.acquireCore();
             final ExcerptAppender app = queue.acquireAppender();
 
@@ -85,9 +89,10 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
                 this.concurrent2.sampleNanos(System.nanoTime() - start);
             }
             queue.close();
-        }).start();
+        });
+        writerThread1.start();
 
-        new Thread(() -> {
+        writerThread2 = new Thread(() -> {
             AffinityLock.acquireCore();
             final ExcerptAppender app = queue.acquireAppender();
 
@@ -104,10 +109,12 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
                 concurrent.sampleNanos(System.nanoTime() - start);
             }
             queue.close();
-        }).start();
+        });
+        writerThread2.start();
     }
 
     long written = 0;
+
     @Override
     public void run(long startTimeNS) {
         write.set(2);
@@ -130,7 +137,18 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     @Override
     public void complete() {
         stopped = true;
+        join(writerThread1);
+        join(writerThread2);
         queue.close();
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
+    }
+
+    private void join(Thread t) {
+        try {
+            t.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static class Datum extends SelfDescribingMarshallable {
