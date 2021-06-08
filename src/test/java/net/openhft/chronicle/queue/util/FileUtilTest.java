@@ -16,10 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -35,6 +32,17 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 public class FileUtilTest extends ChronicleQueueTestBase {
+
+    @Test
+    public void assertLsofPresent() throws IOException {
+        assumeFalse(OS.isWindows());
+        final Process process = new ProcessBuilder("which", "lsof").start();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            assertTrue("make sure \"lsof\" is installed on your target machine", reader.lines().anyMatch(l -> l.contains("lsof")));
+        } finally {
+            process.destroyForcibly();
+        }
+    }
 
     @Test
     public void stateNonExisting() {
@@ -71,7 +79,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
     }
 
     @Test(expected = UnsupportedOperationException.class)
-    public void stateWindows(){
+    public void stateWindows() {
         assumeTrue(OS.isWindows());
 
         expectException("closable tracing disabled");
@@ -94,7 +102,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
 
     @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     @Test
-    public void removableQueueFileCandidates(){
+    public void removableQueueFileCandidates() {
         assumeFalse(OS.isWindows());
         final int rolls = 4;
         final int intermediateRolls = rolls / 2;
@@ -156,7 +164,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
     }
 
     @Test(expected = UnsupportedOperationException.class)
-    public void removableQueueFileCandidatesWindows(){
+    public void removableQueueFileCandidatesWindows() {
         assumeTrue(OS.isWindows());
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
