@@ -36,8 +36,8 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
             new NamedThreadFactory("test"));
     private final List<String> lastFileHandles = new ArrayList<>();
-    private TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
-    private AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
+    private final TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
+    private final AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
     private File queuePath;
 
     private static void readMessage(final ChronicleQueue queue,
@@ -151,7 +151,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException {
         assumeTrue(OS.isLinux() || OS.isMacOSX());
 
         File file;
