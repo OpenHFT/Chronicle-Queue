@@ -51,6 +51,9 @@ public class FileUtilTest extends ChronicleQueueTestBase {
             final File testFile = dir.resolve("tmpFile").toFile();
             Files.write(testFile.toPath(), "A".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
+            // Allow things to stabilize
+            Jvm.pause(100);
+
             // The file is created but not open
             assertEquals(FileState.CLOSED, FileUtil.state(testFile));
 
