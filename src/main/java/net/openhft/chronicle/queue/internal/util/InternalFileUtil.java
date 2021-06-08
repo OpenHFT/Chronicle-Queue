@@ -112,7 +112,7 @@ public final class InternalFileUtil {
         if (!file.exists()) return FileState.NON_EXISTENT;
         final String absolutePath = file.getAbsolutePath();
         try {
-            final Process process = new ProcessBuilder("lsof", "|", "grep", absolutePath).start();
+            final Process process = new ProcessBuilder("/bin/bash", "-c", "lsof", "|", "grep", absolutePath).start();
             try  (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 return reader.lines()
                     .anyMatch(l -> l.contains(absolutePath))
