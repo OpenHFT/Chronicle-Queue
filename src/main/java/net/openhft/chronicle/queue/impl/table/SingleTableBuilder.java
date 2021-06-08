@@ -25,6 +25,8 @@ import net.openhft.chronicle.core.util.Builder;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
+import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -36,6 +38,8 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 
@@ -96,8 +100,15 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             if (!file.exists())
                 throw new IORuntimeException("Metadata file not found in readOnly mode");
 
-            if (file.length() < OS.mapAlignment())
+            // Wait a short time for the file to be initialized
+            TimingPauser pauser = Pauser.balanced();
+            try {
+                while (file.length() < OS.mapAlignment()) {
+                    pauser.pause(1, TimeUnit.SECONDS);
+                }
+            } catch (TimeoutException e) {
                 throw new IORuntimeException("Metadata file found in readOnly mode, but not initialized yet");
+            }
         }
 
         MappedBytes bytes = null;
