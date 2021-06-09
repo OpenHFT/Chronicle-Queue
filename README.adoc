@@ -1049,6 +1049,39 @@ The Pretoucher's constructor takes the following parameter:
 
 - `queue`: The queue that this Pretoucher is assigned to.
 
+===== Usage example
+
+This section shows how to create a Pretoucher and configure its parameters.
+The constructor of Pretoucher takes the name of the queue that this Pretoucher is assigned to and creates a new Pretoucher. Then, by invoking the `execute()` methode the Pretoucher starts.
+[source,java]
+----
+// Create the queue q1 (or q1 is a queue that already exists)
+try(final SingleChronicleQueue q1 = SingleChronicleQueueBuilder.binary("queue-storage-path").build();
+
+    // Create Pretoucher pretouch for q1
+    final Pretoucher pretouch = new Pretoucher(q1)){
+    try {
+        // Start the Pretoucher
+        pretouch.execute();
+
+    } catch (InvalidEventHandlerException e) {
+        throw Jvm.rethrow(e);
+    }
+}
+----
+The configuration parameters of the Pretoucher that described above, should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
+[source,java]
+----
+System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
+System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100");
+----
+The methode shutdown(), closes the queue and releases any other resources.
+[source,java]
+----
+// Calls q1.close() and releases the resources
+pretouch.shutdown();
+----
+
 === File Rolling
 
 Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
@@ -1907,10 +1940,6 @@ One option to consider may be using local disk for the shared appender/tailer da
 If you only have NFS available then using NFS locally can be fine subject to some caveats as above. Tests would be required to confirm correct behaviour in your specific environment.
 
 NOTE: The above explanation assumes C\++ Queue on Linux. Java Queue has similar functional requirements which should ultimately use similar native calls to C++ via the JVM, but this would need to be confirmed in your environment.
-
-
-
-
 
 === Configuration
 
