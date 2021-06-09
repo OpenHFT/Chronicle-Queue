@@ -353,7 +353,7 @@ class StoreAppender extends AbstractCloseable
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
 
-            int safeLength = (int) queue.overlapSize();
+            long safeLength = queue.overlapSize();
             resetPosition();
             assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
@@ -423,7 +423,7 @@ class StoreAppender extends AbstractCloseable
         setCycle2(lastCycle, true);
     }
 
-    private long writeHeader(@NotNull final Wire wire, final int safeLength) {
+    private long writeHeader(@NotNull final Wire wire, final long safeLength) {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
         long pos = positionOfHeader;
@@ -444,7 +444,7 @@ class StoreAppender extends AbstractCloseable
         return wire.enterHeader(safeLength);
     }
 
-    private void openContext(final boolean metaData, final int safeLength) {
+    private void openContext(final boolean metaData, final long safeLength) {
         assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
         writeContext.isClosed = false;
