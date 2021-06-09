@@ -21,16 +21,14 @@ package net.openhft.chronicle.queue.internal.writer;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
-import java.util.List;
 
 import static net.openhft.chronicle.queue.ChronicleReaderMain.addOption;
 
 public class ChronicleWriterMain {
 
-    public void run(@NotNull String[] args) throws IOException {
+    public void run(@NotNull String[] args) throws Exception {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
@@ -51,8 +49,8 @@ public class ChronicleWriterMain {
                 printHelpAndExit(options, 0, null);
             }
 
-            if (commandLine.getArgList().size() < 2) {
-                printHelpAndExit(options, 1, "Need methodName and files...");
+            if (commandLine.getArgList().isEmpty()) {
+                printHelpAndExit(options, 1, "Need files...");
             }
         } catch (ParseException e) {
             printHelpAndExit(options, 1, e.getMessage());
@@ -66,7 +64,7 @@ public class ChronicleWriterMain {
         new HelpFormatter().printHelp(
                 writer,
                 180,
-                this.getClass().getSimpleName() + " methodName files..",
+                this.getClass().getSimpleName() + " files..",
                 message,
                 options,
                 HelpFormatter.DEFAULT_LEFT_PAD,
@@ -80,24 +78,23 @@ public class ChronicleWriterMain {
 
     private void configure(final ChronicleWriter writer, final CommandLine commandLine) {
         writer.withBasePath(Paths.get(commandLine.getOptionValue('d')));
+        writer.withMethodName(commandLine.getOptionValue('m'));
 
-        if (commandLine.hasOption('r')) {
-            final String r = commandLine.getOptionValue('r');
+        if (commandLine.hasOption('i')) {
+            final String r = commandLine.getOptionValue('i');
             writer.asMethodWriter(r.equals("null") ? null : r);
         }
 
-        final List<String> args = commandLine.getArgList();
-        writer.withMethodName(args.get(0));
-
-        writer.withFiles(args.subList(1, args.size()));
+        writer.withFiles(commandLine.getArgList());
     }
 
     @NotNull
     private Options options() {
         final Options options = new Options();
 
-        addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
-        addOption(options, "i", "interface", true, "Interface to load up", false);
+        addOption(options, "m", "method", true, "Method name", true);
+        addOption(options, "d", "directory", true, "Directory containing chronicle queue to write to", true);
+        addOption(options, "i", "interface", true, "Interface to write via", false);
         return options;
     }
 }

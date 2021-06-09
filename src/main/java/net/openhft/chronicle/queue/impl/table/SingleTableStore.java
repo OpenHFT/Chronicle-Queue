@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl.table;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -264,7 +263,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 mappedBytes.readPosition(readPosition + length);
             }
             // not found
-            final int safeLength = Maths.toUInt31(mappedBytes.realCapacity() - mappedBytes.readPosition());
+            final long safeLength = mappedBytes.realCapacity() - mappedBytes.readPosition();
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             long start = mappedBytes.readPosition();
             mappedBytes.writePosition(start);

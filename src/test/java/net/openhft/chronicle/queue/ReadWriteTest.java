@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
@@ -28,6 +29,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 
@@ -88,6 +91,70 @@ public class ReadWriteTest extends QueueTestCommon {
             }
         }
     }
+
+    @Test
+    public void testNotInitializedMetadataFile() throws IOException {
+        assumeFalse(OS.isWindows());
+
+        final String expectedException = "Failback to readonly tablestore";
+        expectException(expectedException);
+        System.out.println("This test will produce a " + expectedException);
+
+        File meta = new File(chroniclePath, "metadata.cq4t");
+        assertTrue(meta.exists());
+
+        try (RandomAccessFile raf = new RandomAccessFile(meta, "rw")) {
+            raf.setLength(0);
+        }
+
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(chroniclePath)
+                .testBlockSize()
+                .readOnly(true)
+                .build()) {
+
+            ExcerptTailer tailer = out.createTailer();
+            tailer.toEnd();
+            long index = tailer.index();
+            assertNotEquals(0, index);
+        }
+    }
+
+    @Test
+    public void testProceedWhenMetadataFileInitialized() throws IOException {
+        assumeFalse(OS.isWindows());
+
+        File meta = new File(chroniclePath, "metadata.cq4t");
+        assertTrue(meta.exists());
+
+        try (RandomAccessFile raf = new RandomAccessFile(meta, "rw")) {
+            raf.setLength(0);
+        }
+
+        new Thread(() -> {
+            Jvm.pause(200);
+            try (ChronicleQueue out = SingleChronicleQueueBuilder
+                    .binary(chroniclePath)
+                    .testBlockSize()
+                    .build()) {
+                // Do nothing, just create
+            }
+        }).start();
+
+        // This should succeed after 200ms
+        try (ChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(chroniclePath)
+                .testBlockSize()
+                .readOnly(true)
+                .build()) {
+
+            ExcerptTailer tailer = out.createTailer();
+            tailer.toEnd();
+            long index = tailer.index();
+            assertNotEquals(0, index);
+        }
+    }
+
 
     // Can't append to a read-only chronicle
     @Test(expected = IllegalStateException.class)

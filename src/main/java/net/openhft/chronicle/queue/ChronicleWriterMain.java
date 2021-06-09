@@ -20,11 +20,9 @@ package net.openhft.chronicle.queue;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-
 public class ChronicleWriterMain {
 
-    public static void main(@NotNull String[] args) throws IOException {
+    public static void main(@NotNull String[] args) throws Exception {
         new net.openhft.chronicle.queue.internal.writer.ChronicleWriterMain().run(args);
     }
 }

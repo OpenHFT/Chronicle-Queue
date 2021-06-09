@@ -211,7 +211,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         Bytes<?> bytes = wire.bytes();
         bytes.writePosition(writePosition);
 
-        long position = wire.enterHeader(indexCount * 8 + 128);
+        long position = wire.enterHeader(indexCount * 8L + 128);
 
         WriteMarshallable writer = index2index ? index2IndexTemplate : indexTemplate;
         writer.writeMarshallable(wire);
