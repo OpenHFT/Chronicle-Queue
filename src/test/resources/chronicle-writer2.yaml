@@ -1,0 +1,4 @@
+!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {
+  age: 42,
+  name: Percy
+}

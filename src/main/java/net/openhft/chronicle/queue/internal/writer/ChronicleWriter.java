@@ -5,12 +5,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.WriteMarshallable;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 
 public class ChronicleWriter {
@@ -19,27 +17,17 @@ public class ChronicleWriter {
     private List<String> files;
     private Class<?> writeTo;
 
-    public void execute() throws IOException, InvocationTargetException, IllegalAccessException {
+    public void execute() throws IOException {
         try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(this.basePath).build()) {
             final ExcerptAppender appender = queue.acquireAppender();
-
-            final Object mw;
-            final Method method;
-            if (writeTo != null) {
-                mw = appender.methodWriter(writeTo);
-                method = Arrays.stream(writeTo.getMethods()).filter(m -> m.getName().equals(methodName)).findFirst().orElseThrow(() -> new IllegalArgumentException("Cannot find method"));
-            } else {
-                mw = null;
-                method = null;
-            }
 
             for (final String file : files) {
                 final Object payload = Marshallable.fromFile(Object.class, file);
                 try (final DocumentContext dc = appender.writingDocument()) {
-                    if (mw == null)
-                        dc.wire().write(methodName).object(payload);
+                    if (writeTo != null)
+                        dc.wire().write(methodName).marshallable((WriteMarshallable) payload);
                     else
-                        method.invoke(mw, payload);
+                        dc.wire().write(methodName).object(payload);
                 }
             }
         }
