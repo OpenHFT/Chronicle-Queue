@@ -1111,7 +1111,12 @@ The Pretoucher's constructor takes the following parameter:
 
 ===== Usage example
 
-This section shows how to create a Pretoucher and configure its parameters.
+The configuration parameters of the Pretoucher that described above, should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
+[source,java]
+----
+System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
+System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100");
+----
 The constructor of Pretoucher takes the name of the queue that this Pretoucher is assigned to and creates a new Pretoucher. Then, by invoking the `execute()` methode the Pretoucher starts.
 [source,java]
 ----
@@ -1129,12 +1134,7 @@ try(final SingleChronicleQueue q1 = SingleChronicleQueueBuilder.binary("queue-st
     }
 }
 ----
-The configuration parameters of the Pretoucher that described above, should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
-[source,java]
-----
-System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
-System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100");
-----
+
 The methode shutdown(), closes the queue and releases any other resources.
 [source,java]
 ----
