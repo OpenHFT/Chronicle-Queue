@@ -7,7 +7,7 @@ image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-que
 image:https://javadoc-badge.appspot.com/net.openhft/chronicle-queue.svg?label=javadoc[JavaDoc, link=https://www.javadoc.io/doc/net.openhft/chronicle-queue]
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
-//image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
+
 
 image::docs/images/Queue_line.png[]
 
@@ -339,9 +339,9 @@ NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations c
 
 === Writing to a Queue
 
-In Chronicle Queue we refer to the act of writing your data to the Chronicle queue, as storing an excerpt.This data could be made up from any data type, including text, numbers, or serialised blobs.Ultimately, all your data, regardless of what it is, is stored as a series of bytes.
+In Chronicle Queue we refer to the act of writing your data to the Chronicle queue, as storing an excerpt. This data could be made up from any data type, including text, numbers, or serialised blobs. Ultimately, all your data, regardless of what it is, is stored as a series of bytes.
 
-Just before storing your excerpt, Chronicle Queue reserves a 4-byte header.Chronicle Queue writes the length of your data into this header.This way, when Chronicle Queue comes to read your excerpt, it knows how long each blob of data is.We refer to this 4-byte header, along with your excerpt, as a document.So strictly speaking Chronicle Queue can be used to read and write documents.
+Just before storing your excerpt, Chronicle Queue reserves a 4-byte header. Chronicle Queue writes the length of your data into this header. This way, when Chronicle Queue comes to read your excerpt, it knows how long each blob of data is. We refer to this 4-byte header, along with your excerpt, as a document. So strictly speaking Chronicle Queue can be used to read and write documents.
 
 NOTE:  Within this 4-byte header we also reserve a few bits for a number of internal operations, such as locking, to make Chronicle Queue thread-safe across both processors and threads.
 The important thing to note is that because of this, you can’t strictly convert the 4 bytes to an integer to find the length of your data blob.
@@ -392,7 +392,7 @@ void writeText(CharSequence text) {
 
 So you have a choice of a number of high-level interfaces, down to a low-level API, to raw memory.
 
-This is the highest-level API which hides the fact you are writing to messaging at all.The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
+This is the highest-level API which hides the fact you are writing to messaging at all. The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
 
 [source,Java]
 ----
@@ -402,7 +402,7 @@ final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
 riskMonitor.trade(new TradeDetails(now, "GBPUSD", 1.3095, 10e6, Side.Buy, "peter"));
 ----
 
-You can write a "self-describing message".Such messages can support schema changes.They are also easier to understand when debugging or diagnosing problems.
+You can write a "self-describing message". Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
 
 [source,Java]
 ----
@@ -416,7 +416,7 @@ appender.writeDocument(w -> w.write("trade").marshallable(
                 .write("trader").text("peter")));
 ----
 
-You can write "raw data" which is self-describing.The types will always be correct; position is the only indication as to the meaning of those values.
+You can write "raw data" which is self-describing. The types will always be correct; position is the only indication as to the meaning of those values.
 
 [source,Java]
 ----
@@ -427,7 +427,7 @@ appender.writeDocument(w -> w
         .getValueOut().text("Hello World"));
 ----
 
-You can write "raw data" which is not self-describing.Your reader must know what this data means, and the types that were used.
+You can write "raw data" which is not self-describing. Your reader must know what this data means, and the types that were used.
 
 [source,Java]
 ----
@@ -439,7 +439,7 @@ appender.writeBytes(b -> b
         .writeUtf8("Hello World"));
 ----
 
-Below, the lowest level way to write data is illustrated.You get an address to raw memory and you can write whatever you want.
+Below, the lowest level way to write data is illustrated. You get an address to raw memory and you can write whatever you want.
 
 [source,Java]
 ----
@@ -459,7 +459,7 @@ appender.writeBytes(b -> {
 });
 ----
 
-You can print the contents of the queue.You can see the first two, and last two messages store the same data.
+You can print the contents of the queue. You can see the first two, and last two messages store the same data.
 
 [source,Java]
 ----
@@ -829,7 +829,7 @@ assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
         })));
 ----
 
-You can read self-describing data values.This will check the types are correct, and convert as required.
+You can read self-describing data values. This will check the types are correct, and convert as required.
 
 [source,Java]
 ----
@@ -1109,9 +1109,9 @@ The Pretoucher's constructor takes the following parameter:
 
 - `queue`: The queue that this Pretoucher is assigned to.
 
-===== Usage example
+==== Usage example
 
-The configuration parameters of the Pretoucher that described above, should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
+The configuration parameters of Pretoucher that described above, should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
 [source,java]
 ----
 System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
@@ -1145,7 +1145,7 @@ pretouch.shutdown();
 === File Rolling
 
 Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
-When the roll cycle reaches the point it should roll, appender will atomically writes `EOF` mark at the end of current file to indicate that no other appender should write to this file and no tailer should read further, and instead everyone should use new file.
+When the roll cycle reaches the point it should roll, appender will atomically write `EOF` mark at the end of current file to indicate that no other appender should write to this file and no tailer should read further, and instead everyone should use new file.
 
 If the process was shutdown, and restarted later when the roll cycle should be using a new file, an appender will try to locate old files and write an `EOF` mark in them to help tailers reading them.
 However, tailers are robust enough to understand that the `EOF` mark should be present in the file from previous roll cycle even if it's not written, after a certain timeout.
@@ -2096,12 +2096,27 @@ In particular, the following wire types are not supported:
 - RAW
 - READ_ANY
 
-==== Other Configuration
+==== Other Configurations
+For complete list of configuration parameters, refer to Links: https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise-Demo/blob/master/docs/ConfigurationParameters.adoc
 
 [qanda]
-Block Size::
-When the queue is read/written, it maps part of the file currently being read/written to a memory segment (block).
-This parameter controls the size of a memory mapping chunk.
+
+*blockSize*
+
+When a queue is read/written, part of the file currently being read/written is mapped to a memory segment.
+This parameter controls the size of the memory mapping block. You can change this parameter using the methode `SingleChronicleQueueBuilder.blockSize(long blockSize)`.
+
+NOTE: You should avoid changing `blockSize` unnecessarily.
+
+If you are sending large messages then you should set a large `blockSize` i.e. the `blockSize` should be at least four times the message size.
+
+WARNING:  If you use small `blockSize` for large messages you receive an `IllegalStateException` and the write is aborted.
+
+
+We recommend that you use the same `blockSize` for each queue instance when replicating queues, the `blockSize` is not written to the queue's metadata, so should ideally be set to the same value when creating your instances of chronicle queue (this is recommended but if you wish to run with a different `blocksize` you can).
+
+TIP: Use the same `blockSize` for each instance of replicated queues.
+
 Index Spacing::
 The space between excerpts that are explicitly indexed.
 A higher number means higher sequential write performance but slower random access read.
@@ -2114,6 +2129,7 @@ the size of each index array, as well as the total number of index arrays per qu
 +
 [NOTE]
 indexCount^2^ is the maximum number of indexed queue entries.
+
 Buffer Mode::
 - `None` - The default (and the only one available for open source users), no buffering; - `Copy` - used in conjunction with encryption; - `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer Capacity::
 Ring buffer capacity when using `bufferMode: Asynchronous`
