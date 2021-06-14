@@ -1117,7 +1117,7 @@ The configuration parameters of Pretoucher that described above, should be set v
 System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
 System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100");
 ----
-The constructor of Pretoucher takes the name of the queue that this Pretoucher is assigned to and creates a new Pretoucher. Then, by invoking the `execute()` methode the Pretoucher starts.
+The constructor of Pretoucher takes the name of the queue that this Pretoucher is assigned to and creates a new Pretoucher. Then, by invoking the `execute()` method the Pretoucher starts.
 [source,java]
 ----
 // Create the queue q1 (or q1 is a queue that already exists)
@@ -1135,7 +1135,7 @@ try(final SingleChronicleQueue q1 = SingleChronicleQueueBuilder.binary("queue-st
 }
 ----
 
-The methode shutdown(), closes the queue and releases any other resources.
+The method shutdown(), closes the queue and releases any other resources.
 [source,java]
 ----
 // Calls q1.close() and releases the resources
