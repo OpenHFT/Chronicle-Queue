@@ -95,7 +95,7 @@ class StoreTailer extends AbstractCloseable
     public @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
         final Wire privateWire = privateWire();
         if (privateWire != null) {
-            ((MappedBytes)privateWire.bytes()).disableThreadSafetyCheck(disableThreadSafetyCheck);
+            ((MappedBytes) privateWire.bytes()).disableThreadSafetyCheck(disableThreadSafetyCheck);
         }
         this.disableThreadSafetyCheck = disableThreadSafetyCheck;
         return this;
@@ -393,7 +393,9 @@ class StoreTailer extends AbstractCloseable
     }
 
     @Override
-    public long lastReadIndex() { return this.lastReadIndex; }
+    public long lastReadIndex() {
+        return this.lastReadIndex;
+    }
 
     private boolean beyondStartOfCycleBackward() throws StreamCorruptedException {
         // give the position of the last entry and
@@ -446,8 +448,10 @@ class StoreTailer extends AbstractCloseable
 //        Jvm.optionalSafepoint();
 
         final Wire wire = privateWire();
-        if (wire == null)
+        if (wire == null) {
             throwExceptionIfClosed();
+            return false;
+        }
 
         final Bytes<?> bytes = wire.bytes();
         return inACycle2(includeMetaData, wire, bytes);
@@ -830,7 +834,7 @@ class StoreTailer extends AbstractCloseable
         final MappedBytes bytes = store.bytes();
         bytes.disableThreadSafetyCheck(disableThreadSafetyCheck);
         final Wire wire2 = wireType.apply(bytes);
-        wire2.usePadding(store.dataVersion()>0);
+        wire2.usePadding(store.dataVersion() > 0);
         final AbstractWire wire = (AbstractWire) readAnywhere(wire2);
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
@@ -849,7 +853,7 @@ class StoreTailer extends AbstractCloseable
     private Wire readAnywhere(@NotNull final Wire wire) {
         final Bytes<?> bytes = wire.bytes();
         bytes.readLimitToCapacity();
-            wire.usePadding(store.dataVersion() > 0);
+        wire.usePadding(store.dataVersion() > 0);
         return wire;
     }
 
