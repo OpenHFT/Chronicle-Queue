@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.service.HelloWorld;
@@ -18,6 +19,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -195,27 +197,138 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
 
     @Test
     public void disableThreadSafety() throws InterruptedException {
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
-            BlockingQueue<ExcerptTailer> tq = new LinkedBlockingQueue<>();
-            Thread t = new Thread(() -> {
-                ExcerptTailer tailer = queue.createTailer();
-                tailer.readText();
-                tq.offer(tailer);
-                Jvm.pause(1000);
-            });
-            t.start();
-            ExcerptTailer tailer = tq.take();
-            try {
-                tailer.readText();
-                fail();
-            } catch (IllegalStateException expected) {
-//                expected.printStackTrace();
-            }
-            tailer.disableThreadSafetyCheck(true).readText();
+        new ThreadSafetyTestingTemplate() {
 
-            tailer.close();
-            t.interrupt();
-            t.join(1000);
+            @Override
+            void doOnFirstThread(SingleChronicleQueue singleChronicleQueue, ExcerptTailer tailer) {
+                tailer.readText();
+            }
+
+            @Override
+            void doOnSecondThread(ExcerptTailer tailer) {
+                try {
+                    tailer.readText();
+                    fail();
+                } catch (IllegalStateException expected) {
+//                    expected.printStackTrace();
+                }
+                tailer.disableThreadSafetyCheck(true).readText();
+            }
+        }.run();
+    }
+
+    @Test
+    public void disableThreadSafetyWithMethodReader() throws InterruptedException {
+        new ThreadSafetyTestingTemplate() {
+
+            @Override
+            void doOnFirstThread(SingleChronicleQueue queue, ExcerptTailer tailer) {
+                writeMethodCall(queue, "Testing1");
+                writeMethodCall(queue, "Testing2");
+                assertEquals("Testing1", readMethodCall(tailer));
+            }
+
+            @Override
+            void doOnSecondThread(ExcerptTailer tailer) {
+                try {
+                    readMethodCall(tailer);
+                    fail();
+                } catch (IllegalStateException expected) {
+//                    expected.printStackTrace();
+                }
+                tailer.disableThreadSafetyCheck(true);
+                assertEquals("Testing2", readMethodCall(tailer));
+            }
+        }.run();
+    }
+
+    @Test
+    public void clearUsedByThread() throws InterruptedException {
+        new ThreadSafetyTestingTemplate() {
+
+            @Override
+            void doOnFirstThread(SingleChronicleQueue singleChronicleQueue, ExcerptTailer tailer) {
+                tailer.readText();
+            }
+
+            @Override
+            void doOnSecondThread(ExcerptTailer tailer) {
+                try {
+                    tailer.readText();
+                    fail();
+                } catch (IllegalStateException expected) {
+//                    expected.printStackTrace();
+                }
+                ((AbstractCloseable) tailer).clearUsedByThread();
+                tailer.readText();
+            }
+        }.run();
+    }
+
+    @Test
+    public void clearUsedByThreadWithMethodReader() throws InterruptedException {
+        new ThreadSafetyTestingTemplate() {
+
+            @Override
+            void doOnFirstThread(SingleChronicleQueue queue, ExcerptTailer tailer) {
+                writeMethodCall(queue, "Testing1");
+                writeMethodCall(queue, "Testing2");
+                writeMethodCall(queue, "Testing3");
+                assertEquals("Testing1", readMethodCall(tailer));
+            }
+
+            @Override
+            void doOnSecondThread(ExcerptTailer tailer) {
+                try {
+                    readMethodCall(tailer);
+                    fail();
+                } catch (IllegalStateException expected) {
+//                    expected.printStackTrace();
+                }
+                ((AbstractCloseable) tailer).clearUsedByThread();
+                assertEquals("Testing2", readMethodCall(tailer));
+            }
+        }.run();
+    }
+
+    private void writeMethodCall(SingleChronicleQueue queue, String message) {
+        try (final ExcerptAppender appender = queue.acquireAppender()) {
+            final Foobar foobar = appender.methodWriter(Foobar.class);
+            foobar.say(message);
+        }
+    }
+
+    private String readMethodCall(ExcerptTailer tailer) {
+        AtomicReference<String> messageHolder = new AtomicReference<>();
+        final MethodReader methodReader = tailer.methodReader((Foobar) messageHolder::set);
+        methodReader.readOne();
+        return messageHolder.get();
+    }
+
+    interface Foobar {
+        void say(String message);
+    }
+
+    abstract class ThreadSafetyTestingTemplate {
+
+        abstract void doOnFirstThread(SingleChronicleQueue queue, ExcerptTailer tailer);
+
+        abstract void doOnSecondThread(ExcerptTailer tailer);
+
+        public void run() throws InterruptedException {
+            try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
+                BlockingQueue<ExcerptTailer> tq = new LinkedBlockingQueue<>();
+                Thread t = new Thread(() -> {
+                    ExcerptTailer tailer = queue.createTailer();
+                    doOnFirstThread(queue, tailer);
+                    tq.offer(tailer);
+                    Jvm.pause(1000);
+                });
+                t.start();
+                doOnSecondThread(tq.take());
+                t.interrupt();
+                t.join(1000);
+            }
         }
     }
 }
