@@ -108,6 +108,15 @@ class StoreTailer extends AbstractCloseable
     }
 
     @Override
+    public void clearUsedByThread() {
+        super.clearUsedByThread();
+        final Wire privateWire = privateWire();
+        if (privateWire != null) {
+            ((MappedBytes) privateWire.bytes()).clearUsedByThread();
+        }
+    }
+
+    @Override
     public boolean readDocument(@NotNull final ReadMarshallable reader) {
         throwExceptionIfClosed();
 
