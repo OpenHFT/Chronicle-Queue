@@ -338,24 +338,6 @@
 
     <profiles>
         <profile>
-            <id>pre-java9</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.sun</groupId>
-                    <artifactId>tools</artifactId>
-                    <version>${java.version}</version>
-                    <scope>system</scope>
-                    <systemPath>${java.home}/../lib/tools.jar</systemPath>
-                </dependency>
-            </dependencies>
-            <activation>
-                <file>
-                    <exists>${java.home}/../lib/tools.jar</exists>
-                </file>
-            </activation>
-        </profile>
-
-        <profile>
             <id>bundled-nexus-staging</id>
             <repositories>
                 <repository>
