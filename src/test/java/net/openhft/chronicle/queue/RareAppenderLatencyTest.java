@@ -50,7 +50,6 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
     private final static int HEAVY_MSGS = 1_000_000;
     private final static int RARE_MSGS = 50;
 
-    boolean isAssertionsOn;
     private ExecutorService appenderES;
 
     @Before
@@ -72,9 +71,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             // this is a performance test so should not be run in debug mode
             return;
 
-        assert (isAssertionsOn = true);
-
-        if (isAssertionsOn)
+        if (Jvm.isAssertEnabled())
             // this is a performance test so should not be run with assertions turned on
             return;
 

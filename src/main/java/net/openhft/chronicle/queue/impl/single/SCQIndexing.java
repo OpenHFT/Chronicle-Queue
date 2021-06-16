@@ -338,10 +338,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     private void checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
             start) {
-        boolean assertOn = false;
-        assert assertOn = true;
-        //noinspection ConstantConditions
-        if (!assertOn)
+        if (!Jvm.isAssertEnabled())
             return;
 
         long end = System.nanoTime();
