@@ -1,7 +1,8 @@
 = Chronicle Queue
 Peter Lawrey
 
-image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
+//removed the link as web page is not available
+//image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
 == How Chronicle Works
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.

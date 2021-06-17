@@ -12,7 +12,8 @@ Every reader sees every message, and a reader can join at any time and still see
 We assume that you can read/scan through messages fast enough that, even if you are not interested in most messages, it will still be fast enough.
 These are not consumers as such, and messages do not disappear after reading them.
 
-image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
+//removed the link as the web page is not available
+//image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
 
 Retaining every message has a number of advantages:
 
