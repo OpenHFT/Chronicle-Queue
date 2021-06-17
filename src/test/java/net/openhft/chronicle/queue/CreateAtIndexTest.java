@@ -57,10 +57,9 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
             assertEquals(before, after);
         }
 
-        boolean runIfAssertsOn = false;
-        // TODO: implement this
-        //assert runIfAssertsOn = true;
-        if (runIfAssertsOn) {
+/*
+        TODO FIX
+        if (Jvm.isAssertEnabled()) {
             try (ChronicleQueue queue = single(tmp)
                     .testBlockSize()
                     .build()) {
@@ -77,6 +76,7 @@ public class CreateAtIndexTest extends ChronicleQueueTestBase {
                 assertEquals(before, after);
             }
         }
+        */
 
         // try too far
         try (ChronicleQueue queue = single(tmp)

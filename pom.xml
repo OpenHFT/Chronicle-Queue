@@ -27,7 +27,7 @@
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.21ea65-SNAPSHOT</version>
+    <version>5.21ea66-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -337,24 +337,6 @@
     </build>
 
     <profiles>
-        <profile>
-            <id>pre-java9</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.sun</groupId>
-                    <artifactId>tools</artifactId>
-                    <version>${java.version}</version>
-                    <scope>system</scope>
-                    <systemPath>${java.home}/../lib/tools.jar</systemPath>
-                </dependency>
-            </dependencies>
-            <activation>
-                <file>
-                    <exists>${java.home}/../lib/tools.jar</exists>
-                </file>
-            </activation>
-        </profile>
-
         <profile>
             <id>bundled-nexus-staging</id>
             <repositories>

@@ -65,9 +65,6 @@ When `offer` has returned, the data is available for all readers to consume. The
 ```
   boolean succeeded = ringBuffer.read(bytesToRead);
 ```
-==== Example from a test case
-
-TODO: add this in
 
 === Chronicle Ring Buffer and Chronicle Queue
 

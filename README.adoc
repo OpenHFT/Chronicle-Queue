@@ -2131,7 +2131,11 @@ the size of each index array, as well as the total number of index arrays per qu
 indexCount^2^ is the maximum number of indexed queue entries.
 
 Buffer Mode::
-- `None` - The default (and the only one available for open source users), no buffering; - `Copy` - used in conjunction with encryption; - `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer Capacity::
+- `None` - The default (and the only one available for open source users), no buffering;
+- `Copy` - used in conjunction with encryption;
+- `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
+
+Capacity::
 Ring buffer capacity when using `bufferMode: Asynchronous`
 
 === Running under Docker

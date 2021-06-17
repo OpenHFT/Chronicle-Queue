@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -252,6 +253,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/873")
     @Test
     public void appendToPreviousCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
