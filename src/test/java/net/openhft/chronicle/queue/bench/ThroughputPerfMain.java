@@ -4,7 +4,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.UnsafeMemory;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -13,6 +12,8 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
+
+import static net.openhft.chronicle.core.UnsafeMemory.MEMORY;
 
 /*
 ARMv7 Processor rev 10 (v7l), Quad 1 GHz.
@@ -102,8 +103,8 @@ public class ThroughputPerfMain {
 //        writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
         long fromAddress = nbs.addressForRead(0);
         while (writeCount > count && length + 4 + size <= canWrite) {
-            UnsafeMemory.UNSAFE.copyMemory(fromAddress, address + 4, size);
-            UnsafeMemory.UNSAFE.putOrderedInt(null, address, size);
+            MEMORY.copyMemory(fromAddress, address + 4, size);
+            MEMORY.writeOrderedInt(address, size);
             address += 4 + size;
             length += 4 + size;
             count++;

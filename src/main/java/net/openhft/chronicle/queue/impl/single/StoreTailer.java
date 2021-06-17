@@ -24,7 +24,7 @@ import java.io.StreamCorruptedException;
 import java.text.ParseException;
 
 import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
-import static net.openhft.chronicle.core.UnsafeMemory.UNSAFE;
+import static net.openhft.chronicle.core.UnsafeMemory.MEMORY;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
@@ -280,7 +280,7 @@ class StoreTailer extends AbstractCloseable
         if (address == NO_PAGE || state != FOUND_IN_CYCLE || direction != FORWARD)
             return peekDocument0();
 
-        final int header = UNSAFE.getIntVolatile(null, address);
+        final int header = MEMORY.readVolatileInt(address);
 
         if (header == END_OF_DATA)
             return peekDocument0();
