@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -12,7 +11,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -178,7 +176,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             assertEquals(test, result);
             assertEquals(1, tailer.index());
         }
-        IOTools.deleteDirWithFiles(tmpDir);
     }
 
     @NotNull
@@ -237,7 +234,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
                 .rollCycle(MINUTELY)
                 .timeProvider(() -> 0).build();
 
-             ExcerptAppender appender = q.acquireAppender()) {
+            ExcerptAppender appender = q.acquireAppender()) {
             appender.writeText("hello");
             appender.writeText("hello2");
             try (final DocumentContext dc = appender.writingDocument()) {
@@ -248,12 +245,12 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             final RollCycle rollCycle = q.rollCycle();
             final int currentCycle = rollCycle.toCycle(l);
             // try to write to next roll cycle and write at seqnum 1 (but miss the 0th seqnum of that roll cycle)
+            expectException("wrote an EOF at 0x812c");
             final long index = rollCycle.toIndex(currentCycle + 1, 1);
             ((InternalAppender) appender).writeBytes(index, Bytes.from("text"));
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/873")
     @Test
     public void appendToPreviousCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
@@ -268,6 +265,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             int firstCycle = q.rollCycle().toCycle(nextIndexInFirstCycle);
 
             timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65));
+            expectException("wrote an EOF at 0x8118");
             appender.writeBytes(test2);
 
             Assert.assertTrue(hasEOF(q, firstCycle));
@@ -277,6 +275,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             Assert.assertFalse(hasEOF(q, firstCycle));
 
             // we have to manually fix. This is done by CQE at the end of backfilling
+            expectException("wrote an EOF at 0x8134");
             appender.normaliseEOFs();
 
             ExcerptTailer tailer = q.createTailer();
