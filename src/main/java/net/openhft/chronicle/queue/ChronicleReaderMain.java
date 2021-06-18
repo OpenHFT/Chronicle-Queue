@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.reader.ChronicleReader;
+import net.openhft.chronicle.wire.AbstractTimestampLongConverter;
 import net.openhft.chronicle.wire.WireType;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
@@ -137,7 +138,8 @@ public class ChronicleReaderMain {
             chronicleReader.suppressDisplayIndex();
         }
         if (commandLine.hasOption('z')) {
-            System.setProperty("mtlc.zoneId", ZoneId.systemDefault().toString());
+            System.setProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY,
+                    ZoneId.systemDefault().toString());
         }
     }
 
