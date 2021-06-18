@@ -734,6 +734,7 @@ class StoreAppender extends AbstractCloseable
 
     void position0(final long position, final long startOfMessage, Bytes<?> bytes) {
         this.positionOfHeader = position;
+        bytes.writeLimit(bytes.capacity());
         bytes.writePosition(startOfMessage);
     }
 
