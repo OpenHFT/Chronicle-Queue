@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.threads.NamedThreadFactory;
+import net.openhft.chronicle.wire.AbstractTimestampLongConverter;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MicroTimestampLongConverter;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
@@ -88,7 +89,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
-            methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
@@ -392,14 +392,14 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
             }
 
             // UTC by default
-            System.clearProperty("mtlc.zoneId");
+            System.clearProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY);
             assertTimesAreInZone(queueDir, ZoneId.of("UTC"), timestamps);
 
             // Local timezone
-            System.setProperty("mtlc.zoneId", ZoneId.systemDefault().toString());
+            System.setProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY, ZoneId.systemDefault().toString());
             assertTimesAreInZone(queueDir, ZoneId.systemDefault(), timestamps);
         } finally {
-            System.clearProperty("mtlc.zoneId");
+            System.clearProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY);
         }
     }
 
