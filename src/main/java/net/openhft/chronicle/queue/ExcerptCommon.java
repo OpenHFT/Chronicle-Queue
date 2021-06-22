@@ -49,7 +49,7 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
     ChronicleQueue queue();
 
     /**
-     * When set to true this Appender or Tailer can be shared between thread provided you ensure they used in a thread safe manner.
+     * When set to <code>true</code> this Appender or Tailer can be shared between thread provided you ensure they used in a thread safe manner.
      *
      * @param disableThreadSafetyCheck true to turn off the thread safety check
      * @return this.
