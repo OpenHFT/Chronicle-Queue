@@ -186,7 +186,6 @@ public class InternalServiceWrapperBuilder<O> implements ServiceWrapper.Builder<
         ChronicleQueue queue = inputQueue();
         return queue.acquireAppender()
                 .methodWriterBuilder(tClass)
-                .recordHistory(true)
                 .onClose(queue)
                 .get();
     }

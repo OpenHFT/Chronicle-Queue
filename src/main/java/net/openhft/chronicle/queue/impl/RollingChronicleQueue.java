@@ -112,6 +112,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      */
     int deltaCheckpointInterval();
 
+    @Deprecated(/* to be removed in x.22 */)
     QueueLock queueLock();
 
 }
