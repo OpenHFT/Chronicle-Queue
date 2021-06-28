@@ -548,7 +548,6 @@ class StoreAppender extends AbstractCloseable
         writeBytesInternal(index, bytes, false);
     }
 
-
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         checkAppendLock(true);
 

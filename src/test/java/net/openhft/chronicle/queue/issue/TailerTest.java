@@ -84,5 +84,4 @@ public class TailerTest {
         return ChronicleQueue.singleBuilder(QUEUE_PATH).build();
     }
 
-
 }

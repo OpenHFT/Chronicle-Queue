@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase {
 
-
     private static final int MESSAGES_TO_WRITE = 200;
 
     @Test

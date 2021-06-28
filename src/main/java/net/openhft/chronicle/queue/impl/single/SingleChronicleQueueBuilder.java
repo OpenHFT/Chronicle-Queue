@@ -78,7 +78,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
 
-
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
 

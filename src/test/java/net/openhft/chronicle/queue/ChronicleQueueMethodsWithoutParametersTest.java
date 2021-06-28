@@ -12,7 +12,6 @@ import static org.junit.Assert.assertTrue;
 
 public class ChronicleQueueMethodsWithoutParametersTest extends ChronicleQueueTestBase {
 
-
     @Test
     public void test() {
         File file = getTmpDir();

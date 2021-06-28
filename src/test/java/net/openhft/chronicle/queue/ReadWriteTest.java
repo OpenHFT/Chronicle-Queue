@@ -154,7 +154,6 @@ public class ReadWriteTest extends QueueTestCommon {
         }
     }
 
-
     // Can't append to a read-only chronicle
     @Test(expected = IllegalStateException.class)
     public void testWriteToReadOnlyChronicle() {

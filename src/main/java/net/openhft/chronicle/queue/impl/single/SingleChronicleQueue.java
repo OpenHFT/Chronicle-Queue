@@ -70,7 +70,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
 
-
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     @NotNull
     protected final EventLoop eventLoop;

@@ -18,7 +18,6 @@ import java.util.Set;
 
 public class DirectoryUtils {
 
-
     /**
      * Beware, this can give different results depending on whether you are
      * a) running inside maven
