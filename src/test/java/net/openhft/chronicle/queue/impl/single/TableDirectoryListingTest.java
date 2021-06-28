@@ -42,8 +42,7 @@ public class TableDirectoryListingTest extends ChronicleQueueTestBase {
     }
 
     @Override
-    public void tearDown() {
-        super.tearDown();
+    public void preAfter() {
         tablestore.close();
         listing.close();
     }
