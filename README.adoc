@@ -416,7 +416,7 @@ Below, we first provide a section for quick reference to use Chronicle Queue. Th
 ==== A Quick start
 This section provides a quick reference for using Chronicle Queue to briefly show how to create, write/read into/from a queue.
 
-1. Chronicle Queue construction
+- Chronicle Queue construction
 
 Creating an instance of Chronicle Queue is different from just calling a constructor.
 To create an instance you have to use the `ChronicleQueueBuilder`.
@@ -434,7 +434,7 @@ In this example we have created an `IndexedChronicle` which creates two `RandomA
 ${java.io.tmpdir}/getting-started/{today}.cq4
 ----
 
-2. Writing to a queue
+- Writing to a queue
 
 [source,Java]
 ----
@@ -448,7 +448,7 @@ appender.writeDocument(w -> w.write("msg").text("TestMessage"));
 appender.writeText("TestMessage");
 ----
 
-3. Reading from a queue
+- Reading from a queue
 
 [source,Java]
 ----
@@ -465,7 +465,7 @@ Also, the `ChronicleQueue.dump()` method can be used to dump the raw contents as
 queue.dump();
 ----
 
-4. Cleanup
+- Cleanup
 
 Chronicle Queue stores its data off-heap, and it is recommended that you call `close()` once you have finished working with Chronicle Queue, to free resources.
 
@@ -477,7 +477,7 @@ This is only to clean up resources that were used.
 queue.close();
 ----
 
-5. Putting it all together
+- Putting it all together
 
 [source,Java]
 ----
@@ -652,6 +652,7 @@ These parameters define BufferMode for reads or writes that have the following o
 
 RingBuffer capacity in bytes when using `bufferMode: Asynchronous`
 
+'''
 * *2. Writing to a queue using an appender*
 
 In Chronicle Queue we refer to the act of writing your data to the Chronicle Queue, as storing an excerpt. This data could be made up from any data type, including text, numbers, or serialised blobs. Ultimately, all your data, regardless of what it is, is stored as a series of bytes.
@@ -820,6 +821,7 @@ Hello World
 000402e0 6C 6F 20 57 6F 72 6C 64                          lo World
 ----
 
+'''
 * *3. Reading from a queue using a tailer*
 
 Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
@@ -920,6 +922,7 @@ However, in general you only need one main tailer for a topic, with possibly, so
 As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic.
 Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
 
+'''
 * *4. Tailers and file handlers clean up*
 
 Chronicle Queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
@@ -929,6 +932,7 @@ If you are writing your code not have GC pauses and you explicitly want to clean
 ((StoreTailer)tailer).releaseResources()
 ```
 
+'''
 * *5. Using `ExcerptTailer.toEnd()`*
 
 In some applications, it may be necessary to start reading from the end of the queue (e.g. in a restart scenario).
@@ -958,12 +962,13 @@ If the queue is not empty, then there will be a
 `DocumentContext` available for reading:
 
 [source,java]
-....
+----
 // this will be true if there is at least one message in the queue
 boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
         readingDocument().isPresent();
-....
+----
 
+'''
 * *6. Restartable tailers*
 
 It can be useful to have a tailer which continues from where it was up to on restart of the application.
@@ -1003,6 +1008,7 @@ NOTE: The `direction()` is not preserved across restarts, only the next index to
 NOTE: The index of a tailer is only progressed when the `DocumentContext.close()` is called.
 If this is prevented by an error, the same message will be read on each restart.
 
+'''
 * *7. Command line tools - reading and writing a Chronicle Queue*
 
 Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
@@ -1017,6 +1023,7 @@ This can often be a bit difficult to read, so it is better to dump the `cq4` fil
 
 You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue. They can both be run from the command line in a number of ways described below.
 
+'''
 * *8. DumpMain*
 
 If you have a project pom file that includes the Chronicle-Queue artifact, you can read a `cq4` file with the following command:
@@ -1091,7 +1098,9 @@ There is also a script named `dump_queue.sh` located in the `Chonicle-Queue/bin`
 $ ./bin/dump_queue.sh <file path>
 ----
 
+'''
 * *9. Reading a queue using `ChronicleReaderMain`*
+
 The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project). As mentioned above, it is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
 
 Below is the command line interface used to configure `ChronicleReaderMain`:
@@ -1166,6 +1175,7 @@ Lastly, there is a script for running the reader named `queue_reader.sh` which a
 $ ./bin/queue_reader.sh <options>
 ----
 
+'''
 * *10. Writing into a queue using `ChronicleWriter`*
 
 If using `MethodReader` and `MethodWriter` then you can write single-argument method calls to a queue
@@ -1206,6 +1216,7 @@ or
 
 If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
 
+''''
 * *11. High level interface for reading/writing*
 
 Chronicle v4.4+ supports the use of proxies to write and read messages.
@@ -1300,6 +1311,7 @@ method2 [!Message2 {
 
 * For more details see, https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest]
 
+''''
 * *12. Detailed tracing of timings*
 
 Chronicle Queue supports explicit, or implicit, nanosecond resolution timing for messages as they pass end-to-end over across your system.
@@ -1347,6 +1359,7 @@ onTopOfBookPrice: {
 <3> Write of the result of the read.
 <4> What triggered this event.
 
+''''
 * *13. Excerpt indexing in Chronicle Queue*
 
 //An index is assigned to the excerpt that is written into a queue.
@@ -1431,6 +1444,7 @@ public void read5thMessageTest() {
 }
 ----
 
+'''
 * *14. File retention*
 
 You can add a `StoreFileListener` to notify you when a file is added, or no longer used.
@@ -1454,6 +1468,7 @@ Rather than partition the queue files across servers, we support each server, st
 This is much more scalable than being limited to the amount of memory space that you have.
 You can buy a redundant pair of 6TB of enterprise disks very much more cheaply than 6TB of memory.
 
+'''
 * *15. File handles and flushing data to the disk*
 
 As mentioned previously Chronicle Queue stores its data off-heap in a ‘.cq4’ file.
@@ -1466,6 +1481,7 @@ Of course, creating a new file every second is a little extreme, but it's a good
 When using secondly rolling, If you had written 10 seconds worth of data and then you wish to read this data, chronicle would have to scan across 10 files.
 To reduce the creation of the file handles, chronicle queue cashes them lazily and when it comes to writing data to the queue files, care-full consideration must be taken when closing the files, because on most OS’s a close of the file, will force any data that has been appended to the file, to be flushed to disk, and if we are not careful this could stall your application.
 
+'''
 * *16. Pretoucher and its configuration*
 
 `Pretoucher` is a class designed to be called from a long-lived thread. The purpose of the Pretoucher
