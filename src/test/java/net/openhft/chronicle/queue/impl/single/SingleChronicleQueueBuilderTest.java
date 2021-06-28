@@ -29,6 +29,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     public void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
         expectException("reading control code as text");
         expectException("Unable to copy TimedStoreRecovery safely");
+        expectException("Queues should be configured with the queue directory, not a specific filename");
 
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");

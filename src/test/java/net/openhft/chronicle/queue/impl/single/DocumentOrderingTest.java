@@ -5,7 +5,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -211,8 +210,8 @@ public final class DocumentOrderingTest extends ChronicleQueueTestBase {
         }
     }
 
-    @After
-    public void tearDown() {
+    @Override
+    public void preAfter() {
         executorService.shutdownNow();
     }
 

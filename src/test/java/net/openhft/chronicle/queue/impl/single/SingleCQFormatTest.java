@@ -62,6 +62,9 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testInvalidFile() throws FileNotFoundException {
+        // based on the file name
+        expectException("Overriding roll cycle from TEST4_DAILY to DAILY");
+
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         dir.mkdir();
 
@@ -106,7 +109,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.TEST4_DAILY)
+                .rollCycle(RollCycles.DAILY)
                 .timeoutMS(500L)
                 .testBlockSize()
                 .build()) {
@@ -164,7 +167,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         final File dir = getTmpDir();
         dir.mkdirs();
 
-        final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
+        final File file = new File(dir, "19700101T4" + SingleChronicleQueue.SUFFIX);
 
         Wire wire;
 
@@ -264,7 +267,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), QueueUtil.testBlockSize())) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101T4" + SingleChronicleQueue.SUFFIX), QueueUtil.testBlockSize())) {
             final Wire wire = new BinaryWire(bytes);
             wire.usePadding(true);
             try (DocumentContext dc = wire.writingDocument(true)) {

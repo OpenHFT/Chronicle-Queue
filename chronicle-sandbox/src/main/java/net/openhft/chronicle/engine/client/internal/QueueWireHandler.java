@@ -37,7 +37,6 @@ import java.util.function.Consumer;
 public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
 
     public static final int SIZE_OF_SIZE = ClientWiredStatelessTcpConnectionHub.SIZE_OF_SIZE;
-    private static final Logger LOG = LoggerFactory.getLogger(QueueWireHandler.class);
     final StringBuilder cspText = new StringBuilder();
     final StringBuilder eventName = new StringBuilder();
     // assume there is a handler for each connection.
@@ -69,7 +68,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             this.outWire = out;
             onEvent();
         } catch (Exception e) {
-            LOG.error("", e);
+            Jvm.error().on(getClass(), "", e);
         }
     }
 
@@ -217,7 +216,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             if (e.getMessage() != null)
                 o.writeValue().text(e.getMessage());
 
-            LOG.error("", e);
+            Jvm.error().on(getClass(), "", e);
         }
     }
 }

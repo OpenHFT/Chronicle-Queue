@@ -94,8 +94,7 @@ public class Indexer {
         }, null);
     }
 
-    public enum IndexOffset {
-        ;
+    public enum IndexOffset {;
 
         static long toAddress0(long index) {
             long siftedIndex = index >> (17L + 6L);

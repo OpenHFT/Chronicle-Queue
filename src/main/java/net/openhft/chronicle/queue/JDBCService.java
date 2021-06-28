@@ -18,14 +18,13 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -34,7 +33,6 @@ import java.util.concurrent.Executors;
 
 @Deprecated /* For removal in x.22, use JDBCServiceProvider.create instead */
 public class JDBCService extends AbstractCloseable implements Closeable, JDBCServiceProvider {
-    private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
     @NotNull
     private final ChronicleQueue in;
     private final ChronicleQueue out;
@@ -69,7 +67,7 @@ public class JDBCService extends AbstractCloseable implements Closeable, JDBCSer
                 }
             }
         } catch (Exception t) {
-            LOGGER.warn("Run loop exited", t);
+            Jvm.warn().on(getClass(), "Run loop exited", t);
         }
     }
 

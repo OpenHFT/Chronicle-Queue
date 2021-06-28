@@ -4,8 +4,7 @@ import net.openhft.chronicle.core.Jvm;
 
 import java.io.File;
 
-public enum PrecreatedFiles {
-    ;
+public enum PrecreatedFiles {;
 
     private static final String PRE_CREATED_FILE_SUFFIX = ".precreated";
 

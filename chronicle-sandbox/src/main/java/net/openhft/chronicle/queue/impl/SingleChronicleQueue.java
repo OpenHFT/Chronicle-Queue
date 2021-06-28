@@ -54,7 +54,6 @@ public class SingleChronicleQueue extends AbstractChronicle {
     static final int MAX_LENGTH = LENGTH_MASK;
 
     private static final long MAGIC_OFFSET = 0L;
-    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class.getName());
 
     @NotNull
     final Header header;

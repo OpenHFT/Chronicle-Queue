@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -116,7 +117,7 @@ public class ChronicleHistoryReader implements HistoryReader {
                 while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
                     ++counter;
                     if (this.progress && counter % 1_000_000L == 0) {
-                        System.out.println("Progress: " + counter);
+                        Jvm.debug().on(getClass(), "Progress: " + counter);
                     }
                 }
             }

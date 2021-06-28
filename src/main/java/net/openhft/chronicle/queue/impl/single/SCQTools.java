@@ -12,8 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
-public enum SCQTools {
-    ;
+public enum SCQTools {;
 
     static final int MESSAGE_HISTORY_METHOD_ID = -1;
 

@@ -28,7 +28,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
@@ -178,7 +177,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testRestartingAService() throws FileNotFoundException {
+    public void testRestartingAService() {
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
 
@@ -203,7 +202,7 @@ public class OrderManagerTest extends QueueTestCommon {
                     combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
                 }
             }
-            DumpQueueMain.dump(queuePath.getAbsolutePath());
+//            DumpQueueMain.dump(queuePath.getAbsolutePath());
 
             // TODO FIx for more.
             for (int i = 0; i < 10; i++) {

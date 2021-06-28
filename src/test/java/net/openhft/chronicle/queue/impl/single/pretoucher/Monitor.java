@@ -6,8 +6,6 @@ import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.PauserMonitor;
 import net.openhft.chronicle.threads.ThreadMonitors;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -18,7 +16,6 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 @Deprecated(/* To be removed in x.23 */)
 public class Monitor {
     static final EventLoop loop = new MonitorEventLoop(null, Pauser.millis(10));
-    private static final Logger LOG = LoggerFactory.getLogger(Monitor.class);
 
     static {
         loop.start();

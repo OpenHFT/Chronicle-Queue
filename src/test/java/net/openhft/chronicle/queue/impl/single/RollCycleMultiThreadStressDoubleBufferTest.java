@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -77,9 +78,9 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
 
         @Override
         public void postReadCheck(RollingChronicleQueue queue) {
-            LOG.info("Out-of-order count: {}", outOfOrderCount);
+            Jvm.debug().on(getClass(), "Out-of-order count: " + outOfOrderCount);
             if (skippedValue.size() > 0 || unexpectedValues.size() > 0) {
-                LOG.error("Skipped {}, Unexpected {}", skippedValue, unexpectedValues);
+                Jvm.error().on(getClass(), "Skipped " + skippedValue + ", Unexpected " + unexpectedValues);
                 if (DUMP_QUEUE && !queueDumped.getAndSet(true)) {
                     DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
                 }

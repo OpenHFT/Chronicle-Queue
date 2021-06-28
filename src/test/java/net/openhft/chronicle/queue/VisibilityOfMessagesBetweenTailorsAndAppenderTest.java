@@ -19,8 +19,6 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends Chronicle
     /**
      * check if a message is written with an appender its visible to the tailor, without locks etc.
      *
-     * @throws InterruptedException
-     * @throws ExecutionException
      */
     @Test
     public void test() throws InterruptedException, ExecutionException {

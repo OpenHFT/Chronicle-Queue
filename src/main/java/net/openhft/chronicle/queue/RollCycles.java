@@ -143,8 +143,7 @@ public enum RollCycles implements RollCycle {
     /**
      * 0x20000 entries per day - Only good for testing
      */
-    TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8),
-    ;
+    TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8),;
     public static final RollCycles DEFAULT = FAST_DAILY;
 
     // don't alter this or you will confuse yourself.

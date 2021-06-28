@@ -27,8 +27,6 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,7 +34,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ChronicleQueueTestBase extends QueueTestCommon {
-    protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
     private List<File> tmpDirs = new ArrayList<>();
 
@@ -60,9 +57,9 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
         @Override
         protected void starting(@NotNull Description description) {
             if (TRACE_TEST_EXECUTION) {
-                LOGGER.info("Starting test: {}.{}",
-                        description.getClassName(),
-                        description.getMethodName()
+                Jvm.debug().on(getClass(), "Starting test: "
+                        + description.getClassName() + "."
+                        + description.getMethodName()
                 );
             }
         }
@@ -88,13 +85,11 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
     }
 
     @Override
-    public void afterChecks() {
-        super.afterChecks();
-
+    public void tearDown() {
         // should be able to remove tmp dirs
         tmpDirs.forEach(file -> {
             if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
-                LOGGER.error("Could not delete tmp dir {}. Remaining {}", file, file.list());
+                Jvm.error().on(getClass(), "Could not delete tmp dir " + file);
             }
         });
     }
