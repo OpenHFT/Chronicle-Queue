@@ -548,7 +548,6 @@ class StoreAppender extends AbstractCloseable
         writeBytesInternal(index, bytes, false);
     }
 
-
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         checkAppendLock(true);
 
@@ -702,11 +701,12 @@ class StoreAppender extends AbstractCloseable
             if (seq1 != seq2) {
                 final long seq3 = store.indexing
                         .linearScanByPosition(wireForIndex(), position, 0, 0, true);
-                System.out.println("Thread=" + Thread.currentThread().getName() +
-                        " pos: " + position +
-                        " seq1: " + Long.toHexString(seq1) +
-                        " seq2: " + Long.toHexString(seq2) +
-                        " seq3: " + Long.toHexString(seq3));
+                Jvm.error().on(getClass(),
+                        "Thread=" + Thread.currentThread().getName() +
+                                " pos: " + position +
+                                " seq1: " + Long.toHexString(seq1) +
+                                " seq2: " + Long.toHexString(seq2) +
+                                " seq3: " + Long.toHexString(seq3));
 
 //                System.out.println(store.dump());
 

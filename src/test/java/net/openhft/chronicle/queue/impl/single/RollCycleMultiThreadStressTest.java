@@ -17,8 +17,6 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +54,6 @@ public class RollCycleMultiThreadStressTest {
     final boolean DOUBLE_BUFFER;
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
-    final Logger LOG = LoggerFactory.getLogger(getClass());
     final SetTimeProvider timeProvider = new SetTimeProvider();
     private ChronicleQueue sharedWriterQueue;
 
@@ -92,11 +89,12 @@ public class RollCycleMultiThreadStressTest {
             ++count;
             if (reader.lastRead < expectedNumberOfMessages - 1) {
                 allReadersComplete = false;
-               // System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
+                // System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
             }
         }
         return allReadersComplete;
     }
+
     PretoucherThread pretoucherThread = null;
 
     @Test
@@ -104,7 +102,7 @@ public class RollCycleMultiThreadStressTest {
         assert warnIfAssertsAreOn();
 
         File file = DirectoryUtils.tempDir("stress");
-       // System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
+        // System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
         final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(
@@ -117,14 +115,14 @@ public class RollCycleMultiThreadStressTest {
         final AtomicInteger wrote = new AtomicInteger();
         final double expectedPerSecond = Jvm.isAzulZing() ? 3e8 : 1e9;
         final int expectedNumberOfMessages = (int) (TEST_TIME * expectedPerSecond / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
-        LOG.info("Expecting {} messages", expectedNumberOfMessages);
+        Jvm.debug().on(getClass(), "Expecting " + expectedNumberOfMessages + " messages");
 
-       // System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
-               // numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
-       // System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
-               // SLEEP_PER_WRITE_NANOS);
-       // System.out.printf("Should take ~%dms%n",
-               // TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters / 2));
+        // System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
+        // numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
+        // System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
+        // SLEEP_PER_WRITE_NANOS);
+        // System.out.printf("Should take ~%dms%n",
+        // TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters / 2));
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
@@ -155,7 +153,7 @@ public class RollCycleMultiThreadStressTest {
             results.add(executorServiceRead.submit(reader));
         }
         if (WRITE_ONE_THEN_WAIT_MS > 0) {
-            LOG.warn("Wrote one now waiting for {}ms", WRITE_ONE_THEN_WAIT_MS);
+            Jvm.warn().on(getClass(), "Wrote one now waiting for " + WRITE_ONE_THEN_WAIT_MS + "ms");
             Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
         }
         for (int i = 0; i < numWriters; i++) {
@@ -179,9 +177,9 @@ public class RollCycleMultiThreadStressTest {
             }
             if (now > nextCheckTime) {
                 String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
-               // System.out.printf("Writer has written %d of %d messages after %dms. Readers at %s. Waiting...%n",
-                       // wrote.get() + 1, expectedNumberOfMessages,
-                       // i * 10, readersLastRead);
+                // System.out.printf("Writer has written %d of %d messages after %dms. Readers at %s. Waiting...%n",
+                // wrote.get() + 1, expectedNumberOfMessages,
+                // i * 10, readersLastRead);
                 readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
                     if (reader.exception != null) {
                         throw new AssertionError("Reader encountered exception, so stopped reading messages",
@@ -244,7 +242,7 @@ public class RollCycleMultiThreadStressTest {
                     break;
                 }
 
-               // System.out.printf("Not all readers are complete. Waiting...%n");
+                // System.out.printf("Not all readers are complete. Waiting...%n");
                 Jvm.pause(2000);
             }
             assertTrue("Readers did not catch up",
@@ -283,7 +281,7 @@ public class RollCycleMultiThreadStressTest {
         }
 
         IOTools.deleteDirWithFiles("stress");
-       // System.out.println("Test complete");
+        // System.out.println("Test complete");
     }
 
     protected ReaderCheckingStrategy getReaderCheckingStrategy() {
@@ -436,7 +434,7 @@ public class RollCycleMultiThreadStressTest {
                             if (now > last + 2000) {
                                 if (lastRead < 0)
                                     throw new AssertionError("read nothing after 2 seconds");
-                               // System.out.println(Thread.currentThread() + " - Last read: " + lastRead);
+                                // System.out.println(Thread.currentThread() + " - Last read: " + lastRead);
                                 last = now;
                             }
                             continue;
@@ -458,11 +456,11 @@ public class RollCycleMultiThreadStressTest {
                 readerCheckingStrategy.postReadCheck(queue);
             } catch (Throwable e) {
                 exception = e;
-                LOG.info("Finished reader", e);
+                Jvm.debug().on(getClass(), "Finished reader", e);
                 return e;
             }
 
-            LOG.info("Finished reader OK");
+            Jvm.debug().on(getClass(), "Finished reader OK");
             return null;
         }
     }
@@ -500,12 +498,12 @@ public class RollCycleMultiThreadStressTest {
                     loopIteration++;
 
                     if (value >= expectedNumberOfMessages) {
-                        LOG.info("Finished writer");
+                        Jvm.debug().on(getClass(), "Finished writer");
                         return null;
                     }
                 }
             } catch (Throwable e) {
-                LOG.info("Finished writer", e);
+                Jvm.debug().on(getClass(), "Finished writer", e);
                 exception = e;
                 return e;
             } finally {
@@ -561,7 +559,7 @@ public class RollCycleMultiThreadStressTest {
                 queue0 = queue;
                 ExcerptAppender appender = queue.acquireAppender();
                 appender0 = appender;
-               // System.out.println("Starting pretoucher");
+                // System.out.println("Starting pretoucher");
                 while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
                     appender.pretouch();
                     Jvm.pause(50);

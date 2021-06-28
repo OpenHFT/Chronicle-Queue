@@ -24,7 +24,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -58,8 +57,8 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
                 new NamedThreadFactory("Appender", false));
     }
 
-    @After
-    public void after() {
+    @Override
+    public void preAfter() {
         appenderES.shutdownNow();
     }
 

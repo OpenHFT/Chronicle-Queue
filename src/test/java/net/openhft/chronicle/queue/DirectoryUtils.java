@@ -5,12 +5,11 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Collections;
@@ -18,8 +17,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class DirectoryUtils {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryUtils.class);
 
     /**
      * Beware, this can give different results depending on whether you are
@@ -35,7 +32,7 @@ public class DirectoryUtils {
 
         // Log the temporary directory in OSX as it is quite obscure
         if (OS.isMacOSX()) {
-            LOGGER.info("Tmp dir: {}", tmpDir);
+            Jvm.debug().on(DirectoryUtils.class, "Tmp dir: " + tmpDir);
         }
 
         return tmpDir;

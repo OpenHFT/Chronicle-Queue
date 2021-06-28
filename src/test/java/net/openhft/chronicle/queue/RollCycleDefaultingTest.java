@@ -6,9 +6,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import java.util.concurrent.TimeUnit;
-
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.DEFAULT_ROLL_CYCLE_PROPERTY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -38,6 +35,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
 
     @Test
     public void unknownClassDefaultsToDaily() {
+        expectException("Default roll cycle class: foobarblah was not found");
         String configuredCycle = "foobarblah";
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
@@ -47,6 +45,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
 
     @Test
     public void nonRollCycleDefaultsToDaily() {
+        expectException("Configured default rollcycle is not a subclass of RollCycle");
         String configuredCycle = String.class.getName();
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");

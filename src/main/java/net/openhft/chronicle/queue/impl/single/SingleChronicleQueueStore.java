@@ -278,7 +278,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         try {
             mappedFile.release(this);
         } catch (IllegalStateException e) {
-            Jvm.warn().on(getClass(), "trouble releasing " + mappedFile.toString(), e);
+            Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
         }
     }
 
@@ -313,7 +313,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public String toString() {
         return "SingleChronicleQueueStore{" +
                 "indexing=" + indexing +
-                ", writePosition/seq=" + writePosition.toString() +
+                ", writePosition/seq=" + writePosition +
                 ", mappedFile=" + mappedFile +
                 ", isClosed=" + isClosed() +
                 '}';

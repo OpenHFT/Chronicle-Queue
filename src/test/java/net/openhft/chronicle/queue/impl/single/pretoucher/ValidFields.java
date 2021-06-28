@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single.pretoucher;
 
-public enum ValidFields {
-    ;
+public enum ValidFields {;
 
     public static void validateAll(Object... objects) {
         if (objects == null) {

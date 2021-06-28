@@ -5,7 +5,6 @@ import net.openhft.chronicle.bytes.ref.BinaryTwoLongReference;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.Sequence;
-import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -40,8 +39,8 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
         });
     }
 
-    @After
-    public void before() {
+    @Override
+    public void preAfter() {
         bytes.releaseLast();
     }
 

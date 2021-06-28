@@ -58,7 +58,7 @@ public class QueueTestCommon {
     }
 
     public void checkExceptions() {
-        for (String msg : "Allocation of , ms to add mapping for ,jar to the classpath, ms to pollDiskSpace for , us to linearScan by position from ,File released ".split(",")) {
+        for (String msg : "Shrinking ,Allocation of , ms to add mapping for ,jar to the classpath, ms to pollDiskSpace for , us to linearScan by position from ,File released ".split(",")) {
             exceptions.keySet().removeIf(e -> e.message.contains(msg));
         }
         for (Map.Entry<Predicate<ExceptionKey>, String> expectedException : expectedExceptions.entrySet()) {
@@ -78,12 +78,10 @@ public class QueueTestCommon {
     }
 
     @After
-    public void resetClock() {
-        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
-    }
-
-    @After
     public void afterChecks() {
+        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+        preAfter();
+
         CleaningThread.performCleanup(Thread.currentThread());
 
         // find any discarded resources.
@@ -93,5 +91,14 @@ public class QueueTestCommon {
         assertReferencesReleased();
         checkThreadDump();
         checkExceptions();
+
+        tearDown();
+    }
+
+    protected void preAfter() {
+
+    }
+
+    protected void tearDown() {
     }
 }

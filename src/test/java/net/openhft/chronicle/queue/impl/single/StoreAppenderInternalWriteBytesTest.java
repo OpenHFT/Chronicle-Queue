@@ -8,15 +8,10 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -29,8 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(StoreAppenderInternalWriteBytesTest.class);
 
     private static final int MESSAGES_TO_WRITE = 200;
 
@@ -172,7 +165,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
 
     private void populateSourceQueue(Path queueDir) {
         SetTimeProvider tp = new SetTimeProvider();
-        LOGGER.info("Populating source queue...");
+        Jvm.debug().on(getClass(), "Populating source queue...");
         try (final ChronicleQueue queue = createQueue(queueDir)) {
             try (final ExcerptAppender appender = queue.acquireAppender()) {
                 Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
@@ -187,7 +180,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                 }
             }
         }
-        LOGGER.info("Populated source queue");
+        Jvm.debug().on(getClass(), "Populated source queue");
     }
 
     private byte[] messageForIndex(long index) {

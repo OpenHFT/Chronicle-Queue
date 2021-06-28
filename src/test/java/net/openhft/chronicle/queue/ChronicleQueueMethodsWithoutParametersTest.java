@@ -1,9 +1,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
@@ -12,8 +11,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class ChronicleQueueMethodsWithoutParametersTest extends ChronicleQueueTestBase {
-
-    protected static final Logger LOG = LoggerFactory.getLogger(ChronicleQueueMethodsWithoutParametersTest.class);
 
     @Test
     public void test() {
@@ -30,11 +27,11 @@ public class ChronicleQueueMethodsWithoutParametersTest extends ChronicleQueueTe
             MethodReader reader = queue.createTailer()
                     .methodReader(someManager);
 
-            LOG.debug("Writing to queue");
+            Jvm.debug().on(getClass(), "Writing to queue");
             someListener.methodWithOneParam(1);
             someListener.methodWithoutParams();
 
-            LOG.debug("Reading from queue");
+            Jvm.debug().on(getClass(), "Reading from queue");
             assertTrue(reader.readOne());
             assertTrue(reader.readOne());
             assertFalse(reader.readOne());
@@ -42,7 +39,7 @@ public class ChronicleQueueMethodsWithoutParametersTest extends ChronicleQueueTe
             assertTrue(someManager.methodWithOneParamInvoked);       // one param method was invoked
             assertTrue(someManager.methodWithoutParamsInvoked);      // no params method was NOT invoked
 
-           // LOG.warn(queue.dump());
+           // Jvm.warn().on(getClass(), queue.dump());
         }
     }
 

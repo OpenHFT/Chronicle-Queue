@@ -6,10 +6,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ManagedCloseable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
-import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -17,7 +14,6 @@ import java.util.function.ToIntFunction;
 
 final class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TableDirectoryListing.class);
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String MOD_COUNT = "listing.modCount";
@@ -94,7 +90,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     @Override
     public void onFileCreated(final File file, final int cycle) {
         if (readOnly) {
-            LOGGER.warn("DirectoryListing is read-only, not updating listing");
+            Jvm.warn().on(getClass(), "DirectoryListing is read-only, not updating listing");
             return;
         }
         modCount.addAtomicValue(1);

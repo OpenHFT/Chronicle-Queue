@@ -41,7 +41,6 @@ public class PretoucherSoakTest extends QueueTestCommon {
         /**
          * called periodically under normal operation
          *
-         * @param heartbeat
          */
         void heartbeat(Heartbeat heartbeat);
 

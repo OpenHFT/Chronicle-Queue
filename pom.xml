@@ -27,7 +27,7 @@
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.21ea67-SNAPSHOT</version>
+    <version>5.21ea80-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -164,7 +164,7 @@
         <dependency>
             <groupId>io.hawt</groupId>
             <artifactId>hawtio-embedded</artifactId>
-            <version>2.13.3</version>
+            <version>2.13.5</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

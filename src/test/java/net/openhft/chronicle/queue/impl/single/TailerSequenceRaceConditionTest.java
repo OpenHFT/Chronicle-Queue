@@ -7,7 +7,6 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
@@ -46,8 +45,9 @@ public final class TailerSequenceRaceConditionTest extends ChronicleQueueTestBas
         Closeable.closeQuietly(queues);
     }
 
-    @After
+    @Override
     public void tearDown() {
+        super.tearDown();
         threadPool.shutdownNow();
     }
 

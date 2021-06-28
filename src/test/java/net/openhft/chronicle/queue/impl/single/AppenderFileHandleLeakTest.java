@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.FlakyTestRunner;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
@@ -194,7 +195,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
             BackgroundResourceReleaser.releasePendingResources();
             // tailers do not call StoreFileListener correctly - see
             // https://github.com/OpenHFT/Chronicle-Queue/issues/694
-            LOGGER.info("storeFileListener {}", storeFileListener);
+            Jvm.debug().on(getClass(), "storeFileListener " + storeFileListener);
 
             assertEquals(acquiredBefore, storeFileListener.acquiredCounts.size());
 

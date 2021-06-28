@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -58,8 +57,8 @@ public class ReadWriteTest extends QueueTestCommon {
         }
     }
 
-    @After
-    public void teardown() {
+    @Override
+    public void tearDown() {
         try {
             IOTools.shallowDeleteDirWithFiles(chroniclePath);
         } catch (Exception e) {
@@ -155,7 +154,6 @@ public class ReadWriteTest extends QueueTestCommon {
         }
     }
 
-
     // Can't append to a read-only chronicle
     @Test(expected = IllegalStateException.class)
     public void testWriteToReadOnlyChronicle() {
@@ -192,9 +190,8 @@ public class ReadWriteTest extends QueueTestCommon {
     @Test
     public void testNonWriteableFilesSetToReadOnly() {
         assumeFalse(OS.isWindows());
-        final String expectedException = "Failback to readonly tablestore";
-        expectException(expectedException);
-        System.out.println("This test will produce a " + expectedException);
+        expectException("Failback to readonly tablestore");
+        expectException("Forcing queue to be readOnly");
 
         Arrays.stream(chroniclePath.list()).forEach(s ->
                 assertTrue(new File(chroniclePath, s).setWritable(false)));

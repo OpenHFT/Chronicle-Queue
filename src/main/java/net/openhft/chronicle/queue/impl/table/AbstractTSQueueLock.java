@@ -58,7 +58,6 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     /**
      * will only force unlock if you give it the correct pid
      *
-     * @param value
      */
     protected void forceUnlock(long value) {
         boolean unlocked = lock.compareAndSwapValue(value, UNLOCKED);

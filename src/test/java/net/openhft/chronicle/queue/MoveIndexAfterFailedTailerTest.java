@@ -17,6 +17,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.util.Time;
@@ -25,8 +26,6 @@ import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -35,7 +34,6 @@ import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 
 @RequiredForClient
 public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MoveIndexAfterFailedTailerTest.class);
 
     @Test
     public void test() {
@@ -79,7 +77,7 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
         return aMarshallable -> {
             final byte[] myBytes = aMarshallable.read().bytes();
             if (myBytes != null) {
-                LOGGER.info("Reading: {}", new String(myBytes, StandardCharsets.UTF_8));
+                Jvm.debug().on(getClass(), "Reading: " + new String(myBytes, StandardCharsets.UTF_8));
             }
         };
     }

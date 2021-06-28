@@ -263,7 +263,8 @@ class StoreTailer extends AbstractCloseable
             // read-only tailer view is fixed, a writer could continue past the end of the view
             // at the point this tailer was created. Log a warning and return no document.
             if (queue.isReadOnly()) {
-                Jvm.warn().on(StoreTailer.class, "Tried to read past the end of a read-only view. " +
+                Jvm.warn().on(StoreTailer.class,
+                        "Tried to read past the end of a read-only view. " +
                         "Underlying data store may have grown since this tailer was created.", e);
             } else {
                 throw e;

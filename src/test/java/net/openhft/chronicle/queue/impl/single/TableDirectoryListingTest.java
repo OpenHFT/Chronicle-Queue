@@ -6,7 +6,6 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,8 +41,8 @@ public class TableDirectoryListingTest extends ChronicleQueueTestBase {
         tempFile.deleteOnExit();
     }
 
-    @After
-    public void tearDown() {
+    @Override
+    public void preAfter() {
         tablestore.close();
         listing.close();
     }

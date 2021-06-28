@@ -7,7 +7,6 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -89,8 +88,8 @@ public class OvertakeTest extends QueueTestCommon {
         }
     }
 
-    @After
-    public void after() {
+    @Override
+    public void tearDown() {
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception ignored) {

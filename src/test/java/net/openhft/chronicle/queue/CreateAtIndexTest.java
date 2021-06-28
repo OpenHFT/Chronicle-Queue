@@ -36,7 +36,8 @@ import static org.junit.Assert.*;
 public class CreateAtIndexTest extends ChronicleQueueTestBase {
 
     @Test
-    public void testWriteBytesWithIndex() {
+    public void
+    testWriteBytesWithIndex() {
         final Bytes HELLO_WORLD = Bytes.from("hello world");
         File tmp = getTmpDir();
         try (ChronicleQueue queue = single(tmp).testBlockSize().rollCycle(TEST_DAILY).build()) {

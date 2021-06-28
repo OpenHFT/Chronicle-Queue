@@ -99,7 +99,6 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest {
         }
     }
 
-
     @Test
     public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
         Assume.assumeTrue(!OS.isWindows());

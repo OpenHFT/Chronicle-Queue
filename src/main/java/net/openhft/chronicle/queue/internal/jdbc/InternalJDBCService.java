@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.internal.jdbc;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
@@ -25,8 +26,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -34,7 +33,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class InternalJDBCService extends AbstractCloseable implements Closeable, JDBCServiceProvider {
-    private static final Logger LOGGER = LoggerFactory.getLogger(InternalJDBCService.class);
     @NotNull
     private final ChronicleQueue in;
     private final ChronicleQueue out;
@@ -68,7 +66,7 @@ public class InternalJDBCService extends AbstractCloseable implements Closeable,
                 }
             }
         } catch (Throwable t) {
-            LOGGER.warn("Run loop exited", t);
+            Jvm.warn().on(getClass(), "Run loop exited", t);
         }
     }
 

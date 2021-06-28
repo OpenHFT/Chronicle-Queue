@@ -42,7 +42,6 @@ public class ZippedDocumentAppender implements Closeable {
 
     public static final String ERR_MSG = "It not possible to zip more than " +
             "Integer.MAX_VALUE bytes in one go";
-    private static final Logger LOG = LoggerFactory.getLogger(ZippedDocumentAppender.class.getName());
     @NotNull
     private final BytesRingBuffer q;
     @NotNull
@@ -135,7 +134,7 @@ public class ZippedDocumentAppender implements Closeable {
                     chronicleQueue.appendDocument(outputBuffer);
                 }
             } catch (Exception e) {
-                LOG.error("", e);
+                Jvm.error().on(getClass(), "", e);
             }
         }
 

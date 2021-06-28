@@ -41,8 +41,6 @@ import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.lang.ref.WeakReference;
@@ -71,8 +69,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String SUFFIX = ".cq4";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
-
-    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     @NotNull
@@ -168,7 +164,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             metaStore = builder.metaStore();
             doubleBuffer = false; //builder.doubleBuffer();
             if (metaStore.readOnly() && !builder.readOnly()) {
-                LOG.warn("Forcing queue to be readOnly");
+                Jvm.warn().on(getClass(), "Forcing queue to be readOnly file=" + path);
                 // need to set this on builder as it is used elsewhere
                 builder.readOnly(metaStore.readOnly());
             }
@@ -392,7 +388,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             try {
                 writer.flush();
             } catch (IOException e) {
-                LoggerFactory.getLogger(SingleChronicleQueue.class).debug("", e);
+                Jvm.debug().on(SingleChronicleQueue.class,  e);
             }
         }
     }
@@ -1010,7 +1006,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 //                pauseUnderload();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
-                    LOG.warn("", new Exception("Creating cycle which is not the current cycle"));
+                    Jvm.warn().on(getClass(), new Exception("Creating cycle which is not the current cycle"));
                 }
                 queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
@@ -1088,12 +1084,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                     // we hold the file lock so are going to force recovery
                     if (!bytes.compareAndSwapInt(0, header, 0)) {
-                        LOG.warn("failed to recover.");
+                        Jvm.warn().on(getClass(), "failed to recover.");
                         throw new StreamCorruptedException("failed to recover.˚");
                     }
 
                     if (!wire.writeFirstHeader()) {
-                        LOG.warn("failed to recover.");
+                        Jvm.warn().on(getClass(), "failed to recover.");
                         throw new StreamCorruptedException("failed to recover.˚");
                     }
 

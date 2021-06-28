@@ -51,8 +51,6 @@ import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
@@ -64,7 +62,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
-import java.util.function.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
@@ -76,8 +77,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @Deprecated /* For removal in x.22, Use QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY instead*/
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class);
 
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
@@ -187,8 +186,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 throw new IllegalArgumentException("Invalid file type: " + file.getName());
             }
 
-            LOGGER.warn("Queues should be configured with the queue directory, not a specific filename. Actual file used: {}",
-                    file.getParentFile());
+            Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                    "Queues should be configured with the queue directory, not a specific filename. Actual file used: "
+                            + file.getParentFile());
 
             result.path(file.getParentFile());
         } else
@@ -285,7 +285,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
                 if (Enum.class.isAssignableFrom(rollCycleClass)) {
                     if (rollCyclePropertyParts.length < 2) {
-                        LOGGER.warn("Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
+                        Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                                "Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
                     } else {
                         @SuppressWarnings("unchecked")
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
@@ -293,7 +294,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                         if (instance instanceof RollCycle) {
                             return (RollCycle) instance;
                         } else {
-                            LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                            Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                                    "Configured default rollcycle is not a subclass of RollCycle");
                         }
                     }
                 } else {
@@ -301,11 +303,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                     if (instance instanceof RollCycle) {
                         return (RollCycle) instance;
                     } else {
-                        LOGGER.warn("Configured default rollcycle is not a subclass of RollCycle");
+                        Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                                "Configured default rollcycle is not a subclass of RollCycle");
                     }
                 }
             } catch (ClassNotFoundException ignored) {
-                LOGGER.warn("Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
+                Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                        "Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
             }
         }
 
@@ -363,7 +367,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     private boolean onlyAvailableInEnterprise(final String feature) {
         if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
-            LOGGER.warn(feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
+            Jvm.warn().on(getClass(), feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
         return true;
     }
 
@@ -491,8 +495,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private void overrideRollCycle(RollCycles cycle) {
-        if (rollCycle != cycle)
-            LOGGER.warn("Overriding roll cycle from {} to {}", rollCycle, cycle);
+        if (rollCycle != cycle && rollCycle != null)
+            Jvm.warn().on(getClass(), "Overriding roll cycle from " + rollCycle + " to " + cycle);
         rollCycle = cycle;
     }
 
@@ -593,8 +597,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     /**
      * Enable out-of-process pretoucher (AKA preloader) (Queue Enterprise feature)
      *
-     * @param pretouchIntervalMillis
-     * @return
      */
     public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
         this.pretouchIntervalMillis = pretouchIntervalMillis;
