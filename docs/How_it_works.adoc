@@ -37,7 +37,7 @@ An appender is used to write/add data to the queue.
 == Getting Started
 In the following example we will:
 
-- Create a Chronicle queue
+- Create a Chronicle Queue
 - Put a record to the queue
 - Read the record from queue.
 
@@ -61,7 +61,7 @@ System.out.println(tailer.readText());
 
 ----
 
-Create a tmp directory for the Chronicle queue giving the name starting `Java_temp_directory/SimpleChronicle` as the base folder.
+Create a tmp directory for the Chronicle Queue giving the name starting `Java_temp_directory/SimpleChronicle` as the base folder.
 
 [source,java]
 ----

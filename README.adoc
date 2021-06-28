@@ -2,16 +2,15 @@
 Peter Lawrey, Rob Austin
 :css-signature: demo
 :toc: macro
+:toclevels: 2
+:icons: font
 
 image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[caption="",link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
 image:https://javadoc-badge.appspot.com/net.openhft/chronicle-queue.svg?label=javadoc[JavaDoc, link=https://www.javadoc.io/doc/net.openhft/chronicle-queue]
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 
-
 image::docs/images/Queue_line.png[]
-
-== Contents
 
 toc::[]
 
@@ -19,14 +18,34 @@ toc::[]
 
 https://player.vimeo.com/video/201989439
 
-== What is Chronicle Queue
+== Overview
 
-What is Chronicle Queue
+This project covers the Java version of Chronicle Queue.
+Chronicle Queue is a persisted low-latency messaging framework for high performance and critical applications.
+A {cpp} version of this project is also available and can be evaluated upon request.
+If you are interested in looking at the {cpp} version please contact sales@chronicle.software.
 
-* You could consider Chronicle Queue to be similar to a low latency broker less durable/persisted JVM topic.
+At first glance Chronicle Queue can be seen as simply **another queue implementation**.
+However, it has major design choices that should be emphasised.
+Using *non-heap storage options* (`RandomAccessFile`), Chronicle Queue provides a processing environment where applications do not suffer from Garbage Collection (GC).
+When implementing high-performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java, one of the biggest problems is garbage collection.
 
-Chronicle Queue is a distributed unbounded persisted queue.
-Chronicle Queue:
+Garbage collection may slow down your critical operations non-deterministically at any time.
+In order to avoid non-determinism, and escape from garbage collection delays, off-heap memory solutions are ideal.
+The main idea is to manage your memory manually so it does not suffer from garbage collection.
+Chronicle Queue behaves like a management interface over off-heap memory so you can build your own solutions over it.
+
+Chronicle Queue uses `RandomAccessFiles` while managing memory and this choice brings lots of possibilities. `RandomAccessFiles` permit non-sequential, or random, access to a file's contents.
+To access a file randomly, you open the file, seek a particular location, and read from or write to that file.
+`RandomAccessFiles` can be seen as "large" C-type byte arrays that you can access at any random index "directly" using pointers.
+File portions can be used as `ByteBuffers` if the portion is mapped into memory.
+This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance.
+There is no garbage collection as everything is done off-heap.
+
+== What Is Chronicle Queue?
+
+You could consider Chronicle Queue to be similar to a low latency broker-less durable/persisted JVM topic.
+Chronicle Queue is a distributed unbounded persisted queue that:
 
 * supports asynchronous RMI and Publish/Subscribe interfaces with microsecond latencies.
 * passes messages between JVMs in under a microsecond (in optimised examples)
@@ -57,19 +76,140 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 IMPORTANT: This performance is not achieved using a *large cluster of machines*.
 This is using one thread to publish, and one thread to consume.
 
-===  Java Docs
+=== Design Motivation and Features
 
-see https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html
+Chronicle Queue is designed to:
+
+* be a "record everything store" which can read with microsecond real-time latency.
+This supports even the most demanding High Frequency Trading systems.
+However, it can be used in any application where the recording of information is a concern.
+
+* support reliable replication with notification to either the appender (writer of message) or a tailer (reader of message), when a message has been successfully replicated.
+
+==== Persistence
+
+Chronicle Queue assumes disk space is cheap compared with memory.
+Chronicle Queue makes full use of the disk space you have, and so you are not limited by the main memory of your machine.
+If you use spinning HDD, you can store many TBs of disk space for little cost.
+
+The only extra software that Chronicle Queue needs to run is the operating system.
+It doesn't have a broker; instead it uses your operating system to do all the work.
+If your application dies, the operating system keeps running for seconds longer, so no data is lost; even without replication.
+
+As Chronicle Queue stores all saved data in memory-mapped files, this has a trivial on-heap overhead, even if you have over 100 TB of data.
+
+==== Efficiency
+
+Chronicle put significant effort into achieving very low latency.
+In other products which focus on support of web applications, latencies of less than 40 milliseconds are fine as they are faster than you can see; for example, the frame rate of cinema is 24 Hz, or about 40 ms.
+
+Chronicle Queue aims to achieve latencies of under 40 microseconds for 99% to 99.99% of the time.
+Using Chronicle Queue without replication, we support applications with latencies below 40 microseconds end-to-end across multiple services.
+Often the 99% latency of Chronicle Queue is entirely dependent on the choice of operating system and hard disk sub-system.
+
+==== Compression
+
+Replication for Chronicle Queue supports Chronicle Wire Enterprise.
+This supports a real-time compression which calculates the deltas for individual objects, as they are written.
+This can reduce the size of messages by a factor of 10, or better, without the need for batching; that is, without introducing significant latency.
+
+Chronicle Queue also supports LZW, Snappy, and GZIP compression.
+These formats however add significant latency.
+These are only useful if you have strict limitations on network bandwidth.
+
+==== Delivery mode semantics
+
+Chronicle Queue supports a number of semantics:
+
+- Every message is replayed on restart.
+- Only new messages are played on restart.
+- Restart from any known point using the index of the entry.
+- Replay only the messages you have missed.
+This is supported directly using the methodReader/methodWriter builders.
+
+==== Using high resolution timings across machines
+
+On most systems `System.nanoTime()` is roughly the number of nanoseconds since the system last rebooted (although different JVMs may behave differently).
+This is the same across JVMs on the same machine, but wildly different between machines.
+The absolute difference when it comes to machines is meaningless.
+However, the information can be used to detect outliers; you can't determine what the best latency is, but you can determine how far off the best latencies you are.
+This is useful if you are focusing on the 99th percentile latencies.
+We have a class called `RunningMinimum` to obtain timings from different machines, while compensating for a drift in the `nanoTime` between machines.
+The more often you take measurements, the more accurate this running minimum is.
+
+==== Compacting logs
+
+Chronicle Queue manages storage by cycle.
+You can add a `StoreFileListener` which will notify you when a file is added, and when it is no longer retained.
+You can move, compress, or delete all the messages for a day, at once.
+NOTE : Unfortunately on Windows, if an IO operation is interrupted, it can close the underlying FileChannel.
+
+==== Avoid Interrupts
+
+Due to performance reasons, we have removed checking for interrupts in the chronicle queue code.
+Because of this, we recommend that you avoid using chronicle queue with code that generates interrupts.
+If you can not avoid generating interrupts then we suggest that you create a separate instance of Chronicle Queue per thread.
 
 === Usage
 
-https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vTe-ijX-uRMc86pB1r-qPUIDZmzI0drPQtvUiGiU8p6WEq98HHDO47HXfV_dk_q6Tmhr1fq2pLxLkqv/pubhtml[Usage of Chronicle-Queue]
+Chronicle Queue is most often used for producer-centric systems where you need to retain a lot of data for days or years. For statistics see https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vTe-ijX-uRMc86pB1r-qPUIDZmzI0drPQtvUiGiU8p6WEq98HHDO47HXfV_dk_q6Tmhr1fq2pLxLkqv/pubhtml[Usage of Chronicle-Queue]
 
-=== More benchmarks
+IMPORTANT: Chronicle Queue does *not* support operating off any network file system, be it NFS, AFS, SAN-based storage or anything else.
+The reason for this is those file systems do not provide all the required primitives for memory-mapped files Chronicle Queue uses.
+If any networking is needed (e.g. to make the data accessible to multiple hosts), the only supported way is Chronicle Queue Replication (Enterprise feature).
 
-https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
+==== What is a producer-centric system?
 
-<<docs/performance.adoc#,End-to-End latency plots for various message sizes>>
+Most messaging systems are consumer-centric.
+Flow control is implemented to avoid the consumer ever getting overloaded; even momentarily.
+A common example is a server supporting multiple GUI users.
+Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times.
+For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.
+
+Chronicle Queue is a producer-centric solution and does everything possible to never push back on the producer, or tell it to slow down.
+This makes it a powerful tool, providing a big buffer between your system, and an upstream producer over which you have little, or no, control.
+
+==== Market data
+
+Market data publishers don't give you the option to push back on the producer for long; if at all.
+A few of our users consume data from CME OPRA. This produces peaks of 10 million events per minute, sent as UDP packets without any retry.
+If you miss, or drop a packet, then it is lost.
+You have to consume and record those packets as fast as they come to you, with very little buffering in the network adapter.
+For market data in particular, real time means in a *few microseconds*; it doesn't mean intra-day (during the day).
+
+Chronicle Queue is fast and efficient, and has been used to increase the speed that data is passed between threads.
+In addition, it also keeps a record of every message passed allowing you to significantly reduce the amount of logging that you need to do.
+
+==== Compliance systems
+
+Compliance systems are required by more and more systems these days.
+Everyone has to have them, but no one wants to be slowed down by them.
+By using Chronicle Queue to buffer data between monitored systems and the compliance system, you don't need to worry about the impact of compliance recording for your monitored systems.
+Again, Chronicle Queue can support millions of events per-second, per-server, and access data which has been retained for years.
+
+==== Latency sensitive micro-services
+
+Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine in the order of magnitude of 1 microsecond; as well as between machines with a typical latency of 10 microseconds for modest throughputs of a few hundred thousands.
+Chronicle Queue supports throughputs of millions of events per second, with stable microsecond latencies.
+
+See https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronicle Queue in Microservices]
+
+==== Log replacement
+
+A Chronicle Queue can be used to build state machines.
+All the information about the state of those components can be reproduced externally, without direct access to the components, or to their state.
+This significantly reduces the need for additional logging.
+However, any logging you do need can be recorded in great detail.
+This makes enabling `DEBUG` logging in production practical.
+This is because the cost of logging is very low; less than 10 microseconds.
+Logs can be replicated centrally for log consolidation.
+Chronicle Queue is being used to store 100+ TB of data, which can be replayed from any point in time.
+
+==== Lambda Stream Processing
+
+Non-batching streaming components are highly performant, deterministic, and reproducible.
+You can reproduce bugs which only show up after a million events played in a particular order, with accelerated realistic timings.
+This makes using Stream processing attractive for systems which need a high degree of quality outcomes.
 
 == Downloading Chronicle Queue
 
@@ -84,53 +224,79 @@ Releases are available on Maven Central as:
 </dependency>
 ----
 
-Click here to get the http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle-queue%22[Latest Version Number]
-
+See https://github.com/OpenHFT/Chronicle-Queue/releases[Chronicle Queue Release Notes] and get the http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle-queue%22[Latest Version Number].
 Snapshots are available on https://oss.sonatype.org
 
-https://github.com/OpenHFT/Chronicle-Queue/releases[Chronicle Queue Release Notes]
+NOTE: Classes that reside in either of the packages 'internal', 'impl', and 'main' (the latter containing various runnable main methods) and
+any sub-packages are not a part of the public API and *may become subject to change at any time for any reason*. See the respective `package-info.java` files for details.
 
-== Simple Step-By-Step Guide
+== Chronicle Queue Versions and Remarkable Changes
 
-see https://github.com/OpenHFT/Chronicle-Queue-Sample
+=== Changes from Version 4 to Version 5
 
-== Overview
+In Chronicle Queue v5 tailers are now read-only, in Chronicle Queue v4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise, when lazy indexing was turned on the indexing was done by the first tailer that read the data.
+Since in v4 tailers could do the indexing we could not rely on them to be read-only.
+We decided to drop lazy indexing in v5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations elsewhere in the code.
 
-Ths project covers the Java version of Chronicle Queue.
-Chronicle Queue is a persisted low-latency messaging framework for high performance and critical applications.
-A {cpp} version of this project is also available and can be evaluated upon request.
-If you are interested in looking at the {cpp} version please contact sales@chronicle.software.
+The locking model of Chronicle Queue was changed in v5, in Chronicle Queue v4 a write lock (to prevent concurrent writes to the queue) exists in the .cq4 file.
+In v5 this was moved to a single file called a table store (metadata.cq4t).
+This simplifies the locking code internally as only the table store file has to be inspected.
 
-At first glance Chronicle Queue can be seen as simply **another queue implementation**.
-However, it has major design choices that should be emphasised.
+You can use Chronicle Queue v5 to read messages written with Chronicle Queue v4, however you should not concurrently run Chronicle Queue v4 and Chronicle Queue v5 at the same time.
+In other words avoid running Chronicle Queue v4’s appenders and tailers on a queue which at the same time is also read and written to via Chronicle Queue v5.
 
-Using *non-heap storage options* (`RandomAccessFile`), Chronicle Queue provides a processing environment where applications do not suffer from Garbage Collection (GC).
-When implementing high-performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java, one of the biggest problems is garbage collection.
+=== Changes from Version 3 to Version 4
 
-Garbage collection may slow down your critical operations non-deterministically at any time.
-In order to avoid non-determinism, and escape from garbage collection delays, off-heap memory solutions are ideal.
-The main idea is to manage your memory manually so it does not suffer from garbage collection.
-Chronicle Queue behaves like a management interface over off-heap memory so you can build your own solutions over it.
+Chronicle Queue v4 is a complete re-write of Chronicle Queue that solves the following issues that existed in v3.
 
-Chronicle Queue uses `RandomAccessFiles` while managing memory and this choice brings lots of possibilities. `RandomAccessFiles` permit non-sequential, or random, access to a file's contents.
-To access a file randomly, you open the file, seek a particular location, and read from or write to that file.
-RandomAccessFiles can be seen as "large" C-type byte arrays that you can access at any random index "directly" using pointers.
-File portions can be used as `ByteBuffers` if the portion is mapped into memory.
+- Without self-describing messages, users had to create their own functionality for dumping messages and long term storage of data.
+With v4 you don't have to do this, but you can if you wish to.
+- Vanilla Chronicle Queue would create a file per thread. This is fine if the number of threads is controlled, however, many applications have little or no control over how many threads are used and this caused usability problems.
+- The configuration for Indexed and Vanilla Chronicle was entirely in code so the reader had to have the same configuration as the writers and it wasn't always clear what that was.
+- There was no way for the producer to know how much data had been replicated to the a second machine. The only workaround was to replicate data back to the producers.
+- You needed to specify the size of data to reserve before you started to write your message.
+- You needed to do your own locking for the appender when using Indexed Chronicle.
 
-This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance.
-There is no garbage collection as everything is done off-heap.
+=== Migrating from Chronicle Queue v2 and v3
 
-== Chronicle Queue (Enterprise Edition)
+In Chronicle Queue v3, everything was in terms of bytes, not wire.
+There are two ways to use byte in Chronicle Queue v4. You can use the `writeBytes` and `readBytes` methods, or you can get the `bytes()` from the wire.
+For example:
 
-Chronicle Queue (Enterprise Edition) is a commercially supported version of our successful open source Chronicle Queue.
+.Writing and reading bytes using a lambda
+[source,Java]
+----
+appender.writeBytes(b -> b.writeInt(1234).writeDouble(1.111));
 
-The open source documentation is extended by this document to describe the additional features that are available when you are licenced for Enterprise Edition.
+boolean present = tailer.readBytes(b -> process(b.readInt(), b.readDouble()));
+----
+
+.Writing to a queue without using a lambda
+[source,Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    Bytes bytes = dc.wire().bytes();
+    // write to bytes
+}
+
+try (DocumentContext dc = tailer.readingDocument()) {
+    if (dc.isPresent()) {
+        Bytes bytes = dc.wire().bytes();
+        // read from bytes
+    }
+}
+----
+
+=== Chronicle Queue Enterprise Edition
+
+link:https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise[Chronicle Queue Enterprise Edition] is a commercially supported version of our successful open source Chronicle Queue.
+The open source documentation is extended by the following documents to describe the additional features that are available when you are licenced for Enterprise Edition.
 These are:
 
 - Encryption of message queues and messages.
 For more information see <<docs/encryption.adoc#, Encryption>>.
 - TCP/IP Replication between hosts to ensure real-time backup of all your queue data.
-For more information see <<docs/replication.adoc#, Replication>>, the <<docs/queue-replication-message-protocol-overview.adoc#, protocol is covered here.>>
+For more information see <<docs/replication.adoc#, Replication>>, the queue replication protocol is covered in <<docs/queue-replication-message-protocol-overview.adoc#, TCP/IP Replication Protocol>>.
 - Timezone support for daily queue rollover scheduling.
 For more information see <<docs/timezone_rollover.adoc#, Timezone support>>.
 - Ring Buffer support to give improved performance at high throughput on slower filesystems.
@@ -138,44 +304,54 @@ For more information see <<docs/ring_buffer.adoc#,Ring Buffer>> and also <<docs/
 
 In addition, you will be fully supported by our technical experts.
 
-For more information on Chronicle Queue (Enterprise Edition), please contact mailto:sales@chronicle.software[sales@chronicle.software].
+For more information on Chronicle Queue Enterprise Edition, please contact mailto:sales@chronicle.software[sales@chronicle.software].
 
-== How does Chronicle Queue work
+== How Does Chronicle Queue Work?
+For demonstrations of how Chronicle Queue can be used see link:https://github.com/OpenHFT/Chronicle-Queue-Sample[Chronicle Queue Demo] and for Java documentation see link:https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html[Chronicle Queue JavaDocs]
 
-=== Internals
-Classes that reside in either of the packages 'internal', 'impl', and 'main' (the latter containing various runnable main methods) and
-any sub-packages are not a part of the public API and *may become subject to change at any time for any reason*. See the respective `package-info.java` files for details.
+=== Key Concepts and Terminology
+Chronicle Queue is a persisted journal of messages which supports concurrent writers and readers even across multiple JVMs on the same machine.
+Every reader sees every message, and a reader can join at any time and still see every message.
 
-=== Terminology
+NOTE: We deliberately avoid the term *consumer* and instead use *reader* as messages are not consumed/destroyed by reading.
 
-- Messages are grouped by *topics*.
-A topic can contain any number of *sub-topics* which are logically stored together under the queue/topic.
-- An *appender* is the source of messages.
-- A *tailer* is a receiver of messages.
-- *Chronicle Queue* is broker-less by default.
-You can use *Chronicle Datagrid* to act as a broker for remote access.
+Chronicle queue has the following main concepts:
 
-NOTE: We deliberately avoid the term *consumer* as messages are not consumed/destroyed by reading.
+- *Excerpt*
 
-At a high level:
+Excerpt is the main data container in a Chronicle Queue. In other words, each Chronicle Queue is composed of excerpts.
+Writing message to a Chronicle Queue means starting a new excerpt, writing message into it, and finishing the excerpt at the end.
 
-- *appenders* write to the end of a queue.
-There is no way to insert, or delete excerpts.
-- *tailers* read the next available message each time they are called.
+- *Appender*
 
-By using *Chronicle Datagrid*, a Java or C# client can publish to a *queue* to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
+An appender is the source of messages; something like an iterator in Chronicle environment.
+You add data appending the current Chronicle Queue. It can perform sequential writes by appending to the end of queue only. There is no way to insert, or delete excerpts.
 
-=== Important note
+- *Tailer*
 
-Chronicle Queue does *not* support operating off any network file system, be it NFS, AFS, SAN-based storage or anything else.
-The reason for this is those file systems do not provide all the required primitives for memory-mapped files Chronicle Queue uses.
+A tailer is an excerpt reader optimized for sequential reads. It can perform sequential and random reads, both forwards and backwards.
+Tailers read the next available message each time they are called. The followings are guaranteed in Chronicle Queue:
 
-If any networking is needed (e.g. to make the data accessible to multiple hosts), the only supported way is Chronicle Queue Replication (Enterprise feature).
+*-* for each *appender*, messages are written in the order the appender wrote them.
+Messages by different appenders are interleaved,
 
-=== Topics and Queue files
+*-* for each *tailer*, it will see every message for a topic in the same order as every other tailer,
 
-Each topic is a directory of queues.
-There is a file for each roll cycle.
+*-* when replicated, every replica has a copy of every message.
+
+Chronicle Queue is broker-less by default. You can use link:https://github.com/ChronicleEnterprise/Chronicle-Datagrid-Demo[*Chronicle Datagrid*] to act as a broker for remote access.
+By using *Chronicle Datagrid*, a Java or C# client can publish to a queue to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
+
+- *File rolling and queue files*
+
+Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
+In other words, a queue file is created for each roll cycle which has extension `cq4`. When the roll cycle reaches the point it should roll, appender will atomically write `EOF` mark at the end of current file to indicate that no other appender should write to this file and no tailer should read further, and instead everyone should use new file.
+
+If the process was shut down, and restarted later when the roll cycle should be using a new file, an appender will try to locate old files and write an `EOF` mark in them to help tailers reading them.
+
+- *Topics*
+
+Each topic is a directory of queue files.
 If you have a topic called `mytopic`, the layout could look like this:
 
 [source]
@@ -189,31 +365,7 @@ mytopic/
 
 To copy all the data for a single day (or cycle), you can copy the file for that day on to your development machine for replay testing.
 
-=== File Retention
-
-You can add a `StoreFileListener` to notify you when a file is added, or no longer used.
-This can be used to delete files after a period of time.
-However, by default, files are retained forever.
-Our largest users have over 100 TB of data stored in queues.
-
-The only thing each tailer retains is an index which is composed from:
-
-- a cycle number.
-For example, days since epoch, and
-- a sequence number within that cycle.
-+
-In the case of a `DAILY` cycle, the sequence number is 32 bit and the `index = ((long) cycle << 32) | sequenceNumber` providing up to 4 billion entries per day.
-if more messages per day are anticipated, the `XLARGE_DAILY` cycle, for example, provides up 4 trillion entries per day using a 48-bit sequence number.
-+
-Printing the index in hexadecimal is common in our libraries, to make it easier to see these two components.
-
-Appenders and tailers are cheap as they don't even require a TCP connection; they are just a few Java objects.
-
-Rather than partition the queue files across servers, we support each server, storing as much data as you have disk space.
-This is much more scalable than being limited to the amount of memory space that you have.
-You can buy a redundant pair of 6TB of enterprise disks very much more cheaply than 6TB of memory.
-
-=== Restrictions on topics and messages.
+** Restrictions on topics and messages
 
 Topics are limited to being strings which can be used as directory names.
 Within a topic, you can have sub-topics which can be any data type that can be serialized.
@@ -221,132 +373,296 @@ Messages can be any serializable data.
 
 Chronicle Queue supports:
 
-- `Serializable` objects, though this is to be avoided as it is not efficient
-- `Externalizable` objects is preferred if you wish to use standard Java APIs.
-- `byte[]` and `String`
-- `Marshallable`; a self describing message which can be written as YAML, Binary YAML, or JSON.
-- `BytesMarshallable` which is low-level binary, or text encoding.
+*-* `Serializable` objects, though this is to be avoided as it is not efficient
 
-=== Every Tailer sees every message.
+*-* `Externalizable` objects is preferred if you wish to use standard Java APIs.
 
-An abstraction can be added to filter messages, or assign messages to just one message processor.
-However, in general you only need one main tailer for a topic, with possibly, some supporting tailers for monitoring etc.
+*-* `byte[]` and `String`
 
-As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic.
-Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
+*-* `Marshallable`; a self describing message which can be written as YAML, Binary YAML, or JSON.
 
-=== Replaying from the output, not the input.
+*-* `BytesMarshallable` which is low-level binary, or text encoding.
 
-It is common practice to replay a state machine from its inputs.
-To do this, there are two assumptions that you have to make; these are difficult to implement;
+=== User Guide
 
-- you have either just one input, or you can always determine the order the inputs were consumed,
-- you have not changed the software (or all the software is stored in the queue).
+A Chronicle Queue is defined by `SingleChronicleQueue.class` that is designed to support:
 
-You can see from this that if you want to be able to upgrade your system, then you'll want to replay from the output.
+*-* rolling files on a daily, weekly or hourly basis,
 
-Replaying from the output means that;
+*-* concurrent writers on the same machine,
 
-- you have a record of the order of the inputs that you processed
-- you have a record of all the decisions your new system is committed to; even if the new code would have made different decisions.
+*-* concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise),
 
-=== Guarantees
+*-* zero copy serialization and deserialization,
 
-Chronicle Queue provides the following guarantees;
+*-* millions of writes/reads per second on commodity hardware.
 
-- for each *appender*, messages are written in the order the appender wrote them.
-Messages by different appenders are interleaved,
-- for each *tailer*, it will see every message for a topic in the same order as every other tailer,
-- when replicated, every replica has a copy of every message.
+Approximately 5 million messages/second for 96-byte messages on a i7-4790 processor.
+A queue directory structure is as follows:
 
-Replication has three modes of operation;
+[source]
+----
+base-directory /
+   {cycle-name}.cq4       - The default format is yyyyMMdd for daily rolling.
+----
 
-- replicate as soon as possible; < 1 millisecond in as many as 99.9% of cases,
-- a tailer will only see messages which have been replicated,
-- an appender doesn't return until a replica has acknowledged it has been received.
+The format consists of size-prefixed bytes which are formatted using `BinaryWire` or `TextWire`.
+Chronicle Queue is designed to be driven from code. You can easily add an interface which suits your needs.
 
-== Use Cases
+NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations can throw unchecked exceptions. In order to prevent thread death, it might be practical to catch `RuntimeException`s and log/analyze them as appropriate.
 
-Chronicle Queue is most often used for producer-centric systems where you need to retain a lot of data for days or years.
+Below, we first provide a section for quick reference to use Chronicle Queue. Then, in the next section we provide a more detailed guide.
 
-=== What is a producer-centric system?
+==== A Quick start
+This section provides a quick reference for using Chronicle Queue to briefly show how to create, write/read into/from a queue.
 
-Most messaging systems are consumer-centric.
-Flow control is implemented to avoid the consumer ever getting overloaded; even momentarily.
-A common example is a server supporting multiple GUI users.
-Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times.
-For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.
+1. Chronicle Queue construction
 
-Chronicle Queue is a producer-centric solution and does everything possible to never push back on the producer, or tell it to slow down.
-This makes it a powerful tool, providing a big buffer between your system, and an upstream producer over which you have little, or no, control.
+Creating an instance of Chronicle Queue is different from just calling a constructor.
+To create an instance you have to use the `ChronicleQueueBuilder`.
 
-=== Market Data
+[source,Java]
+----
+String basePath = OS.getTarget() + "/getting-started"
+ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath).build();
+----
 
-Market data publishers don't give you the option to push back on the producer for long; if at all.
-A few of our users consume data from CME OPRA. This produces peaks of 10 million events per minute, sent as UDP packets without any retry.
-If you miss, or drop a packet, then it is lost.
-You have to consume and record those packets as fast as they come to you, with very little buffering in the network adapter.
+In this example we have created an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
 
-For market data in particular, real time means in a *few microseconds*; it doesn't mean intra-day (during the day).
+[source]
+----
+${java.io.tmpdir}/getting-started/{today}.cq4
+----
 
-Chronicle Queue is fast and efficient, and has been used to increase the speed that data is passed between threads.
-In addition, it also keeps a record of every message passed allowing you to significantly reduce the amount of logging that you need to do.
+2. Writing to a queue
 
-=== Compliance Systems
+[source,Java]
+----
+// Obtains an ExcerptAppender
+ExcerptAppender appender = queue.acquireAppender();
 
-Compliance Systems are required by more and more systems these days.
-Everyone has to have them, but no one wants to be slowed down by them.
-By using Chronicle Queue to buffer data between monitored systems and the compliance system, you don't need to worry about the impact of compliance recording for your monitored systems.
+// Writes: {msg: TestMessage}
+appender.writeDocument(w -> w.write("msg").text("TestMessage"));
 
-Again, Chronicle Queue can support millions of events per-second, per-server, and access data which has been retained for years.
+// Writes: TestMessage
+appender.writeText("TestMessage");
+----
 
-=== Latency Sensitive Micro-services
+3. Reading from a queue
 
-Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine in the order of magnitude of 1 microsecond; as well as between machines with a typical latency of 10 microseconds for modest throughputs of a few hundred thousands.
-Chronicle Queue supports throughputs of millions of events per second, with stable microsecond latencies.
+[source,Java]
+----
+// Creates a tailer
+ExcerptTailer tailer = queue.createTailer();
 
-https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronicle Queue in Microservices]
+tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
 
-=== Metrics
+assertEquals("TestMessage", tailer.readText());
+----
+Also, the `ChronicleQueue.dump()` method can be used to dump the raw contents as a string.
+[source,Java]
+----
+queue.dump();
+----
 
-Chronicle Queue can be monitored to obtain latency, throughput, and activity metrics, in real time (that is, within microseconds of the event triggering it).
+4. Cleanup
 
-=== Log Replacement
+Chronicle Queue stores its data off-heap, and it is recommended that you call `close()` once you have finished working with Chronicle Queue, to free resources.
 
-As Chronicle Queue can be used to build state machines.
-All the information about the state of those components can be reproduced externally, without direct access to the components, or to their state.
-This significantly reduces the need for additional logging.
+NOTE: No data will be lost if you do this.
+This is only to clean up resources that were used.
 
-However, any logging you do need can be recorded in great detail.
-This makes enabling `DEBUG` logging in production practical.
-This is because the cost of logging is very low; less than 10 microseconds.
-Logs can be replicated centrally for log consolidation.
+[source,Java]
+----
+queue.close();
+----
 
-Chronicle Queue is being used to store 100+ TB of data, which can be replayed from any point in time.
+5. Putting it all together
 
-=== Lambda Stream Processing
+[source,Java]
+----
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").build()) {
+    // Obtain an ExcerptAppender
+    ExcerptAppender appender = queue.acquireAppender();
 
-Non-batching streaming components are highly performant, deterministic, and reproducible.
-You can reproduce bugs which only show up after a million events played in a particular order, with accelerated realistic timings.
+    // Writes: {msg: TestMessage}
+    appender.writeDocument(w -> w.write("msg").text("TestMessage"));
 
-This makes using Stream Processing attractive for systems which need a high degree of quality outcomes.
+    // Writes: TestMessage
+    appender.writeText("TestMessage");
 
-== Using Chronicle Queue
+    ExcerptTailer tailer = queue.createTailer();
 
-Chronicle Queue is designed to be driven from code.You can easily add an interface which suits your needs.
+    tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
 
-NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations can throw unchecked exceptions.In order to prevent thread death, it might be practical to catch `RuntimeException`s and log/analyze them as appropriate.
+    assertEquals("TestMessage", tailer.readText());
+}
+----
 
-=== Writing to a Queue
+//TODO: for now this section has been commented out as needs clarification
+//==== Replaying from the output, not the input
+//
+//It is common practice to replay a state machine from its inputs.
+//To do this, there are two assumptions that you have to make; these are difficult to implement;
+//
+//*-* you have either just one input, or you can always determine the order the inputs were consumed,
+//
+//*-* you have not changed the software (or all the software is stored in the queue).
+//
+//You can see from this that if you want to be able to upgrade your system, then you'll want to replay from the output.
+//
+//Replaying from the output means that;
+//
+//*-* you have a record of the order of the inputs that you processed.
+//
+//*-* you have a record of all the decisions your new system is committed to; even if the new code would have made different decisions.
 
-In Chronicle Queue we refer to the act of writing your data to the Chronicle queue, as storing an excerpt. This data could be made up from any data type, including text, numbers, or serialised blobs. Ultimately, all your data, regardless of what it is, is stored as a series of bytes.
+==== Detailed Guide
+You can configure a Chronicle Queue using its configuration parameters or system properties. In addition, there are different ways of writing/reading into/from a queue such as the use of proxies and using `MethodReader` and `MethodWriter`.
 
-Just before storing your excerpt, Chronicle Queue reserves a 4-byte header. Chronicle Queue writes the length of your data into this header. This way, when Chronicle Queue comes to read your excerpt, it knows how long each blob of data is. We refer to this 4-byte header, along with your excerpt, as a document. So strictly speaking Chronicle Queue can be used to read and write documents.
+===== **1. Queue configuration**
+
+Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
+For complete list of configuration parameters and system properties, refer to https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise-Demo/blob/master/docs/ConfigurationParameters.adoc#singlechroniclequeuebuilder[Configuration Parameters]. Please note that some configuration parameters on this page are only available for the Enterprise edition.
+A few of the parameters that were most queried by our customers are explained below .
+
+* *RollCycle*
+
+The `RollCycle` parameter configures the rate at which CQ will roll the underlying queue files.
+For instance, using the following code snippet will result in the queue files being rolled (i.e. a new file created) every hour:
+
+[source,java]
+----
+ChronicleQueue.singleBuilder(queuePath).rollCycle(RollCycles.HOURLY).build()
+----
+
+Once a queue's roll-cycle has been set, it cannot be changed at a later date.
+Any further instances of `SingleChronicleQueue` configured to use the same path should be configured to use the same roll-cycle,
+and if they are not, then the roll-cycle will be updated to match the persisted roll-cycle.
+In this case, a warning log message will be printed in order to notify the library user of the situation:
+
+[source,java]
+----
+// Creates a queue with roll-cycle MINUTELY
+try (ChronicleQueue minuteRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(MINUTELY).build()) {
+
+    // Creates a queue with roll-cycle HOURLY
+    try (ChronicleQueue hourlyRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(HOURLY).build()) {
+
+        try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
+            documentContext.wire().write("somekey").text("somevalue");
+        }
+    }
+    // Now try to append using the queue configured with roll-cycle MINUTELY
+    try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
+        documentContext2.wire().write("otherkey").text("othervalue");
+    }
+}
+----
+
+console output:
+
+[source]
+----
+[main] WARN SingleChronicleQueueBuilder - Overriding roll cycle from HOURLY to MINUTELY.
+----
+The maximum number of messages that can be stored in a queue file depends on roll cycle. See  https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/FAQ.adoc[FAQ] for more information on this.
+
+* *wireType*
+
+It's possible to configure how Chronicle Queue will store the data by explicitly set the `WireType`:
+
+[source,java]
+----
+// Creates a queue at "queuePath" and sets the WireType
+SingleChronicleQueueBuilder.builder(queuePath, wireType)
+----
+For example:
+
+[source,java]
+----
+// Creates a queue with default WireType: BINARY_LIGHT
+ChronicleQueue.singleBuilder(queuePath)
+
+// Creates a queue and sets the WireType as FIELDLESS_BINARY
+SingleChronicleQueueBuilder.fieldlessBinary(queuePath)
+
+// Creates a queue and sets the WireType as DEFAULT_ZERO_BINARY
+SingleChronicleQueueBuilder.defaultZeroBinary(queuePath)
+
+// Creates a queue and sets the WireType as DELTA_BINARY
+SingleChronicleQueueBuilder.deltaBinary(queuePath)
+----
+
+Although it's possible to explicitly provide WireType when creating a builder, it is discouraged as not all wire types are supported by Chronicle Queue yet.
+In particular, the following wire types are not supported:
+
+*-* TEXT (and essentially all based on text, including JSON and CSV)
+
+*-* RAW
+
+*-* READ_ANY
+
+* *blockSize*
+
+When a queue is read/written, part of the file currently being read/written is mapped to a memory segment.
+This parameter controls the size of the memory mapping block. You can change this parameter using the methode `SingleChronicleQueueBuilder.blockSize(long blockSize)` if it is necessary.
+
+NOTE: You should avoid changing `blockSize` unnecessarily.
+
+If you are sending large messages then you should set a large `blockSize` i.e. the `blockSize` should be at least four times the message size.
+
+WARNING:  If you use small `blockSize` for large messages you receive an `IllegalStateException` and the write is aborted.
+
+We recommend that you use the same `blockSize` for each queue instance when replicating queues, the `blockSize` is not written to the queue's metadata, so should ideally be set to the same value when creating your instances of chronicle queue (this is recommended but if you wish to run with a different `blocksize` you can).
+
+TIP: Use the same `blockSize` for each instance of replicated queues.
+
+* *indexSpacing*
+
+This parameter shows space between excerpts that are explicitly indexed.
+A higher number means higher sequential write performance but slower random access read.
+The sequential read performance is not affected by this property.
+For example, the following default index spacing can be returned:
+
+*-* 16 (MINUTELY)
+
+*-* 64 (DAILY)
+
+You can change this parameter using the method `SingleChronicleQueueBuilder.indexSpacing(int indexSpacing)`.
+
+* *indexCount*
+
+The size of each index array, as well as the total number of index arrays per queue file.
+
+[NOTE]
+indexCount^2^ is the maximum number of indexed queue entries.
+
+* *readBufferMode, writeBufferMode*
+
+These parameters define BufferMode for reads or writes that have the following options:
+
+*-* `None` - The default (and the only one available for open source users), no buffering;
+
+*-* `Copy` - used in conjunction with encryption;
+
+*-* `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
+
+* *bufferCapacity*
+
+RingBuffer capacity in bytes when using `bufferMode: Asynchronous`
+
+===== *2. Writing to a queue using an appender*
+
+In Chronicle Queue we refer to the act of writing your data to the Chronicle Queue, as storing an excerpt. This data could be made up from any data type, including text, numbers, or serialised blobs. Ultimately, all your data, regardless of what it is, is stored as a series of bytes.
+
+Just before storing your excerpt, Chronicle Queue reserves a 4-byte header. Chronicle Queue writes the length of your data into this header. This way, when Chronicle Queue comes to read your excerpt, it knows how long each blob of data is. We refer to this 4-byte header, along with your excerpt, as a document. Strictly speaking Chronicle Queue can be used to read and write documents.
 
 NOTE:  Within this 4-byte header we also reserve a few bits for a number of internal operations, such as locking, to make Chronicle Queue thread-safe across both processors and threads.
 The important thing to note is that because of this, you can’t strictly convert the 4 bytes to an integer to find the length of your data blob.
 
-To write data to a Chronicle-Queue, you must first create an Appender
+As stated before, Chronicle Queue uses an *appender* to write to the queue and a *tailer* to read from the queue. Unlike other java queuing solutions, messages are not lost when they are read with a tailer. This is covered in more detail in the section below on "Reading from a queue using a tailer".
+To write data to a Chronicle Queue, you must first create an appender:
 
 [source,Java]
 ----
@@ -354,8 +670,6 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
    final ExcerptAppender appender = queue.acquireAppender();
 }
 ----
-
-So, Chronicle Queue uses an *Appender* to write to the queue and a *Tailer* to read from the queue.Unlike other java queuing solutions, messages are not lost when they are read with a Tailer.This is covered in more detail in the section below on "Reading from a Queue".
 
 Chronicle Queue uses the following low-level interface to write the data:
 
@@ -366,7 +680,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The close on the try-with-resources, is the point when the length of the data is written to the header.You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below).You can later use this index to move-to/look up this excerpt.Each Chronicle Queue excerpt has a unique index.
+The close on the try-with-resources, is the point when the length of the data is written to the header. You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below). You can later use this index to move-to/look up this excerpt. Each Chronicle Queue excerpt has a unique index.
 
 [source,Java]
 ----
@@ -376,12 +690,12 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing.The actual code of `writeText(CharSequence text)` looks like this:
+The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing. The actual code of `writeText(CharSequence text)` looks like this:
 
 [source,Java]
 ----
 /**
- * @param text to write a message
+ * @param text the message to write
  */
 void writeText(CharSequence text) {
     try (DocumentContext dc = writingDocument()) {
@@ -466,7 +780,6 @@ You can print the contents of the queue. You can see the first two, and last two
 // dump the content of the queue
 System.out.println(queue.dump());
 ----
-
 prints:
 
 [source,Yaml]
@@ -507,288 +820,7 @@ Hello World
 000402e0 6C 6F 20 57 6F 72 6C 64                          lo World
 ----
 
-=== Finding the index at the end of a Chronicle Queue
-
-Chronicle Queue appenders are thread-local.
-In fact when you ask for:
-
-```
-final ExcerptAppender appender = queue.acquireAppender();
-```
-
-the `acquireAppender()` uses a thread-local pool to give you an appender which will be reused to reduce object creation.
-
-As such, the method call to:
-
-```
-long index = appender.lastIndexAppended();
-```
-
-will only give you the last index appended by this appender; not the last index appended by any appender.
-
-If you wish to find the index of the last record written to the queue, then you have to call:
-
-```
-queue.lastIndex()
-```
-Which will return the index of the last excerpt present in the queue (or -1 for an empty queue). Note that if the queue is
-being written to concurrently it's possible the value may be an under-estimate, as subsequent entries may have been written
-even before it was returned.
-
-=== How to determine how many messages are between two indexes
-
-to count the number of messages between two indexes you can use:
-
-```
-((SingleChronicleQueue)queue).countExcerpts(<firstIndex>,<lastIndex>);
-```
-
-NOTE: You should avoid calling this method on latency sensitive code, because if the indexes are in different cycles this method may have to access the .cq4 files from the file system.
-
-for more information on this see :
-
-```
-net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
-```
-
-=== How to write 10 messages, then move to the 5th message to read it.
-
-```
-@Test
-public void read5thMessageTest() {
-    try (final ChronicleQueue queue = singleBuilder(getTmpDir()).build()) {
-
-        final ExcerptAppender appender = queue.acquireAppender();
-
-        int i = 0;
-        for (int j = 0; j < 10; j++) {
-
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.wire().write("hello").text("world " + (i++));
-                long indexWritten = dc.index();
-            }
-        }
-
-        // get the current cycle
-        int cycle;
-        final ExcerptTailer tailer = queue.createTailer();
-        try (DocumentContext documentContext = tailer.readingDocument()) {
-            long index = documentContext.index();
-            cycle = queue.rollCycle().toCycle(index);
-        }
-
-        long index = queue.rollCycle().toIndex(cycle, 5);
-        tailer.moveToIndex(index);
-        try (DocumentContext dc = tailer.readingDocument()) {
-            System.out.println(dc.wire().read("hello").text());
-        }
- }
-}
-```
-=== Command line tools - reading and writing a Chronicle Queue
-
-Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
-
-```
-\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
-ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
-���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß����������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������
-```
-
-This can often be a bit difficult to read, so it is better to dump the `cq4` files as text. This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
-
-You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue. They can both be run from the command line in a number of ways described below.
-
-==== DumpMain
-If you have a project pom file that includes the Chronicle-Queue artifact, you can read a `cq4` file with the following command:
-
-[source, shell script]
-----
-$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -Dexec.args="myqueue"
-----
-
-NOTE: _myqueue_ is the directory containing your .cq4 files
-
-You can also set up any dependent files manually. This requires the `chronicle-queue.jar`, from any version 4.5.3 or later, and that all dependent files are present on the class path. The dependent jars are listed below:
-
-```
-$ ls -ltr
-total 9920
--rw-r--r--  1 robaustin  staff   112557 28 Jul 14:52 chronicle-queue-5.20.108.jar
--rw-r--r--  1 robaustin  staff   209268 28 Jul 14:53 chronicle-bytes-2.20.104.jar
--rw-r--r--  1 robaustin  staff   136434 28 Jul 14:56 chronicle-core-2.20.114.jar
--rw-r--r--  1 robaustin  staff    33562 28 Jul 15:03 slf4j-api-1.7.30.jar
--rw-r--r--  1 robaustin  staff    33562 28 Jul 15:03 slf4j-simple-1.7.30.jar
--rw-r--r--  1 robaustin  staff   324302 28 Jul 15:04 chronicle-wire-2.20.105.jar
--rw-r--r--  1 robaustin  staff    35112 28 Jul 15:05 chronicle-threads-2.20.101.jar
--rw-r--r--  1 robaustin  staff   344235 28 Jul 15:05 affinity-3.20.0.jar
--rw-r--r--  1 robaustin  staff   124332 28 Jul 15:05 commons-cli-1.4.jar
--rw-r--r--  1 robaustin  staff  4198400 28 Jul 15:06 19700101-02.cq4
-```
-
-TIP: To find out which version of jars to include please, refer to the link:https://github.com/OpenHFT/OpenHFT/blob/74808dc7f0b55094d4fd6fce1817842baab5b87b/chronicle-bom/pom.xml[`chronicle-bom`].
-
-Once the dependencies are present on the class path, you can run:
-
-```
-$ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.main.DumpMain 19700101-02.cq4
-```
-
-This will dump the `19700101-02.cq4` file out as text, as shown below:
-
-[source,Yaml]
-----
-!!meta-data #binary
-header: !SCQStore {
-  wireType: !WireType BINARY,
-  writePosition: 0,
-  roll: !SCQSRoll {
-    length: !int 3600000,
-    format: yyyyMMdd-HH,
-    epoch: !int 3600000
-  },
-  indexing: !SCQSIndexing {
-    indexCount: !short 4096,
-    indexSpacing: 4,
-    index2Index: 0,
-    lastIndex: 0
-  },
-  lastAcknowledgedIndexReplicated: -1,
-  recovery: !TimedStoreRecovery {
-    timeStamp: 0
-  }
-}
-
-...
-# 4198044 bytes remaining
-
-----
-
-NOTE: The example above does not show any user data, because no user data was written to this example file.
-
-There is also a script named `dump_queue.sh` located in the `Chonicle-Queue/bin`-folder that gathers the needed dependencies in a shaded jar and uses it to dump the queue with `DumpMain`. The script can be run from the `Chronicle-Queue` root folder like this:
-
-[source, shell script]
-----
-$ ./bin/dump_queue.sh <file path>
-----
-
-==== ChronicleReaderMain
-The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project). As mentioned above, it is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
-
-Below is the command line interface used to configure `ChronicleReaderMain`:
-
-----
-usage: ChronicleReaderMain
- -d <directory>       Directory containing chronicle queue files
- -e <exclude-regex>   Do not display records containing this regular
-                      expression
- -f                   Tail behaviour - wait for new records to arrive
- -h                   Print this help and exit
- -i <include-regex>   Display records containing this regular expression
- -l                   Squash each output message into a single line
- -m <max-history>     Show this many records from the end of the data set
- -n <from-index>      Start reading from this index (e.g. 0x123ABE)
- -r <interface>       Use when reading from a queue generated using a MethodWriter
- -s                   Display index
- -w <wire-type>       Control output i.e. JSON
-----
-
-Just as with `DumpQueue` you need the classes in the example above present on the class path. This can again be achieved by manually adding them and then run:
-
-```
-$ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.ChronicleReaderMain -d <directory>
-```
-
-Another option is to create an Uber Jar using the Maven shade plugin. It is configured as follows:
-
-[source,xml]
-----
- <build>
-    <plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
-            <version>3.1.1</version>
-            <executions>
-                <execution>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>shade</goal>
-                    </goals>
-                    <configuration>
-                        <filters>
-                            <filter>
-                                <artifact>*:*</artifact>
-                                <includes>
-                                    <include>net/openhft/**</include>
-                                    <include>software/chronicle/**</include>
-                                </includes>
-                            </filter>
-                        </filters>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
-
-----
-
-Once the Uber jar is present, you can run `ChronicleReaderMain` from the command line via:
-
-----
-java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "19700101-02.cq4"
-----
-
-Lastly, there is a script for running the reader named `queue_reader.sh` which again is located in the `Chonicle-Queue/bin`-folder. It automatically gathers the needed dependencies in a shaded jar and uses it to run `ChronicleReaderMain`. The script can be run from the `Chronicle-Queue` root folder like this:
-
-[source, shell script]
-----
-$ ./bin/queue_reader.sh <options>
-----
-
-==== ChronicleWriter
-
-If using MethodReaders and MethodWriters then you can write single-argument method calls to a queue
-using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
-
-[source,bash]
-usage: ChronicleWriterMain files.. -d <directory> [-i <interface>] -m <method>
-Missing required options: m, d
- -d <directory>   Directory containing chronicle queue to write to
- -i <interface>   Interface to write via
- -m <method>      Method name
-
-If you want to write to the below "doit" method
-
-[source,java]
-public interface MyInterface {
-    void doit(DTO dto);
-}
-public class DTO extends SelfDescribingMarshallable {
-    private int age;
-    private String name;
-}
-
-Then you can call `ChronicleWriterMain -d queue doit x.yaml` with either (or both) of the below Yamls:
-
-[source,yaml]
-{
-  age: 19,
-  name: Henry
-}
-
-or
-[source,yaml]
-!x.y.z.DTO {
-  age: 42,
-  name: Percy
-}
-
-If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
-
-=== Reading from a Queue using a Tailer
+===== *3. Reading from a queue using a tailer*
 
 Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
 
@@ -800,7 +832,7 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
 }
 ----
 
-You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialise the method arguments.Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
+You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments. Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
 
 [source,Java]
 ----
@@ -880,21 +912,27 @@ assertTrue(tailer.readBytes(b -> {
 
 ----
 
-==== Tailers and File Handlers Clean up
+NOTE: Every tailer sees every message.
 
-Chronicle queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
+An abstraction can be added to filter messages, or assign messages to just one message processor.
+However, in general you only need one main tailer for a topic, with possibly, some supporting tailers for monitoring etc.
+
+As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic.
+Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
+
+===== *4. Tailers and file handlers clean up*
+
+Chronicle Queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
 If you are writing your code not have GC pauses and you explicitly want to clean up the file handlers, you can call the following:
 
 ```java
 ((StoreTailer)tailer).releaseResources()
 ```
 
-==== `ExcerptTailer.toEnd()`
+===== *5. Using `ExcerptTailer.toEnd()`*
 
 In some applications, it may be necessary to start reading from the end of the queue (e.g. in a restart scenario).
-For this use-case, `ExcerptTailer` provides the `toEnd()`
-method.
-
+For this use-case, `ExcerptTailer` provides the `toEnd()` method.
 When the tailer direction is `FORWARD` (by default, or as set by the `ExcerptTailer.direction`
 method), then calling `toEnd()` will place the tailer just *after* the last existing record in the queue.
 In this case, the tailer is now ready for reading any new records appended to the queue.
@@ -926,7 +964,7 @@ boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
         readingDocument().isPresent();
 ....
 
-=== Restartable Tailers
+===== *6. Restartable tailers*
 
 It can be useful to have a tailer which continues from where it was up to on restart of the application.
 
@@ -965,9 +1003,211 @@ NOTE: The `direction()` is not preserved across restarts, only the next index to
 NOTE: The index of a tailer is only progressed when the `DocumentContext.close()` is called.
 If this is prevented by an error, the same message will be read on each restart.
 
-=== High level interface
+===== *7. Command line tools - reading and writing a Chronicle Queue*
 
-Chronicle v4.4+ supports the use of proxies to send and consume messages.
+Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
+
+```
+\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
+ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
+���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß����������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������
+```
+
+This can often be a bit difficult to read, so it is better to dump the `cq4` files as text. This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
+
+You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue. They can both be run from the command line in a number of ways described below.
+
+===== *8. DumpMain*
+If you have a project pom file that includes the Chronicle-Queue artifact, you can read a `cq4` file with the following command:
+
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -Dexec.args="myqueue"
+----
+
+In the above command _myqueue_ is the directory containing your .cq4 files
+
+You can also set up any dependent files manually. This requires the `chronicle-queue.jar`, from any version 4.5.3 or later, and that all dependent files are present on the class path. The dependent jars are listed below:
+
+```
+$ ls -ltr
+total 9920
+-rw-r--r--  1 robaustin  staff   112557 28 Jul 14:52 chronicle-queue-5.20.108.jar
+-rw-r--r--  1 robaustin  staff   209268 28 Jul 14:53 chronicle-bytes-2.20.104.jar
+-rw-r--r--  1 robaustin  staff   136434 28 Jul 14:56 chronicle-core-2.20.114.jar
+-rw-r--r--  1 robaustin  staff    33562 28 Jul 15:03 slf4j-api-1.7.30.jar
+-rw-r--r--  1 robaustin  staff    33562 28 Jul 15:03 slf4j-simple-1.7.30.jar
+-rw-r--r--  1 robaustin  staff   324302 28 Jul 15:04 chronicle-wire-2.20.105.jar
+-rw-r--r--  1 robaustin  staff    35112 28 Jul 15:05 chronicle-threads-2.20.101.jar
+-rw-r--r--  1 robaustin  staff   344235 28 Jul 15:05 affinity-3.20.0.jar
+-rw-r--r--  1 robaustin  staff   124332 28 Jul 15:05 commons-cli-1.4.jar
+-rw-r--r--  1 robaustin  staff  4198400 28 Jul 15:06 19700101-02.cq4
+```
+
+TIP: To find out which version of jars to include please, refer to the link:https://github.com/OpenHFT/OpenHFT/blob/74808dc7f0b55094d4fd6fce1817842baab5b87b/chronicle-bom/pom.xml[`chronicle-bom`].
+
+Once the dependencies are present on the class path, you can run:
+
+```
+$ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.main.DumpMain 19700101-02.cq4
+```
+
+This will dump the `19700101-02.cq4` file out as text, as shown below:
+
+[source,Yaml]
+----
+!!meta-data #binary
+header: !SCQStore {
+  wireType: !WireType BINARY,
+  writePosition: 0,
+  roll: !SCQSRoll {
+    length: !int 3600000,
+    format: yyyyMMdd-HH,
+    epoch: !int 3600000
+  },
+  indexing: !SCQSIndexing {
+    indexCount: !short 4096,
+    indexSpacing: 4,
+    index2Index: 0,
+    lastIndex: 0
+  },
+  lastAcknowledgedIndexReplicated: -1,
+  recovery: !TimedStoreRecovery {
+    timeStamp: 0
+  }
+}
+
+...
+# 4198044 bytes remaining
+----
+
+NOTE: The example above does not show any user data, because no user data was written to this example file.
+
+There is also a script named `dump_queue.sh` located in the `Chonicle-Queue/bin`-folder that gathers the needed dependencies in a shaded jar and uses it to dump the queue with `DumpMain`. The script can be run from the `Chronicle-Queue` root folder like this:
+
+[source, shell script]
+----
+$ ./bin/dump_queue.sh <file path>
+----
+
+===== *9. Reading a queue using `ChronicleReaderMain`*
+The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project). As mentioned above, it is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
+
+Below is the command line interface used to configure `ChronicleReaderMain`:
+
+----
+usage: ChronicleReaderMain
+ -d <directory>       Directory containing chronicle queue files
+ -e <exclude-regex>   Do not display records containing this regular
+                      expression
+ -f                   Tail behaviour - wait for new records to arrive
+ -h                   Print this help and exit
+ -i <include-regex>   Display records containing this regular expression
+ -l                   Squash each output message into a single line
+ -m <max-history>     Show this many records from the end of the data set
+ -n <from-index>      Start reading from this index (e.g. 0x123ABE)
+ -r <interface>       Use when reading from a queue generated using a MethodWriter
+ -s                   Display index
+ -w <wire-type>       Control output i.e. JSON
+----
+
+Just as with `DumpQueue` you need the classes in the example above present on the class path. This can again be achieved by manually adding them and then run:
+
+```
+$ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.ChronicleReaderMain -d <directory>
+```
+
+Another option is to create an Uber Jar using the Maven shade plugin. It is configured as follows:
+
+[source,xml]
+----
+ <build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.1.1</version>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                    <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <includes>
+                                    <include>net/openhft/**</include>
+                                    <include>software/chronicle/**</include>
+                                </includes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+
+----
+
+Once the Uber jar is present, you can run `ChronicleReaderMain` from the command line via:
+
+----
+java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "19700101-02.cq4"
+----
+
+Lastly, there is a script for running the reader named `queue_reader.sh` which again is located in the `Chonicle-Queue/bin`-folder. It automatically gathers the needed dependencies in a shaded jar and uses it to run `ChronicleReaderMain`. The script can be run from the `Chronicle-Queue` root folder like this:
+
+[source, shell script]
+----
+$ ./bin/queue_reader.sh <options>
+----
+
+===== *10. Writing into a queue using `ChronicleWriter`*
+
+If using `MethodReader` and `MethodWriter` then you can write single-argument method calls to a queue
+using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
+
+[source,bash]
+usage: ChronicleWriterMain files.. -d <directory> [-i <interface>] -m <method>
+Missing required options: m, d
+ -d <directory>   Directory containing chronicle queue to write to
+ -i <interface>   Interface to write via
+ -m <method>      Method name
+
+If you want to write to the below "doit" method
+
+[source,java]
+public interface MyInterface {
+    void doit(DTO dto);
+}
+public class DTO extends SelfDescribingMarshallable {
+    private int age;
+    private String name;
+}
+
+Then you can call `ChronicleWriterMain -d queue doit x.yaml` with either (or both) of the below Yamls:
+
+[source,yaml]
+{
+  age: 19,
+  name: Henry
+}
+
+or
+[source,yaml]
+!x.y.z.DTO {
+  age: 42,
+  name: Percy
+}
+
+If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
+
+===== *11. High level interface for reading/writing*
+
+Chronicle v4.4+ supports the use of proxies to write and read messages.
 You start by defining an asynchronous `interface`, where all methods have:
 
 - arguments which are only inputs
@@ -1059,26 +1299,172 @@ method2 [!Message2 {
 
 * For more details see, https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest]
 
-=== Building Blocks
+===== *12. Detailed tracing of timings*
 
-Chronicle has three main concepts:
+Chronicle Queue supports explicit, or implicit, nanosecond resolution timing for messages as they pass end-to-end over across your system.
+We support using nano-time across machines, without the need for specialist hardware.
 
-- *Tailer*.
-Sequential and random reads, forwards and backwards
-+
-A Tailer is an excerpt optimized for sequential reads.
-- *Appender*.
-Sequential writes, append to the end only
-+
-An Appender is something like an iterator in Chronicle environment.
-You add data appending the current chronicle.
-- *Excerpt*.
-Excerpt is the main data container in a Chronicle queue.
-+
-Each Chronicle queue is composed of excerpts.
-Putting data to a Chronicle queue means starting a new excerpt, writing data into it, and finishing the excerpt at the end.
+.Enabling high resolution timings
+[source,Java]
+----
+SidedMarketDataListener combiner = out.acquireAppender()
+        .methodWriterBuilder(SidedMarketDataListener.class)
+        .recordHistory(true)
+        .get();
 
-=== Pretoucher configuration
+combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
+----
+
+A timestamp is added for each read and write as it passes from service to service.
+
+.Downstream message triggered by the event above
+[source,Yaml]
+----
+--- !!data #binary
+history: {
+  sources: [
+    1,
+    0x426700000000 # <4>
+  ]
+  timings: [
+    1394278797664704, # <1>
+    1394278822632044, # <2>
+    1394278824073475  # <3>
+  ]
+}
+onTopOfBookPrice: {
+  symbol: EURUSD1,
+  timestamp: 123456789000,
+  buyPrice: NaN,
+  buyQuantity: 0,
+  sellPrice: 1.1172,
+  sellQuantity: 2000000.0
+}
+----
+<1> First write
+<2> First read
+<3> Write of the result of the read.
+<4> What triggered this event.
+
+===== *13. Excerpt indexing in Chronicle Queue*
+//An index is assigned to the excerpt that is written into a queue.
+In the following section you will find how to work with the excerpt index.
+
+- *Finding the index at the end of a Chronicle Queue*
+
+Chronicle Queue appenders are thread-local.
+In fact when you ask for:
+
+```
+final ExcerptAppender appender = queue.acquireAppender();
+```
+
+the `acquireAppender()` uses a thread-local pool to give you an appender which will be reused to reduce object creation.
+As such, the method call to:
+
+```
+long index = appender.lastIndexAppended();
+```
+
+will only give you the last index appended by this appender; not the last index appended by any appender.
+If you wish to find the index of the last record written to the queue, then you have to call:
+
+```
+queue.lastIndex()
+```
+Which will return the index of the last excerpt present in the queue (or -1 for an empty queue). Note that if the queue is
+being written to concurrently it's possible the value may be an under-estimate, as subsequent entries may have been written
+even before it was returned.
+
+- *The number of messages between two indexes*
+
+To count the number of messages between two indexes you can use:
+
+```
+((SingleChronicleQueue)queue).countExcerpts(<firstIndex>,<lastIndex>);
+```
+
+NOTE: You should avoid calling this method on latency sensitive code, because if the indexes are in different cycles this method may have to access the .cq4 files from the file system.
+
+for more information on this see :
+
+```
+net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.countExcerpts
+```
+
+- *Move to a specific message and read it*
+
+The following example shows how to write 10 messages, then move to the 5th message to read it
+[source,java]
+----
+@Test
+public void read5thMessageTest() {
+    try (final ChronicleQueue queue = singleBuilder(getTmpDir()).build()) {
+
+        final ExcerptAppender appender = queue.acquireAppender();
+
+        int i = 0;
+        for (int j = 0; j < 10; j++) {
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("hello").text("world " + (i++));
+                long indexWritten = dc.index();
+            }
+        }
+
+        // Get the current cycle
+        int cycle;
+        final ExcerptTailer tailer = queue.createTailer();
+        try (DocumentContext documentContext = tailer.readingDocument()) {
+            long index = documentContext.index();
+            cycle = queue.rollCycle().toCycle(index);
+        }
+
+        long index = queue.rollCycle().toIndex(cycle, 5);
+        tailer.moveToIndex(index);
+        try (DocumentContext dc = tailer.readingDocument()) {
+            System.out.println(dc.wire().read("hello").text());
+        }
+ }
+}
+----
+
+===== *14. File retention*
+
+You can add a `StoreFileListener` to notify you when a file is added, or no longer used.
+This can be used to delete files after a period of time.
+However, by default, files are retained forever.
+Our largest users have over 100 TB of data stored in queues.
+
+Appenders and tailers are cheap as they don't even require a TCP connection; they are just a few Java objects.
+The only thing each tailer retains is an index which is composed from:
+
+*-* a cycle number.
+For example, days since epoch, and
+
+*-* a sequence number within that cycle.
+
+In the case of a `DAILY` cycle, the sequence number is 32 bits, and the `index = ((long) cycle << 32) | sequenceNumber` providing up to 4 billion entries per day.
+if more messages per day are anticipated, the `XLARGE_DAILY` cycle, for example, provides up 4 trillion entries per day using a 48-bit sequence number.
+Printing the index in hexadecimal is common in our libraries, to make it easier to see these two components.
+
+Rather than partition the queue files across servers, we support each server, storing as much data as you have disk space.
+This is much more scalable than being limited to the amount of memory space that you have.
+You can buy a redundant pair of 6TB of enterprise disks very much more cheaply than 6TB of memory.
+
+===== *15. File handles and flushing data to the disk*
+
+As mentioned previously Chronicle Queue stores its data off-heap in a ‘.cq4’ file.
+So whenever you wish to append data to this file or read data into this file, chronicle queue will create a file handle .
+Typically, Chronicle Queue will create a new ‘.cq4’ file every day.
+However, this could be changed so that you can create a new file every hour, every minute or even every second.
+
+If we create a queue file every second, we would refer to this as SECONDLY rolling.
+Of course, creating a new file every second is a little extreme, but it's a good way to illustrate the following point.
+When using secondly rolling, If you had written 10 seconds worth of data and then you wish to read this data, chronicle would have to scan across 10 files.
+To reduce the creation of the file handles, chronicle queue cashes them lazily and when it comes to writing data to the queue files, care-full consideration must be taken when closing the files, because on most OS’s a close of the file, will force any data that has been appended to the file, to be flushed to disk, and if we are not careful this could stall your application.
+
+===== *16. Pretoucher and its configuration*
 
 `Pretoucher` is a class designed to be called from a long-lived thread. The purpose of the Pretoucher
 is to accelerate writing in a queue. Upon invocation of the `execute()` method, this object will pre-touch
@@ -1093,7 +1479,7 @@ The Pretoucher's configuration parameters (set via the system properties) are as
 - `SingleChronicleQueueExcerpts.earlyAcquireNextCycle` (defaults to false): Causes the Pretoucher to create the next cycle file while the queue
 is still writing to the current one in order to mitigate the impact of stalls in the OS when creating new files.
 
-*Note:* `earlyAcquireNextCycle` is off by default and if it is going to be turned on, you should very carefully
+WARNING: `earlyAcquireNextCycle` is off by default and if it is going to be turned on, you should very carefully
 stress test before and after turning it on. Basically what you experience is related to your system.
 
 - `SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs` (defaults to 2,000 milliseconds) The pretoucher will create new cycle files
@@ -1107,11 +1493,11 @@ have been written, it will create the "current" cycle file. Obviously enabling t
 
 The Pretoucher's constructor takes the following parameter:
 
-- `queue`: The queue that this Pretoucher is assigned to.
+*-* `queue`: The queue that this Pretoucher is assigned to.
 
-==== Usage example
+- *Pretoucher usage example*
 
-The configuration parameters of Pretoucher that described above, should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
+The configuration parameters of Pretoucher that were described above should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
 [source,java]
 ----
 System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
@@ -1120,10 +1506,10 @@ System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100"
 The constructor of Pretoucher takes the name of the queue that this Pretoucher is assigned to and creates a new Pretoucher. Then, by invoking the `execute()` method the Pretoucher starts.
 [source,java]
 ----
-// Create the queue q1 (or q1 is a queue that already exists)
+// Creates the queue q1 (or q1 is a queue that already exists)
 try(final SingleChronicleQueue q1 = SingleChronicleQueueBuilder.binary("queue-storage-path").build();
 
-    // Create Pretoucher pretouch for q1
+    // Creates Pretoucher pretouch for q1
     final Pretoucher pretouch = new Pretoucher(q1)){
     try {
         // Start the Pretoucher
@@ -1142,43 +1528,51 @@ The method shutdown(), closes the queue and releases any other resources.
 pretouch.shutdown();
 ----
 
-=== File Rolling
+== Performance and Benchmarking
+Chronicle Queue can be monitored to obtain latency, throughput, and activity metrics, in real time (that is, within microseconds of the event triggering it).
 
-Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
-When the roll cycle reaches the point it should roll, appender will atomically write `EOF` mark at the end of current file to indicate that no other appender should write to this file and no tailer should read further, and instead everyone should use new file.
+=== Latency Test for Chronicle Queue Replication
 
-If the process was shutdown, and restarted later when the roll cycle should be using a new file, an appender will try to locate old files and write an `EOF` mark in them to help tailers reading them.
-However, tailers are robust enough to understand that the `EOF` mark should be present in the file from previous roll cycle even if it's not written, after a certain timeout.
+The following charts show how long it takes to:
 
-=== File Handles and Flushing Data to the Disk
+- write a 40 byte message to a Chronicle Queue
+- have the write replicated over TCP
+- have the second copy acknowledge receipt of the message
+- have a thread read the acknowledged message
 
-As mentioned previously Chronicle Queue stores its data off-heap in a ‘.cq4’ file.
-So whenever you wish to append data to this file or read data into this file, chronicle queue will create a file handle .
+The test was run for ten minutes, and the distribution of latencies plotted.
 
-Typically, Chronicle Queue will create a new ‘.cq4’ file every day.
-However, this could be changed so that you can create a new file every hour, every minute or even every second.
+image:https://vanilla-java.github.io/images/Latency-to-993.png[]
 
-If we create a queue file every second, we would refer to this as SECONDLY rolling.
-Of course, creating a new file every second is a little extreme, but it's a good way to illustrate my following point.
-When using secondly rolling, If you had written 10 seconds worth of data and then you wish to read this data, chronicle would have to scan across 10 files.
-To reduce the creation of the file handles, chronicle queue cashes them lazily and when it comes to writing data to the queue files, care-full consideration must be taken when closing the files, because on most OS’s a close of the file, will force any data that has been appended to the file, to be flushed to disk, and if we are not careful this could stall your application.
+NOTE: There is a step in latency at around 10 million message per second; it jumps as the messages start to batch.
+At rates below this, each message can be sent individually.
+
+The 99.99 percentile and above are believed to be delays in passing the message over TCP. Further research is needed to prove this.
+These delays are similar, regardless of the throughput.
+The 99.9 percentile and 99.93 percentile are a function of how quickly the system can recover after a delay.
+The higher the throughput, the less headroom the system has to recover from a delay.
+
+image:https://vanilla-java.github.io/images/Latency-from-993.png[]
 
 === Double-buffering for contended writes
 
-By default, double-buffering is disabled. You can enable double-buffering by calling
-```
-SingleChronicleQueueBuilder#doubleBuffer(true);
-```
-
-Normally (when double-buffering is disabled), all writes to the queue will be serialized based on the write lock acquisition.
-Each time `ExcerptAppender#writingDocument()`
+When double-buffering is disabled, all writes to the queue will be serialized based on the write lock acquisition.
+Each time `ExcerptAppender.writingDocument()`
 is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write lock is unlocked, and in turn locks the queue for itself.
 
-When double-buffering is enabled, if appender sees that the write lock is acquired upon call to `ExcerptAppender#writingDocument()` call, it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block), allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
+When double-buffering is enabled, if appender sees that the write lock is acquired upon call to `ExcerptAppender.writingDocument()` call, it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition until the `context.close()` is called (normally with try-with-resources pattern it is at the end of the try block), allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
+By default, double-buffering is disabled. You can enable double-buffering by calling
+
+```
+SingleChronicleQueueBuilder.doubleBuffer(true);
+```
 
 NOTE: During a write that is buffered, `DocumentContext.index()` will throw an `IndexNotAvailableException`. This is because it is impossible to know the index until the buffer is written back to the queue, which only happens when the `DocumentContext` is closed.
 
 This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
+
+- Results:
+
 Below are the benchmark results for various data sizes at the frequency of 10 KHz for a cumbersome message (see `net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark`), YMMV - always do your own benchmarks:
 
 * 1 KB
@@ -1267,531 +1661,6 @@ worst:      71925.76     80314.37     62537.73        15.93
 ------------------------------------------------------------------------------------------------------------------
 ----
 
-== The Changes from Chronicle Queue version 4 to version 5
-
-In Chronicle Queue 5 tailers are now read-only, in Chronicle Queue 4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise, when lazy indexing was turned on the indexing was done by the first tailer that read the data.
-Since in chronicle queue 4 tailers could do the indexing we could not rely on them to be read-only.
-We decided to drop lazy indexing in chronicle queue 5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations elsewhere in the code.
-
-The locking model of Chronicle Queue was changed, in Chronicle Queue 4 a write lock (to prevent concurrent writes to the queue) exists in the .cq4 file.
-In Chronicle Queue 5 this was moved to a single file called a table store (metadata.cq4t).
-This simplifies the locking code internally as only the table store file has to be inspected.
-
-You can use Chronicle 5 to read messages written with Chronicle 4, however you should not concurrently run chronicle queue 4 and chronicle queue 5 at the same time.
-In other words avoid running Chronicle Queue 4’s appenders and tailers on a queue which at the same time is also read and written to via Chronicle Queue 5.
-
-== Changes from Chronicle Queue v3
-
-Chronicle Queue v4 solves a number of issues that existed in Chronicle Queue v3.
-
-- Without self-describing messages, users had to create their own functionality for dumping messages and long term storage of data.
-+
-With Q4 you don't have to do this, but you can if you wish to.
-- Vanilla Chronicle Queue would create a file per thread.This is fine if the number of threads is controlled, however, many applications have little or no control over how many threads are used and this caused usability problems.
-- The configuration for Indexed and Vanilla Chronicle was entirely in code so the reader had to have the same configuration as the writers and it wasn't always clear what that was.
-- There was no way for the producer to know how much data had been replicated to the a second machine.The only work around was to replicate data back to the producers.
-- You needed to specify the size of data to reserve before you started to write your message.
-- You needed to do your own locking for the appender when using Indexed Chronicle.
-
-=== Can I use Chronicle Queue v3 and v4 in the same project.
-
-Yes.
-They use different packages.
-Chronicle Queue v4 is a complete re-write so there is no problem using it at the same time as Chronicle Queue v3. The format of how the data is stored is slightly different, so they are are not interoperable on the same queue data file.
-
-=== Migrating from Chronicle Queue v2 and v3.
-
-In Chronicle Queue v3, everything was in terms of bytes, not wire.
-There are two ways to use byte in Chronicle Queue v4. You can use the `writeBytes` and `readBytes` methods, or you can get the `bytes()` from the wire.
-For example:
-
-.Writing and reading bytes using a lambda
-[source,Java]
-----
-appender.writeBytes(b -> b.writeInt(1234).writeDouble(1.111));
-
-boolean present = tailer.readBytes(b -> process(b.readInt(), b.readDouble()));
-----
-
-.Writing to a queue without using a lambda
-[source,Java]
-----
-try (DocumentContext dc = appender.writingDocument()) {
-    Bytes bytes = dc.wire().bytes();
-    // write to bytes
-}
-
-try (DocumentContext dc = tailer.readingDocument()) {
-    if (dc.isPresent()) {
-        Bytes bytes = dc.wire().bytes();
-        // read from bytes
-    }
-}
-----
-
-=== Single Chronicle Queue
-
-This queue is a designed to support:
-
-- rolling files on a daily, weekly or hourly basis,
-
-- concurrent writers on the same machine,
-
-- concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise),
-
-- zero copy serialization and deserialization,
-
-- millions of writes/reads per second on commodity hardware.
-+
-Approximately 5 million messages/second for 96-byte messages on a i7-4790 processor.
-
-The directory structure is as follows:
-
-[source]
-----
-base-directory /
-   {cycle-name}.cq4       - The default format is yyyyMMdd for daily rolling.
-----
-
-The format consists of size-prefixed bytes which are formatted using `BinaryWire` or `TextWire`.
-The `ChronicleQueue.dump()` method can be used to dump the raw contents as a string.
-
-=== Getting Started
-
-==== Chronicle Construction
-
-Creating an instance of Chronicle Queue is a little more complex than just calling a constructor.
-
-To create an instance you have to use the `ChronicleQueueBuilder`.
-
-[source,Java]
-----
-String basePath = OS.getTarget() + "/getting-started"
-ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath).build();
-----
-
-In this example we have created an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
-
-[source]
-----
-${java.io.tmpdir}/getting-started/{today}.cq4
-----
-
-==== Writing
-
-[source,Java]
-----
-// Obtain an ExcerptAppender
-ExcerptAppender appender = queue.acquireAppender();
-
-// write - {msg: TestMessage}
-appender.writeDocument(w -> w.write("msg").text("TestMessage"));
-
-// write - TestMessage
-appender.writeText("TestMessage");
-----
-
-==== Reading
-
-[source,Java]
-----
-ExcerptTailer tailer = queue.createTailer();
-
-tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
-
-assertEquals("TestMessage", tailer.readText());
-----
-
-==== Cleanup
-
-Chronicle Queue stores its data off-heap, and it is recommended that you call `close()` once you have finished working with Chronicle Queue, to free resources,
-
-NOTE: No data will be lost if you do not do this.
-This is only to clean up resources that were used.
-
-[source,Java]
-----
-queue.close();
-----
-
-==== Putting it all together
-
-[source,Java]
-----
-try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").build()) {
-    // Obtain an ExcerptAppender
-    ExcerptAppender appender = queue.acquireAppender();
-
-    // write - {msg: TestMessage}
-    appender.writeDocument(w -> w.write("msg").text("TestMessage"));
-
-    // write - TestMessage
-    appender.writeText("TestMessage");
-
-    ExcerptTailer tailer = queue.createTailer();
-
-    tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
-
-    assertEquals("TestMessage", tailer.readText());
-}
-----
-
-=== FAQ
-
-=== If you are seeing "OutOfMemoryError: Map failed"
-
-[source,Java]
-----
-Caused by: java.lang.OutOfMemoryError: Map failed
-            at sun.nio.ch.FileChannelImpl.map0(Native Method)
-            at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-            at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
-            at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-            at java.lang.reflect.Method.invoke(Method.java:497)
-            at net.openhft.chronicle.core.OS.map0(OS.java:292)
-            at net.openhft.chronicle.core.OS.map(OS.java:280)
-            ... 54 more
-----
-
-The problem is that it is running out of virtual memory, you are more likely to see this if you are running a 32-Bit JVM on 64-bit.
-One work around is to use a 64-bit JVM.
-
-=== How to change the time that Chronicle Queue rolls
-
-The time Chronicle Queue rolls, is based on the UTC time, it uses `System.currentTimeMillis()`.
-
-When using daily-rolling, Chronicle Queue will roll at midnight UTC. If you wish to change the time it rolls, you have to change Chronicle Queue's `epoch()` time.
-This time is a milliseconds offset, in other words, if you set the `epoch` to be `epoch(1)` then chronicle will roll at 1 millisecond past midnight.
-
-[source,Java]
-----
-Path path = Files.createTempDirectory("rollCycleTest");
-SingleChronicleQueue queue = ChronicleQueue.singleBuilder(path).epoch(0).build();
-----
-
-We do not recommend that you change the `epoch()` on an existing system, which already has `.cq4` files created, using a different `epoch()` setting.
-
-If you were to set :
-
-[source,Java]
-----
-.epoch(System.currentTimeMillis()
-----
-
-This would make the current time the roll time, and the cycle numbers would start from zero.
-
-=== How to find the current cq4 Chronicle Queue is writing to
-
-[source,Java]
-----
-WireStore wireStore = queue.storeForCycle(queue.cycle(), 0, false);
-System.out.println(wireStore.file().getAbsolutePath());
-----
-
-==== Do we have to use Wire, can we use Bytes?
-
-You can access the bytes in wire as follows:
-
-.Writing to Bytes
-[source,Java]
-----
-try (DocumentContext dc = appender.writingDocument()) {
-    Wire wire = dc.wire();
-    Bytes bytes = wire.bytes();
-    // write to bytes
-}
-----
-
-.Reading from Bytes
-[source,Java]
-----
-try (DocumentContext dc = tailer.readingDocument()) {
-    Wire wire = dc.wire();
-    Bytes bytes = wire.bytes();
-    // read from the bytes
-}
-----
-
-.Checking that you have data
-You can use `isPresent()` to check that there is data to read.
-[source,Java]
-
-----
-try (DocumentContext dc = tailer.readingDocument()) {
-    if(!dc.isPresent()) // this will tell you if there is any data  to read
-        return;
-    Bytes bytes = dc.wire().bytes();
-    // read from the bytes
-}
-----
-
-==== Is there a lower level interface?
-
-You can access native memory:
-
-.Writing to native memory
-[source,Java]
-----
-try (DocumentContext dc = appender.writingDocument()) {
-    Wire wire = dc.wire();
-    Bytes bytes = wire.bytes();
-    long address = bytes.address(bytes.readPosition());
-    // write to native memory
-    bytes.writeSkip(lengthActuallyWritten);
-}
-----
-
-.Reading from native memory
-[source,Java]
-----
-try (DocumentContext dc = appender.writingDocument()) {
-    Wire wire = dc.wire();
-    Bytes bytes = wire.bytes();
-    long address = bytes.address(bytes.readPosition());
-    long length = bytes.readRemaining();
-    // read from native memory
-}
-----
-
-==== Padding added to the end of Excerpts
-
-If you are writing bytes to a Chronicle-Queue you will find that it occasionally adds padding to the end of each message.
-This is to ensure that each message starts on a 4-byte boundary which is a requirement for ARM architectures. NOTE: Intel requires that messages don’t straggle 64-byte cash lines.
-but aligning to 4 bytes also ensures 64-byte alignment and allows your Chronicle Queues to be shared between various different platforms.
-
-For Chronicle Queue, the 4-byte alignment is now enforced, so there is now, no way to turn this feature on or off.
-This behaviour was changed on 21 April 2020 as part of https://github.com/OpenHFT/Chronicle-Queue/issues/656
-
-==== Ensure long Running tasks are not performed with a writingDocument()
-
-The `writingDocument()` should be performed as quickly as possible because a write lock is held until the `DocumentContext` is closed by the try-with-resources.
-This blocks other appenders and tailers.
-More dangerously, if something keeps the thread busy long enough(more than recovery timeout, which is 20 seconds by default) between call to `appender.writingDocument()` and code that actually writes something into bytes, it can cause recovery to kick in from other appenders (potentially in other process), which will rewrite message header, and if your thread subsequently continues writing its own message it the will corrupt queue file.
-
-[source,Java]
-----
-try (DocumentContext dc = appender.writingDocument()) {
-  // this should be performed as quickly as possible because a write lock is held until the
-  // DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
-}
-----
-
-==== Exceptions thrown with a writingDocument()
-
-If an exception is thrown while you are holding the `writingDocument()`, then the `close()` method will be called on the
-`DocumentContext` which will release the lock, set the length in the header, and allow writing to continue.
-If the exception was thrown halfway through writing your data, then you will end up with your data half-written in the chronicle queue.
-If there is a possibility of an exception during writing, you should use something like the below.
-This calls the `DocumentContext.rollbackOnClose()` method to tell the `DocumentContext` to rollback the data.
-
-[source,Java]
-----
-@NotNull DocumentContext dc = writingDocument();
-try {
-    // perform the write which may throw
-} catch (Throwable t) {
-    dc.rollbackOnClose();
-    throw Jvm.rethrow(t);
-} finally {
-    dc.close();
-}
-----
-
-==== How to Shutdown
-
-You should try to avoid abruptly killing Chronicle Queue, especially if its in the middle of writing a message.
-
-[source,Java]
-----
-try (DocumentContext dc = appender.writingDocument()) {
-    // killing chronicle queue here will leave the file in a locked state
-}
-----
-
-If you kill Chronicle Queue when its half way through writing a document, this can leave your Chronicle Queue in a locked state, which could later prevent other appenders from writing to the queue file.
-
-Although we do not recommend that you `$kill -9` your process, in the event that your process abruptly terminates we have added recovery code that should recover from this situation.
-
-== Design
-
-=== Motivation
-
-Chronicle Queue is designed to be a "record everything store" which can read with microsecond real-time latency.
-This supports even the most demanding High Frequency Trading systems.
-However, it can be used in any application where the recording of information is a concern.
-
-Chronicle Queue is designed to support reliable replication with notification to either the appender or a tailer, when a message has been successfully replicated.
-
-=== Persistence
-
-Chronicle Queue assumes disk space is cheap compared with memory.
-Chronicle Queue makes full use of the disk space you have, and so you are not limited by the main memory of your machine.
-If you use spinning HDD, you can store many TBs of disk space for little cost.
-
-The only extra software that Chronicle Queue needs to run is the operating system.
-It doesn't have a broker; instead it uses your operating system to do all the work.
-If your application dies, the operating system keeps running for seconds longer, so no data is lost; even without replication.
-
-As Chronicle Queue stores all saved data in memory-mapped files, this has a trivial on-heap overhead, even if you have over 100 TB of data.
-
-=== Efficiency
-
-Chronicle put significant effort into achieving very low latency.
-
-In other products which focus on support of web applications, latencies of less than 40 milliseconds are fine as they are faster than you can see; for example, the frame rate of cinema is 24 Hz, or about 40 ms.
-
-Chronicle Queue aims to achieve latencies of under 40 microseconds for 99% to 99.99% of the time.
-Using Chronicle Queue without replication, we support applications with latencies below 40 microseconds end-to-end across multiple services.
-Often the 99% latency of Chronicle Queue is entirely dependant on the choice of operating system and hard disk sub-system.
-
-=== Compression
-
-Replication for Chronicle Queue supports Chronicle Wire Enterprise.
-This supports a real-time compression which calculates the deltas for individual objects, as they are written.
-This can reduce the size of messages by a factor of 10, or better, without the need for batching; that is, without introducing significant latency.
-
-Chronicle Queue also supports LZW, Snappy, and GZIP compression.
-These formats however add significant latency.
-These are only useful if you have strict limitations on network bandwidth.
-
-=== Delivery Mode Semantics
-
-Chronicle Queue supports a number of semantics.
-
-- Every message is replayed on restart.
-- Only new messages are played on restart.
-- Restart from any known point using the index of the entry.
-- Replay only the messages you have missed.
-This is supported directly using the methodReader/methodWriter builders.
-
-=== Detailed tracing of timings.
-
-Chronicle Queue supports explicit, or implicit, nanosecond resolution timing for messages as they pass end-to-end over across your system.
-We support using nano-time across machines, without the need for specialist hardware.
-
-.Enabling high resolution timings
-[source,Java]
-----
-SidedMarketDataListener combiner = out.acquireAppender()
-        .methodWriterBuilder(SidedMarketDataListener.class)
-        .recordHistory(true)
-        .get();
-
-combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
-----
-
-A timestamp is added for each read and write as it passes from service to service.
-
-.Downstream message triggered by the event above
-[source,Yaml]
-----
---- !!data #binary
-history: {
-  sources: [
-    1,
-    0x426700000000 # <4>
-  ]
-  timings: [
-    1394278797664704, # <1>
-    1394278822632044, # <2>
-    1394278824073475  # <3>
-  ]
-}
-onTopOfBookPrice: {
-  symbol: EURUSD1,
-  timestamp: 123456789000,
-  buyPrice: NaN,
-  buyQuantity: 0,
-  sellPrice: 1.1172,
-  sellQuantity: 2000000.0
-}
-----
-<1> First write
-<2> First read
-<3> Write of the result of the read.
-<4> What triggered this event.
-
-=== Using high resolution timings across machines.
-
-On most systems `System.nanoTime()` is roughly the number of nanoseconds since the system last rebooted (although different JVMs may behave differently).
-This is the same across JVMs on the same machine, but wildly different between machines.
-The absolute difference when it comes to machines is meaningless.
-However, the information can be used to detect outliers; you can't determine what the best latency is, but you can determine how far off the best latencies you are.
-This is useful if you are focusing on the 99th percentile latencies.
-We have a class called `RunningMinimum` to obtain timings from different machines, while compensating for a drift in the `nanoTime` between machines.
-The more often you take measurements, the more accurate this running minimum is.
-
-=== Compacting logs
-
-Chronicle Queue manages storage by cycle.
-You can add a `StoreFileListener` which will notify you when a file is added, and when it is no longer retained.
-You can move, compress, or delete all the messages for a day, at once.
-NOTE : Unfortunately on Windows, if an IO operation is interrupted, it can close the underlying FileChannel.
-
-=== Avoid Interrupts
-
-Due to performance reasons, we have removed checking for interrupts in the chronicle queue code.
-Because of this, we recommend that you avoid using chronicle queue with code that generates interrupts.
-If you can not avoid generating interrupts then we suggest that you create a separate instance of chronicle-queue per thread.
-
-== Chronicle Queue vs Kafka
-
-Chronicle Queue is designed to out-perform its rivals such as Kafka.
-
-Chronicle Queue supports over an order-of-magnitude of greater throughput, together with an order-of-magnitude of lower latency, than Apache Kafka.
-While Kafka is faster than many of the alternatives, it doesn't match Chronicle Queue's ability to support throughputs of over a million events per second, while simultaneously achieving latencies of 1 to 20 microseconds.
-
-Chronicle Queue handles more volume from a single thread to a single partition.
-This avoids the need for the complexity, and the downsides, of having partitions.
-
-NOTE: Chronicle Datagrid does support partitioning of queues across machines, though not the partitioning of a single queue.
-
-Kafka uses an intermediate broker to use the operating system's file system and cache, while Chronicle Queue directly uses the operating system's file system and cache.
-
-=== Similar product guides
-
-http://kafka.apache.org/documentation.html[Kafka Documentation]
-
-==  Support
-
-* https://github.com/OpenHFT/Chronicle-Queue/blob/master/docs/FAQ.adoc[Chronicle FAQ]
-* http://stackoverflow.com/tags/chronicle/info[Chronicle support on StackOverflow]
-* https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle[Chronicle support on Google Groups]
-* https://higherfrequencytrading.atlassian.net/browse/CHRON[Development Tasks - JIRA]
-
-== Replication
-
-Chronicle Queue Enterprise supports TCP and UDP replication.
-
-Replication between hosts ensures real-time backup of all your queue data.
-For more information see <<docs/replication.adoc#, Replication>>, the <<docs/queue-replication-message-protocol-overview.adoc#, protocol is covered here.>>
-
-image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/images/queue-replication.png[]
-
-=== Latency Test for Chronicle Queue replication
-
-The following charts show how long it takes to:
-
-- write a 40 byte message to a Chronicle Queue
-- have the write replicated over TCP
-- have the second copy acknowledge receipt of the message
-- have a thread read the acknowledged message
-
-The test was run for ten minutes, and the distribution of latencies plotted.
-
-image:https://vanilla-java.github.io/images/Latency-to-993.png[]
-
-NOTE: There is a step in latency at around 10 million message per second; it jumps as the messages start to batch.
-At rates below this, each message can be sent individually.
-
-The 99.99 percentile and above are believed to be delays in passing the message over TCP. Further research is needed to prove this.
-These delays are similar, regardless of the throughput.
-
-The 99.9 percentile and 99.93 percentile are a function of how quickly the system can recover after a delay.
-The higher the throughput, the less headroom the system has to recover from a delay.
-
-image:https://vanilla-java.github.io/images/Latency-from-993.png[]
-
 === Jitter
 
 If you wish to tune your code for ultra-low latency, you could take a similar approach to our `QueueReadJitterMain`
@@ -1839,10 +1708,9 @@ As it is based on a statistical approach of where the stalls are, it takes many 
 ----
 
 from this, we can see that most of the samples (on this occasion 28 of them ) were captured in `ConcurrentHashMap.putVal()` if we wish to get finer grain granularity,
-
 we will often add a `net.openhft.chronicle.core.Jvm.safepoint` into the code because thread dumps are only reported at safe-points.
 
-==== Summary
+- Results:
 
 In the test described above, the typical latency varied between 14 and 40 microseconds.
 The 99 percentile varied between 17 and 56 microseconds depending on the throughput being tested.
@@ -1857,320 +1725,55 @@ Notably, the 99.93% latency varied between 21 microseconds and 41 milliseconds, 
 | < 60 microseconds 99.3% of the time | 80 million message per second
 |===
 
-== FAQs
+=== More Benchmarks
 
-=== Can Chronicle Queue Work on OpenJ9
+https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
 
-The byte[] methods on StringUtils are designed to work only on those Java 9+ VMs that have the compact strings feature enabled, but not on ones that have non-compact strings.
-This is not specific to OpenJ9, and HotSpot should fail with Java9 (but it doesn't because compact strings are enabled by default).
+<<docs/performance.adoc#,End-to-End latency plots for various message sizes>>
 
-Conversely, OpenJ9 should be able to run Chronicle Queue with compact strings.
-We can confirm ( with limited testing ) that Chronicle Queue is able to work on OpenJ9 VM with the -XX:+CompactStrings option enabled.
+=== Chronicle Queue vs Kafka
 
-In summary, Chronicle Queue can be considered compatible with OpenJ9, provided the -XX:+CompactStrings option is used.
+Chronicle Queue is designed to out-perform its rivals such as Kafka.
+Chronicle Queue supports over an order-of-magnitude of greater throughput, together with an order-of-magnitude of lower latency, than Apache Kafka.
+While Kafka is faster than many of the alternatives, it doesn't match Chronicle Queue's ability to support throughputs of over a million events per second, while simultaneously achieving latencies of 1 to 20 microseconds.
 
-OpenJ9 version 0.12.1 and earlier requires the file descriptor limit to be manually adjusted to a higher value - for example, using the command `ulimit -Sn 500`.
+Chronicle Queue handles more volume from a single thread to a single partition.
+This avoids the need for the complexity, and the downsides, of having partitions.
 
-=== How can I determine the speed of my disk sub system
+NOTE: Chronicle Datagrid does support partitioning of queues across machines, though not the partitioning of a single queue.
 
-[source,ssh]
-----
-$ for i in 0 1 2 3 4 5 6 7 8 9; do dd bs=65536 count=163840 if=/dev/zero of=deleteme$i ; done
+Kafka uses an intermediate broker to use the operating system's file system and cache, while Chronicle Queue directly uses the operating system's file system and cache.
+For comparison see http://kafka.apache.org/documentation.html[Kafka Documentation]
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 5.60293 s, 1.9 GB/s
+== More Information and Support
+==== Queue replication
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 6.08841 s, 1.8 GB/s
+Chronicle Queue Enterprise supports TCP and UDP replication.
+Replication has three modes of operation;
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 5.64981 s, 1.9 GB/s
+*-* replicate as soon as possible; < 1 millisecond in as many as 99.9% of cases,
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 5.77591 s, 1.9 GB/s
+*-* a tailer will only see messages which have been replicated,
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 5.59537 s, 1.9 GB/s
+*-* an appender doesn't return until a replica has acknowledged it has been received.
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 5.74398 s, 1.9 GB/s
+Replication between hosts ensures real-time backup of all your queue data.
+For more information see <<docs/replication.adoc#, Queue Replication>> and <<docs/queue-replication-message-protocol-overview.adoc#, TCP/IP Replication Protocol>>.
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 8.24996 s, 1.3 GB/s
+image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/images/queue-replication.png[]
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 11.1431 s, 964 MB/s
+==== Further information
 
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 12.2505 s, 876 MB/s
-
-163840+0 records in
-163840+0 records out
-10737418240 bytes (11 GB) copied, 12.7551 s, 842 MB/s
-----
-
-=== How many messages can you store in a Chronicle Queue?
-
-The number of messages that you can store depends on the roll-cycle; the roll-cycle determines how often you create a new Chronicle Queue data file.
-Most people use a new file each day and we call this daily-rolling.
-The Chronicle index is a unique index that is given to each message.
-You can use the index to retrieve any message that you have stored.
-
-When using daily-rolling, each message stored to the Chronicle queue will increase the index by 1. The high bytes in the 64-bit index are used to store the cycle number, and the low bits to store the sequence number.
-
-The index is broken down into two numbers:
-
-* *cycle number* - When using daily-rolling, the first file from epoch has cycle number of 1, and the next day it will have a cycle number of 2, and so on
-* *message sequence number* - Within a cycle, when using daily-rolling, the first message of each day will have a message sequence number of 1, and the next message within that day have a message sequence number of 2, and so on
-
-Different roll-cycles have a difference balance between how many bits are allocated to the message sequence number, and how many of the remaining bits are allocated to the cycle number.
-In other words, different roll-cycles allow us to trade off the maximum number of cycles, for the maximum number of messages within the cycle.
-
-With daily-rolling we use:
-
-* a 32-bit message sequence number - which gives us *4 billion messages per day*, and
-* a 31-bit cycle number (reserving the high bit for the sign ) - allows us to store messages up to the year *5,881,421*.
-With hourly rolling we can store messages up to the year 246,947.
-
-If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle, though reducing the number of cycles.
-
-For example, you may have up to 1 trillion messages per day and you need 23-bit cycles to allow for up to the year 24,936. If we had rolled every second with 32-bit 4 bn messages per second, we would be running out in about a decade.
-With hourly and daily-rolling it's pretty limitless.
-
-Also, by changing the `epoch`, you can extend the dates further, shifting the limit between the first and last cycle to 31-bits or 23-bits.
-
-=== Is there an Appender to Tailer notification?
-
-Not implicitly.
-We didn't want to assume whether the appenders or tailers:
-
-- were running at the same time
-- were in the same process
-- wanted to block on the queue for either writing or reading.
-
-If both the appender and tailer are in the same process, the tailer can use a pauser when not busy.
-
-.Call the reader, and pause if no messages.
-[source,java]
-----
-pauser = balanced ? Pauser.balanced() : Pauser.millis(1, 10);
-while (!closed) {
-    if (reader.readOne())
-        pauser.reset();
-    else
-        pauser.pause();
-}
-----
-
-In another thread you can wake the reader with:
-
-[source,Java]
-----
-pauser.unpause();
-----
-
-=== Unlocking a locked queue
-
-To unlock a locked chronicle queue (perhaps an appending process has been abruptly killed), the
-`net.openhft.chronicle.queue.QueueUnlockMain` utility will accomplish this. There is also a script `unlock_queue.sh` to call this.
-
-=== Creating Chronicle Queue on Network File System (NFS) mount
-
-One of the challenges with NFS is the variation in behaviour/functionality from version to version, across Operating Systems, and also differences between how individual deployments have been configured.
-The main concerns with NFS relevant to a Chronicle Queue are:
-
-- support and behaviour of file locks (including fine-grained locking of distinct byte ranges within a file)
-- support and behaviour of memory mapping, and visibility of changes across separate mappings
-
-Crucially, if you are only using the file on one host, then the OS layer for memory mapping comes before the file system, so the fact that the backing file resides on an NFS mount is less of a concern.
-There are however some nuances with NFS around the behaviour of syncs to disk (both in normal operation and importantly if an application crashes) which in turn requires slightly more defensive programming and consequently some degradation in performance is likely.
-
-File locking will generally work provided you are using an up to date version of NFS (4+) and it has been suitably configured. There are additional elements to file locking through NFS which need to be handled (e.g. dealing with network interruptions with an NFS server which can cause locks to go stale/lost), but the basic mechanism works as needed.
-
-So in summary using an NFS mount locally is fine, however care is needed to ensure the environment is correctly configured. The _"local"_ caveat is very important.
-
-NOTE: We would certainly recommend running a series of tests to confirm lock and memory map behaviour. Chronicle Software can work with you to set this up.
-
-In brief, our recommendation is that using local disk rather than NFS is always preferable in cases where appenders and tailers are on the same host.
-One option to consider may be using local disk for the shared appender/tailer data, then replicate this onto an NFS mount if passive copies are needed elsewhere.
-If you only have NFS available then using NFS locally can be fine subject to some caveats as above. Tests would be required to confirm correct behaviour in your specific environment.
-
-NOTE: The above explanation assumes C\++ Queue on Linux. Java Queue has similar functional requirements which should ultimately use similar native calls to C++ via the JVM, but this would need to be confirmed in your environment.
-
-=== Configuration
-
-Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
-
-==== RollCycle
-
-One such piece of configuration is the `RollCycle` that determines the rate at which CQ will roll the underlying queue files.
-For instance, using the following code snippet will result in the queue files being rolled (i.e. a new file created) every hour:
-
-[source,java]
-----
-ChronicleQueue.singleBuilder(queuePath).rollCycle(RollCycles.HOURLY).build()
-----
-
-Once a queue's roll-cycle has been set, it cannot be changed at a later date.
-Any further instances of `SingleChronicleQueue` configured to use the same path should be configured to use the same roll-cycle,
-and if they are not, then the roll-cycle will be updated to match the persisted roll-cycle.
-In this case, a warning log message will be printed in order to notify the library user of the situation:
-
-[source,java]
-----
-// creates a queue with roll-cycle MINUTELY
-try (ChronicleQueue minuteRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(MINUTELY).build()) {
-    // creates a queue with roll-cycle HOURLY
-    try (ChronicleQueue hourlyRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(HOURLY).build()) {
-        try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
-            documentContext.wire().write("somekey").text("somevalue");
-        }
-    }
-    // now try to append using the queue configured with roll-cycle MINUTELY
-    try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
-        documentContext2.wire().write("otherkey").text("othervalue");
-    }
-}
-----
-
-console output:
-
-[source]
-----
-[main] WARN SingleChronicleQueueBuilder - Overriding roll cycle from HOURLY to MINUTELY.
-----
-
-==== WireType
-
-It's possible to configure how Chronicle Queue will store the data:
-
-[source,java]
-----
-ChronicleQueue.singleBuilder(queuePath)
-SingleChronicleQueueBuilder.fieldlessBinary(queuePath)
-SingleChronicleQueueBuilder.defaultZeroBinary(queuePath)
-SingleChronicleQueueBuilder.deltaBinary(queuePath)
-----
-
-Although it's possible to explicitly provide WireType when creating a builder, it is discouraged as not all wire types are supported by Chronicle Queue as of yet:
-
-[source,java]
-----
-SingleChronicleQueueBuilder.builder(queuePath, wireType)
-----
-
-In particular, the following wire types are not supported:
-
-- TEXT (and essentially all based on text, including JSON and CSV)
-- RAW
-- READ_ANY
-
-==== Other Configurations
-For complete list of configuration parameters, refer to Links: https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise-Demo/blob/master/docs/ConfigurationParameters.adoc
-
-[qanda]
-
-*blockSize*
-
-When a queue is read/written, part of the file currently being read/written is mapped to a memory segment.
-This parameter controls the size of the memory mapping block. You can change this parameter using the methode `SingleChronicleQueueBuilder.blockSize(long blockSize)`.
-
-NOTE: You should avoid changing `blockSize` unnecessarily.
-
-If you are sending large messages then you should set a large `blockSize` i.e. the `blockSize` should be at least four times the message size.
-
-WARNING:  If you use small `blockSize` for large messages you receive an `IllegalStateException` and the write is aborted.
-
-
-We recommend that you use the same `blockSize` for each queue instance when replicating queues, the `blockSize` is not written to the queue's metadata, so should ideally be set to the same value when creating your instances of chronicle queue (this is recommended but if you wish to run with a different `blocksize` you can).
-
-TIP: Use the same `blockSize` for each instance of replicated queues.
-
-Index Spacing::
-The space between excerpts that are explicitly indexed.
-A higher number means higher sequential write performance but slower random access read.
-The sequential read performance is not affected by this property.
-For example, the following default index spacing can be returned:
-- 16 (MINUTELY)
-- 64 (DAILY)
-Index Count::
-the size of each index array, as well as the total number of index arrays per queue file.
-+
-[NOTE]
-indexCount^2^ is the maximum number of indexed queue entries.
-
-Buffer Mode::
-- `None` - The default (and the only one available for open source users), no buffering;
-- `Copy` - used in conjunction with encryption;
-- `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
-
-Capacity::
-Ring buffer capacity when using `bufferMode: Asynchronous`
-
-=== Running under Docker
-If you are running Chronicle Queue or Chronicle Queue Enterprise under Docker, the best
-practice is to use the following command:
-
-[source,text]
-----
---ipc=host
-----
-This feature lets processes running on a host computer communicate with each other
-immediately, therefore the latency associated with network or pipe-based IPC does not degrade
-the Chronicle Queue (Enterprise) performance.
-
-=== The Maximum number of messages per cycle
-
-|===
-| RollCycle Name | Max Number of messages in each cycle in Decimal | Max Number of messages in each cycle in Hexadecimal | maximum messages per seconds over the length of the cycle  ( on average )
-
-| FIVE_MINUTELY | 1,073,741,824| 0x40000000 | 3,579,139
-| TEN_MINUTELY | 1,073,741,824| 0x40000000 | 1,789,569
-| TWENTY_MINUTELY | 1,073,741,824| 0x40000000 | 1,491,308
-| HALF_HOURLY | 1,073,741,824| 0x40000000 | 596,523
-| FAST_HOURLY | 4,294,967,295| 0xffffffff | 1,193,046
-| TWO_HOURLY | 4,294,967,295| 0xffffffff | 596,523
-| FOUR_HOURLY | 4,294,967,295| 0xffffffff | 298,261
-| SIX_HOURLY | 4,294,967,295| 0xffffffff | 198,841
-| FAST_DAILY | 4,294,967,295| 0xffffffff | 49,710
-| MINUTELY | 67,108,864| 0x4000000 | 1,118,481
-| HOURLY | 268,435,456| 0x10000000 | 74,565
-| DAILY | 4,294,967,295| 0xffffffff | 49,710
-| LARGE_HOURLY | 4,294,967,295| 0xffffffff | 49,710
-| LARGE_DAILY | 137,438,953,471| 0x1fffffffff | 1,590,728
-| XLARGE_DAILY | 4,398,046,511,103| 0x3ffffffffff | 50,903,316
-| HUGE_DAILY | 281,474,976,710,655| 0xffffffffffff | 3,257,812,230
-| SMALL_DAILY | 536,870,912| 0x20000000 | 6,213
-| LARGE_HOURLY_SPARSE | 17,179,869,183| 0x3ffffffff | 4,772,185
-| LARGE_HOURLY_XSPARSE | 4,398,046,511,103| 0x3ffffffffff | 1,221,679,586
-| HUGE_DAILY_XSPARSE | 281,474,976,710,655| 0xffffffffffff | 78,187,493,530
-| TEST_SECONDLY | 4,294,967,295| 0xffffffff | 4,294,967,295
-| TEST4_SECONDLY | 4,096| 0x1000 | 4,096
-| TEST_HOURLY | 1,024| 0x400 | 0
-| TEST_DAILY | 64| 0x40 | 0
-| TEST2_DAILY | 512| 0x200 | 0
-| TEST4_DAILY | 4,096| 0x1000 | 0
-| TEST8_DAILY | 131,072| 0x20000 | 1
-|===
-
-=== More information
-
-More in-depth information can be found in the following topics:
-
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some of the techniques utilised by Chronicle Queue
+* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some techniques utilised by Chronicle Queue
 * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/encryption.adoc[Encryption] - describes how to encrypt the contents of a Queue
 * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/FAQ.adoc[FAQ] - questions asked by customers
 * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/replication.adoc[Replication] - an overview of the replication mechanism
+//* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/replication.adoc[Replication] - an overview of the replication mechanism
 * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/timezone_rollover.adoc[Timezone rollover] - describes how to configure file-rolling at a specific time in a given time-zone
 * https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
 
+==== Online support
+
+* http://stackoverflow.com/tags/chronicle/info[Chronicle support on StackOverflow]
+* https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle[Chronicle support on Google Groups]
+* https://higherfrequencytrading.atlassian.net/browse/CHRON[Development Tasks - JIRA]

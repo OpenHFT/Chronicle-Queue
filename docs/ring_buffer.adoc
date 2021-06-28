@@ -85,7 +85,7 @@ the builder's `readBufferMode` and `writeBufferMode`.
 
 If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the queue will be given to the ring buffer.
 A background task is created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed)
-chronicle queue. Reads are made from the underlying queue. This use-case is designed to help with very "bursty" writes,
+Chronicle Queue. Reads are made from the underlying queue. This use-case is designed to help with very "bursty" writes,
 which cannot afford to be blocked by a slow underlying disk sub-system. The ring buffer's buffer size must be carefully
 chosen to allow for the maximum burst size.
 
@@ -109,7 +109,7 @@ chosen to allow for the maximum burst size.
 If both `writeBufferMode` and `readBufferMode` are set to `BufferMode.Asynchronous` then any writes to the queue will
 be given to the ring buffer and reads will read from the ring buffer. This gives the lowest possible latency as the
 disk subsystem is not involved at all. As with asynchronous writes, a background task is created in the builder's event
-loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue.
+loop to drain the ring buffer in to the underlying (disk-backed) Chronicle Queue.
 
 ====== Example for asynchronous reads and writes using a memory-mapped file and two processes
 

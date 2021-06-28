@@ -31,7 +31,7 @@ The following table lists the available command line option arguments:
 |===
 |Argument |Description
 |`-d`
-|Mandatory. The directory containing the source chronicle queue files.
+|Mandatory. The directory containing the source Chronicle Queue files.
 |`-i`
 |Display data containing this regular expression.
 |`-e`
