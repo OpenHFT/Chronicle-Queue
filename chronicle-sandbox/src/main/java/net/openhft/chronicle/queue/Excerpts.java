@@ -20,7 +20,8 @@ package net.openhft.chronicle.queue;
 
 import org.jetbrains.annotations.NotNull;
 
-public enum Excerpts {; // Utility class
+public enum Excerpts {
+    ; // none // Utility class
 
     public static long findMatch(@NotNull Excerpt excerpt, @NotNull ExcerptComparator comparator) {
         long lo = excerpt.chronicle().firstAvailableIndex();

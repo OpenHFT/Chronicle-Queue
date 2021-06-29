@@ -22,7 +22,8 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 
-public enum RunLargeQueueMain {;
+public enum RunLargeQueueMain {
+    ; // none
 
     private static final int FILE_SIZE = Integer.getInteger("file.size", 1024);
     private static final int MSG_SIZE = Integer.getInteger("msg.size", 512);

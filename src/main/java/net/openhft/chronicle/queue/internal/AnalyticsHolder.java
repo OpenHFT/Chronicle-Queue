@@ -3,7 +3,8 @@ package net.openhft.chronicle.queue.internal;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.pom.PomProperties;
 
-public enum AnalyticsHolder {;
+public enum AnalyticsHolder {
+    ; // none
 
     private static final String VERSION = PomProperties.version("net.openhft", "chronicle-queue");
 

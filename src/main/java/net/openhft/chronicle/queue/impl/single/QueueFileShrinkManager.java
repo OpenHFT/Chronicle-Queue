@@ -28,7 +28,8 @@ import java.io.RandomAccessFile;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public enum QueueFileShrinkManager {;
+public enum QueueFileShrinkManager {
+    ; // none
     public static final String THREAD_NAME = "queue~file~shrink~daemon";
     // don't use this with a Pretoucher enabled!
     public static final boolean RUN_SYNCHRONOUSLY = Jvm.getBoolean("chronicle.queue.synchronousFileShrinking");
