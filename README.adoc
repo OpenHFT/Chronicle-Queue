@@ -383,7 +383,7 @@ Chronicle Queue supports:
 
 *-* `BytesMarshallable` which is low-level binary, or text encoding.
 
-=== User Guide
+=== [big]#User Guide#
 
 A Chronicle Queue is defined by `SingleChronicleQueue.class` that is designed to support:
 
@@ -413,7 +413,7 @@ NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations c
 
 Below, we first provide a section for quick reference to use Chronicle Queue. Then, in the next section we provide a more detailed guide.
 
-==== A Quick start
+==== [big]#A Quick start#
 This section provides a quick reference for using Chronicle Queue to briefly show how to create, write/read into/from a queue.
 
 - Chronicle Queue construction
@@ -517,7 +517,7 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").buil
 //
 //*-* you have a record of all the decisions your new system is committed to; even if the new code would have made different decisions.
 
-==== Detailed Guide
+==== [big]#Detailed Guide#
 You can configure a Chronicle Queue using its configuration parameters or system properties. In addition, there are different ways of writing/reading into/from a queue such as the use of proxies and using `MethodReader` and `MethodWriter`.
 
 * **1. Queue configuration**
