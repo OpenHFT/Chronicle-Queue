@@ -18,8 +18,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static net.openhft.chronicle.queue.RollCycles.MINUTELY;
-import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
 
@@ -258,15 +257,15 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
         Bytes result = Bytes.elasticHeapByteBuffer();
         SetTimeProvider timeProvider = new SetTimeProvider();
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(MINUTELY).build()) {
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build()) {
             ExcerptAppender appender = q.acquireAppender();
             appender.writeBytes(test);
             long nextIndexInFirstCycle = appender.lastIndexAppended() + 1;
             int firstCycle = q.rollCycle().toCycle(nextIndexInFirstCycle);
 
-            timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65));
-            expectException("wrote an EOF at 0x8118");
+            timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
             appender.writeBytes(test2);
+//            System.out.println(q.dump());
 
             Assert.assertTrue(hasEOF(q, firstCycle));
             // here we try and write to previous cycle file. We will overwrite the EOF in doing so
@@ -275,7 +274,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             Assert.assertFalse(hasEOF(q, firstCycle));
 
             // we have to manually fix. This is done by CQE at the end of backfilling
-            expectException("wrote an EOF at 0x8134");
             appender.normaliseEOFs();
 
             ExcerptTailer tailer = q.createTailer();
@@ -293,7 +291,8 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     private boolean hasEOF(SingleChronicleQueue q, int cycle) {
         try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
             String dump = store.dump();
-            return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data! #binary");
+            System.out.println(dump);
+            return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }
     }
 }

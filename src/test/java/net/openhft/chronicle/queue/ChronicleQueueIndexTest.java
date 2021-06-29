@@ -167,7 +167,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
                 .path(file).build()) {
             String dump = queue123.dump();
             // System.out.println(dump);
-            return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data! #binary");
+            return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }
     }
 

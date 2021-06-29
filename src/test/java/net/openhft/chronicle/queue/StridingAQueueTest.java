@@ -200,7 +200,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  !int 2,\n" +
                 "  !int 7\n" +
                 "]\n" +
-                "--- !!not-ready-meta-data! #binary\n" +
+                "--- !!not-ready-meta-data #binary\n" +
                 "...\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -275,7 +275,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "  !int 3,\n" +
                 "  !int 8\n" +
                 "]\n" +
-                "--- !!not-ready-meta-data! #binary\n" +
+                "--- !!not-ready-meta-data #binary\n" +
                 "...\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
