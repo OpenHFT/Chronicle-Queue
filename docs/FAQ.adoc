@@ -12,7 +12,7 @@ This document provides information for some common questions about Chronicle Que
 === What is Single Chronicle Queue?
 
 Single Chronicle Queue is designed to be easier to work with compared with
-the previous vanilla and indexed Chronicle versions.
+the previous vanilla and indexed Chronicle Queue versions.
 It supports:
 
 - concurrent readers in different JVMs.
@@ -22,12 +22,12 @@ It supports:
 - storing key information in the header so that there is no longer the requirement that the writers and readers be configured the same.
 - not needing to know the size of the message.
 
-=== What is Chronicle designed for?
+=== What is Chronicle Queue designed for?
 
-Chronicle is design to record everything of interest in the logger and persisted IPC.
+Chronicle Queue's design to record everything of interest in the logger and persisted IPC.
 A key requirement of low latency systems is transparency, and you can record enough information to enable a monitoring system to recreate the state of the monitored system.  This allows downstream systems to record any information they need, and perform queries without having to touch the critical system.
 
-Chronicle works best in `SEDA` style event-driven systems, where latency is critical, and you need a record of exactly what was performed, and  when. All this can be done without expensive network sniffing/recording systems.
+Chronicle Queue works best in `SEDA` style event-driven systems, where latency is critical, and you need a record of exactly what was performed, and  when. All this can be done without expensive network sniffing/recording systems.
 
 === What was the library originally designed for?
 
@@ -91,7 +91,7 @@ The organizational cost of disk is often `10-100x` the real cost, but so is your
 In essence, disk space should be cheap, and you can record between a week and a month of continuous data, on one cheap drive.
 Nevertheless, there is less maintenance overhead if the Chronicle logs rotate themselves, and there is work being done to implement this for Chronicle 2.1. Initially, Chronicle files will be rotated when they reach a specific number of entries.
 
-=== Can I use Chronicle as an off-heap cache?
+=== Can I use Chronicle Queue as an off-heap cache?
 
 Chronicle Queue is designed for replay.  While it can be used as an off-heap persisted cache, it does not do this very easily.
 Chronicle Map is likely to be a better choice for this requirement.
@@ -100,7 +100,7 @@ Chronicle Map is likely to be a better choice for this requirement.
 
 === What is the performance like?
 
-Single Chronicle (single file per cycle) supports sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+Single Chronicle Queue (single file per cycle) supports sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
 
 === With a tight reader loop, I see 100% utilization. Will there be processing capability left for anything else?
 
