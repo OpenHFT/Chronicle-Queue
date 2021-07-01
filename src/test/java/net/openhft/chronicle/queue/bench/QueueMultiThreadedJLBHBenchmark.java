@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.BytesMarshallable;
 import net.openhft.chronicle.bytes.BytesOut;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
@@ -43,13 +44,14 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     private boolean stopped = false;
     private Thread tailerThread;
     private JLBH jlbh;
+    private NanoSampler writeProbe;
 
     public static void main(String[] args) {
-        // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50000)
                 .iterations(ITERATIONS)
                 .throughput(100_000)
+                // disable as otherwise single GC event skews results heavily
                 .recordOSJitter(false).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
                 .runs(5)
@@ -66,14 +68,20 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         sinkQueue = single("replica").build();
         appender = sourceQueue.acquireAppender();
         tailer = sinkQueue.createTailer();
+
+        NanoSampler readProbe = jlbh.addProbe("read");
+        writeProbe = jlbh.addProbe("write");
         tailerThread = new Thread(() -> {
             Datum datum2 = new Datum();
             while (!stopped) {
+                long beforeReadNs = System.nanoTime();
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (dc.wire() == null)
                         continue;
                     datum2.readMarshallable(dc.wire().bytes());
-                    jlbh.sample(System.nanoTime() - datum2.ts);
+                    long now = System.nanoTime();
+                    jlbh.sample(now - datum2.ts);
+                    readProbe.sampleNanos(now - beforeReadNs);
                 }
             }
         });
@@ -86,6 +94,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         try (DocumentContext dc = appender.writingDocument()) {
             datum.writeMarshallable(dc.wire().bytes());
         }
+        writeProbe.sampleNanos(System.nanoTime() - startTimeNS);
     }
 
     @Override
