@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -11,6 +12,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -23,6 +25,11 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 
 public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
+
+    @Before
+    public void before() {
+        expectException(exceptionKey -> OS.isMacOSX() && exceptionKey.clazz == DirectoryUtils.class, "Ignore DirectoryUtils");
+    }
 
     @Override
     protected boolean hasExceptions(Map<ExceptionKey, Integer> exceptions) {
@@ -233,7 +240,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
                 .rollCycle(MINUTELY)
                 .timeProvider(() -> 0).build();
 
-            ExcerptAppender appender = q.acquireAppender()) {
+             ExcerptAppender appender = q.acquireAppender()) {
             appender.writeText("hello");
             appender.writeText("hello2");
             try (final DocumentContext dc = appender.writingDocument()) {
