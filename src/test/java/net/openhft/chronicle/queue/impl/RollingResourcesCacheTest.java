@@ -14,9 +14,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 public class RollingResourcesCacheTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;

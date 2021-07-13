@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static net.openhft.chronicle.queue.impl.single.GcControls.waitForGcCycle;
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
