@@ -196,7 +196,7 @@ $ for i in 0 1 2 3 4 5 6 7 8 9; do dd bs=65536 count=163840 if=/dev/zero of=dele
 163840+0 records out
 10737418240 bytes (11 GB) copied, 12.7551 s, 842 MB/s
 ----
-
+                                             
 === Can Chronicle Queue compete with Spark in this domain?
 
 To our knowledge, Spark Streaming is designed for real-time, but is looking to support a much lower message rate, and does not attempt to be ultra-low GC (minor GC less than once a day).  We have not heard of any one using Spark in the core of a trading system. It tends to be used for downstream monitoring and reporting.
@@ -261,10 +261,10 @@ WireStore wireStore = queue.storeForCycle(queue.cycle(), 0, false);
 System.out.println(wireStore.file().getAbsolutePath());
 ----
 
-=== Can records be updated?
+=== Can messages be updated?
 
-They can be updated at any time, but you lose any event-driven notification to readers at this point.
-It might be practical to have multiple Chronicle Queues; one which stores large updated records, and another for small notifications.
+Chronicle Queue messages are immutable. In other words, once written, you should not attempt to modify existing messages.
+If you require existing messages to be modified, we would have to work with you on a consultancy arrangement to achieve this.
 
 === How do I know the reader is up to date?
 
