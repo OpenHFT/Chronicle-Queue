@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireDumper;
 import org.jetbrains.annotations.NotNull;
@@ -37,13 +38,17 @@ public class InternalDumpMain {
     private static final boolean UNALIGNED = Jvm.getBoolean("dumpUnaligned");
     private static final int LENGTH = ", 0".length();
 
+    static {
+        SingleChronicleQueueBuilder.addAliases();
+    }
+
     public static void main(String[] args) throws FileNotFoundException {
         dump(args[0]);
     }
 
     public static void dump(@NotNull String path) throws FileNotFoundException {
         File path2 = new File(path);
-        PrintStream out = FILE == null ? System.out : new PrintStream(new File(FILE));
+        PrintStream out = FILE == null ? System.out : new PrintStream(FILE);
         long upperLimit = Long.MAX_VALUE;
         dump(path2, out, upperLimit);
     }
