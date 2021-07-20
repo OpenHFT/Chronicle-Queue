@@ -258,7 +258,7 @@ public final class ChronicleReader implements Reader {
     private void moveToSpecifiedPosition(final ChronicleQueue ic, final ExcerptTailer tailer, final boolean isFirstIteration) {
         if (isSet(startIndex) && isFirstIteration) {
             if (startIndex < ic.firstIndex()) {
-                throw new IllegalArgumentException(String.format("startIndex %d is less than first index %d",
+                throw new IllegalArgumentException(String.format("startIndex 0x%xd is less than first index 0x%xd",
                         startIndex, ic.firstIndex()));
             }
 
