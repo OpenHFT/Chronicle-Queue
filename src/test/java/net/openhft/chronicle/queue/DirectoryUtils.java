@@ -8,6 +8,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.shutdown.PriorityHook;
 import net.openhft.chronicle.core.util.Time;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,9 +53,7 @@ public class DirectoryUtils {
 
         {
             // TODO: should not need to do this now
-            Runtime.getRuntime().addShutdownHook(new Thread(
-                    () -> toDeleteList.forEach(DirectoryUtils::deleteDir)
-            ));
+            PriorityHook.add(100, () -> toDeleteList.forEach(DirectoryUtils::deleteDir));
         }
 
         synchronized void add(File path) {
