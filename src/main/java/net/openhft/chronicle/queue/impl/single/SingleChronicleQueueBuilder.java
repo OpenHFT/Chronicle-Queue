@@ -337,11 +337,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private void postBuild(@NotNull SingleChronicleQueue chronicleQueue) {
-        /*
-            The condition has a circular dependency with the Queue, so we need to add it after the queue is
-            constructed. This is to avoid passing `this` out of the constructor.
-         */
-        chronicleQueue.createAppenderCondition(requireNonNull(createAppenderConditionCreator().apply(chronicleQueue)));
+        if (!readOnly()) {
+            /*
+                The condition has a circular dependency with the Queue, so we need to add it after the queue is
+                constructed. This is to avoid passing `this` out of the constructor.
+             */
+            chronicleQueue.createAppenderCondition(requireNonNull(createAppenderConditionCreator().apply(chronicleQueue)));
+        }
     }
 
     private boolean checkEnterpriseFeaturesRequested() {
@@ -596,7 +598,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Enable out-of-process pretoucher (AKA preloader) (Queue Enterprise feature)
-     *
      */
     public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
         this.pretouchIntervalMillis = pretouchIntervalMillis;

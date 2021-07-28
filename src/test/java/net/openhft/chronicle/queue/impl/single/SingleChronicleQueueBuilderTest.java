@@ -142,4 +142,21 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
             assertEquals(firstSourceId, q.sourceId());
         }
     }
+
+    @Test
+    public void buildWillNotSetCreateAppenderConditionWhenQueueIsReadOnly() {
+        final File tmpDir = getTmpDir();
+        try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).build()) {
+            // just create the queue
+        }
+
+        try (SingleChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir)
+                .createAppenderConditionCreator(q -> {
+                    throw new AssertionError("This should never be called");
+                })
+                .readOnly(true)
+                .build()) {
+            // This will throw if we attempt to create the createAppender condition
+        }
+    }
 }
