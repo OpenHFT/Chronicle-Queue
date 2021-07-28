@@ -21,6 +21,7 @@ import java.nio.file.Paths;
 import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeFalse;
 
 public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
@@ -145,6 +146,8 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test
     public void buildWillNotSetCreateAppenderConditionWhenQueueIsReadOnly() {
+        assumeFalse(OS.isWindows());
+
         final File tmpDir = getTmpDir();
         try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).build()) {
             // just create the queue
