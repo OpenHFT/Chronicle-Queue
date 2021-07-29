@@ -28,7 +28,7 @@ public final class Stage implements MethodDefinition {
         }
 
         if (currentNanoTime > lastLagReport + READ_LAG_REPORT_INTERVAL_NS) {
-           // System.out.printf("Stage %d is currently %dms behind publisher%n",
+            System.out.printf("Stage %d is currently %dms behind publisher%n",
                     index, TimeUnit.NANOSECONDS.toMillis(currentNanoTime - message.publishNanos));
             lastLagReport = currentNanoTime;
         }

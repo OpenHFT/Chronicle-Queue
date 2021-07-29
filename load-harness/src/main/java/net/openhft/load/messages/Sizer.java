@@ -1,7 +1,7 @@
 package net.openhft.load.messages;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.bytes.BytesMarshallable;
 
 import java.nio.ByteBuffer;
 
