@@ -9,14 +9,12 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.threads.NamedThreadFactory;
-import net.openhft.chronicle.wire.AbstractTimestampLongConverter;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MicroTimestampLongConverter;
-import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
+import net.openhft.chronicle.wire.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
@@ -421,6 +419,36 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
             }
         }
         assertEquals("Didn't check all the timestamps", timestamps.size(), i);
+    }
+
+    @Test
+    public void findByBinarySearch() {
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+        final File queueDir = getTmpDir();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
+             final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+
+            TimeUnit timeUnit = ServicesTimestampLongConverter.timeUnit();
+            long start = timeUnit.convert(1610000000000L, TimeUnit.MILLISECONDS);
+            int max = 10;
+            for (long i = 0; i < max; i++) {
+                long ts = start + i * timeUnit.convert(1, TimeUnit.SECONDS);
+                try (DocumentContext dc = excerptAppender.writingDocument()) {
+                    dc.wire().write(TimestampComparator.TS).int64(ts);
+                }
+            }
+
+            int eventToStartAt = 3;
+            long tsToLookFor = start + timeUnit.convert(eventToStartAt, TimeUnit.SECONDS);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(max - eventToStartAt, capturedOutput.size() / 2);
+        }
     }
 
     private String findAnExistingIndex() {
