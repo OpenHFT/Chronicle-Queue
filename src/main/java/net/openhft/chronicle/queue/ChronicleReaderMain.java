@@ -141,6 +141,12 @@ public class ChronicleReaderMain {
             System.setProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY,
                     ZoneId.systemDefault().toString());
         }
+        if (commandLine.hasOption('a')) {
+            chronicleReader.withArg(commandLine.getOptionValue('a'));
+        }
+        if (commandLine.hasOption('b')) {
+            chronicleReader.withBinarySearch(commandLine.getOptionValue('b'));
+        }
     }
 
     @NotNull
@@ -153,6 +159,8 @@ public class ChronicleReaderMain {
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
         addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
         addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
+        addOption(options, "b", "binary-search", true, "Use this class as a comparator to binary search", false);
+        addOption(options, "a", "binary-arg", true, "Argument to pass to binary search class", false);
         addOption(options, "r", "as-method-reader", true, "Use when reading from a queue generated using a MethodWriter", false);
         addOption(options, "w", "wire-type", true, "Control output i.e. JSON", false);
         addOption(options, "s", "suppress-index", false, "Display index", false);
