@@ -81,14 +81,14 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
-     * Returns the current index of this Trailer.
+     * Returns the current index of this Tailer.
      * <p>
      * If this method is invoked within a {@code try (tailer.readingDocument(){ }} block, returns the index of
      * the current reading document. Otherwise, returns the next index to read.
      * <p>
      * The index includes the cycle and the sequence number within that cycle.
      *
-     * @return the current index of this Trailer
+     * @return the current index of this Tailer
      *
      */
     @Override
@@ -96,16 +96,16 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     default long lastReadIndex() { return -1; }
 
     /**
-     * Returns the current cycle for this Trailer.
+     * Returns the current cycle for this Tailer.
      * <p>
      * Usually, each cycle will have its own unique data file to store excerpts.
      *
-     * @return Returns the current cycle for this Trailer
+     * @return Returns the current cycle for this Tailer
      */
     int cycle();
 
     /**
-     * Tries to move the index for this Trailer to the provided {@code index}.
+     * Tries to move the index for this Tailer to the provided {@code index}.
      * <p>
      * The index contains both the cycle number and sequence number within the cycle.
      * <p>
@@ -121,7 +121,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     boolean moveToIndex(long index);
 
     /**
-     * Tries to move to the start of a cycle for this Trailer to the provided {@code cycle}.
+     * Tries to move to the start of a cycle for this Tailer to the provided {@code cycle}.
      * <p>
      * In order for the operation to succeed, the roll file, corresponding to
      * the cycle number, must be present.
@@ -134,15 +134,15 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     boolean moveToCycle(int cycle);
 
     /**
-     * Moves the index for this Trailer to the first existing excerpt in the queue.
+     * Moves the index for this Tailer to the first existing excerpt in the queue.
      *
-     * @return this ExcerptTrailer
+     * @return this ExcerptTailer
      */
     @NotNull
     ExcerptTailer toStart();
 
     /**
-     * Moves the index for this Trailer to the end of the queue.
+     * Moves the index for this Tailer to the end of the queue.
      * <p>
      * If the direction() == FORWARD, this will be the index position corresponding to one more
      * than the last entry. Otherwise, the index will be the last excerpt.
@@ -162,7 +162,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer toEnd();
 
     /**
-     * Sets the {@code striding} property of this Trailer.
+     * Sets the {@code striding} property of this Tailer.
      * <p>
      * When striding is enabled AND direction is BACKWARD, skip to the entries easiest to find, doesn't need to be every entry.
      *
@@ -173,9 +173,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer striding(boolean striding);
 
     /**
-     * Returns the striding property of this Trailer.
+     * Returns the striding property of this Tailer.
      *
-     * @return the striding property of this Trailer
+     * @return the striding property of this Tailer
      * @see #striding(boolean)
      */
     boolean striding();
@@ -187,7 +187,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *
      * @param direction which is either of NONE, FORWARD, BACKWARD
 
-     * @return this ExcerptTrailer
+     * @return this ExcerptTailer
      * @throws NullPointerException if the provide {@code direction} is {@code null}
      */
     @NotNull
@@ -215,7 +215,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer afterLastWritten(ChronicleQueue queue);
 
     /**
-     * Sets the Read After Replica Acknowledged property of this Trailer to the
+     * Sets the Read After Replica Acknowledged property of this Tailer to the
      * provided {@code readAfterReplicaAcknowledged}.
      * <p>
      * Enterprise Queue only: if replication enabled, setting this to <code>true</code> on a source queue ensures that
@@ -228,22 +228,22 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
-     * Returns the Read After Replica Acknowledged property of this Trailer.
+     * Returns the Read After Replica Acknowledged property of this Tailer.
      * <p>
      * Enterprise Queue only: if replication enabled, setting this to <code>true</code> on a source queue ensures that
      * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
      * This will block forever if no sinks acknowledge receipt.
      *
-     * @return the Read After Replica Acknowledged property of this Trailer
+     * @return the Read After Replica Acknowledged property of this Tailer
      */
     default boolean readAfterReplicaAcknowledged() {
         return false;
     }
 
     /**
-     * Returns the {@link TailerState} of this Trailer.
+     * Returns the {@link TailerState} of this Tailer.
      *
-     * @return the {@link TailerState} of this Trailer
+     * @return the {@link TailerState} of this Tailer
      */
     @NotNull
     TailerState state();

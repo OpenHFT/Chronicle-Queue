@@ -161,14 +161,14 @@ public interface ChronicleQueue extends Closeable {
     /**
      * Creates and returns a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}.
      * <p>
-     * The id is used to persistently store the latest index for the trailer. Any new Trailer with
+     * The id is used to persistently store the latest index for the Tailer. Any new Tailer with
      * a previously used id will continue where the old one left off.
      * <b>
      * A Tailer is <em>NOT thread-safe</em>. A Tailer can be created by one Thread and might be used by at most one other Thread.</em>.
      * Sharing a Tailer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>
-     * If the provided {@code id} is {@code null}, the Trailer will be unnamed and this is
+     * If the provided {@code id} is {@code null}, the Tailer will be unnamed and this is
      * equivalent to invoking {@link #createTailer()}.
      *
      * @param id unique id for a tailer which uses to track where it was up to
