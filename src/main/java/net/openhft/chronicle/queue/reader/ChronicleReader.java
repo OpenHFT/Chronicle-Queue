@@ -31,6 +31,7 @@ import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -307,7 +308,7 @@ public class ChronicleReader implements Reader {
                     Jvm.pause(100);
                 }
             } else if (binarySearch != null) {
-                startIndex = seekBinarySearch((SingleChronicleQueue) ic);
+                startIndex = seekBinarySearch(tailer);
                 tailer.moveToIndex(startIndex);
             }
         }
@@ -320,13 +321,25 @@ public class ChronicleReader implements Reader {
         }
     }
 
-    private long seekBinarySearch(SingleChronicleQueue queue) {
+    private long seekBinarySearch(ExcerptTailer tailer) {
         try {
-            long rv = BinarySearch.search(queue, binarySearch.wireKey(), binarySearch);
+            final Wire key = binarySearch.wireKey();
+            long rv = BinarySearch.search((SingleChronicleQueue) tailer.queue(), key, binarySearch);
             if (rv == -1)
-                return queue.firstIndex();
-            // approximate is better than nothing so seek to there
-            return Math.abs(rv);
+                return tailer.queue().firstIndex();
+            if (rv < 0) {
+                // we can get an approximate match even if we search for a key after the last entry - this works around that
+                tailer.moveToIndex(-rv);
+                while (true) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent())
+                            return dc.index();
+                        if (binarySearch.compare(dc.wire(), key) >= 0)
+                            return dc.index();
+                    }
+                }
+            }
+            return rv;
         } catch (ParseException e) {
             throw Jvm.rethrow(e);
         }
@@ -352,7 +365,6 @@ public class ChronicleReader implements Reader {
         } finally {
             excerptTailer.moveToIndex(index);
         }
-
     }
 
     @NotNull
