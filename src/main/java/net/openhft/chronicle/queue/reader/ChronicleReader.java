@@ -48,6 +48,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
@@ -72,6 +73,7 @@ public class ChronicleReader implements Reader {
     private BinarySearchComparator binarySearch;
     private String arg;
     private volatile boolean running = true;
+    private TailerDirection tailerDirection = TailerDirection.FORWARD;
 
     static {
         ToolsUtil.warnIfResourceTracing();
@@ -151,7 +153,7 @@ public class ChronicleReader implements Reader {
                     retryLastOperation = false;
                     if (!running)
                         return;
-                } while (tailInputSource || queueHasBeenModified);
+                } while (tailerDirection != BACKWARD && (tailInputSource || queueHasBeenModified));
             } catch (final RuntimeException e) {
                 if (e.getCause() != null && e.getCause() instanceof DateTimeParseException) {
                     // ignore this error - due to a race condition between
@@ -265,6 +267,11 @@ public class ChronicleReader implements Reader {
         return this;
     }
 
+    public ChronicleReader inReverseOrder() {
+        this.tailerDirection = TailerDirection.BACKWARD;
+        return this;
+    }
+
     public ChronicleReader suppressDisplayIndex() {
         this.displayIndex = false;
         return this;
@@ -293,10 +300,22 @@ public class ChronicleReader implements Reader {
 
     private void moveToSpecifiedPosition(final ChronicleQueue ic, final ExcerptTailer tailer, final boolean isFirstIteration) {
         if (isFirstIteration) {
+
+            // Set the direction, if we're reading backwards, start at the end by default
+            tailer.direction(tailerDirection);
+            if (tailerDirection == BACKWARD) {
+                tailer.toEnd();
+            }
+
             if (isSet(startIndex)) {
                 if (startIndex < ic.firstIndex()) {
                     throw new IllegalArgumentException(String.format("startIndex 0x%xd is less than first index 0x%xd",
                             startIndex, ic.firstIndex()));
+                }
+
+                if (tailerDirection == BACKWARD && startIndex > ic.lastIndex()) {
+                    throw new IllegalArgumentException(String.format("startIndex 0x%xd is greater than last index 0x%xd",
+                            startIndex, ic.lastIndex()));
                 }
 
                 boolean firstTime = true;
@@ -311,13 +330,15 @@ public class ChronicleReader implements Reader {
                 startIndex = seekBinarySearch(tailer);
                 tailer.moveToIndex(startIndex);
             }
-        }
 
-        if (isSet(maxHistoryRecords) && isFirstIteration) {
-            tailer.toEnd();
-            moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
-        } else if (tailInputSource && isFirstIteration) {
-            tailer.toEnd();
+            if (tailerDirection == FORWARD) {
+                if (isSet(maxHistoryRecords)) {
+                    tailer.toEnd();
+                    moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
+                } else if (tailInputSource) {
+                    tailer.toEnd();
+                }
+            }
         }
     }
 
