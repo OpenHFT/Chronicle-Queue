@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue.reader;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
@@ -53,13 +54,21 @@ public interface Reader {
 
     Reader historyRecords(final long maxHistoryRecords);
 
-    Reader asMethodReader(@NotNull String methodReaderInterface);
+    /**
+     * specify method reader interface to use
+     * @param methodReaderInterface interface class name. If null, a dummy reader is created
+     *                              TODO: x.23 this argument will become @NonNull
+     * @return this
+     */
+    Reader asMethodReader(@Nullable String methodReaderInterface);
 
     Reader withWireType(@NotNull WireType wireType);
 
     Reader suppressDisplayIndex();
 
     Reader withBinarySearch(@NotNull String binarySearch);
+
+    Reader showMessageHistory(boolean showMessageHistory);
 
     String arg();
 

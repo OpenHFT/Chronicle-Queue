@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -71,7 +70,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder =
                     excerptAppender.methodWriterBuilder(Say.class);
-            methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
@@ -190,7 +188,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
-            methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
@@ -203,68 +200,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertFalse(capturedOutput.isEmpty());
     }
-
-/*
-    @Test(timeout = 30_000L)
-    public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws InterruptedException {
-        ReferenceCounter.TRACING_ENABLED = false;
-        // TODO FIX
-//        AbstractCloseable.disableCloseableTracing();
-
-        expectException("Overriding roll length from existing metadata");
-        Path path = getTmpDir().toPath();
-        path.toFile().mkdirs();
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicLong recordsProcessed = new AtomicLong(0);
-        final ChronicleReader reader = new ChronicleReader().withBasePath(path).withMessageSink(m -> {
-            latch.countDown();
-            recordsProcessed.incrementAndGet();
-        });
-
-        final AtomicReference<Throwable> readerException = new AtomicReference<>();
-        final CountDownLatch executeLatch = new CountDownLatch(1);
-
-try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
-                build()) {
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
-            methodWriterBuilder.recordHistory(true);
-            final StringEvents events = methodWriterBuilder.build();
-
-            for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
-                events.say(i % 2 == 0 ? "hello" : "goodbye");
-            }
-        }
-
-        final Thread readerThread = new Thread(() -> {
-            long end = System.currentTimeMillis() + 5000;
-            do {
-                try {
-                    reader.execute();
-                    executeLatch.countDown();
-                } catch (Throwable t) {
-                    readerException.set(t);
-                    throw t;
-                }
-            } while(System.currentTimeMillis() < end);
-        });
-        readerThread.start();
-
-        assertTrue(executeLatch.await(5, TimeUnit.SECONDS));
-        readerThread.interrupt();
-        assertTrue(capturedOutput.isEmpty());
-
-        assertTrue(latch.await(15, TimeUnit.SECONDS));
-        while (recordsProcessed.get() < 10) {
-            LockSupport.parkNanos(1L);
-        }
-
-        readerThread.join();
-
-        assertNull(readerException.get());
-    }
-*/
 
     @Test
     public void shouldNotFailOnEmptyQueue() {
@@ -291,13 +226,32 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     }
 
     @Test
-    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
+    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessagesMethodReaderDummy() {
         basicReader().
                 // matches goodbye, but not hello or history
-                        withInclusionRegex("goodbye").
+                withInclusionRegex("goodbye").
                 asMethodReader(null).
                 execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
+    }
+
+    @Test
+    public void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
+        basicReader().
+                asMethodReader(Say.class.getName()).
+                execute();
+
+        assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
+    }
+
+    @Test
+    public void shouldIncludeMessageHistoryMethodReaderShowHistory() {
+        basicReader().
+                asMethodReader(Say.class.getName()).
+                showMessageHistory(true).
+                execute();
+
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("MessageHistory")));
     }
 
     @Test(timeout = 5000)
@@ -450,7 +404,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
 
     @Test
     public void shouldPrintTimestampsToLocalTime() {
-        final Path queueDir = IOTools.createTempDirectory("shouldPrintTimestampsToLocalTime");
+        final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
              final ExcerptAppender excerptAppender = queue.acquireAppender()) {
             final VanillaMethodWriterBuilder<SayWhen> methodWriterBuilder =
@@ -477,10 +431,10 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         }
     }
 
-    private void assertTimesAreInZone(Path queueDir, ZoneId zoneId, List<Long> timestamps) {
+    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) {
         ChronicleReader reader = new ChronicleReader()
                 .asMethodReader(SayWhen.class.getName())
-                .withBasePath(queueDir)
+                .withBasePath(queueDir.toPath())
                 .withMessageSink(capturedOutput::add);
         reader.execute();
 
