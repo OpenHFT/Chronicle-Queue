@@ -31,9 +31,11 @@ import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -72,6 +74,7 @@ public class ChronicleReader implements Reader {
     private Class<?> methodReaderInterface;
     private BinarySearchComparator binarySearch;
     private String arg;
+    private boolean showMessageHistory;
     private volatile boolean running = true;
     private TailerDirection tailerDirection = TailerDirection.FORWARD;
 
@@ -121,13 +124,16 @@ public class ChronicleReader implements Reader {
                         if (methodReaderInterface == null) {
                             readOne = () -> readOne(messageConverter, tailer, messageConsumer);
                         } else {
+                            // TODO: consider unifying this with messageConverter
                             Bytes<ByteBuffer> bytes = Bytes.elasticHeapByteBuffer(256);
                             Object writer = WireType.TEXT.apply(bytes).methodWriter(methodReaderInterface);
                             MethodReader methodReader = tailer.methodReader(writer);
                             readOne = () -> {
                                 boolean found = methodReader.readOne();
-                                if (found)
-                                    messageConsumer.accept(bytes.toString());
+                                if (found) {
+                                    String msg = showMessageHistory ? (MessageHistory.get().toString() + System.lineSeparator()) : "";
+                                    messageConsumer.accept(msg + bytes);
+                                }
                                 bytes.clear();
                                 return found;
                             };
@@ -232,7 +238,7 @@ public class ChronicleReader implements Reader {
         return this;
     }
 
-    public ChronicleReader asMethodReader(String methodReaderInterface) {
+    public ChronicleReader asMethodReader(@Nullable String methodReaderInterface) {
         if (methodReaderInterface == null)
             entryHandlerFactory = () -> QueueEntryHandler.dummy(wireType);
         else try {
@@ -240,6 +246,12 @@ public class ChronicleReader implements Reader {
         } catch (ClassNotFoundException e) {
             throw Jvm.rethrow(e);
         }
+        return this;
+    }
+
+    @Override
+    public ChronicleReader showMessageHistory(boolean showMessageHistory) {
+        this.showMessageHistory = showMessageHistory;
         return this;
     }
 

@@ -130,6 +130,7 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption('r')) {
             final String r = commandLine.getOptionValue('r');
             chronicleReader.asMethodReader(r.equals("null") ? null : r);
+            chronicleReader.showMessageHistory(commandLine.hasOption('g'));
         }
         if (commandLine.hasOption('w')) {
             chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w')));
@@ -165,6 +166,7 @@ public class ChronicleReaderMain {
         addOption(options, "b", "binary-search", true, "Use this class as a comparator to binary search", false);
         addOption(options, "a", "binary-arg", true, "Argument to pass to binary search class", false);
         addOption(options, "r", "as-method-reader", true, "Use when reading from a queue generated using a MethodWriter", false);
+        addOption(options, "g", "message-history", false, "Show message history (when using method reader)", false);
         addOption(options, "w", "wire-type", true, "Control output i.e. JSON", false);
         addOption(options, "s", "suppress-index", false, "Display index", false);
         addOption(options, "l", "single-line", false, "Squash each output message into a single line", false);
