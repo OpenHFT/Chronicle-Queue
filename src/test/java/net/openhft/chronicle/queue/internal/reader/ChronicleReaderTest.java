@@ -47,6 +47,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
+    private long lastIndex = Long.MIN_VALUE;
+    private long firstIndex = Long.MAX_VALUE;
 
     private static long getCurrentQueueFileLength(final Path dataDir) throws IOException {
         try (RandomAccessFile file = new RandomAccessFile(
@@ -58,6 +60,10 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     @Before
     public void before() {
+        // Reader opens queues in read-only mode
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
@@ -71,15 +77,91 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
+            lastIndex = queue.lastIndex();
+            firstIndex = queue.firstIndex();
         }
         expectException("Overriding sourceId from existing metadata, was 0, overriding to 1");
     }
 
     @Test(timeout = 10_000L)
-    public void shouldReadQueueWithNonDefaultRollCycle() {
-        if (OS.isWindows())
-            return;
+    public void shouldReadQueueInReverse() {
+        addCountToEndOfQueue();
 
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .execute();
+        final List<String> firstFourElements = capturedOutput.stream().limit(4).collect(Collectors.toList());
+        assertEquals(Arrays.asList("\"4\"\n", "\"3\"\n", "\"2\"\n", "\"1\"\n"), firstFourElements);
+    }
+
+    @Test
+    public void reverseOrderShouldIgnoreOptionsThatDontMakeSense() {
+        addCountToEndOfQueue();
+
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .tail()               // Ignored
+                .historyRecords(10)   // Ignored
+                .execute();
+        final List<String> firstFourElements = capturedOutput.stream().limit(4).collect(Collectors.toList());
+        assertEquals(Arrays.asList("\"4\"\n", "\"3\"\n", "\"2\"\n", "\"1\"\n"), firstFourElements);
+    }
+
+    @Test
+    public void reverseOrderWorksWithStartPosition() {
+        List<Long> indices = addCountToEndOfQueue();
+
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .withStartIndex(indices.get(1))
+                .execute();
+        final List<String> firstFourElements = capturedOutput.stream().limit(2).collect(Collectors.toList());
+        assertEquals(Arrays.asList("\"2\"\n", "\"1\"\n"), firstFourElements);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void reverseOrderThrowsWhenStartPositionIsAfterEndOfQueue() {
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .withStartIndex(lastIndex + 1)
+                .execute();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void reverseOrderThrowsWhenStartPositionIsBeforeStartOfQueue() {
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .withStartIndex(firstIndex - 1)
+                .execute();
+    }
+
+    private List<Long> addCountToEndOfQueue() {
+        List<Long> indices = new ArrayList<>();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
+                .sourceId(1)
+                .testBlockSize().build()) {
+            try (final ExcerptAppender appender = queue.acquireAppender()) {
+                for (int i = 1; i < 5; i++) {
+                    appender.writeText(String.valueOf(i));
+                    indices.add(appender.lastIndexAppended());
+                }
+            }
+        }
+        return indices;
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
@@ -101,8 +183,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
-
         expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
@@ -190,10 +270,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     public void shouldNotFailOnEmptyQueue() {
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
-        else
-            expectException("Failback to readonly tablestore");
+        expectException("Failback to readonly tablestore");
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertTrue(capturedOutput.isEmpty());
     }
@@ -373,8 +450,6 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
 
     @Test
     public void shouldPrintTimestampsToLocalTime() {
-        if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
         final Path queueDir = IOTools.createTempDirectory("shouldPrintTimestampsToLocalTime");
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
              final ExcerptAppender excerptAppender = queue.acquireAppender()) {
@@ -423,8 +498,6 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
 
     @Test
     public void findByBinarySearch() {
-        if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
              final ExcerptAppender excerptAppender = queue.acquireAppender()) {
@@ -463,9 +536,6 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     }
 
     private ChronicleReader basicReader() {
-        if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
-
         return new ChronicleReader()
                 .withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add);

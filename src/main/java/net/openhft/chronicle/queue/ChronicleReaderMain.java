@@ -147,6 +147,9 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption('b')) {
             chronicleReader.withBinarySearch(commandLine.getOptionValue('b'));
         }
+        if (commandLine.hasOption('k')) {
+            chronicleReader.inReverseOrder();
+        }
     }
 
     @NotNull
@@ -166,6 +169,7 @@ public class ChronicleReaderMain {
         addOption(options, "s", "suppress-index", false, "Display index", false);
         addOption(options, "l", "single-line", false, "Squash each output message into a single line", false);
         addOption(options, "z", "use-local-timezone", false, "Print timestamps using the local timezone", false);
+        addOption(options, "k", "reverse", false, "Read the queue in reverse", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
         return options;
     }
