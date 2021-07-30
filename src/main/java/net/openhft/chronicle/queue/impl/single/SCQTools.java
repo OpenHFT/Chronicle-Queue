@@ -15,7 +15,8 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 public enum SCQTools {
     ; // none
 
-    static final int MESSAGE_HISTORY_METHOD_ID = -1;
+    @Deprecated(/*to be removed in x.22*/)
+    static final int MESSAGE_HISTORY_METHOD_ID = MethodReader.MESSAGE_HISTORY_METHOD_ID;
 
     @Nullable
     public static MessageHistory readHistory(@NotNull final DocumentContext dc, final MessageHistory history) {
