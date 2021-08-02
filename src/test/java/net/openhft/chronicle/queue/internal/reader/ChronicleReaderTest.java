@@ -227,11 +227,11 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessagesMethodReaderDummy() {
-        basicReader().
+        basicReader()
                 // matches goodbye, but not hello or history
-                withInclusionRegex("goodbye").
-                asMethodReader(null).
-                execute();
+                .withInclusionRegex("goodbye")
+                .asMethodReader(null)
+                .execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
@@ -429,6 +429,17 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         } finally {
             System.clearProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY);
         }
+    }
+
+    @Test
+    public void shouldOnlyOutputUpToMatchLimitAfterFiltering() {
+        basicReader().withInclusionRegex("goodbye").withMatchLimit(3).execute();
+
+        final List<String> matchedMessages = capturedOutput.stream()
+                .filter(msg -> !msg.startsWith("0x"))
+                .collect(Collectors.toList());
+        assertEquals(3, matchedMessages.size());
+        assertTrue(matchedMessages.stream().allMatch(s -> s.contains("goodbye")));
     }
 
     private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) {
