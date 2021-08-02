@@ -44,6 +44,7 @@ import java.text.ParseException;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -77,6 +78,7 @@ public class ChronicleReader implements Reader {
     private boolean showMessageHistory;
     private volatile boolean running = true;
     private TailerDirection tailerDirection = TailerDirection.FORWARD;
+    private long matchLimit = 0;
 
     static {
         ToolsUtil.warnIfResourceTracing();
@@ -104,6 +106,7 @@ public class ChronicleReader implements Reader {
         boolean isFirstIteration = true;
         boolean retryLastOperation;
         boolean queueHasBeenModified;
+        final AtomicLong matchCounter = new AtomicLong(0L);
         do {
             try (final ChronicleQueue queue = createQueue();
                  final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
@@ -119,7 +122,7 @@ public class ChronicleReader implements Reader {
                     try {
                         moveToSpecifiedPosition(queue, tailer, isFirstIteration);
                         lastObservedTailIndex = tailer.index();
-                        Consumer<String> messageConsumer = text -> applyFiltersAndLog(text, tailer.index());
+                        Consumer<String> messageConsumer = text -> applyFiltersAndLog(text, tailer.index(), matchCounter);
                         BooleanSupplier readOne;
                         if (methodReaderInterface == null) {
                             readOne = () -> readOne(messageConverter, tailer, messageConsumer);
@@ -147,6 +150,10 @@ public class ChronicleReader implements Reader {
                                     pauser.pause();
                                 }
                                 break;
+                            } else {
+                                if (matchLimitReached(matchCounter.get())) {
+                                    break;
+                                }
                             }
                             pauser.reset();
                         }
@@ -157,7 +164,7 @@ public class ChronicleReader implements Reader {
                     }
                     queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex);
                     retryLastOperation = false;
-                    if (!running)
+                    if (!running || matchLimitReached(matchCounter.get()))
                         return;
                 } while (tailerDirection != BACKWARD && (tailInputSource || queueHasBeenModified));
             } catch (final RuntimeException e) {
@@ -172,6 +179,10 @@ public class ChronicleReader implements Reader {
             }
         } while (retryLastOperation);
 
+    }
+
+    private boolean matchLimitReached(long matches) {
+        return matchLimit > 0 && matches >= matchLimit;
     }
 
     public boolean readOne(@NotNull QueueEntryHandler messageConverter, @NotNull ExcerptTailer tailer, @NotNull Consumer<String> messageConsumer) {
@@ -191,6 +202,11 @@ public class ChronicleReader implements Reader {
 
     public ChronicleReader withReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
+        return this;
+    }
+
+    public ChronicleReader withMatchLimit(long matchLimit) {
+        this.matchLimit = matchLimit;
         return this;
     }
 
@@ -412,9 +428,10 @@ public class ChronicleReader implements Reader {
                 .build();
     }
 
-    protected void applyFiltersAndLog(final String text, final long index) {
+    protected void applyFiltersAndLog(final String text, final long index, AtomicLong matches) {
         if (inclusionRegex.isEmpty() || checkForMatches(inclusionRegex, text, true)) {
             if (exclusionRegex.isEmpty() || checkForMatches(exclusionRegex, text, false)) {
+                matches.incrementAndGet();
                 if (displayIndex)
                     messageSink.accept("0x" + Long.toHexString(index) + ": ");
                 messageSink.accept(text);
