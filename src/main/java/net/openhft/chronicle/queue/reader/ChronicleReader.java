@@ -24,29 +24,38 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.impl.single.BinarySearch;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.ParseException;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
-public final class ChronicleReader implements Reader {
+public class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
     private final List<Pattern> inclusionRegex = new ArrayList<>();
@@ -64,7 +73,12 @@ public final class ChronicleReader implements Reader {
     private Supplier<QueueEntryHandler> entryHandlerFactory = () -> QueueEntryHandler.messageToText(wireType);
     private boolean displayIndex = true;
     private Class<?> methodReaderInterface;
+    private BinarySearchComparator binarySearch;
+    private String arg;
+    private boolean showMessageHistory;
     private volatile boolean running = true;
+    private TailerDirection tailerDirection = TailerDirection.FORWARD;
+    private long matchLimit = 0;
 
     static {
         ToolsUtil.warnIfResourceTracing();
@@ -92,6 +106,7 @@ public final class ChronicleReader implements Reader {
         boolean isFirstIteration = true;
         boolean retryLastOperation;
         boolean queueHasBeenModified;
+        final AtomicLong matchCounter = new AtomicLong(0L);
         do {
             try (final ChronicleQueue queue = createQueue();
                  final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
@@ -107,18 +122,21 @@ public final class ChronicleReader implements Reader {
                     try {
                         moveToSpecifiedPosition(queue, tailer, isFirstIteration);
                         lastObservedTailIndex = tailer.index();
-                        Consumer<String> messageConsumer = text -> applyFiltersAndLog(text, tailer.index());
+                        Consumer<String> messageConsumer = text -> applyFiltersAndLog(text, tailer.index(), matchCounter);
                         BooleanSupplier readOne;
                         if (methodReaderInterface == null) {
                             readOne = () -> readOne(messageConverter, tailer, messageConsumer);
                         } else {
+                            // TODO: consider unifying this with messageConverter
                             Bytes<ByteBuffer> bytes = Bytes.elasticHeapByteBuffer(256);
                             Object writer = WireType.TEXT.apply(bytes).methodWriter(methodReaderInterface);
                             MethodReader methodReader = tailer.methodReader(writer);
                             readOne = () -> {
                                 boolean found = methodReader.readOne();
-                                if (found)
-                                    messageConsumer.accept(bytes.toString());
+                                if (found) {
+                                    String msg = showMessageHistory ? (MessageHistory.get().toString() + System.lineSeparator()) : "";
+                                    messageConsumer.accept(msg + bytes);
+                                }
                                 bytes.clear();
                                 return found;
                             };
@@ -132,6 +150,10 @@ public final class ChronicleReader implements Reader {
                                     pauser.pause();
                                 }
                                 break;
+                            } else {
+                                if (matchLimitReached(matchCounter.get())) {
+                                    break;
+                                }
                             }
                             pauser.reset();
                         }
@@ -140,11 +162,11 @@ public final class ChronicleReader implements Reader {
                         highestReachedIndex = tailer.index();
                         isFirstIteration = false;
                     }
-                    queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex, queue);
+                    queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex);
                     retryLastOperation = false;
-                    if (!running)
+                    if (!running || matchLimitReached(matchCounter.get()))
                         return;
-                } while (tailInputSource || queueHasBeenModified);
+                } while (tailerDirection != BACKWARD && (tailInputSource || queueHasBeenModified));
             } catch (final RuntimeException e) {
                 if (e.getCause() != null && e.getCause() instanceof DateTimeParseException) {
                     // ignore this error - due to a race condition between
@@ -159,7 +181,11 @@ public final class ChronicleReader implements Reader {
 
     }
 
-    public boolean readOne(QueueEntryHandler messageConverter, ExcerptTailer tailer, Consumer<String> messageConsumer) {
+    private boolean matchLimitReached(long matches) {
+        return matchLimit > 0 && matches >= matchLimit;
+    }
+
+    public boolean readOne(@NotNull QueueEntryHandler messageConverter, @NotNull ExcerptTailer tailer, @NotNull Consumer<String> messageConsumer) {
         try (DocumentContext dc = pollMethod.apply(tailer)) {
             if (!dc.isPresent()) {
                 return false;
@@ -179,7 +205,12 @@ public final class ChronicleReader implements Reader {
         return this;
     }
 
-    public ChronicleReader withMessageSink(final Consumer<String> messageSink) {
+    public ChronicleReader withMatchLimit(long matchLimit) {
+        this.matchLimit = matchLimit;
+        return this;
+    }
+
+    public ChronicleReader withMessageSink(final @NotNull Consumer<String> messageSink) {
         this.messageSink = messageSink;
         return this;
     }
@@ -188,22 +219,22 @@ public final class ChronicleReader implements Reader {
         return messageSink;
     }
 
-    public ChronicleReader withBasePath(final Path path) {
+    public ChronicleReader withBasePath(final @NotNull Path path) {
         this.basePath = path;
         return this;
     }
 
-    public ChronicleReader withInclusionRegex(final String regex) {
+    public ChronicleReader withInclusionRegex(final @NotNull String regex) {
         this.inclusionRegex.add(Pattern.compile(regex));
         return this;
     }
 
-    public ChronicleReader withExclusionRegex(final String regex) {
+    public ChronicleReader withExclusionRegex(final @NotNull String regex) {
         this.exclusionRegex.add(Pattern.compile(regex));
         return this;
     }
 
-    public ChronicleReader withCustomPlugin(final ChronicleReaderPlugin customPlugin) {
+    public ChronicleReader withCustomPlugin(final @NotNull ChronicleReaderPlugin customPlugin) {
         this.customPlugin = customPlugin;
         return this;
     }
@@ -223,7 +254,7 @@ public final class ChronicleReader implements Reader {
         return this;
     }
 
-    public ChronicleReader asMethodReader(String methodReaderInterface) {
+    public ChronicleReader asMethodReader(@Nullable String methodReaderInterface) {
         if (methodReaderInterface == null)
             entryHandlerFactory = () -> QueueEntryHandler.dummy(wireType);
         else try {
@@ -234,8 +265,38 @@ public final class ChronicleReader implements Reader {
         return this;
     }
 
-    public ChronicleReader withWireType(WireType wireType) {
+    @Override
+    public ChronicleReader showMessageHistory(boolean showMessageHistory) {
+        this.showMessageHistory = showMessageHistory;
+        return this;
+    }
+
+    @Override
+    public ChronicleReader withBinarySearch(@NotNull String binarySearchClass) {
+        try {
+            Class<?> clazz = Class.forName(binarySearchClass);
+            this.binarySearch = (BinarySearchComparator) clazz.getDeclaredConstructor().newInstance();
+            // allow binary search to configure itself
+            this.binarySearch.accept(this);
+        } catch (Exception e) {
+            throw Jvm.rethrow(e);
+        }
+        return this;
+    }
+
+    @Override
+    public ChronicleReader withArg(String arg) {
+        this.arg = arg;
+        return this;
+    }
+
+    public ChronicleReader withWireType(@NotNull WireType wireType) {
         this.wireType = wireType;
+        return this;
+    }
+
+    public ChronicleReader inReverseOrder() {
+        this.tailerDirection = TailerDirection.BACKWARD;
         return this;
     }
 
@@ -244,39 +305,92 @@ public final class ChronicleReader implements Reader {
         return this;
     }
 
+    @Override
+    public String arg() {
+        return arg;
+    }
+
+    @Override
+    public Class<?> methodReaderInterface() {
+        return methodReaderInterface;
+    }
+
     // visible for testing
     public ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
         this.pollMethod = pollMethod;
         return this;
     }
 
-    private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex, ChronicleQueue queue) {
-        long currentTailIndex = indexOfEnd(queue);
+    private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex) {
+        long currentTailIndex = indexOfEnd();
         return currentTailIndex > lastObservedTailIndex;
     }
 
     private void moveToSpecifiedPosition(final ChronicleQueue ic, final ExcerptTailer tailer, final boolean isFirstIteration) {
-        if (isSet(startIndex) && isFirstIteration) {
-            if (startIndex < ic.firstIndex()) {
-                throw new IllegalArgumentException(String.format("startIndex %d is less than first index %d",
-                        startIndex, ic.firstIndex()));
+        if (isFirstIteration) {
+
+            // Set the direction, if we're reading backwards, start at the end by default
+            tailer.direction(tailerDirection);
+            if (tailerDirection == BACKWARD) {
+                tailer.toEnd();
             }
 
-            boolean firstTime = true;
-            while (!tailer.moveToIndex(startIndex)) {
-                if (firstTime) {
-                    messageSink.accept("Waiting for startIndex " + Long.toHexString(startIndex));
-                    firstTime = false;
+            if (isSet(startIndex)) {
+                if (startIndex < ic.firstIndex()) {
+                    throw new IllegalArgumentException(String.format("startIndex 0x%xd is less than first index 0x%xd",
+                            startIndex, ic.firstIndex()));
                 }
-                Jvm.pause(100);
+
+                if (tailerDirection == BACKWARD && startIndex > ic.lastIndex()) {
+                    throw new IllegalArgumentException(String.format("startIndex 0x%xd is greater than last index 0x%xd",
+                            startIndex, ic.lastIndex()));
+                }
+
+                boolean firstTime = true;
+                while (!tailer.moveToIndex(startIndex)) {
+                    if (firstTime) {
+                        messageSink.accept("Waiting for startIndex " + Long.toHexString(startIndex));
+                        firstTime = false;
+                    }
+                    Jvm.pause(100);
+                }
+            } else if (binarySearch != null) {
+                startIndex = seekBinarySearch(tailer);
+                tailer.moveToIndex(startIndex);
+            }
+
+            if (tailerDirection == FORWARD) {
+                if (isSet(maxHistoryRecords)) {
+                    tailer.toEnd();
+                    moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
+                } else if (tailInputSource) {
+                    tailer.toEnd();
+                }
             }
         }
+    }
 
-        if (isSet(maxHistoryRecords) && isFirstIteration) {
-            tailer.toEnd();
-            moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
-        } else if (tailInputSource && isFirstIteration) {
-            tailer.toEnd();
+    private long seekBinarySearch(ExcerptTailer tailer) {
+        try {
+            final Wire key = binarySearch.wireKey();
+            long rv = BinarySearch.search((SingleChronicleQueue) tailer.queue(), key, binarySearch);
+            if (rv == -1)
+                return tailer.queue().firstIndex();
+            if (rv < 0) {
+                // we can get an approximate match even if we search for a key after the last entry - this works around that
+                tailer.moveToIndex(-rv);
+                while (true) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent())
+                            return dc.index();
+                        if (binarySearch.compare(dc.wire(), key) >= 0)
+                            return dc.index();
+                    }
+                }
+            }
+            return rv;
+        } catch (ParseException e) {
+            throw Jvm.rethrow(e);
         }
     }
 
@@ -292,7 +406,7 @@ public final class ChronicleReader implements Reader {
         tailer.direction(FORWARD);
     }
 
-    private long indexOfEnd(ChronicleQueue queue) {
+    private long indexOfEnd() {
         final ExcerptTailer excerptTailer = tlTailer.get();
         long index = excerptTailer.index();
         try {
@@ -300,7 +414,6 @@ public final class ChronicleReader implements Reader {
         } finally {
             excerptTailer.moveToIndex(index);
         }
-
     }
 
     @NotNull
@@ -315,9 +428,10 @@ public final class ChronicleReader implements Reader {
                 .build();
     }
 
-    protected void applyFiltersAndLog(final String text, final long index) {
+    protected void applyFiltersAndLog(final String text, final long index, AtomicLong matches) {
         if (inclusionRegex.isEmpty() || checkForMatches(inclusionRegex, text, true)) {
             if (exclusionRegex.isEmpty() || checkForMatches(exclusionRegex, text, false)) {
+                matches.incrementAndGet();
                 if (displayIndex)
                     messageSink.accept("0x" + Long.toHexString(index) + ": ");
                 messageSink.accept(text);

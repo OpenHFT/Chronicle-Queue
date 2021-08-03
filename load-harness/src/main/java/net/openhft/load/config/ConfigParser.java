@@ -13,11 +13,12 @@ public final class ConfigParser {
 
     public ConfigParser(final String resourceName) throws IOException {
         final Properties properties = new Properties();
-        final InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName);
-        if (stream == null) {
-            throw new IllegalArgumentException("Resource not found: " + resourceName);
+        try (final InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName)) {
+            if (stream == null) {
+                throw new IllegalArgumentException("Resource not found: " + resourceName);
+            }
+            properties.load(stream);
         }
-        properties.load(stream);
         final int stageCount = requiredIntValue(properties, "stage.count");
         this.config = new PublisherConfig(
                 toRelativePath(requiredValue(properties, "publisher.outputDir")),

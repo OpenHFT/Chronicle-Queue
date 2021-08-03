@@ -130,6 +130,7 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption('r')) {
             final String r = commandLine.getOptionValue('r');
             chronicleReader.asMethodReader(r.equals("null") ? null : r);
+            chronicleReader.showMessageHistory(commandLine.hasOption('g'));
         }
         if (commandLine.hasOption('w')) {
             chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w')));
@@ -140,6 +141,18 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption('z')) {
             System.setProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY,
                     ZoneId.systemDefault().toString());
+        }
+        if (commandLine.hasOption('a')) {
+            chronicleReader.withArg(commandLine.getOptionValue('a'));
+        }
+        if (commandLine.hasOption('b')) {
+            chronicleReader.withBinarySearch(commandLine.getOptionValue('b'));
+        }
+        if (commandLine.hasOption('k')) {
+            chronicleReader.inReverseOrder();
+        }
+        if (commandLine.hasOption('x')) {
+            chronicleReader.withMatchLimit(Long.parseLong(commandLine.getOptionValue('x')));
         }
     }
 
@@ -153,12 +166,17 @@ public class ChronicleReaderMain {
         addOption(options, "f", "follow", false, "Tail behaviour - wait for new records to arrive", false);
         addOption(options, "m", "max-history", true, "Show this many records from the end of the data set", false);
         addOption(options, "n", "from-index", true, "Start reading from this index (e.g. 0x123ABE)", false);
+        addOption(options, "b", "binary-search", true, "Use this class as a comparator to binary search", false);
+        addOption(options, "a", "binary-arg", true, "Argument to pass to binary search class", false);
         addOption(options, "r", "as-method-reader", true, "Use when reading from a queue generated using a MethodWriter", false);
+        addOption(options, "g", "message-history", false, "Show message history (when using method reader)", false);
         addOption(options, "w", "wire-type", true, "Control output i.e. JSON", false);
         addOption(options, "s", "suppress-index", false, "Display index", false);
         addOption(options, "l", "single-line", false, "Squash each output message into a single line", false);
         addOption(options, "z", "use-local-timezone", false, "Print timestamps using the local timezone", false);
+        addOption(options, "k", "reverse", false, "Read the queue in reverse", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
+        addOption(options, "x", "max-results", true, "Limit the number of results to output", false);
         return options;
     }
 }

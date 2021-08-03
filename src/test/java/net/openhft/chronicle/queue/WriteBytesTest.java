@@ -215,7 +215,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "# # Unknown_0x84\n" +
                     "# position: 848, header: 6\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x86\n" +
+                    "# # BYTES_MARSHALLABLE\n" +
                     "# # Unknown_0x85\n" +
                     "# # Unknown_0x85\n" +
                     "# # Unknown_0x85\n" +

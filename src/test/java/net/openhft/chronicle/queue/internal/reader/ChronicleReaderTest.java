@@ -2,21 +2,18 @@ package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.threads.NamedThreadFactory;
-import net.openhft.chronicle.wire.AbstractTimestampLongConverter;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MicroTimestampLongConverter;
-import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
+import net.openhft.chronicle.wire.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
@@ -49,6 +46,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
+    private long lastIndex = Long.MIN_VALUE;
+    private long firstIndex = Long.MAX_VALUE;
 
     private static long getCurrentQueueFileLength(final Path dataDir) throws IOException {
         try (RandomAccessFile file = new RandomAccessFile(
@@ -60,6 +59,10 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     @Before
     public void before() {
+        // Reader opens queues in read-only mode
+        if (OS.isWindows())
+            expectException("Read-only mode is not supported on Windows");
+
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
@@ -67,21 +70,96 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder =
                     excerptAppender.methodWriterBuilder(Say.class);
-            methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
                 events.say(i % 2 == 0 ? "hello" : "goodbye");
             }
+            lastIndex = queue.lastIndex();
+            firstIndex = queue.firstIndex();
         }
         expectException("Overriding sourceId from existing metadata, was 0, overriding to 1");
     }
 
     @Test(timeout = 10_000L)
-    public void shouldReadQueueWithNonDefaultRollCycle() {
-        if (OS.isWindows())
-            return;
+    public void shouldReadQueueInReverse() {
+        addCountToEndOfQueue();
 
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .execute();
+        final List<String> firstFourElements = capturedOutput.stream().limit(4).collect(Collectors.toList());
+        assertEquals(Arrays.asList("\"4\"\n", "\"3\"\n", "\"2\"\n", "\"1\"\n"), firstFourElements);
+    }
+
+    @Test
+    public void reverseOrderShouldIgnoreOptionsThatDontMakeSense() {
+        addCountToEndOfQueue();
+
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .tail()               // Ignored
+                .historyRecords(10)   // Ignored
+                .execute();
+        final List<String> firstFourElements = capturedOutput.stream().limit(4).collect(Collectors.toList());
+        assertEquals(Arrays.asList("\"4\"\n", "\"3\"\n", "\"2\"\n", "\"1\"\n"), firstFourElements);
+    }
+
+    @Test
+    public void reverseOrderWorksWithStartPosition() {
+        List<Long> indices = addCountToEndOfQueue();
+
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .withStartIndex(indices.get(1))
+                .execute();
+        final List<String> firstFourElements = capturedOutput.stream().limit(2).collect(Collectors.toList());
+        assertEquals(Arrays.asList("\"2\"\n", "\"1\"\n"), firstFourElements);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void reverseOrderThrowsWhenStartPositionIsAfterEndOfQueue() {
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .withStartIndex(lastIndex + 1)
+                .execute();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void reverseOrderThrowsWhenStartPositionIsBeforeStartOfQueue() {
+        new ChronicleReader().withBasePath(dataDir)
+                .withMessageSink(capturedOutput::add)
+                .inReverseOrder()
+                .suppressDisplayIndex()
+                .withStartIndex(firstIndex - 1)
+                .execute();
+    }
+
+    private List<Long> addCountToEndOfQueue() {
+        List<Long> indices = new ArrayList<>();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
+                .sourceId(1)
+                .testBlockSize().build()) {
+            try (final ExcerptAppender appender = queue.acquireAppender()) {
+                for (int i = 1; i < 5; i++) {
+                    appender.writeText(String.valueOf(i));
+                    indices.add(appender.lastIndexAppended());
+                }
+            }
+        }
+        return indices;
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
@@ -103,8 +181,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
-
         expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
@@ -112,7 +188,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
-            methodWriterBuilder.recordHistory(true);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
@@ -126,76 +201,11 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         assertFalse(capturedOutput.isEmpty());
     }
 
-/*
-    @Test(timeout = 30_000L)
-    public void shouldReadQueueWithDifferentRollCycleWhenCreatedAfterReader() throws InterruptedException {
-        ReferenceCounter.TRACING_ENABLED = false;
-        // TODO FIX
-//        AbstractCloseable.disableCloseableTracing();
-
-        expectException("Overriding roll length from existing metadata");
-        Path path = getTmpDir().toPath();
-        path.toFile().mkdirs();
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicLong recordsProcessed = new AtomicLong(0);
-        final ChronicleReader reader = new ChronicleReader().withBasePath(path).withMessageSink(m -> {
-            latch.countDown();
-            recordsProcessed.incrementAndGet();
-        });
-
-        final AtomicReference<Throwable> readerException = new AtomicReference<>();
-        final CountDownLatch executeLatch = new CountDownLatch(1);
-
-try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
-                build()) {
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
-            methodWriterBuilder.recordHistory(true);
-            final StringEvents events = methodWriterBuilder.build();
-
-            for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
-                events.say(i % 2 == 0 ? "hello" : "goodbye");
-            }
-        }
-
-        final Thread readerThread = new Thread(() -> {
-            long end = System.currentTimeMillis() + 5000;
-            do {
-                try {
-                    reader.execute();
-                    executeLatch.countDown();
-                } catch (Throwable t) {
-                    readerException.set(t);
-                    throw t;
-                }
-            } while(System.currentTimeMillis() < end);
-        });
-        readerThread.start();
-
-        assertTrue(executeLatch.await(5, TimeUnit.SECONDS));
-        readerThread.interrupt();
-        assertTrue(capturedOutput.isEmpty());
-
-        assertTrue(latch.await(15, TimeUnit.SECONDS));
-        while (recordsProcessed.get() < 10) {
-            LockSupport.parkNanos(1L);
-        }
-
-        readerThread.join();
-
-        assertNull(readerException.get());
-    }
-*/
-
     @Test
     public void shouldNotFailOnEmptyQueue() {
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
-        else
-            expectException("Failback to readonly tablestore");
+        expectException("Failback to readonly tablestore");
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertTrue(capturedOutput.isEmpty());
     }
@@ -216,13 +226,32 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     }
 
     @Test
-    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
-        basicReader().
+    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessagesMethodReaderDummy() {
+        basicReader()
                 // matches goodbye, but not hello or history
-                        withInclusionRegex("goodbye").
-                asMethodReader(null).
-                execute();
+                .withInclusionRegex("goodbye")
+                .asMethodReader(null)
+                .execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
+    }
+
+    @Test
+    public void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
+        basicReader().
+                asMethodReader(Say.class.getName()).
+                execute();
+
+        assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
+    }
+
+    @Test
+    public void shouldIncludeMessageHistoryMethodReaderShowHistory() {
+        basicReader().
+                asMethodReader(Say.class.getName()).
+                showMessageHistory(true).
+                execute();
+
+        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("MessageHistory")));
     }
 
     @Test(timeout = 5000)
@@ -375,9 +404,7 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
 
     @Test
     public void shouldPrintTimestampsToLocalTime() {
-        if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
-        final Path queueDir = IOTools.createTempDirectory("shouldPrintTimestampsToLocalTime");
+        final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
              final ExcerptAppender excerptAppender = queue.acquireAppender()) {
             final VanillaMethodWriterBuilder<SayWhen> methodWriterBuilder =
@@ -404,10 +431,21 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         }
     }
 
-    private void assertTimesAreInZone(Path queueDir, ZoneId zoneId, List<Long> timestamps) {
+    @Test
+    public void shouldOnlyOutputUpToMatchLimitAfterFiltering() {
+        basicReader().withInclusionRegex("goodbye").withMatchLimit(3).execute();
+
+        final List<String> matchedMessages = capturedOutput.stream()
+                .filter(msg -> !msg.startsWith("0x"))
+                .collect(Collectors.toList());
+        assertEquals(3, matchedMessages.size());
+        assertTrue(matchedMessages.stream().allMatch(s -> s.contains("goodbye")));
+    }
+
+    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) {
         ChronicleReader reader = new ChronicleReader()
                 .asMethodReader(SayWhen.class.getName())
-                .withBasePath(queueDir)
+                .withBasePath(queueDir.toPath())
                 .withMessageSink(capturedOutput::add);
         reader.execute();
 
@@ -423,6 +461,34 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
         assertEquals("Didn't check all the timestamps", timestamps.size(), i);
     }
 
+    @Test
+    public void findByBinarySearch() {
+        final File queueDir = getTmpDir();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
+             final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+
+            TimeUnit timeUnit = ServicesTimestampLongConverter.timeUnit();
+            long start = timeUnit.convert(1610000000000L, TimeUnit.MILLISECONDS);
+            int max = 10;
+            for (long i = 0; i < max; i++) {
+                long ts = start + i * timeUnit.convert(1, TimeUnit.SECONDS);
+                try (DocumentContext dc = excerptAppender.writingDocument()) {
+                    dc.wire().write(TimestampComparator.TS).int64(ts);
+                }
+            }
+
+            int eventToStartAt = 3;
+            long tsToLookFor = start + timeUnit.convert(eventToStartAt, TimeUnit.SECONDS);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(max - eventToStartAt, capturedOutput.size() / 2);
+        }
+    }
+
     private String findAnExistingIndex() {
         basicReader().execute();
         final List<String> indicies = capturedOutput.stream()
@@ -435,9 +501,6 @@ try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollC
     }
 
     private ChronicleReader basicReader() {
-        if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
-
         return new ChronicleReader()
                 .withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add);

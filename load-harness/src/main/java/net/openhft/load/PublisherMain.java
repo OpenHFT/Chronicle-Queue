@@ -1,15 +1,14 @@
 package net.openhft.load;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.load.config.ConfigParser;
 import net.openhft.load.config.PublisherConfig;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

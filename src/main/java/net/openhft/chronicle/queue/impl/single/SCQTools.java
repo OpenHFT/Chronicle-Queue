@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesMarshallable;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MessageHistory;
@@ -15,7 +14,8 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 public enum SCQTools {
     ; // none
 
-    static final int MESSAGE_HISTORY_METHOD_ID = -1;
+    @Deprecated(/*to be removed in x.22*/)
+    static final int MESSAGE_HISTORY_METHOD_ID = MethodReader.MESSAGE_HISTORY_METHOD_ID;
 
     @Nullable
     public static MessageHistory readHistory(@NotNull final DocumentContext dc, final MessageHistory history) {
@@ -42,10 +42,9 @@ public enum SCQTools {
 
     @Nullable
     private static MessageHistory readHistoryFromBytes(@NotNull final Wire wire, final MessageHistory history) {
-        final Bytes<?> bytes = wire.bytes();
         if (MESSAGE_HISTORY_METHOD_ID != wire.readEventNumber())
             return null;
-        ((BytesMarshallable) history).readMarshallable(bytes);
+        wire.getValueIn().marshallable(history);
         return history;
     }
 
@@ -56,7 +55,7 @@ public enum SCQTools {
 
         if (!MethodReader.HISTORY.contentEquals(sb))
             return null;
-        valueIn.object(history, MessageHistory.class);
+        valueIn.marshallable(history);
         return history;
     }
 }

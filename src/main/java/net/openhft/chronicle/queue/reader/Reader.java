@@ -48,15 +48,31 @@ public interface Reader {
 
     Reader withStartIndex(final long index);
 
+    Reader withArg(@NotNull String arg);
+
     Reader tail();
 
     Reader historyRecords(final long maxHistoryRecords);
 
+    /**
+     * specify method reader interface to use
+     * @param methodReaderInterface interface class name. If null, a dummy reader is created
+     *                              TODO: x.23 this argument will become @NonNull
+     * @return this
+     */
     Reader asMethodReader(@Nullable String methodReaderInterface);
 
     Reader withWireType(@NotNull WireType wireType);
 
     Reader suppressDisplayIndex();
+
+    Reader withBinarySearch(@NotNull String binarySearch);
+
+    Reader showMessageHistory(boolean showMessageHistory);
+
+    String arg();
+
+    Class<?> methodReaderInterface();
 
     static Reader create() {
         return new ChronicleReader();

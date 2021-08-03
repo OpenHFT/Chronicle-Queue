@@ -228,9 +228,10 @@ public class ChronicleHistoryReader implements HistoryReader {
         // if the tailer has recordHistory(true) then the MessageHistory will be
         // written with a single timing and nothing else. This is then carried through
         int firstWriteOffset = history.timings() - (history.sources() * 2);
-        if (!(firstWriteOffset == 0 || firstWriteOffset == 1))
-            // don't know how this can happen, but there is at least one CQ that exhibits it
+        if (!(firstWriteOffset == 0 || firstWriteOffset == 1)) {
+            Jvm.warn().on(getClass(), "firstWriteOffset is not 0 or 1 for " + history);
             return;
+        }
         for (int sourceIndex = 0; sourceIndex < history.sources(); sourceIndex++) {
             String histoId = Integer.toString(history.sourceId(sourceIndex)) + extraHistoId;
             Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());
