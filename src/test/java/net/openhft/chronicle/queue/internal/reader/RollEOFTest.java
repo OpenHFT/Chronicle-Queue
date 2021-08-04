@@ -80,8 +80,8 @@ public class RollEOFTest extends ChronicleQueueTestBase {
     public void testRollWritesEOF() throws IOException {
         assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
 
-        expectException("Overriding roll length from existing metadata");
-        expectException("Overriding roll cycle from");
+//        expectException("Overriding roll length from existing metadata");
+//        expectException("Overriding roll cycle from");
 
         final File path = getTmpDir();
         try {
@@ -111,8 +111,8 @@ public class RollEOFTest extends ChronicleQueueTestBase {
     public void testRollWithoutEOFDoesntBlowup() throws IOException {
         assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
 
-        expectException("Overriding roll length from existing metadata");
-        expectException("Overriding roll cycle from");
+//        expectException("Overriding roll length from existing metadata");
+//        expectException("Overriding roll cycle from");
 
         final File path = getTmpDir();
         try {
@@ -148,8 +148,8 @@ public class RollEOFTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOF() throws IOException {
-        expectException("Overriding roll length from existing metadata");
-        expectException("Overriding roll cycle from");
+//        expectException("Overriding roll length from existing metadata");
+//        expectException("Overriding roll cycle from");
 
         final File path = getTmpDir();
         try {

@@ -28,7 +28,8 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
     @Before
     public void before() {
-        expectException(exceptionKey -> OS.isMacOSX() && exceptionKey.clazz == DirectoryUtils.class, "Ignore DirectoryUtils");
+        if (OS.isMacOSX())
+            ignoreException(exceptionKey -> exceptionKey.clazz == DirectoryUtils.class, "Ignore DirectoryUtils");
     }
 
     @Override
@@ -251,7 +252,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             final RollCycle rollCycle = q.rollCycle();
             final int currentCycle = rollCycle.toCycle(l);
             // try to write to next roll cycle and write at seqnum 1 (but miss the 0th seqnum of that roll cycle)
-            expectException("wrote an EOF at 0x812c");
             final long index = rollCycle.toIndex(currentCycle + 1, 1);
             ((InternalAppender) appender).writeBytes(index, Bytes.from("text"));
         }
@@ -276,7 +276,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
             Assert.assertTrue(hasEOF(q, firstCycle));
             // here we try and write to previous cycle file. We will overwrite the EOF in doing so
-            expectException("Incomplete header found at pos: 33048: c0000000, overwriting");
+            ignoreException("Incomplete header found at pos: 33048: c0000000, overwriting");
             ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
             Assert.assertFalse(hasEOF(q, firstCycle));
 

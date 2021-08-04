@@ -178,8 +178,8 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testRestartingAService() {
-        expectException("Overriding roll length from existing metadata");
-        expectException("Overriding roll cycle from");
+//        expectException("Overriding roll length from existing metadata");
+//        expectException("Overriding roll cycle from");
 
         File queuePath = DirectoryUtils.tempDir("testRestartingAService");
         File queuePath2 = DirectoryUtils.tempDir("testRestartingAService-down");

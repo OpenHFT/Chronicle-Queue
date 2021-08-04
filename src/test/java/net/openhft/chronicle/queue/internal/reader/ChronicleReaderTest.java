@@ -78,7 +78,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             lastIndex = queue.lastIndex();
             firstIndex = queue.firstIndex();
         }
-        expectException("Overriding sourceId from existing metadata, was 0, overriding to 1");
+        ignoreException("Overriding sourceId from existing metadata, was 0, overriding to 1");
     }
 
     @Test(timeout = 10_000L)
@@ -161,7 +161,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
-        expectException("Overriding roll cycle from");
+//        expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).

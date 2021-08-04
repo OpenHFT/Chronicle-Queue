@@ -310,7 +310,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCanAppendMetadataIfAppendLockIsSet() {
-        expectException(SingleChronicleQueueTest::isThrowingIllegalStateException, "threw ISE");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
@@ -324,7 +323,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSet() {
-        expectException(SingleChronicleQueueTest::isThrowingIllegalStateException, "threw ISE");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
@@ -335,7 +333,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalStateException.class)
     public void testCantAppendIfAppendLockIsSetInDifferentQueue() {
-        expectException(SingleChronicleQueueTest::isThrowingIllegalStateException, "threw ISE");
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
 

@@ -3,12 +3,14 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ReferenceOwner;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,10 +34,10 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
 
         expectException("Failback to readonly tablestore");
         expectException("reading control code as text");
-        expectException("Unable to copy TimedStoreRecovery safely will try anyway");
-        expectException("Unable to copy SCQStore safely will try anyway");
-        expectException("Unable to copy SCQSRoll safely");
-        expectException("Unable to copy SCQSIndexing safely");
+//        expectException("Unable to copy TimedStoreRecovery safely will try anyway");
+//        expectException("Unable to copy SCQStore safely will try anyway");
+//        expectException("Unable to copy SCQSRoll safely");
+//        expectException("Unable to copy SCQSIndexing safely");
 
         tmpDir.toFile().mkdirs();
         // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4

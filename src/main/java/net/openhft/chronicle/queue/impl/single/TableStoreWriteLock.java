@@ -31,8 +31,8 @@ import java.util.function.Supplier;
 import static net.openhft.chronicle.core.Jvm.warn;
 
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
-    private static final String LOCK_KEY = "chronicle.write.lock";
     public static final String APPEND_LOCK_KEY = "chronicle.append.lock";
+    private static final String LOCK_KEY = "chronicle.write.lock";
     private final long timeout;
     private Thread lockedByThread = null;
     private StackTrace lockedHere;
@@ -60,11 +60,11 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         long value = 0;
         TimingPauser tlPauser = pauser.get();
         try {
-            int i = 0;
             value = lock.getVolatileValue();
+            long start = System.currentTimeMillis();
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
-                if (i++ > 1000 && Thread.interrupted())
+                if (Thread.interrupted())
                     throw new IllegalStateException("Interrupted for the lock file:" + path);
                 tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
                 value = lock.getVolatileValue();
@@ -88,6 +88,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             // we should reset the pauser after a timeout exception
             tlPauser.reset();
             lock();
+        } catch (Throwable t) {
+            t.printStackTrace();
         } finally {
             tlPauser.reset();
         }

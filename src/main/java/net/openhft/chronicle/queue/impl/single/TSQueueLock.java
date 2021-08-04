@@ -120,7 +120,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     private void warnLock(String msg, long value) {
-        String pid = ((int) value==PID) ? "me":Integer.toString((int) value);
+        String pid = ((int) value == PID) ? "me" : Integer.toString((int) value);
         final String warningMsg = msg + " after " + timeout + "ms for " +
                 "the lock file:" + path + ". Lock is held by " +
                 "PID: " + pid + ", " +
