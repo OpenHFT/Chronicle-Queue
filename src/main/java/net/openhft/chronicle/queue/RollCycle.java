@@ -76,15 +76,20 @@ public interface RollCycle {
     int defaultIndexSpacing();
 
     /**
-     * @param epoch and EPOCH offset, to all the user to define their own epoch
-     * @return the cycle
+     * Returns the current cycle. Default epoch is 0 so for a DAILY cycle this will return the number of days since 1970-01-01T00:00:00Z.
+     *
+     * @param epoch an EPOCH offset, to all the user to define their own epoch
+     * @return the current cycle
      */
     int current(TimeProvider time, long epoch);
 
     /**
-     * Returns the index for the given {@code cycle} and {@code sequenceNumber}.
+     * Returns the index for the provided {@code cycle} and {@code sequenceNumber}.
      * <p>
-     * An index is comprised of both a cycle and a sequence number but the way the index is composed of said properties may vary.
+     * An index is made up of {@code cycle} shifted left + {@code sequenceNumber}. {@code sequenceNumber} starts at 0 for each new {@code cycle}.
+     * DAILY cycle has cycleShift=32 and sequenceMask=0xFFFFFFFF so the top 32 bits are for cycle and bottom
+     * 32 bits are for sequence. This means you can only store 2^32 entries per day.
+     * HUGE_DAILY has shift=48 and mask=0xFFFFFFFFFFFF thus allowing 2^48 entries per day.
      *
      * @param cycle          to be composed into an index
      * @param sequenceNumber to be composed into an index
@@ -93,13 +98,13 @@ public interface RollCycle {
     long toIndex(int cycle, long sequenceNumber);
 
     /**
-     * Returns the sequence number for the given {@code index}.
+     * Returns the sequence number for the provided {@code index}.
      * <p>
      * An index is comprised of both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
      * decomposes the provided {@code index} and extracts the sequence number.
      *
-     * @param index to use when extracting the sequence number
-     * @return the sequence number for the given {@code index}
+     * @param index to use to extract the sequence number
+     * @return the sequence number for the provided {@code index}
      */
     long toSequenceNumber(long index);
 

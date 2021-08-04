@@ -568,6 +568,10 @@ console output:
 ----
 The maximum number of messages that can be stored in a queue file depends on roll cycle. See  https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/FAQ.adoc[FAQ] for more information on this.
 
+In Chronicle Queue, the rollover time is based on UTC. The Timezone Rollover Enterprise feature extends Chronicle Queue's ability to specify the time and periodicity of queue rollovers, rather than UTC. For more information see link:docs/timezone_rollover.adoc[Timezone Queue Rollover].
+
+The Chronicle Queue `FileUtil` class provides useful methods for managing queue files. See link:docs/managing_roll_files_directly.adoc[Managing Roll Files Directly].
+
 * *wireType*
 
 It's possible to configure how Chronicle Queue will store the data by explicitly set the `WireType`:
@@ -620,7 +624,7 @@ TIP: Use the same `blockSize` for each instance of replicated queues.
 
 * *indexSpacing*
 
-This parameter shows space between excerpts that are explicitly indexed.
+This parameter shows the space between excerpts that are explicitly indexed.
 A higher number means higher sequential write performance but slower random access read.
 The sequential read performance is not affected by this property.
 For example, the following default index spacing can be returned:
@@ -637,6 +641,8 @@ The size of each index array, as well as the total number of index arrays per qu
 
 [NOTE]
 indexCount^2^ is the maximum number of indexed queue entries.
+
+NOTE: See Section *_13. Excerpt indexing in Chronicle Queue_* of this User Guide for more information and examples of using indexes.
 
 * *readBufferMode, writeBufferMode*
 
@@ -1362,7 +1368,6 @@ onTopOfBookPrice: {
 ''''
 * *13. Excerpt indexing in Chronicle Queue*
 
-//An index is assigned to the excerpt that is written into a queue.
 In the following section you will find how to work with the excerpt index.
 
 ** *13.1. Finding the index at the end of a Chronicle Queue*
