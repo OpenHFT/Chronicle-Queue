@@ -86,7 +86,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!data #binary\n" +
                 "listing.lowestCycle: 1567498753\n" +
                 "--- !!data #binary\n" +
-                "listing.modCount: 3\n" +
+                "listing.modCount: 7\n" +
                 "--- !!data #binary\n" +
                 "chronicle.write.lock: -9223372036854775808\n" +
                 "--- !!data #binary\n" +

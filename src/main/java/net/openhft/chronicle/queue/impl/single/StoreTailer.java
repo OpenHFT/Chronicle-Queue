@@ -46,9 +46,9 @@ class StoreTailer extends AbstractCloseable
     private final LongValue indexValue;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
+    private final Finalizer finalizer;
     long index; // index of the next read.
     long lastReadIndex; // index of the last read message
-
     @Nullable
     SingleChronicleQueueStore store;
     private int cycle;
@@ -61,7 +61,6 @@ class StoreTailer extends AbstractCloseable
     private boolean readingDocumentFound = false;
     private long address = NO_PAGE;
     private boolean striding = false;
-    private final Finalizer finalizer;
     private boolean disableThreadSafetyCheck;
 
     public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool) {
@@ -265,7 +264,7 @@ class StoreTailer extends AbstractCloseable
             if (queue.isReadOnly()) {
                 Jvm.warn().on(StoreTailer.class,
                         "Tried to read past the end of a read-only view. " +
-                        "Underlying data store may have grown since this tailer was created.", e);
+                                "Underlying data store may have grown since this tailer was created.", e);
             } else {
                 throw e;
             }
@@ -706,7 +705,7 @@ class StoreTailer extends AbstractCloseable
                 state = NOT_REACHED_IN_CYCLE;
                 break;
             case NOT_FOUND:
-                if (this.cycle < this.queue.lastCycle) {
+                if (this.cycle < this.queue.lastCycle()) {
                     state = END_OF_CYCLE;
                     return END_OF_FILE;
                 }
@@ -803,7 +802,7 @@ class StoreTailer extends AbstractCloseable
         // fixes #378
         if (sequenceNumber == -1L) {
             // nothing has been written yet, so point to start of cycle
-            long prevCycle = queue.firstCycle;
+            long prevCycle = queue.firstCycle();
             while (prevCycle < lastCycle) {
                 lastCycle--;
                 try {
@@ -873,17 +872,28 @@ class StoreTailer extends AbstractCloseable
         throwExceptionIfClosed();
 
         if (direction.equals(TailerDirection.BACKWARD)) {
-            try {
-                return originalToEnd();
-            } catch (NotReachedException e) {
-                // due to a race condition, where the queue rolls as we are processing toEnd()
-                // we may get a NotReachedException  ( see https://github.com/OpenHFT/Chronicle-Queue/issues/702 )
-                // hence are are just going to retry.
-                return originalToEnd();
-            }
+            return callOriginalToEnd();
         }
 
         return optimizedToEnd();
+    }
+
+    @NotNull
+    private ExcerptTailer callOriginalToEnd() {
+        try {
+            return originalToEnd();
+        } catch (NotReachedException e) {
+            queue.refreshDirectoryListing();
+            // due to a race condition, where the queue rolls as we are processing toEnd()
+            // we may get a NotReachedException  ( see https://github.com/OpenHFT/Chronicle-Queue/issues/702 )
+            // hence are are just going to retry.
+            try {
+                return originalToEnd();
+            } catch (Exception ex) {
+                Jvm.warn().on(getClass(), "Unable to find toEnd() so winding to the start " + ex);
+                return toStart();
+            }
+        }
     }
 
     @Override
@@ -930,14 +940,7 @@ class StoreTailer extends AbstractCloseable
 
             // fixes #378
             if (sequenceNumber == -1L) {
-                // nothing has been written yet, so point to start of cycle
-                try {
-                    return originalToEnd();
-                } catch (NotReachedException e) {
-                    // due to a race condition, where the queue rolls as we are processing toEnd()
-                    // we may get a NotReachedException hence are are just going to retry.
-                    return originalToEnd();
-                }
+                return callOriginalToEnd();
             }
 
             final Bytes<?> bytes = privateWire().bytes();

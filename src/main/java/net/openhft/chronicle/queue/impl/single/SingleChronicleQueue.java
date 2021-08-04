@@ -75,17 +75,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     protected final EventLoop eventLoop;
     @NotNull
     protected final TableStore<SCQMeta> metaStore;
-    // Uses this.closers as a lock. concurrent read, locking for write.
-    private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
+    @NotNull
+    protected final WireStorePool pool;
+    protected final boolean doubleBuffer;
     final Supplier<TimingPauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
     final File path;
     final String fileAbsolutePath;
+    // Uses this.closers as a lock. concurrent read, locking for write.
+    private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
     private final StoreSupplier storeSupplier;
     private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
-    @NotNull
-    protected final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
     @NotNull
@@ -119,17 +120,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollingResourcesCache dateCache;
     private final WriteLock appendLock;
-    protected int sourceId;
-    long firstAndLastCycleTime = 0;
-    int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
-    protected final boolean doubleBuffer;
     private final StoreFileListener storeFileListener;
-    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
+    protected int sourceId;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -285,8 +283,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         throwExceptionIfClosed();
 
         directoryListing.refresh(true);
-        firstCycle = directoryListing.getMinCreatedCycle();
-        lastCycle = directoryListing.getMaxCreatedCycle();
     }
 
     /**
@@ -388,7 +384,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             try {
                 writer.flush();
             } catch (IOException e) {
-                Jvm.debug().on(SingleChronicleQueue.class,  e);
+                Jvm.debug().on(SingleChronicleQueue.class, e);
             }
         }
     }
@@ -755,21 +751,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private void setFirstAndLastCycle() {
         long now = System.currentTimeMillis();
-        if (now <= firstAndLastCycleTime) {
+        if (now <= directoryListing.lastRefreshTimeMS()) {
             return;
         }
 
-        directoryListing.refresh(now - firstAndLastCycleTime > 60_000);
-        firstCycle = directoryListing.getMinCreatedCycle();
-        lastCycle = directoryListing.getMaxCreatedCycle();
-
-        firstAndLastCycleTime = now;
+        boolean force = now - directoryListing.lastRefreshTimeMS() > 60_000;
+        directoryListing.refresh(force);
     }
 
     @Override
     public int firstCycle() {
         setFirstAndLastCycle();
-        return firstCycle;
+        return directoryListing.getMinCreatedCycle();
     }
 
     /**
@@ -778,16 +771,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @param cycle the cycle the appender has rolled to
      */
     void onRoll(int cycle) {
-        if (lastCycle < cycle)
-            lastCycle = cycle;
-        if (firstCycle > cycle)
-            firstCycle = cycle;
+        directoryListing.onRoll(cycle);
     }
 
     @Override
     public int lastCycle() {
         setFirstAndLastCycle();
-        return lastCycle;
+        return directoryListing.getMaxCreatedCycle();
     }
 
     protected int fileToCycle(final File queueFile) {
@@ -893,7 +883,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
             }
             directoryListing.refresh(true);
-            firstAndLastCycleTime = 0;
         } finally {
             writeLock.unlock();
         }
@@ -1026,7 +1015,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         // do not allow tailer to see the file until it's header is written
                         directoryListing.onFileCreated(path, cycle);
                         // allow directoryListing to pick up the file immediately
-                        firstAndLastCycleTime = 0;
                     } else {
                         try {
                             wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
@@ -1095,10 +1083,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                     try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
                         wire.updateFirstHeader();
-                            wire.usePadding(wireStore.dataVersion() > 0);
+                        wire.usePadding(wireStore.dataVersion() > 0);
                         wireStore.initIndex(wire);
                         directoryListing.onFileCreated(path, cycle);
-                        firstAndLastCycleTime = 0;
                     }
                 } finally {
                     fileLock.release();
@@ -1196,9 +1183,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 for (int i = 0; i < 20; i++) {
                     Jvm.pause(10);
                     directoryListing.refresh(i > 1);
-                    if ((fileFound = (
+                    fileFound = (
                             currentCycle <= directoryListing.getMaxCreatedCycle() &&
-                                    currentCycle >= directoryListing.getMinCreatedCycle()))) {
+                                    currentCycle >= directoryListing.getMinCreatedCycle());
+                    if (fileFound) {
                         break;
                     }
                 }

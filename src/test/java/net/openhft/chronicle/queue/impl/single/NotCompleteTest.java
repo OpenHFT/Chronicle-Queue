@@ -154,7 +154,7 @@ public class NotCompleteTest extends ChronicleQueueTestBase {
 
     // the last line of the dump changes - haven't spent the time to get to the bottom of this
     private String cleanQueueDump(String from) {
-        return from.replaceAll("# [0-9]+ bytes remaining$", "");
+        return from.replaceAll("# [0-9]+ bytes remaining$", "").replaceAll("modCount: (\\d+)", "modCount: 00");
     }
 
     private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {

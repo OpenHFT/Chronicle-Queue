@@ -10,6 +10,8 @@ public interface DirectoryListing extends Closeable {
 
     void refresh(boolean force);
 
+    long lastRefreshTimeMS();
+
     void onFileCreated(File file, int cycle);
 
     int getMinCreatedCycle();
@@ -17,4 +19,6 @@ public interface DirectoryListing extends Closeable {
     int getMaxCreatedCycle();
 
     long modCount();
+
+    void onRoll(int cycle);
 }

@@ -27,13 +27,15 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
@@ -332,7 +334,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
                     "listing.lowestCycle: 5\n" +
                     "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 1\n" +
+                    "listing.modCount: 3\n" +
                     "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +

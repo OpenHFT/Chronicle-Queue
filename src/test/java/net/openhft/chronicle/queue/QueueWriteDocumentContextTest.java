@@ -56,7 +56,7 @@ public class QueueWriteDocumentContextTest {
                     "listing.lowestCycle: 18554\n" +
                     "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 1\n" +
+                    "listing.modCount: 3\n" +
                     "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
@@ -131,7 +131,7 @@ public class QueueWriteDocumentContextTest {
                     "listing.lowestCycle: 18554\n" +
                     "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 1\n" +
+                    "listing.modCount: 3\n" +
                     "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +

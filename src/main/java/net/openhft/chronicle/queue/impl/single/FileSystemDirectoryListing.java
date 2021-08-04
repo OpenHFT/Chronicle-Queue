@@ -10,6 +10,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     private final ToIntFunction<File> fileToCycleFunction;
     private int minCreatedCycle = Integer.MAX_VALUE;
     private int maxCreatedCycle = Integer.MIN_VALUE;
+    private long lastRefreshTimeMS;
 
     FileSystemDirectoryListing(final File queueDir,
                                final ToIntFunction<File> fileToCycleFunction) {
@@ -19,11 +20,12 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
-
+        onRoll(cycle);
     }
 
     @Override
     public void refresh(boolean force) {
+        lastRefreshTimeMS = System.currentTimeMillis();
         int minCycle = Integer.MAX_VALUE;
         int maxCycle = Integer.MIN_VALUE;
         final File[] files = queueDir.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
@@ -39,6 +41,11 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     }
 
     @Override
+    public long lastRefreshTimeMS() {
+        return lastRefreshTimeMS;
+    }
+
+    @Override
     public int getMinCreatedCycle() {
         return minCreatedCycle;
     }
@@ -51,5 +58,11 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     @Override
     public long modCount() {
         return -1;
+    }
+
+    @Override
+    public void onRoll(int cycle) {
+        minCreatedCycle = Math.min(minCreatedCycle, cycle);
+        maxCreatedCycle = Math.max(maxCreatedCycle, cycle);
     }
 }
