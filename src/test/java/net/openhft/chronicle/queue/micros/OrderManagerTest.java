@@ -223,8 +223,7 @@ public class OrderManagerTest extends QueueTestCommon {
                             .get();
 
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
-                    ExcerptTailer tailer = in.createTailer()
-                            .afterLastWritten(out);
+                    ExcerptTailer tailer = in.createTailer("test");
                     assertEquals("tailer.index()=" + Long.toHexString(tailer.index()), i, in.rollCycle().toSequenceNumber(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
