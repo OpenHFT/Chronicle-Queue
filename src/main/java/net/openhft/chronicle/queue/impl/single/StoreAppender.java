@@ -330,6 +330,15 @@ class StoreAppender extends AbstractCloseable
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
         count++;
+        try {
+            return prepareAndReturnWriteContext(metaData);
+        } catch (RuntimeException e) {
+            count--;
+            throw e;
+        }
+    }
+
+    private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(boolean metaData) {
         if (count > 1) {
             assert metaData == writeContext.metaData;
             return writeContext;
