@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.Threads;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -18,8 +19,15 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
 
@@ -168,6 +176,27 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void lockPreventsConcurrentAcquisition() {
+        AtomicBoolean lockIsAcquired = new AtomicBoolean(false);
+        try (final TableStoreWriteLock testLock = createTestLock(tableStore, 10_000)) {
+            int numThreads = Math.min(6, Runtime.getRuntime().availableProcessors());
+            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+            CyclicBarrier barrier = new CyclicBarrier(numThreads);
+            final Collection<Future<?>> futures = IntStream.range(0, numThreads)
+                    .mapToObj(v -> executorService.submit(new LockAcquirer(testLock, lockIsAcquired, 30, barrier)))
+                    .collect(Collectors.toList());
+            futures.forEach(fut -> {
+                try {
+                    fut.get();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            Threads.shutdown(executorService);
+        }
+    }
+
     private TableStoreWriteLock createTestLock() {
         return createTestLock(tableStore, TIMEOUT_MS);
     }
@@ -175,5 +204,40 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     @NotNull
     private static TableStoreWriteLock createTestLock(TableStore<Metadata.NoMeta> tableStore, long timeoutMilliseconds) {
         return new TableStoreWriteLock(tableStore, Pauser::balanced, timeoutMilliseconds, TEST_LOCK_NAME);
+    }
+
+    static class LockAcquirer implements Runnable {
+
+        private final TableStoreWriteLock tableStoreWriteLock;
+        private final AtomicBoolean lockIsAcquired;
+        private final int numberOfIterations;
+        private final CyclicBarrier barrier;
+
+        LockAcquirer(TableStoreWriteLock tableStoreWriteLock, AtomicBoolean lockIsAcquired, int numberOfIterations, CyclicBarrier barrier) {
+            this.tableStoreWriteLock = tableStoreWriteLock;
+            this.lockIsAcquired = lockIsAcquired;
+            this.numberOfIterations = numberOfIterations;
+            this.barrier = barrier;
+        }
+
+        @Override
+        public void run() {
+            try {
+                barrier.await();
+                for (int i = 0; i < numberOfIterations; i++) {
+                    tableStoreWriteLock.lock();
+                    try {
+                        lockIsAcquired.compareAndSet(false, true);
+                        Jvm.pause(10);
+                        lockIsAcquired.compareAndSet(true, false);
+                    } finally {
+                        tableStoreWriteLock.unlock();
+                        Jvm.pause(1);
+                    }
+                }
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
+        }
     }
 }
