@@ -88,8 +88,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             // we should reset the pauser after a timeout exception
             tlPauser.reset();
             lock();
-        } catch (Throwable t) {
-            t.printStackTrace();
         } finally {
             tlPauser.reset();
         }
