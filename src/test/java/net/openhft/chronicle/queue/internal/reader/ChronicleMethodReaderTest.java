@@ -85,7 +85,8 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldNotFailOnEmptyQueue() {
-        expectException("Failback to readonly tablestore");
+        if (!OS.isWindows())
+            expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         basicReader(path).execute();
@@ -95,7 +96,8 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
     @NotNull
     private ChronicleReader basicReader(Path path) {
         if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
+            if (!testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist"))
+                expectException("Read-only mode is not supported on Windows");
 
         return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
     }
@@ -107,7 +109,8 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldNotFailWhenNoMetadata() throws IOException {
-        expectException("Failback to readonly tablestore");
+        if (!OS.isWindows())
+            expectException("Failback to readonly tablestore");
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
         basicReader().execute();
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));

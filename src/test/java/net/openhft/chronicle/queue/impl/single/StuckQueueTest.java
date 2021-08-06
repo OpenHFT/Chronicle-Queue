@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -10,7 +9,6 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -22,13 +20,14 @@ import java.nio.file.StandardCopyOption;
 import static org.junit.Assume.assumeFalse;
 
 public class StuckQueueTest extends ChronicleQueueTestBase {
-    private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
     @Test
     public void test() throws IOException {
 
         // todo remove see https://github.com/OpenHFT/Chronicle-Queue/issues/837
-        Assume.assumeTrue(!Jvm.isMacArm());
+        assumeFalse(Jvm.isMacArm());
+        // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
+        assumeFalse(OS.isWindows());
 
         Path tmpDir = getTmpDir().toPath();
 
@@ -40,8 +39,6 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
 //        expectException("Unable to copy SCQSIndexing safely");
 
         tmpDir.toFile().mkdirs();
-        // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
-        assumeFalse(OS.isWindows());
 
         Path templatePath = Paths.get(StuckQueueTest.class.getResource("/stuck.queue.test/20180508-1249.cq4").getFile());
         Path to = tmpDir.resolve(templatePath.getFileName());

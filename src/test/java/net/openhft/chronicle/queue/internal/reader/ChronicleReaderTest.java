@@ -61,7 +61,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     public void before() {
         // Reader opens queues in read-only mode
         if (OS.isWindows())
-            expectException("Read-only mode is not supported on Windows");
+            if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") || testName.getMethodName().equals("shouldBeAbleToReadFromReadOnlyFile")))
+                expectException("Read-only mode is not supported on Windows");
 
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
@@ -181,7 +182,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
-        expectException("Failback to readonly tablestore");
+        if (!OS.isWindows())
+            expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
@@ -205,14 +207,16 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     public void shouldNotFailOnEmptyQueue() {
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        expectException("Failback to readonly tablestore");
+        if (!OS.isWindows())
+            expectException("Failback to readonly tablestore");
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertTrue(capturedOutput.isEmpty());
     }
 
     @Test
     public void shouldNotFailWhenNoMetadata() throws IOException {
-        expectException("Failback to readonly tablestore");
+        if (!OS.isWindows())
+            expectException("Failback to readonly tablestore");
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
         basicReader().execute();
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
