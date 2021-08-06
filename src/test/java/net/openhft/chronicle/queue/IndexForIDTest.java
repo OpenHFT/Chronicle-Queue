@@ -101,8 +101,8 @@ public class IndexForIDTest {
                         i--;
                         // commented out newly introduced fail which is blowing up in TeamCity
                         // https://github.com/OpenHFT/Chronicle-Queue/issues/897
-                        //if (end < System.currentTimeMillis())
-                        //    fail("Timed out i: " + i);
+                        if (end < System.currentTimeMillis())
+                            fail("Timed out i: " + i);
                         continue;
                     }
                     index = dc.index();
