@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.Pauser;
@@ -64,8 +65,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         Pauser tlPauser = pauser.get();
         try {
             while (!lock.compareAndSwapValue(UNLOCKED, lockValueFromTid)) {
-                if (count++ > 1000 && Thread.interrupted())
-                    throw new IllegalStateException("Interrupted");
+                if (count++ > 1000 && Thread.currentThread().isInterrupted())
+                    throw new InterruptedRuntimeException("Interrupted");
                 tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
                 value = lock.getVolatileValue();
             }
@@ -99,8 +100,8 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         Pauser tlPauser = pauser.get();
         try {
             while (value!=UNLOCKED) {
-                if (Thread.interrupted())
-                    throw new IllegalStateException("Interrupted");
+                if (Thread.currentThread().isInterrupted())
+                    throw new InterruptedRuntimeException("Interrupted");
                 tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
                 value = lock.getVolatileValue();
             }

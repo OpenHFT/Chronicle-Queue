@@ -25,10 +25,7 @@ import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.threads.CleaningThreadLocal;
-import net.openhft.chronicle.core.threads.EventLoop;
-import net.openhft.chronicle.core.threads.OnDemandEventLoop;
-import net.openhft.chronicle.core.threads.ThreadLocalHelper;
+import net.openhft.chronicle.core.threads.*;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
@@ -433,7 +430,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             createAppenderCondition.await();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted waiting for condition to create appender", e);
+            throw new InterruptedRuntimeException("Interrupted waiting for condition to create appender", e);
         }
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, newPool, checkInterrupts);
