@@ -96,7 +96,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
     @NotNull
     private ChronicleReader basicReader(Path path) {
         if (OS.isWindows())
-            if (!testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist"))
+            if (!testName.getMethodName().startsWith("shouldThrowExceptionIfInputDirectoryDoesNotExist"))
                 expectException("Read-only mode is not supported on Windows");
 
         return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
