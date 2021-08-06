@@ -389,6 +389,14 @@ public class ChronicleReader implements Reader {
                 }
             }
             return rv;
+//            // if we have multiple entries that match we need to go back to the 1st
+//            while (true) {
+//                try (DocumentContext dc = tailer.readingDocument()) {
+//                    if (!dc.isPresent())
+//                        return dc.index();
+//
+//                }
+//            }
         } catch (ParseException e) {
             throw Jvm.rethrow(e);
         }
