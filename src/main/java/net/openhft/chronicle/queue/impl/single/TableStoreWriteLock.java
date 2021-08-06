@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.StackTrace;
+import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -64,8 +65,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             long start = System.currentTimeMillis();
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 // add a tiny delay
-                if (Thread.interrupted())
-                    throw new IllegalStateException("Interrupted for the lock file:" + path);
+                if (Thread.currentThread().isInterrupted())
+                    throw new InterruptedRuntimeException("Interrupted for the lock file:" + path);
                 tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
                 value = lock.getVolatileValue();
             }
