@@ -62,9 +62,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         TimingPauser tlPauser = pauser.get();
         try {
             value = lock.getVolatileValue();
-            long start = System.currentTimeMillis();
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
-                // add a tiny delay
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedRuntimeException("Interrupted for the lock file:" + path);
                 tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
@@ -124,7 +122,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
                         "lock file:" + path + " " +
                         "by PID: " + getLockedBy(value));
         }
-        //noinspection ConstantConditions,AssertWithSideEffects
         lockedByThread = null;
         lockedHere = null;
     }
