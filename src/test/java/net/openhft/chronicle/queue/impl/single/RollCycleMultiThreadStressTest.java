@@ -19,7 +19,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +57,10 @@ public class RollCycleMultiThreadStressTest {
     private ChronicleQueue sharedWriterQueue;
 
     public RollCycleMultiThreadStressTest() {
+        this(StressTestType.VANILLA);
+    }
+
+    protected RollCycleMultiThreadStressTest(StressTestType type) {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
         TEST_TIME = Integer.getInteger("testTime", 2);
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 300);
@@ -67,11 +70,11 @@ public class RollCycleMultiThreadStressTest {
         CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
-        PRETOUCH = Jvm.getBoolean("pretouch");
-        READERS_READ_ONLY = Jvm.getBoolean("read_only");
+        PRETOUCH = type == StressTestType.PRETOUCH;
+        READERS_READ_ONLY = type == StressTestType.READONLY;
         DUMP_QUEUE = false;
-        SHARED_WRITE_QUEUE = Jvm.getBoolean("sharedWriteQ");
-        DOUBLE_BUFFER = Jvm.getBoolean("double_buffer");
+        SHARED_WRITE_QUEUE = type == StressTestType.SHAREDWRITEQ;
+        DOUBLE_BUFFER = type == StressTestType.DOUBLEBUFFER;
 
         if (TEST_TIME > 2) {
             AbstractReferenceCounted.disableReferenceTracing();
@@ -249,6 +252,8 @@ public class RollCycleMultiThreadStressTest {
                     areAllReadersComplete(expectedNumberOfMessages, readers));
 
         } finally {
+
+            Jvm.resetExceptionHandlers();
 
             executorServiceRead.shutdown();
             executorServiceWrite.shutdown();
@@ -542,44 +547,45 @@ public class RollCycleMultiThreadStressTest {
 
     class PretoucherThread extends AbstractCloseable implements Callable<Throwable> {
 
-        final File path;
+        private final SingleChronicleQueue queue;
         volatile Throwable exception;
 
-        private ExcerptAppender appender0;
-
         PretoucherThread(File path) {
-            this.path = path;
+            this.queue = queueBuilder(path).build();
         }
 
         @SuppressWarnings("resource")
         @Override
         public Throwable call() {
-            ChronicleQueue queue0 = null;
-            try (ChronicleQueue queue = queueBuilder(path).build()) {
-                queue0 = queue;
+            try {
                 ExcerptAppender appender = queue.acquireAppender();
-                appender0 = appender;
                 // System.out.println("Starting pretoucher");
                 while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
                     appender.pretouch();
                     Jvm.pause(50);
                 }
             } catch (Throwable e) {
-                if (e instanceof ClosedIllegalStateException || queue0 != null && queue0.isClosed())
+                if (e instanceof ClosedIllegalStateException || queue.isClosed())
                     return null;
                 exception = e;
                 return e;
+            } finally {
+                Closeable.closeQuietly(queue);
             }
             return null;
         }
 
         @Override
         protected void performClose() {
-            Closeable.closeQuietly(appender0);
+            Closeable.closeQuietly(queue);
         }
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException, Exception {
+    public static void main(String[] args) throws Exception {
         new RollCycleMultiThreadStressTest().stress();
+    }
+
+    enum StressTestType {
+        VANILLA, READONLY, PRETOUCH, DOUBLEBUFFER, SHAREDWRITEQ;
     }
 }

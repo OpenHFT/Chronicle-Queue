@@ -88,7 +88,7 @@ public class IndexForIDTest {
     private void copy(String fromID, TimeSetter setTime, String toID) {
         Facade datum = Values.newNativeReference(Facade.class);
         long datumSize = datum.maxSize();
-        long end = System.currentTimeMillis() + 60_000;
+        long end = System.currentTimeMillis() + (Jvm.isArm() ? 90_000 : 60_000);
         try (ExcerptTailer tailer = queue.createTailer();
              LongValue fromIndex = queue.indexForId(fromID);
              LongValue toIndex = queue.indexForId(toID)) {

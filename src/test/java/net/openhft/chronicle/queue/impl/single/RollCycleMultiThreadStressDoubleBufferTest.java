@@ -1,20 +1,26 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.DumpQueueMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.internal.main.InternalDumpMain;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Ignore("double buffering is turned off currently")
 public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiThreadStressTest {
 
     private AtomicBoolean queueDumped = new AtomicBoolean(false);
+
+    public RollCycleMultiThreadStressDoubleBufferTest() {
+        super(StressTestType.DOUBLEBUFFER);
+    }
 
     @Test
     public void stress() throws Exception {
@@ -24,10 +30,6 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
     @Before
     public void setUp() {
         queueDumped = new AtomicBoolean(false);
-    }
-
-    static {
-        System.setProperty("double_buffer", "true");
     }
 
     public static void main(String[] args) throws Exception {
@@ -82,7 +84,7 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
             if (skippedValue.size() > 0 || unexpectedValues.size() > 0) {
                 Jvm.error().on(getClass(), "Skipped " + skippedValue + ", Unexpected " + unexpectedValues);
                 if (DUMP_QUEUE && !queueDumped.getAndSet(true)) {
-                    DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
+                    InternalDumpMain.dump(queue.file(), System.out, Long.MAX_VALUE);
                 }
             }
         }
