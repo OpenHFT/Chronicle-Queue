@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 
 public class IndexForIDTest {
     private int count;
@@ -88,7 +89,7 @@ public class IndexForIDTest {
     private void copy(String fromID, TimeSetter setTime, String toID) {
         Facade datum = Values.newNativeReference(Facade.class);
         long datumSize = datum.maxSize();
-        long end = System.currentTimeMillis() + (Jvm.isArm() || Jvm.isCodeCoverage() ? 120_000 : 60_000);
+        long end = System.currentTimeMillis() + (Jvm.isCodeCoverage() ? 90_000 : 60_000);
         try (ExcerptTailer tailer = queue.createTailer();
              LongValue fromIndex = queue.indexForId(fromID);
              LongValue toIndex = queue.indexForId(toID)) {
@@ -125,6 +126,8 @@ public class IndexForIDTest {
 
     @Test //(timeout = 10_000)
     public void staged() {
+        assumeFalse(Jvm.isArm());
+
         Path staged = IOTools.createTempDirectory("staged");
         this.count = 1_000_000;
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(staged).build()) {
