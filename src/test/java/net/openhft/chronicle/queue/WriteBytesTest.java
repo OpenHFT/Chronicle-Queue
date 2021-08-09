@@ -280,7 +280,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "# position: 1028, header: 21\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_4\n" +
-                    "-541098.24210\n" +
+                    "-541098.2421\n" +
                     "# position: 1040, header: 22\n" +
                     "--- !!data #binary\n" +
                     "-93086212.770454\n" +
