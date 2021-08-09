@@ -355,8 +355,7 @@ public class ChronicleReader implements Reader {
                     Jvm.pause(100);
                 }
             } else if (binarySearch != null) {
-                startIndex = seekBinarySearch(tailer);
-                tailer.moveToIndex(startIndex);
+                seekBinarySearch(tailer);
             }
 
             if (tailerDirection == FORWARD) {
@@ -370,35 +369,74 @@ public class ChronicleReader implements Reader {
         }
     }
 
-    private long seekBinarySearch(ExcerptTailer tailer) {
+    private void seekBinarySearch(ExcerptTailer tailer) {
+        TailerDirection originalDirection = tailer.direction();
         try {
             final Wire key = binarySearch.wireKey();
             long rv = BinarySearch.search((SingleChronicleQueue) tailer.queue(), key, binarySearch);
-            if (rv == -1)
-                return tailer.queue().firstIndex();
-            if (rv < 0) {
-                // we can get an approximate match even if we search for a key after the last entry - this works around that
-                tailer.moveToIndex(-rv);
-                while (true) {
-                    try (DocumentContext dc = tailer.readingDocument()) {
-                        if (!dc.isPresent())
-                            return dc.index();
-                        if (binarySearch.compare(dc.wire(), key) >= 0)
-                            return dc.index();
-                    }
-                }
+            if (rv == -1) {
+                tailer.toStart();
+            } else if (rv < 0) {
+                scanToFirstEntryFollowingMatch(tailer, key, -rv);
+            } else {
+                scanToFirstMatchingEntry(tailer, key, rv);
             }
-            return rv;
-//            // if we have multiple entries that match we need to go back to the 1st
-//            while (true) {
-//                try (DocumentContext dc = tailer.readingDocument()) {
-//                    if (!dc.isPresent())
-//                        return dc.index();
-//
-//                }
-//            }
+            tailer.direction(originalDirection);
         } catch (ParseException e) {
             throw Jvm.rethrow(e);
+        }
+    }
+
+    /**
+     * In the event the matched value is repeated, move to the first instance of it, taking into account traversal
+     * direction
+     *
+     * @param tailer The {@link net.openhft.chronicle.queue.ExcerptTailer} to move
+     * @param key The value we searched for
+     * @param matchingIndex The index of a matching entry
+     */
+    private void scanToFirstMatchingEntry(ExcerptTailer tailer, Wire key, long matchingIndex) {
+        long indexToMoveTo = matchingIndex;
+        tailer.direction(tailerDirection == FORWARD ? BACKWARD : FORWARD);
+        tailer.moveToIndex(indexToMoveTo);
+        while (true) {
+            try (DocumentContext dc = tailer.readingDocument()) {
+                if (!dc.isPresent())
+                    break;
+                if (binarySearch.compare(dc.wire(), key) == 0)
+                    indexToMoveTo = dc.index();
+                else
+                    break;
+            }
+        }
+        tailer.moveToIndex(indexToMoveTo);
+    }
+
+    /**
+     * In the event we couldn't find the specified value, move to the first entry that would
+     * follow it, taking into account traversal direction
+     *
+     * @param tailer The {@link net.openhft.chronicle.queue.ExcerptTailer} to move
+     * @param key The key we searched for
+     * @param indexAdjacentMatch The index of an entry which would appear next to the match
+     */
+    private void scanToFirstEntryFollowingMatch(ExcerptTailer tailer, Wire key, long indexAdjacentMatch) {
+        long indexToMoveTo = -1;
+        tailer.direction(tailerDirection);
+        tailer.moveToIndex(indexAdjacentMatch);
+        while (true) {
+            try (DocumentContext dc = tailer.readingDocument()) {
+                if (!dc.isPresent())
+                    break;
+                if ((tailer.direction() == TailerDirection.FORWARD && binarySearch.compare(dc.wire(), key) >= 0)
+                        || (tailer.direction() == BACKWARD && binarySearch.compare(dc.wire(), key) <= 0)) {
+                    indexToMoveTo = dc.index();
+                    break;
+                }
+            }
+        }
+        if (indexToMoveTo >= 0) {
+            tailer.moveToIndex(indexToMoveTo);
         }
     }
 
