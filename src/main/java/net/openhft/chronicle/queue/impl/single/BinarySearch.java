@@ -62,6 +62,7 @@ public enum BinarySearch {
         final RollCycle rollCycle = queue.rollCycle();
         long prevIndex = iterator.next();
 
+        cycleLoop:
         while (iterator.hasNext()) {
 
             final Long current = iterator.next();
@@ -70,16 +71,28 @@ public enum BinarySearch {
             if (!b)
                 return prevIndex;
 
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                final int compare = c.compare(dc.wire(), key);
-                if (compare == 0)
-                    return current;
-                else if (compare > 0)
-                    return prevIndex;
-                prevIndex = current;
+            while (true) {
+                try (final DocumentContext dc = tailer.readingDocument()) {
+                    if (!dc.isPresent()) {
+                        return prevIndex;
+                    }
+                    if (rollCycle.toCycle(dc.index()) > current) {
+                        continue cycleLoop;
+                    }
+                    try {
+                        final int compare = c.compare(dc.wire(), key);
+                        if (compare == 0)
+                            return current;
+                        else if (compare > 0)
+                            return prevIndex;
+                        prevIndex = current;
+                        break;
+                    } catch (NotComparableException e) {
+                        // Keep scanning forward
+                    }
+                }
             }
         }
-
         return prevIndex;
     }
 
@@ -118,18 +131,32 @@ public enum BinarySearch {
 
                 final boolean b = tailer.moveToIndex(midIndex);
                 assert b;
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent())
-                        return -1;
-                    key.bytes().readPosition(readPosition);
-                    int cmp = c.compare(dc.wire(), key);
+                while (true) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent())
+                            return -1;
+                        key.bytes().readPosition(readPosition);
+                        try {
+                            int cmp = c.compare(dc.wire(), key);
 
-                    if (cmp < 0)
-                        lowSeqNum = midSeqNumber + 1;
-                    else if (cmp > 0)
-                        highSeqNum = midSeqNumber - 1;
-                    else
-                        return midIndex; // key found
+                            if (cmp < 0) {
+                                lowSeqNum = rollCycle.toSequenceNumber(dc.index()) + 1;
+                                break;
+                            }
+                            else if (cmp > 0) {
+                                highSeqNum = midSeqNumber - 1;
+                                break;
+                            }
+                            else
+                                return dc.index(); // key found
+                        } catch (NotComparableException e) {
+                            // We reached the upper bound, eliminate the top half of the range
+                            if (rollCycle.toSequenceNumber(dc.index()) == highSeqNum) {
+                                highSeqNum = midSeqNumber - 1;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
