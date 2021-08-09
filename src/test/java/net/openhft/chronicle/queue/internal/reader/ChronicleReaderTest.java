@@ -468,87 +468,107 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     @Test
     public void findByBinarySearch() {
         final File queueDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
-             final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
             int max = 10, reps = 5;
-            TimeUnit timeUnit = ServicesTimestampLongConverter.timeUnit();
-            long start = timeUnit.convert(1610000000000L, TimeUnit.MILLISECONDS);
-            for (long i = 0; i < max; i++) {
-                long ts = start + i * timeUnit.convert(1, TimeUnit.SECONDS);
-                // write multiple so we can confirm that binary search finds the 1st
-                for (int j = 0; j < reps; j++) {
-                    try (DocumentContext dc = excerptAppender.writingDocument()) {
-                        dc.wire().write(TimestampComparator.TS).int64(ts);
-                    }
-                }
-            }
+            populateQueueWithTimestamps(queue, max, reps);
 
-            int eventToStartAt = 3;
-            long tsToLookFor = start + timeUnit.convert(eventToStartAt, TimeUnit.SECONDS);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(reps * (max - eventToStartAt), capturedOutput.size() / 2);
+            for (int i = 0; i < max; i++) {
+                capturedOutput.clear();
+                long tsToLookFor = getTimestampAtIndex(i);
+                System.out.println("Looking for " + tsToLookFor);
+                ChronicleReader reader = new ChronicleReader()
+                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                        .withBasePath(queueDir.toPath())
+                        .withMessageSink(capturedOutput::add);
+                reader.execute();
+                assertEquals(reps * (max - i), capturedOutput.size() / 2);
+            }
+        }
+    }
+
+    @Test
+    public void findByBinarySearchReverse() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            int max = 10, reps = 5;
+            populateQueueWithTimestamps(queue, max, reps);
+
+            for (int i = 0; i < max; i++) {
+                capturedOutput.clear();
+                long tsToLookFor = getTimestampAtIndex(i);
+                System.out.println("Looking for " + tsToLookFor);
+                ChronicleReader reader = new ChronicleReader()
+                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                        .inReverseOrder()
+                        .withBasePath(queueDir.toPath())
+                        .withMessageSink(capturedOutput::add);
+                reader.execute();
+                assertEquals(reps * (i + 1), capturedOutput.size() / 2);
+            }
         }
     }
 
     @Test
     public void findByBinarySearchApprox() {
         final File queueDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
-             final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+            final int reps = 5;
+            final int max = 10;
+            populateQueueWithTimestamps(queue, max, reps);
 
-            int max = 10, reps = 5;
-            TimeUnit timeUnit = ServicesTimestampLongConverter.timeUnit();
-            long start = timeUnit.convert(1610000000000L, TimeUnit.MILLISECONDS);
-            for (long i = 0; i < max; i++) {
-                long ts = start + i * timeUnit.convert(1, TimeUnit.SECONDS);
-                // write multiple so we can confirm that binary search finds the 1st
-                for (int j = 0; j < reps; j++) {
-                    try (DocumentContext dc = excerptAppender.writingDocument()) {
-                        dc.wire().write(TimestampComparator.TS).int64(ts);
-                    }
-                }
+            for (int i = 0; i < max; i++) {
+                capturedOutput.clear();
+                long tsToLookFor = getTimestampAtIndex(i) - 1;
+                System.out.println("Looking for " + tsToLookFor);
+                ChronicleReader reader = new ChronicleReader()
+                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                        .withBasePath(queueDir.toPath())
+                        .withMessageSink(capturedOutput::add);
+                reader.execute();
+                assertEquals(reps * (max - i), capturedOutput.size() / 2);
             }
+        }
+    }
 
-            int eventToStartAt = 3;
-            // TODO: the -1 is the only difference to the test above
-            long tsToLookFor = start + timeUnit.convert(eventToStartAt, TimeUnit.SECONDS) - 1;
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(reps * (max - eventToStartAt), capturedOutput.size() / 2);
+    @Test
+    public void findByBinarySearchApproxReverse() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+            final int reps = 5;
+            final int max = 10;
+            populateQueueWithTimestamps(queue, max, reps);
+
+            for (int i = 0; i < max; i++) {
+                capturedOutput.clear();
+                long tsToLookFor = getTimestampAtIndex(i) + 1;
+                System.out.println("Looking for " + tsToLookFor);
+                ChronicleReader reader = new ChronicleReader()
+                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                        .inReverseOrder()
+                        .withBasePath(queueDir.toPath())
+                        .withMessageSink(capturedOutput::add);
+                reader.execute();
+                assertEquals(reps * (i + 1), capturedOutput.size() / 2);
+            }
         }
     }
 
     @Test
     public void findByBinarySearchAfterEnd() {
         final File queueDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
-             final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
             int max = 10, reps = 5;
-            TimeUnit timeUnit = ServicesTimestampLongConverter.timeUnit();
-            long start = timeUnit.convert(1610000000000L, TimeUnit.MILLISECONDS);
-            for (long i = 0; i < max; i++) {
-                long ts = start + i * timeUnit.convert(1, TimeUnit.SECONDS);
-                // write multiple so we can confirm that binary search finds the 1st
-                for (int j = 0; j < reps; j++) {
-                    try (DocumentContext dc = excerptAppender.writingDocument()) {
-                        dc.wire().write(TimestampComparator.TS).int64(ts);
-                    }
-                }
-            }
+            populateQueueWithTimestamps(queue, max, reps);
 
             // this should be after the end
-            long tsToLookFor = start + timeUnit.convert(max, TimeUnit.SECONDS);
+            long tsToLookFor = getTimestampAtIndex(11);
             ChronicleReader reader = new ChronicleReader()
                     .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
                     .withBinarySearch(TimestampComparator.class.getCanonicalName())
@@ -557,6 +577,89 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             reader.execute();
             assertEquals(0, capturedOutput.size());
         }
+    }
+
+    @Test
+    public void findByBinarySearchAfterEndReverse() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            int max = 10, reps = 5;
+            populateQueueWithTimestamps(queue, max, reps);
+
+            // this should be after the end
+            long tsToLookFor = getTimestampAtIndex(11);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .inReverseOrder()
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(max * reps, capturedOutput.size() / 2);
+        }
+    }
+
+    @Test
+    public void findByBinarySearchBeforeStart() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            int max = 10, reps = 5;
+            populateQueueWithTimestamps(queue, max, reps);
+
+            // this should be before the start
+            long tsToLookFor = getTimestampAtIndex(-1);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(max * reps, capturedOutput.size() / 2);
+        }
+    }
+
+    @Test
+    public void findByBinarySearchBeforeStartReverse() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            int max = 10, reps = 5;
+            populateQueueWithTimestamps(queue, max, reps);
+
+            // this should be before the start
+            long tsToLookFor = getTimestampAtIndex(-1);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .inReverseOrder()
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(0, capturedOutput.size());
+        }
+    }
+
+    private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {
+        try (ExcerptAppender appender = queue.acquireAppender()) {
+            for (int i = 0; i < entries; i++) {
+                // write multiple so we can confirm that binary search finds the 1st
+                for (int j = 0; j < repeatsPerEntry; j++) {
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        final long timestampAtIndex = getTimestampAtIndex(i);
+                        dc.wire().write(TimestampComparator.TS).int64(timestampAtIndex);
+                        System.out.printf("%s:%s -- %s%n", (i * repeatsPerEntry) + j, dc.index(), timestampAtIndex);
+                    }
+                }
+            }
+        }
+    }
+
+    private long getTimestampAtIndex(int index) {
+        TimeUnit timeUnit = ServicesTimestampLongConverter.timeUnit();
+        long start = timeUnit.convert(1610000000000L, TimeUnit.MILLISECONDS);
+        return start + index * timeUnit.convert(1, TimeUnit.SECONDS);
     }
 
     private String findAnExistingIndex() {
