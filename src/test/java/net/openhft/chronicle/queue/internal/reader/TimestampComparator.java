@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.queue.impl.single.NotComparableException;
 import net.openhft.chronicle.queue.reader.Reader;
 import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
 import net.openhft.chronicle.wire.ServicesTimestampLongConverter;
@@ -33,6 +34,8 @@ public class TimestampComparator implements BinarySearchComparator {
             final long key1 = wire1.read(TS).int64();
             final long key2 = wire2.read(TS).int64();
             return Long.compare(key1, key2);
+        } catch (Exception e) {
+            throw NotComparableException.INSTANCE;
         } finally {
             wire1.bytes().readPosition(readPositionO1);
             wire2.bytes().readPosition(readPositionO2);
