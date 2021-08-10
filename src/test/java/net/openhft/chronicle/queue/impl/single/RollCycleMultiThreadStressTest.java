@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -547,20 +548,21 @@ public class RollCycleMultiThreadStressTest {
 
     class PretoucherThread extends AbstractCloseable implements Callable<Throwable> {
 
+        private final AtomicBoolean running;
         private final SingleChronicleQueue queue;
         volatile Throwable exception;
 
         PretoucherThread(File path) {
             this.queue = queueBuilder(path).build();
+            this.running = new AtomicBoolean(true);
         }
 
         @SuppressWarnings("resource")
         @Override
         public Throwable call() {
             try {
-                ExcerptAppender appender = queue.acquireAppender();
-                // System.out.println("Starting pretoucher");
-                while (!Thread.currentThread().isInterrupted() && !queue.isClosed()) {
+                final ExcerptAppender appender = queue.acquireAppender();
+                while (running.get()) {
                     appender.pretouch();
                     Jvm.pause(50);
                 }
@@ -577,7 +579,7 @@ public class RollCycleMultiThreadStressTest {
 
         @Override
         protected void performClose() {
-            Closeable.closeQuietly(queue);
+            running.set(false);
         }
     }
 
