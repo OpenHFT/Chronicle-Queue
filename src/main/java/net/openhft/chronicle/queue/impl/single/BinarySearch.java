@@ -55,6 +55,7 @@ public enum BinarySearch {
                                               @NotNull Comparator<Wire> c,
                                               @NotNull ExcerptTailer tailer,
                                               @NotNull final ChronicleQueue queue) {
+        long readPosition = key.bytes().readPosition();
 
         final Iterator<Long> iterator = cycles.iterator();
         if (!iterator.hasNext())
@@ -89,6 +90,8 @@ public enum BinarySearch {
                         break;
                     } catch (NotComparableException e) {
                         // Keep scanning forward
+                    } finally {
+                        key.bytes().readPosition(readPosition);
                     }
                 }
             }
