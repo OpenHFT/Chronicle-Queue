@@ -513,6 +513,118 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void findByBinarySearchSparseRepeated() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                writeTimestamp(appender, getTimestampAtIndex(1));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                appender.writeText("aaaa");
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(3));
+            }
+
+            capturedOutput.clear();
+            long tsToLookFor = getTimestampAtIndex(2);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(7, capturedOutput.size() / 2);
+        }
+    }
+
+    @Test
+    public void findByBinarySearchSparseRepeatedReverse() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                writeTimestamp(appender, getTimestampAtIndex(1));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                appender.writeText("aaaa");
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(3));
+            }
+
+            capturedOutput.clear();
+            long tsToLookFor = getTimestampAtIndex(2);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .inReverseOrder()
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(7, capturedOutput.size() / 2);
+        }
+    }
+
+    @Test
+    public void findByBinarySearchSparseApprox() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                writeTimestamp(appender, getTimestampAtIndex(1));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                appender.writeText("aaaa");
+                writeTimestamp(appender, getTimestampAtIndex(4));
+                writeTimestamp(appender, getTimestampAtIndex(4));
+                writeTimestamp(appender, getTimestampAtIndex(4));
+            }
+
+            capturedOutput.clear();
+            long tsToLookFor = getTimestampAtIndex(3);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(3, capturedOutput.size() / 2);
+        }
+    }
+
+    @Test
+    public void findByBinarySearchSparseApproxReverse() {
+        final File queueDir = getTmpDir();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                writeTimestamp(appender, getTimestampAtIndex(1));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                writeTimestamp(appender, getTimestampAtIndex(2));
+                appender.writeText("aaaa");
+                writeTimestamp(appender, getTimestampAtIndex(4));
+                writeTimestamp(appender, getTimestampAtIndex(4));
+                writeTimestamp(appender, getTimestampAtIndex(4));
+            }
+
+            capturedOutput.clear();
+            long tsToLookFor = getTimestampAtIndex(3);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .inReverseOrder()
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(3, capturedOutput.size() / 2);
+        }
+    }
+
+    @Test
     public void findByBinarySearchApprox() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -646,13 +758,17 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             for (int i = 0; i < entries; i++) {
                 // write multiple so we can confirm that binary search finds the 1st
                 for (int j = 0; j < repeatsPerEntry; j++) {
-                    try (DocumentContext dc = appender.writingDocument()) {
-                        final long timestampAtIndex = getTimestampAtIndex(i);
-                        dc.wire().write(TimestampComparator.TS).int64(timestampAtIndex);
-                        System.out.printf("%s:%s -- %s%n", (i * repeatsPerEntry) + j, dc.index(), timestampAtIndex);
-                    }
+                    final long timestampAtIndex = getTimestampAtIndex(i);
+                    writeTimestamp(appender, timestampAtIndex);
+                    System.out.printf("%s:%s -- %s%n", (i * repeatsPerEntry) + j, appender.lastIndexAppended(), timestampAtIndex);
                 }
             }
+        }
+    }
+
+    private void writeTimestamp(ExcerptAppender appender, long timestamp) {
+        try (DocumentContext dc = appender.writingDocument()) {
+            dc.wire().write(TimestampComparator.TS).int64(timestamp);
         }
     }
 

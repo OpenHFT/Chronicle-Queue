@@ -25,6 +25,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.BinarySearch;
+import net.openhft.chronicle.queue.impl.single.NotComparableException;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
@@ -391,8 +392,8 @@ public class ChronicleReader implements Reader {
      * In the event the matched value is repeated, move to the first instance of it, taking into account traversal
      * direction
      *
-     * @param tailer The {@link net.openhft.chronicle.queue.ExcerptTailer} to move
-     * @param key The value we searched for
+     * @param tailer        The {@link net.openhft.chronicle.queue.ExcerptTailer} to move
+     * @param key           The value we searched for
      * @param matchingIndex The index of a matching entry
      */
     private void scanToFirstMatchingEntry(ExcerptTailer tailer, Wire key, long matchingIndex) {
@@ -403,10 +404,14 @@ public class ChronicleReader implements Reader {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (!dc.isPresent())
                     break;
-                if (binarySearch.compare(dc.wire(), key) == 0)
-                    indexToMoveTo = dc.index();
-                else
-                    break;
+                try {
+                    if (binarySearch.compare(dc.wire(), key) == 0)
+                        indexToMoveTo = dc.index();
+                    else
+                        break;
+                } catch (NotComparableException e) {
+                    // continue
+                }
             }
         }
         tailer.moveToIndex(indexToMoveTo);
@@ -416,8 +421,8 @@ public class ChronicleReader implements Reader {
      * In the event we couldn't find the specified value, move to the first entry that would
      * follow it, taking into account traversal direction
      *
-     * @param tailer The {@link net.openhft.chronicle.queue.ExcerptTailer} to move
-     * @param key The key we searched for
+     * @param tailer             The {@link net.openhft.chronicle.queue.ExcerptTailer} to move
+     * @param key                The key we searched for
      * @param indexAdjacentMatch The index of an entry which would appear next to the match
      */
     private void scanToFirstEntryFollowingMatch(ExcerptTailer tailer, Wire key, long indexAdjacentMatch) {
@@ -428,9 +433,13 @@ public class ChronicleReader implements Reader {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (!dc.isPresent())
                     break;
-                if ((tailer.direction() == TailerDirection.FORWARD && binarySearch.compare(dc.wire(), key) >= 0)
-                        || (tailer.direction() == BACKWARD && binarySearch.compare(dc.wire(), key) <= 0)) {
-                    indexToMoveTo = dc.index();
+                try {
+                    if ((tailer.direction() == TailerDirection.FORWARD && binarySearch.compare(dc.wire(), key) >= 0)
+                            || (tailer.direction() == BACKWARD && binarySearch.compare(dc.wire(), key) <= 0)) {
+                        indexToMoveTo = dc.index();
+                        break;
+                    }
+                } catch (NotComparableException e) {
                     break;
                 }
             }
