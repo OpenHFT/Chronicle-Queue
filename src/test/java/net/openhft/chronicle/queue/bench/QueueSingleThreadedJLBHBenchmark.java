@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.bench;
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
@@ -67,7 +66,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
 
         Byteable byteable = (Byteable) datum;
         long capacity = byteable.maxSize();
-        byteable.bytesStore(NativeBytesStore.nativeStore(capacity), 0, capacity);
+        byteable.bytesStore(BytesStore.nativeStore(capacity), 0, capacity);
         datumBytes = ((Byteable) datum).bytesStore();
         datumWrite = datumBytes.bytesForWrite();
 

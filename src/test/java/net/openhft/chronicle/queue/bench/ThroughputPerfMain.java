@@ -1,8 +1,8 @@
 package net.openhft.chronicle.queue.bench;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
@@ -25,13 +25,13 @@ public class ThroughputPerfMain {
     static final int size = Integer.getInteger("size", 40);
     static final String path = System.getProperty("path", OS.TMP);
 
-    static NativeBytesStore nbs;
+    static BytesStore nbs;
 
     public static void main(String[] args) {
         String base = path + "/delete-" + Time.uniqueId() + ".me";
         long start = System.nanoTime();
         long count = 0;
-        nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
+        nbs = BytesStore.nativeStoreWithFixedCapacity(size);
 
         long blockSize = OS.is64Bit() ? 4L << 30 : 256L << 20;
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)

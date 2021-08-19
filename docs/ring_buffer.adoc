@@ -46,11 +46,11 @@ implementation of `NativeBytesStore`, and must be sized appropriately by using t
 
 ```
   int size = BytesRingBuffer.sizeFor(2 << 20);
-  NativeBytesStore nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(size);
+  NativeBytesStore nativeStore = BytesStore.nativeStoreWithFixedCapacity(size);
   BytesRingBuffer ringBuffer = BytesRingBuffer.newInstance(nativeStore)
 
   int numReaders = 2;
-  NativeBytesStore nativeStore2 = NativeBytesStore.nativeStoreWithFixedCapacity(size, numReaders);
+  NativeBytesStore nativeStore2 = BytesStore.nativeStoreWithFixedCapacity(size, numReaders);
   MultiReaderBytesRingBuffer ringBuffer2 = newInstance(nativeStore2, numReaders)
 ```
 

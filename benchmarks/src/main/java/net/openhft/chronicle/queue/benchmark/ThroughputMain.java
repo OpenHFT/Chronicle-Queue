@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue.benchmark;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.UnsafeMemory;
@@ -47,7 +46,7 @@ public class ThroughputMain {
         AtomicLong count = new AtomicLong();
         IntStream.range(0, threads).parallel().forEach(i -> {
             long count2 = 0;
-            NativeBytesStore<Void> nbs = NativeBytesStore.nativeStoreWithFixedCapacity(size);
+            BytesStore<?, Void> nbs = BytesStore.nativeStoreWithFixedCapacity(size);
 
             try (ChronicleQueue q = ChronicleQueue.singleBuilder(base + i)
                     .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)

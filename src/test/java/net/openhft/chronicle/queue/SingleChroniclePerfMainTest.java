@@ -107,9 +107,8 @@ public class SingleChroniclePerfMainTest {
         IFacade f = Values.newNativeReference(IFacade.class);
         Byteable byteable = (Byteable) f;
         long capacity = byteable.maxSize();
-        NativeBytesStore<Void> bytesStore = NativeBytesStore.nativeStore(capacity);
+        BytesStore<?, Void> bytesStore = BytesStore.nativeStore(capacity);
         byteable.bytesStore(bytesStore, 0, capacity);
-//        System.out.println(f);
         bytesStore.releaseLast();
     }
 

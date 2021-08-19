@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 
 public enum RunLargeQueueMain {
@@ -38,7 +37,7 @@ public enum RunLargeQueueMain {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(args[0]).blockSize((int) (BLOCK_SIZE * (1 << 20))).build()) {
             ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
-            BytesStore bytes = NativeBytesStore.nativeStore(MSG_SIZE);
+            BytesStore bytes = BytesStore.nativeStore(MSG_SIZE);
             Bytes bytes2 = Bytes.allocateDirect(MSG_SIZE);
             for (int t = 1; t <= FILE_SIZE; t++) {
                 long start = System.currentTimeMillis();
