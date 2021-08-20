@@ -19,10 +19,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
 
-/**
- * @deprecated To be remove in .22
- */
-@Deprecated
 public interface QueueLock extends Closeable {
 
     void waitForLock();

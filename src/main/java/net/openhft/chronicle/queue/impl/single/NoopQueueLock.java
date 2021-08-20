@@ -17,10 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-/**
- * @deprecated To be removed in .22
- */
-@Deprecated
 public class NoopQueueLock implements QueueLock {
 
     @Override

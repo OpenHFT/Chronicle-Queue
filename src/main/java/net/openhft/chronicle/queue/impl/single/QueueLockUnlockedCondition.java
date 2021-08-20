@@ -9,10 +9,7 @@ import java.util.concurrent.locks.Condition;
 /**
  * An adapter so we can use the QueueLock as an acquireAppenderCondition for backward
  * compatibility
- *
- * @deprecated This goes when QueueLock goes (.22)
  */
-@Deprecated
 public class QueueLockUnlockedCondition implements Condition {
 
     private final SingleChronicleQueue singleChronicleQueue;
