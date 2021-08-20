@@ -674,17 +674,5 @@ If you only have NFS available then using NFS locally can be fine subject to som
 
 NOTE: The above explanation assumes C\++ Queue on Linux. Java Queue has similar functional requirements which should ultimately use similar native calls to C++ via the JVM, but this would need to be confirmed in your environment.
 
-=== Running under Docker
-If you are running Chronicle Queue or Chronicle Queue Enterprise under Docker, the best
-practice is to use the following command:
-
-[source,text]
-----
---ipc=host
-----
-This feature lets processes running on a host computer communicate with each other
-immediately, therefore the latency associated with network or pipe-based IPC does not degrade
-the Chronicle Queue (Enterprise) performance.
-
 '''
 <<../README.adoc#,Back to ReadMe>>
