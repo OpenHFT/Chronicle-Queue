@@ -257,9 +257,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
+    protected void threadSafetyCheck(boolean isUsed) {
         // disable thread safety check
-        return true;
     }
 
     @Override

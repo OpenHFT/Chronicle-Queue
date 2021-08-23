@@ -108,9 +108,8 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
+    protected void threadSafetyCheck(boolean isUsed) {
         // The lock is thread safe.
-        return true;
     }
 
     /**

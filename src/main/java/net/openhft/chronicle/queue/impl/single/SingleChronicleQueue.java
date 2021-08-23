@@ -887,9 +887,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
-        // component is thread safe
-        return true;
+    protected void threadSafetyCheck(boolean isUsed) {
     }
 
     public void tableStorePut(CharSequence key, long index) {
@@ -1255,9 +1253,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
 
         @Override
-        protected boolean threadSafetyCheck(boolean isUsed) {
-            // StoreSupplier are thread safe
-            return true;
+        protected void threadSafetyCheck(boolean isUsed) {
         }
     }
 }

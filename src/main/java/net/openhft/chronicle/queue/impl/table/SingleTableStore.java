@@ -328,8 +328,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     @Override
-    protected boolean threadSafetyCheck(final boolean isUsed) {
+    protected void threadSafetyCheck(final boolean isUsed) {
         // TableStore are thread safe
-        return true;
     }
 }

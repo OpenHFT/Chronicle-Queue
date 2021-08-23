@@ -149,8 +149,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     }
 
     @Override
-    protected boolean threadSafetyCheck(final boolean isUsed) {
+    protected void threadSafetyCheck(final boolean isUsed) {
         // TDL are thread safe
-        return true;
     }
 }

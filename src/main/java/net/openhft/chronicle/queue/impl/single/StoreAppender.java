@@ -1,6 +1,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.bytes.internal.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
@@ -756,9 +759,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
-        return disableThreadSafetyCheck
-                || super.threadSafetyCheck(isUsed);
+    protected void threadSafetyCheck(boolean isUsed) {
+        if (!disableThreadSafetyCheck)
+            super.threadSafetyCheck(isUsed);
     }
 
     @Override

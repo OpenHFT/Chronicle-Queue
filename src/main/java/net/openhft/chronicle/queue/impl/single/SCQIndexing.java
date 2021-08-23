@@ -677,8 +677,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
-        return true;
+    protected void threadSafetyCheck(boolean isUsed) {
     }
 
     int indexCount() {

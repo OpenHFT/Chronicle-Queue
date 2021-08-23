@@ -101,9 +101,9 @@ class StoreTailer extends AbstractCloseable
     }
 
     @Override
-    protected boolean threadSafetyCheck(boolean isUsed) {
-        return disableThreadSafetyCheck
-                || super.threadSafetyCheck(isUsed);
+    protected void threadSafetyCheck(boolean isUsed) {
+        if (!disableThreadSafetyCheck)
+            super.threadSafetyCheck(isUsed);
     }
 
     @Override

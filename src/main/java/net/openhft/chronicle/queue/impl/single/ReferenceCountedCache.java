@@ -86,8 +86,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     }
 
     @Override
-    protected boolean threadSafetyCheck(final boolean isUsed) {
-        return true;
+    protected void threadSafetyCheck(final boolean isUsed) {
     }
 
     void bgCleanup() {
