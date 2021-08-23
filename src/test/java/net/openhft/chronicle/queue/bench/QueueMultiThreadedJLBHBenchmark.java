@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle.queue.bench;
 
+import net.openhft.affinity.Affinity;
+import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.BytesIn;
 import net.openhft.chronicle.bytes.BytesMarshallable;
 import net.openhft.chronicle.bytes.BytesOut;
@@ -32,46 +34,68 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
-    private static final int ITERATIONS = 1_000_000;
+    private static final String PATH = "/dev/shm/replica";
+    private static final int MSGSIZE = 512;
+    private final static int CPU1 = 2;
+    private final static int CPU2 = 4;
+    private static final int ITERATIONS = 2_000_000_000;
+    private static final long BLOCKSIZE = 8L << 30;
+    private static final int RUNS = 3;
+
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
-    private Datum datum = new Datum();
+    private final Datum datum = new Datum();
     private boolean stopped = false;
     private Thread tailerThread;
     private JLBH jlbh;
     private NanoSampler writeProbe;
 
-    public static void main(String[] args) {
+    private void run1(int THROUGHPUT) {
         JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(50000)
+                .warmUpIterations(500_000)
                 .iterations(ITERATIONS)
-                .throughput(100_000)
+                .throughput(THROUGHPUT)
                 // disable as otherwise single GC event skews results heavily
                 .recordOSJitter(false).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
-                .runs(5)
+                .acquireLock(()-> AffinityLock.acquireLock(CPU1))
+                .runs(RUNS)
                 .jlbhTask(new QueueMultiThreadedJLBHBenchmark());
         new JLBH(lth).start();
+    }
+
+    public static void main(String[] args) {
+        QueueMultiThreadedJLBHBenchmark bench = new QueueMultiThreadedJLBHBenchmark();
+
+        ArrayList<Integer> throughputs = new ArrayList<>(Arrays.asList(250_000, 1_500_000));
+        for(int throughput : throughputs) {
+            System.out.println("Throughput: " + (throughput/1000) + "k msgs/s");
+            bench.run1(throughput);
+        }
     }
 
     @Override
     public void init(JLBH jlbh) {
         this.jlbh = jlbh;
-        IOTools.deleteDirWithFiles("replica", 10);
+        IOTools.deleteDirWithFiles(PATH, 10);
 
-        sourceQueue = single("replica").build();
-        sinkQueue = single("replica").build();
+        sourceQueue = single(PATH).blockSize(BLOCKSIZE).build();
+        sinkQueue = single(PATH).blockSize(BLOCKSIZE).build();
         appender = sourceQueue.acquireAppender();
         tailer = sinkQueue.createTailer();
 
         NanoSampler readProbe = jlbh.addProbe("read");
         writeProbe = jlbh.addProbe("write");
         tailerThread = new Thread(() -> {
+            Affinity.setAffinity(CPU2);
             Datum datum2 = new Datum();
             while (!stopped) {
                 long beforeReadNs = System.nanoTime();
@@ -112,7 +136,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
     private static class Datum implements BytesMarshallable {
         public long ts = 0;
-        public byte[] filler = new byte[4088];
+        public byte[] filler = new byte[MSGSIZE - 8];
 
         @Override
         public void readMarshallable(BytesIn bytes) throws IORuntimeException {
