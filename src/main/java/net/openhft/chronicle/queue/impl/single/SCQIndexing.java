@@ -104,6 +104,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         this.indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
         this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
+        disableThreadSafetyCheck(true);
     }
 
     private LongArrayValuesHolder newLogArrayValuesHolder(Supplier<LongArrayValues> las) {
@@ -674,10 +675,6 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         }
 
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
-    }
-
-    @Override
-    protected void threadSafetyCheck(boolean isUsed) {
     }
 
     int indexCount() {

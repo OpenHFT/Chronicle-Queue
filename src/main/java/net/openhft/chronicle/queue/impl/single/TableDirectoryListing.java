@@ -36,6 +36,8 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         this.queuePath = queuePath;
         this.fileToCycleFunction = fileToCycleFunction;
         this.readOnly = readOnly;
+
+        disableThreadSafetyCheck(true);
     }
 
     @Override
@@ -148,8 +150,4 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         return (int) minCycleValue.getVolatileValue();
     }
 
-    @Override
-    protected void threadSafetyCheck(final boolean isUsed) {
-        // TDL are thread safe
-    }
 }

@@ -61,7 +61,6 @@ class StoreTailer extends AbstractCloseable
     private boolean readingDocumentFound = false;
     private long address = NO_PAGE;
     private boolean striding = false;
-    private boolean disableThreadSafetyCheck;
 
     public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool) {
         this(queue, storePool, null);
@@ -84,6 +83,7 @@ class StoreTailer extends AbstractCloseable
             }
             finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
             error = false;
+
         } finally {
             if (error)
                 close();
@@ -91,19 +91,13 @@ class StoreTailer extends AbstractCloseable
     }
 
     @Override
-    public @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+    public @NotNull StoreTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
         final Wire privateWire = privateWire();
         if (privateWire != null) {
             ((MappedBytes) privateWire.bytes()).disableThreadSafetyCheck(disableThreadSafetyCheck);
         }
-        this.disableThreadSafetyCheck = disableThreadSafetyCheck;
+        super.disableThreadSafetyCheck(disableThreadSafetyCheck);
         return this;
-    }
-
-    @Override
-    protected void threadSafetyCheck(boolean isUsed) {
-        if (!disableThreadSafetyCheck)
-            super.threadSafetyCheck(isUsed);
     }
 
     @Override
@@ -814,7 +808,7 @@ class StoreTailer extends AbstractCloseable
         final WireType wireType = queue.wireType();
 
         final MappedBytes bytes = store.bytes();
-        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck);
+        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck());
         final Wire wire2 = wireType.apply(bytes);
         wire2.usePadding(store.dataVersion() > 0);
         final AbstractWire wire = (AbstractWire) readAnywhere(wire2);

@@ -208,6 +208,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 additionalEventParameters.put("roll_cycle", rollCycleName);
 
             AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
+            disableThreadSafetyCheck(true);
+
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);
@@ -886,10 +888,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
     }
 
-    @Override
-    protected void threadSafetyCheck(boolean isUsed) {
-    }
-
     public void tableStorePut(CharSequence key, long index) {
         LongValue longValue = tableStoreAcquire(key, index);
         if (longValue == null) return;
@@ -951,6 +949,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             mappedFileCache = new ReferenceCountedCache<>(
                     MappedBytes::mappedBytes,
                     SingleChronicleQueue.this::mappedFile);
+            disableThreadSafetyCheck(true);
         }
 
         @SuppressWarnings("resource")
@@ -1250,10 +1249,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             if (!file.exists())
                 throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
             return dateCache.toLong(file);
-        }
-
-        @Override
-        protected void threadSafetyCheck(boolean isUsed) {
         }
     }
 }

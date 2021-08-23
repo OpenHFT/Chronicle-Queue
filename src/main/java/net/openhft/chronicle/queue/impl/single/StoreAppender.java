@@ -4,7 +4,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
-import net.openhft.chronicle.bytes.internal.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -42,6 +41,8 @@ class StoreAppender extends AbstractCloseable
     private final StoreAppenderContext writeContext;
     private final WireStorePool storePool;
     private final boolean checkInterrupts;
+    @UsedViaReflection
+    private final Finalizer finalizer;
     @Nullable
     SingleChronicleQueueStore store;
     private int cycle = Integer.MIN_VALUE;
@@ -55,11 +56,7 @@ class StoreAppender extends AbstractCloseable
     private int lastCycle;
     @Nullable
     private Pretoucher pretoucher = null;
-    private NativeBytesStore<Void> batchTmp;
     private Wire bufferWire = null;
-    @UsedViaReflection
-    private final Finalizer finalizer;
-    private boolean disableThreadSafetyCheck;
     private int count = 0;
 
     StoreAppender(@NotNull final SingleChronicleQueue queue,
@@ -94,6 +91,12 @@ class StoreAppender extends AbstractCloseable
         finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
+    private static void releaseBytesFor(Wire w) {
+        if (w != null) {
+            w.bytes().release(INIT);
+        }
+    }
+
     private void checkAppendLock() {
         checkAppendLock(false);
     }
@@ -121,12 +124,6 @@ class StoreAppender extends AbstractCloseable
             throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + (myPID ? "me" : lockedBy) + ", file=" + queue.file());
         } else
             throw new IllegalStateException("locked: unable to append, file=" + queue.file());
-    }
-
-    private static void releaseBytesFor(Wire w) {
-        if (w != null) {
-            w.bytes().release(INIT);
-        }
     }
 
     @Deprecated // Should not be providing accessors to reference-counted objects
@@ -753,15 +750,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public @NotNull ExcerptAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        this.disableThreadSafetyCheck = disableThreadSafetyCheck;
+    public @NotNull StoreAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        super.disableThreadSafetyCheck(disableThreadSafetyCheck);
         return this;
-    }
-
-    @Override
-    protected void threadSafetyCheck(boolean isUsed) {
-        if (!disableThreadSafetyCheck)
-            super.threadSafetyCheck(isUsed);
     }
 
     @Override

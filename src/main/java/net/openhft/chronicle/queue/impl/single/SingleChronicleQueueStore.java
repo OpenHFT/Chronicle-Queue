@@ -82,6 +82,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             } else
                 this.dataVersion = 0;
 
+            disableThreadSafetyCheck(true);
         } finally {
             assert wire.endUse();
         }
@@ -111,6 +112,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 rollCycle.defaultIndexCount(),
                 rollCycle.defaultIndexSpacing());
         this.dataVersion = 1;
+
+        disableThreadSafetyCheck(true);
     }
 
     @NotNull
@@ -254,11 +257,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         } catch (EOFException eof) {
             return ScanResult.END_OF_FILE;
         }
-    }
-
-    @Override
-    protected void threadSafetyCheck(boolean isUsed) {
-        // disable thread safety check
     }
 
     @Override

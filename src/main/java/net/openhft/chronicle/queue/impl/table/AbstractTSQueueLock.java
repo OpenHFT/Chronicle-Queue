@@ -49,6 +49,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         this.pauser = ThreadLocal.withInitial(pauserSupplier);
         this.path = tableStore.file();
         this.lockKey = lockKey;
+        disableThreadSafetyCheck(true);
     }
 
     protected void performClose() {
@@ -105,11 +106,6 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             Jvm.debug().on(this.getClass(), format("Unable to release the lock=%s in the table store file=%s " +
                     "as it is being held by pid=%d, and this process is still running.", lockKey, path, pid));
         return false;
-    }
-
-    @Override
-    protected void threadSafetyCheck(boolean isUsed) {
-        // The lock is thread safe.
     }
 
     /**

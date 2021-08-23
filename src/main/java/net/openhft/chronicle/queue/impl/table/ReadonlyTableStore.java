@@ -33,6 +33,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
 
     public ReadonlyTableStore(T metadata) {
         this.metadata = metadata;
+        disableThreadSafetyCheck(true);
     }
 
     @Override
@@ -102,8 +103,4 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         return true;
     }
 
-    @Override
-    protected void threadSafetyCheck(boolean isUsed) {
-        // TableStore are thread safe
-    }
 }

@@ -27,6 +27,8 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
                                  final ThrowingFunction<K, T, E> creator) {
         this.transformer = transformer;
         this.creator = creator;
+
+        disableThreadSafetyCheck(true);
     }
 
     @NotNull
@@ -83,10 +85,6 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
                 .filter(o -> o instanceof ManagedCloseable)
                 .map(o -> (ManagedCloseable) o)
                 .forEach(ManagedCloseable::warnAndCloseIfNotClosed);
-    }
-
-    @Override
-    protected void threadSafetyCheck(final boolean isUsed) {
     }
 
     void bgCleanup() {
