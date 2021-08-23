@@ -538,7 +538,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (ChronicleQueue inQueue = builder(inDir, wireType).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(tp).build()) {
 
                     // write some initial data to the inqueue
-                    final SCQMsg msg = inQueue.acquireAppender().methodWriterBuilder(SCQMsg.class).recordHistory(true).get();
+                    final SCQMsg msg = inQueue.acquireAppender().methodWriterBuilder(SCQMsg.class).get();
 
                     msg.msg("somedata-0");
                     assertEquals(1, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
@@ -551,7 +551,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                     // read a message on the in queue and write it to the out queue
                     {
-                        SCQMsg out = outQueue.acquireAppender().methodWriterBuilder(SCQMsg.class).recordHistory(true).get();
+                        SCQMsg out = outQueue.acquireAppender().methodWriterBuilder(SCQMsg.class).get();
                         MethodReader methodReader = inQueue.createTailer().methodReader((SCQMsg) out::msg);
 
                         // reads the somedata-0

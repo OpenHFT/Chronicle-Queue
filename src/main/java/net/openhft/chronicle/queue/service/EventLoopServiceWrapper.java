@@ -54,7 +54,6 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
                 .build();
         serviceOut = outputQueue.acquireAppender()
                 .methodWriterBuilder(builder.outClass())
-                .recordHistory(builder.outputSourceId() != 0)
                 .get();
         serviceImpl = builder.getServiceFunctions().stream()
                 .map(f -> f.apply(serviceOut))

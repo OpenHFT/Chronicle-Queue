@@ -19,7 +19,10 @@ public class PretoucherSoakTest extends QueueTestCommon {
                 .rollCycle(RollCycles.TEST_SECONDLY).build();
         ExcerptAppender outQueueAppender = outQueue.acquireAppender();
 
-        HeartbeatListener heartbeatWriter = outQueueAppender.methodWriterBuilder(HeartbeatListener.class).methodWriterListener((m, a) -> ValidFields.validateAll(a)).get();
+        HeartbeatListener heartbeatWriter = outQueueAppender.methodWriterBuilder(HeartbeatListener.class).updateInterceptor((m, a) -> {
+            ValidFields.validateAll(a);
+            return true;
+        }).get();
 
         long periodicUpdateUS = (long) 10 * 1000;
         Monitor.loop.addHandler(new PeriodicUpdateEventHandler(() -> currentTimeMillis -> outQueueAppender.pretouch(), 0, periodicUpdateUS));

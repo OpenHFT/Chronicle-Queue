@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.NativeBytesStore;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.StackSampler;
 import net.openhft.chronicle.core.util.Histogram;
@@ -223,7 +223,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 long next = System.nanoTime();
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
-                NativeBytesStore bytes24 = NativeBytesStore.from(new byte[24]);
+                BytesStore bytes24 = BytesStore.nativeStore(24);
                 for (int i = -WARMUP; i < ITERATIONS; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {

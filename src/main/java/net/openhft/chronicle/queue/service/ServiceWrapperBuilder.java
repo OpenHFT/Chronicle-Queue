@@ -187,7 +187,6 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
         ChronicleQueue queue = inputQueue();
         return queue.acquireAppender()
                 .methodWriterBuilder(tClass)
-                .recordHistory(true)
                 .onClose(queue)
                 .get();
     }
