@@ -19,9 +19,11 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
@@ -78,7 +80,12 @@ public class NotCompleteTest extends ChronicleQueueTestBase {
                 // start up writer thread
                 Thread writerThread = new Thread(() -> doWrite(queueWriter, (proxy, queue) -> {
                     // thread is interrupted during this
-                    proxy.accept(interrupter);
+                    try {
+                        proxy.accept(interrupter);
+                        Jvm.error().on(getClass(), "Should have interrupted");
+                    } catch (InterruptedRuntimeException expected) {
+                        // expected.
+                    }
                 }));
                 writerThread.start();
                 writerThread.join();

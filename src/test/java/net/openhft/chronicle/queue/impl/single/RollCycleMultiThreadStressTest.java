@@ -52,9 +52,10 @@ public class RollCycleMultiThreadStressTest {
     final boolean DUMP_QUEUE;
     final boolean SHARED_WRITE_QUEUE;
     final boolean DOUBLE_BUFFER;
+    final SetTimeProvider timeProvider = new SetTimeProvider();
+    PretoucherThread pretoucherThread = null;
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
-    final SetTimeProvider timeProvider = new SetTimeProvider();
     private ChronicleQueue sharedWriterQueue;
 
     public RollCycleMultiThreadStressTest() {
@@ -99,7 +100,9 @@ public class RollCycleMultiThreadStressTest {
         return allReadersComplete;
     }
 
-    PretoucherThread pretoucherThread = null;
+    public static void main(String[] args) throws Exception {
+        new RollCycleMultiThreadStressTest().stress();
+    }
 
     @Test
     public void stress() throws Exception {
@@ -342,6 +345,10 @@ public class RollCycleMultiThreadStressTest {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
+    enum StressTestType {
+        VANILLA, READONLY, PRETOUCH, DOUBLEBUFFER, SHAREDWRITEQ;
+    }
+
     interface ReaderCheckingStrategy {
 
         /**
@@ -560,8 +567,7 @@ public class RollCycleMultiThreadStressTest {
         @SuppressWarnings("resource")
         @Override
         public Throwable call() {
-            try {
-                final ExcerptAppender appender = queue.acquireAppender();
+            try (final ExcerptAppender appender = queue.acquireAppender()) {
                 while (running.get()) {
                     appender.pretouch();
                     Jvm.pause(50);
@@ -581,13 +587,5 @@ public class RollCycleMultiThreadStressTest {
         protected void performClose() {
             running.set(false);
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressTest().stress();
-    }
-
-    enum StressTestType {
-        VANILLA, READONLY, PRETOUCH, DOUBLEBUFFER, SHAREDWRITEQ;
     }
 }

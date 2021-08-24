@@ -459,7 +459,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             // readonly=true and file doesn't exist
             if (OS.isWindows())
                 throw ex; // we cant have a read-only table store on windows so we have no option but to throw the ex.
-            Jvm.warn().on(getClass(), "Failback to readonly tablestore", ex);
+            if (ex.getMessage().equals("Metadata file not found in readOnly mode"))
+                Jvm.warn().on(getClass(), "Failback to readonly tablestore " + ex);
+            else
+                Jvm.warn().on(getClass(), "Failback to readonly tablestore", ex);
             metaStore = new ReadonlyTableStore<>(metadata);
         }
     }
