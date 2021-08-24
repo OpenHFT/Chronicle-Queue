@@ -66,6 +66,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @UsedViaReflection
     private SingleChronicleQueueStore(@NotNull WireIn wire) {
+        boolean failed = true;
         assert wire.startUse();
         try {
             writePosition = loadWritePosition(wire);
@@ -83,7 +84,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 this.dataVersion = 0;
 
             disableThreadSafetyCheck(true);
+            failed = false;
         } finally {
+            if (failed)
+                close();
             assert wire.endUse();
         }
     }

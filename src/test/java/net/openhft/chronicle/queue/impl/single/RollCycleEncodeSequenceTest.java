@@ -41,6 +41,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
 
     @Override
     public void preAfter() {
+        longValue.close();
         bytes.releaseLast();
     }
 
