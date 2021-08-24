@@ -1,13 +1,13 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ManagedCloseable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.TableStoreIterator;
 
 import java.util.function.Function;
 
-public interface TableStore<T extends Metadata> extends CommonStore, Closeable {
+public interface TableStore<T extends Metadata> extends CommonStore, ManagedCloseable {
 
     /**
      * Acquire {@link LongValue} mapped to underlying file, providing atomic operations on the value that is shared
