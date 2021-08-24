@@ -111,8 +111,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final DirectoryListing directoryListing;
     @NotNull
-    private final QueueLock queueLock;
-    @NotNull
     private final WriteLock writeLock;
     private final boolean checkInterrupts;
     @NotNull
@@ -175,7 +173,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
 
             this.directoryListing.refresh(true);
-            this.queueLock = builder.queueLock();
             this.writeLock = builder.writeLock();
 
             // release the write lock if the process is dead
@@ -470,19 +467,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * @return the {@link QueueLock} This lock is held while the queue replication cluster is back-filling.
-     * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
-     * hence we need to back copy data from the sinks to the source upon startup.
-     * While we are doing this we lock the queue so that new appenders can not be created.
-     * <p>
-     * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
-     */
-    @NotNull
-    public QueueLock queueLock() {
-        return queueLock;
-    }
-
-    /**
      * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to
      * coordinate writes from multiple threads and processes.
      * <p>This is also used to protect rolling to the next cycle
@@ -672,7 +656,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             closeQuietly(
                     createAppenderCondition,
                     directoryListing,
-                    queueLock,
                     lastAcknowledgedIndexReplicated,
                     lastIndexReplicated,
                     writeLock,

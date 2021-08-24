@@ -514,19 +514,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return storeFilePath;
     }
 
-    /**
-     * @deprecated To be removed in .22
-     */
-    @Deprecated
-    @NotNull
-    QueueLock queueLock() {
-        return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2) : new NoopQueueLock();
-    }
-
     @NotNull
     public Function<SingleChronicleQueue, Condition> createAppenderConditionCreator() {
         if (createAppenderConditionCreator == null) {
-            return QueueLockUnlockedCondition::new;
+            return queue -> NoOpCondition.INSTANCE;
         }
         return createAppenderConditionCreator;
     }
