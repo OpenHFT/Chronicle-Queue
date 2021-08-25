@@ -1,10 +1,9 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
-import net.openhft.chronicle.queue.main.RemovableRollFileCandidatesMain;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
+import java.io.File;
 import java.util.stream.Stream;
 
 /**
@@ -16,17 +15,6 @@ import java.util.stream.Stream;
 public final class FileUtil {
 
     private FileUtil() {}
-
-    /**
-     * Produces a list of removable roll file candidates and prints
-     * their absolute path to standard out row-by-row.
-     *
-     * @param args the directory. If no directory is given, "." is assumed
-     */
-    @Deprecated /* For removal in x.22, Use RemovableRollFileCandidatesMain.main instead */
-    public static void main(String[] args) {
-        RemovableRollFileCandidatesMain.main(args);
-    }
 
     /**
      * Returns a Stream of roll Queue files that are likely removable

@@ -9,13 +9,11 @@ import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static net.openhft.chronicle.bytes.MethodReader.MESSAGE_HISTORY_METHOD_ID;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
 public enum SCQTools {
     ; // none
-
-    @Deprecated(/*to be removed in x.22*/)
-    static final int MESSAGE_HISTORY_METHOD_ID = MethodReader.MESSAGE_HISTORY_METHOD_ID;
 
     @Nullable
     public static MessageHistory readHistory(@NotNull final DocumentContext dc, final MessageHistory history) {

@@ -49,11 +49,6 @@ public interface RollCycle {
      */
     int lengthInMillis();
 
-    @Deprecated(/* to be removed in x.22 */)
-    default int length() {
-        return lengthInMillis();
-    }
-
     /**
      * @return the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
      */

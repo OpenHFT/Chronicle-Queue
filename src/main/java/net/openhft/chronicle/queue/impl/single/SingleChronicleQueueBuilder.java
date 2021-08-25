@@ -74,8 +74,6 @@ import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
-    @Deprecated /* For removal in x.22, Use QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY instead*/
-    public static final String DEFAULT_ROLL_CYCLE_PROPERTY = QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
 
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -777,15 +775,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the
-     * Chronicle Queue using a background thread
-     */
-    @Deprecated(/* to be removed in x.22 */)
-    public boolean buffered() {
-        return this.writeBufferMode == BufferMode.Asynchronous;
-    }
-
-    /**
      * @return BufferMode to use for writes. Only None is available is the OSS
      */
     @NotNull
@@ -928,11 +917,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public Supplier<Pauser> ringBufferPauserSupplier() {
         return ringBufferPauserSupplier == null ? Pauser::busy : ringBufferPauserSupplier;
-    }
-
-    @Deprecated(/* to be removed in x.22 */)
-    public SingleChronicleQueueBuilder ringBufferPauser(Pauser ringBufferPauser) {
-        return ringBufferPauserSupplier(() -> ringBufferPauser);
     }
 
     public SingleChronicleQueueBuilder ringBufferPauserSupplier(Supplier<Pauser> ringBufferPauserSupplier) {

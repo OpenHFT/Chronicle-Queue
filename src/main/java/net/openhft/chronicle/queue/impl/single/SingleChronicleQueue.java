@@ -471,7 +471,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * <p>
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
      */
-    @Override
     @NotNull
     public QueueLock queueLock() {
         return queueLock;

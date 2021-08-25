@@ -188,16 +188,11 @@ class StoreTailer extends AbstractCloseable
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
         DocumentContext documentContext = readingDocument0(includeMetaData);
-        checkReadRemaining(documentContext);
-        return documentContext;
-    }
-
-    @Deprecated(/* to do remove in x.22 */)
-    private void checkReadRemaining(DocumentContext documentContext) {
         // this check was added after a strange behaviour seen by one client. I should be impossible.
         if (documentContext.wire() != null)
             if (documentContext.wire().bytes().readRemaining() >= 1 << 30)
                 throw new AssertionError("readRemaining " + documentContext.wire().bytes().readRemaining());
+        return documentContext;
     }
 
     DocumentContext readingDocument0(final boolean includeMetaData) {

@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.main.DumpMain;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
@@ -389,7 +390,7 @@ public class RollCycleMultiThreadStressTest {
                                 " (current: " + queue.cycle() + ")";
                     }
                     if (DUMP_QUEUE)
-                        DumpQueueMain.dump(queue.file(), System.out, Long.MAX_VALUE);
+                        DumpMain.dump(queue.file(), System.out, Long.MAX_VALUE);
                     throw new AssertionError(failureMessage);
                 }
             }
