@@ -753,6 +753,18 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Test
+    public void shouldRespectWireType() {
+        basicReader().
+                asMethodReader(Say.class.getName()).
+                withWireType(WireType.JSON).
+                execute();
+
+        capturedOutput.poll();
+        assertEquals("\"say\":\"hello\"\n" +
+                "...\n", capturedOutput.poll());
+    }
+
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {
         try (ExcerptAppender appender = queue.acquireAppender()) {
             for (int i = 0; i < entries; i++) {

@@ -130,7 +130,7 @@ public class ChronicleReader implements Reader {
                         } else {
                             // TODO: consider unifying this with messageConverter
                             Bytes<ByteBuffer> bytes = Bytes.elasticHeapByteBuffer(256);
-                            Object writer = WireType.TEXT.apply(bytes).methodWriter(methodReaderInterface);
+                            Object writer = wireType.apply(bytes).methodWriter(methodReaderInterface);
                             MethodReader methodReader = tailer.methodReader(writer);
                             readOne = () -> {
                                 boolean found = methodReader.readOne();
