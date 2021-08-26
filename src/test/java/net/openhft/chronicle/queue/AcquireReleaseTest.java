@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
@@ -52,8 +53,10 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
                 }
             }
 
+            BackgroundResourceReleaser.releasePendingResources();
+
             Assert.assertEquals(iter, acount.get());
-            Assert.assertEquals(iter , qcount.get());
+            Assert.assertEquals(iter, qcount.get());
         }
     }
 
