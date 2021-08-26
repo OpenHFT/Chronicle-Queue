@@ -413,7 +413,7 @@ NOTE: Due to fairly low-level operation, Chronicle Queue read/write operations c
 
 Below, we first provide a section for quick reference to use Chronicle Queue. Then, in the next section we provide a more detailed guide.
 
-==== [big]#A Quick start#
+==== [big]#Quick start#
 This section provides a quick reference for using Chronicle Queue to briefly show how to create, write/read into/from a queue.
 
 - Chronicle Queue construction
@@ -976,6 +976,8 @@ boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
 
 '''
 * *6. Restartable tailers*
+
+AKA named tailers.
 
 It can be useful to have a tailer which continues from where it was up to on restart of the application.
 
