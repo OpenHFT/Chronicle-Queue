@@ -98,13 +98,8 @@ public class TableStorePutGetTest extends QueueTestCommon {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .testBlockSize()
                 .build()) {
-            for (int j = 0; j < 20000; j += 1000) {
-                long start = System.nanoTime();
-                for (int i = 0; i < 1000; i++) {
-                    cq.tableStorePut("=hello" + (j + i), i);
-                }
-                long end = System.nanoTime() - start;
-               // System.out.println(j + ": " + end / 1000 / 1e3 + " us/entry");
+            for (int j = 0; j < 2200; j++) {
+                cq.tableStorePut("=hello" + j, j);
             }
         }
     }
