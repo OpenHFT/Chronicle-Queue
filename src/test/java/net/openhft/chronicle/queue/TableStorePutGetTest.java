@@ -96,9 +96,9 @@ public class TableStorePutGetTest extends QueueTestCommon {
     public void manyEntries() {
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("manyEntries"))
                 .rollCycle(RollCycles.TEST_DAILY)
-                .testBlockSize()
+                .blockSize(64 << 10)
                 .build()) {
-            for (int j = 0; j < 2200; j++) {
+            for (int j = 0; j < 2280; j++) {
                 cq.tableStorePut("=hello" + j, j);
             }
         }
