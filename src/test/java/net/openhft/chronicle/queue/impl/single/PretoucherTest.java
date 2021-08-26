@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.NewChunkListener;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
@@ -40,7 +41,7 @@ public class PretoucherTest extends ChronicleQueueTestBase {
         File dir = getTmpDir();
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
              SingleChronicleQueue queue2 = createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(queue2, chunkListener, capturedCycles::add)) {
+             final Pretoucher pretoucher = new Pretoucher(queue2, chunkListener, capturedCycles::add, false, false)) {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
@@ -77,7 +78,7 @@ public class PretoucherTest extends ChronicleQueueTestBase {
         clock.set(100);
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
              final SingleChronicleQueue queue2 = createQueue(dir, clock::get);
-             final Pretoucher pretoucher = new Pretoucher(queue2, chunkListener, capturedCycles::add)) {
+             final Pretoucher pretoucher = new Pretoucher(queue2, chunkListener, capturedCycles::add, true, true)) {
 
             range(0, 10).forEach(i -> {
                 try (final DocumentContext ctx = queue.acquireAppender().writingDocument()) {
@@ -99,6 +100,7 @@ public class PretoucherTest extends ChronicleQueueTestBase {
                     throw Jvm.rethrow(e);
                 }
                 clock.addAndGet(50 + earlyMillis);
+                BackgroundResourceReleaser.releasePendingResources();
                 assertEquals(i + 2, capturedCycles.size());
             });
 

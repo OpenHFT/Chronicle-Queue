@@ -126,6 +126,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
+    private long[] chunkCount = {0};
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -387,6 +388,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 Jvm.debug().on(SingleChronicleQueue.class, e);
             }
         }
+    }
+
+    // Used in testing.
+    public long chunkCount() {
+        return chunkCount[0];
     }
 
     @Override
@@ -985,6 +991,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     createFile(path);
                     mappedBytes = mappedFileCache.get(path);
                 }
+                mappedBytes.chunkCount(chunkCount);
 
 //                pauseUnderload();
 

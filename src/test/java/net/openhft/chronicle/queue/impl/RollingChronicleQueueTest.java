@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
@@ -11,6 +12,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import java.io.File;
@@ -190,28 +192,32 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
         try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build();
-             final Pretoucher pretoucher = new Pretoucher(queue)) {
+             Pretoucher pretoucher = new Pretoucher(queue, null, c -> {
+             }, true, true)) {
             int cyclesAdded = 0;
             ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeText("0"); // to file ...000000
-            assertEquals(1, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(1, listCQ4Files(tmpDir).length);
 
             tp.advanceMillis(1000);
             appender.writeText("1"); // to file ...000001
-            assertEquals(2, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            final @Nullable File[] files = listCQ4Files(tmpDir);
+            assertEquals(2, files.length);
 
             tp.advanceMillis(2000);
             cyclesAdded += createGap.apply(pretoucher);
-            assertEquals(2 + cyclesAdded, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            BackgroundResourceReleaser.releasePendingResources();
+            final @Nullable File[] files2 = listCQ4Files(tmpDir);
+            assertEquals(2 + cyclesAdded, files2.length);
 
             tp.advanceMillis(1000);
             appender.writeText("2"); // to file ...000004
-            assertEquals(3 + cyclesAdded, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
 
             tp.advanceMillis(2000);
             cyclesAdded += createGap.apply(pretoucher);
-            assertEquals(3 + cyclesAdded, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
 
             // now tail them all back
             int count = 0;
@@ -234,6 +240,11 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                 assertEquals(i, Integer.parseInt(text));
             }
         }
+    }
+
+    @Nullable
+    private File[] listCQ4Files(File tmpDir) {
+        return tmpDir.listFiles(file -> file.getName().endsWith("cq4"));
     }
 
     @NotNull

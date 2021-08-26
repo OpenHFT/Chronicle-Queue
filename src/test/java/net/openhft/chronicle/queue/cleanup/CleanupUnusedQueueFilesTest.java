@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import java.io.File;
@@ -48,28 +49,29 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
         final File tmpDir = getTmpDir();
 
         try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build();
-             Pretoucher pretoucher = new Pretoucher(queue)) {
+             Pretoucher pretoucher = new Pretoucher(queue, null, c -> {
+             }, true, true)) {
             int cyclesAdded = 0;
             ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeText("0"); // to file ...000000
-            assertEquals(1, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(1, listCQ4Files(tmpDir).length);
 
             tp.advanceMillis(1000);
             appender.writeText("1"); // to file ...000001
-            assertEquals(2, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(2, listCQ4Files(tmpDir).length);
 
             tp.advanceMillis(2000);
             cyclesAdded += createGap.apply(pretoucher);
-            assertEquals(2 + cyclesAdded, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(2 + cyclesAdded, listCQ4Files(tmpDir).length);
 
             tp.advanceMillis(1000);
             appender.writeText("2"); // to file ...000004
-            assertEquals(3 + cyclesAdded, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
 
             tp.advanceMillis(2000);
             cyclesAdded += createGap.apply(pretoucher);
-            assertEquals(3 + cyclesAdded, tmpDir.listFiles(file -> file.getName().endsWith("cq4")).length);
+            assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
 
             // now tail them all back
             int count = 0;
@@ -92,6 +94,11 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
                 assertEquals(i, Integer.parseInt(text));
             }
         }
+    }
+
+    @Nullable
+    private File[] listCQ4Files(File tmpDir) {
+        return tmpDir.listFiles(file -> file.getName().endsWith("cq4"));
     }
 
     @NotNull

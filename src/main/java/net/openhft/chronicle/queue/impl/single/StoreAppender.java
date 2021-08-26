@@ -843,7 +843,7 @@ class StoreAppender extends AbstractCloseable
                 }
 
                 if (wire == StoreAppender.this.wire) {
-
+//                    final BytesStore bs = wire.bytes().bytesStore();
                     try {
                         wire.updateHeader(positionOfHeader, metaData, 0);
                     } catch (IllegalStateException e) {
@@ -851,6 +851,8 @@ class StoreAppender extends AbstractCloseable
                             return;
                         throw e;
                     }
+//                    if (bs != wire.bytes().bytesStore())
+//                        throw new AssertionError("header had to rewind to be written");
 
                     lastPosition = positionOfHeader;
                     lastCycle = cycle;
