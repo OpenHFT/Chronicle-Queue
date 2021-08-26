@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
@@ -110,6 +111,7 @@ public final class QueueEpochTest extends ChronicleQueueTestBase {
         }
 
         int numberOfRollEvents() {
+            BackgroundResourceReleaser.releasePendingResources();
             return numberOfRollEvents;
         }
 
