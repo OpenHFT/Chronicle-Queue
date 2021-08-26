@@ -208,8 +208,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 additionalEventParameters.put("roll_cycle", rollCycleName);
 
             AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
-            disableThreadSafetyCheck(true);
 
+            disableThreadSafetyCheck(true);
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);
@@ -1136,10 +1136,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 final NavigableMap<Long, File> tree = new TreeMap<>();
 
                 final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
-
-                for (File file : files) {
-                    tree.put(dateCache.toLong(file), file);
-                }
+                if (files != null)
+                    for (File file : files)
+                        tree.put(dateCache.toLong(file), file);
 
                 cachedValue = new CachedCycleTree(directoryModCount, tree);
 

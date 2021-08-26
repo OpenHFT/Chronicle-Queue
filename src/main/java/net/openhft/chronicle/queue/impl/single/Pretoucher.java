@@ -24,8 +24,8 @@ import java.util.function.IntConsumer;
 public final class Pretoucher extends AbstractCloseable {
     static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
     private static final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
-    private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Jvm.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
-    private static final boolean CAN_WRITE = !Jvm.getBoolean("SingleChronicleQueueExcerpts.dontWrite");
+    private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Jvm.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", false);
+    private static final boolean CAN_WRITE = !Jvm.getBoolean("SingleChronicleQueueExcerpts.dontWrite", true);
     private final SingleChronicleQueue queue;
     private final NewChunkListener chunkListener;
     private final IntConsumer cycleChangedListener;
@@ -95,7 +95,7 @@ public final class Pretoucher extends AbstractCloseable {
                         Jvm.warn().on(getClass(), "unable to write the EOF file=" + currentCycleMappedBytes.mappedFile().file(), ex);
                     }
                 SingleChronicleQueueStore oldStore = currentCycleWireStore;
-                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), CAN_WRITE, currentCycleWireStore);
+                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), EARLY_ACQUIRE_NEXT_CYCLE || CAN_WRITE, currentCycleWireStore);
                 if (oldStore != null && oldStore != currentCycleWireStore)
                     oldStore.close();
             } finally {

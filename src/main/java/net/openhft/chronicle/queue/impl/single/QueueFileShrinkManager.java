@@ -47,33 +47,52 @@ public enum QueueFileShrinkManager {
             // The shrink is deferred a bit to allow any potentially lagging tailers/pre-touchers
             // to move on to the next roll before the file can be safely shrunk.
             // See https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise/issues/103
-            EXECUTOR.schedule(() -> task(queueFile, writePos), DELAY_S, TimeUnit.SECONDS);
+            EXECUTOR.schedule(new RunTask(queueFile, writePos), DELAY_S, TimeUnit.SECONDS);
         }
     }
 
     private static void task(@NotNull final File queueFile, final long writePos) {
-        if (Jvm.isDebugEnabled(QueueFileShrinkManager.class))
-            Jvm.debug().on(QueueFileShrinkManager.class, "Shrinking " + queueFile + " to " + writePos);
-        int timeout = 50;
-        for (int i = OS.isWindows() ? 1 : 3; i >= 0; i--) {
-            if (!queueFile.exists()) {
-                Jvm.warn().on(QueueFileShrinkManager.class, "Failed to shrink file as it exists no longer, file=" + queueFile);
-                return;
-            }
-            try (RandomAccessFile raf = new RandomAccessFile(queueFile, "rw")) {
-                raf.setLength(writePos);
-
-            } catch (IOException ex) {
-                // on microsoft windows, keep retrying until the file is unmapped
-                if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open")) {
-                    Jvm.debug().on(QueueFileShrinkManager.class, "Failed to shrinking " + queueFile + " " + writePos + " " + (i == 0 ? "giving up" : "retrying"));
-                    Jvm.pause(timeout);
-                    timeout *= 2;
-                    continue;
+        try {
+            if (Jvm.isDebugEnabled(QueueFileShrinkManager.class))
+                Jvm.debug().on(QueueFileShrinkManager.class, "Shrinking " + queueFile + " to " + writePos);
+            int timeout = 50;
+            for (int i = OS.isWindows() ? 1 : 3; i >= 0; i--) {
+                if (!queueFile.exists()) {
+                    Jvm.warn().on(QueueFileShrinkManager.class, "Failed to shrink file as it exists no longer, file=" + queueFile);
+                    return;
                 }
-                Jvm.warn().on(QueueFileShrinkManager.class, "Failed to shrink file " + queueFile, ex);
+                try (RandomAccessFile raf = new RandomAccessFile(queueFile, "rw")) {
+                    raf.setLength(writePos);
+
+                } catch (IOException ex) {
+                    // on microsoft windows, keep retrying until the file is unmapped
+                    if (ex.getMessage().contains("The requested operation cannot be performed on a file with a user-mapped section open")) {
+                        Jvm.debug().on(QueueFileShrinkManager.class, "Failed to shrinking " + queueFile + " " + writePos + " " + (i == 0 ? "giving up" : "retrying"));
+                        Jvm.pause(timeout);
+                        timeout *= 2;
+                        continue;
+                    }
+                    Jvm.warn().on(QueueFileShrinkManager.class, "Failed to shrink file " + queueFile, ex);
+                }
+                break;
             }
-            break;
+        } catch (Throwable t) {
+            Jvm.error().on(QueueFileShrinkManager.class, "Failed to shrink file " + queueFile + " to " + writePos, t);
+        }
+    }
+
+    static class RunTask implements Runnable {
+        private final File queueFile;
+        private final long writePos;
+
+        public RunTask(File queueFile, long writePos) {
+            this.queueFile = queueFile;
+            this.writePos = writePos;
+        }
+
+        @Override
+        public void run() {
+            task(queueFile, writePos);
         }
     }
 }
