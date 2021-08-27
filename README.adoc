@@ -520,7 +520,7 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").buil
 ==== [big]#Detailed Guide#
 You can configure a Chronicle Queue using its configuration parameters or system properties. In addition, there are different ways of writing/reading into/from a queue such as the use of proxies and using `MethodReader` and `MethodWriter`.
 
-===== ** Queue configuration**
+===== ** [big]#Queue configuration#**
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
 For complete list of configuration parameters and system properties, refer to https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise-Demo/blob/master/docs/ConfigurationParameters.adoc#singlechroniclequeuebuilder[Configuration Parameters]. Please note that some configuration parameters on this page are only available for the Enterprise edition.
