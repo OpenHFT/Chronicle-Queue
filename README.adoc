@@ -641,7 +641,7 @@ The size of each index array, as well as the total number of index arrays per qu
 [NOTE]
 indexCount^2^ is the maximum number of indexed queue entries.
 
-NOTE: See Section link:README.adoc#_excerpt_indexing_in_chronicle_queue[Excerpt indexing in Chronicle Queue] of this User Guide for more information and examples of using indexes.
+NOTE: See Section link:#_excerpt_indexing_in_chronicle_queue[Excerpt indexing in Chronicle Queue] of this User Guide for more information and examples of using indexes.
 
 * *readBufferMode, writeBufferMode*
 
