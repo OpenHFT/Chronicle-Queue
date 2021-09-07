@@ -105,7 +105,6 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         onRoll(cycle);
     }
 
-
     @Override
     public void onRoll(int cycle) {
         minCycleValue.setMinValue(cycle);

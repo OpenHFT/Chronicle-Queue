@@ -19,7 +19,6 @@ import java.util.*;
 
 import static org.junit.Assert.assertTrue;
 
-
 @RequiredForClient
 @RunWith(Parameterized.class)
 public class SparseBinarySearchTest extends ChronicleQueueTestBase {
