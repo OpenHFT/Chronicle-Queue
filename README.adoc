@@ -1476,6 +1476,27 @@ This is much more scalable than being limited to the amount of memory space that
 You can buy a redundant pair of 6TB of enterprise disks very much more cheaply than 6TB of memory.
 
 '''
+==== Monitoring that you have sufficent disk space
+
+Chronicle Queue runs a background thread to watch for low disk space (see net.openhft.chronicle.threads.DiskSpaceMonitor class) as the JVM can crash when allocating a new memory mapped file if disk space becomes low enough. The disk space monitor checks (for each FileStore you are using Chronicle Queues on):
+that there is less than 200MB free. If so you will see:
+[source,java]
+----
+Jvm.warn().on(getClass(), "your disk " + fileStore + " is almost full, " +
+        "warning: chronicle-queue may crash if it runs out of space.");
+----	
+
+otherwise it will check for the threshold percentage and log out this message:
+[source,java]
+----
+Jvm.warn().on(getClass(), "your disk " + fileStore
+        + " is " + diskSpaceFull + "% full, " +
+        "warning: chronicle-queue may crash if it runs out of space.");
+----
+
+The threshold percentage is controlled by the chronicle.disk.monitor.threshold.percent system property. The default value is 0.
+
+'''
 ==== File handles and flushing data to the disk
 
 As mentioned previously Chronicle Queue stores its data off-heap in a ‘.cq4’ file.
