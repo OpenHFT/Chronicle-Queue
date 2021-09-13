@@ -67,7 +67,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         sourceQueue = single("replica").build();
         sinkQueue = single("replica").build();
         appender = sourceQueue.acquireAppender();
-        tailer = sinkQueue.createTailer();
+        tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
 
         NanoSampler readProbe = jlbh.addProbe("read");
         writeProbe = jlbh.addProbe("write");

@@ -19,11 +19,11 @@ package net.openhft.chronicle.queue.bench;
 
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
-import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
@@ -70,7 +70,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         concurrent = jlbh.addProbe("Concurrent");
         concurrent2 = jlbh.addProbe("Concurrent2");
         queue = single("replica").rollCycle(RollCycles.LARGE_DAILY).doubleBuffer(false).build();
-        tailer = queue.createTailer();
+        tailer = queue.createTailer().disableThreadSafetyCheck(true);
         tailer.toStart();
         writerThread1 = new Thread(() -> {
             AffinityLock.acquireCore();

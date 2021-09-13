@@ -67,7 +67,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
         sourceQueue = single("large").blockSize(1L << 30).build();
         sinkQueue = single("large").blockSize(1L << 30).build();
         appender = sourceQueue.acquireAppender();
-        tailer = sinkQueue.createTailer();
+        tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
         this.jlbh = jlbh;
     }
 

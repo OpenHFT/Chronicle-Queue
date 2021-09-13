@@ -22,11 +22,11 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
-import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -112,7 +112,7 @@ public class MethodReaderBenchmark implements JLBHTask {
             public void run() {
                 AffinityLock.acquireCore();
 
-                tailer = queue.createTailer();
+                tailer = queue.createTailer().disableThreadSafetyCheck(true);
 
                 noArgsCallSampler = jlbh.addProbe("No args call");
                 oneIntCallSampler = jlbh.addProbe("One int call");
