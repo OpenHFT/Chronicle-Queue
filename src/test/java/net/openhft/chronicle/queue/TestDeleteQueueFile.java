@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assume.assumeFalse;
-
+@Ignore("flaky test - see https://github.com/OpenHFT/Chronicle-Queue/issues/908")
 public class TestDeleteQueueFile extends ChronicleQueueTestBase {
 
     private Path tempQueueDir = getTmpDir().toPath();
