@@ -117,7 +117,7 @@ public final class Pretoucher extends AbstractCloseable {
                 currentCycleMappedBytes = currentCycleWireStore.bytes();
                 currentCycle = qCycle;
                 if (chunkListener != null)
-                    currentCycleMappedBytes.setNewChunkListener(chunkListener);
+                    currentCycleMappedBytes.mappedFile().setNewChunkListener(chunkListener);
 
                 cycleChangedListener.accept(qCycle);
 

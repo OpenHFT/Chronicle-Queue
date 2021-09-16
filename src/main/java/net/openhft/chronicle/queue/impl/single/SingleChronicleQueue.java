@@ -122,6 +122,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
+    private final boolean useSparseFile;
+    private final long sparseCapacity;
     protected int sourceId;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
@@ -147,6 +149,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             wireType = builder.wireType();
             blockSize = builder.blockSize();
             overlapSize = Math.max(64 << 10, builder.blockSize() / 4);
+            useSparseFile = builder.useSparseFile();
+            sparseCapacity = builder.sparseCapacity();
             eventLoop = builder.eventLoop();
             bufferCapacity = builder.bufferCapacity();
             onRingBufferStats = builder.onRingBufferStats();
@@ -821,7 +825,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
-        return MappedFile.of(file, chunkSize, overlapSize, readOnly);
+        return useSparseFile
+                ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
+                : MappedFile.of(file, chunkSize, overlapSize, readOnly);
     }
 
     boolean isReadOnly() {

@@ -102,6 +102,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
+    private Long sparseCapacity;
     private File path;
     private RollCycle rollCycle;
     private Long epoch; // default is 1970-01-01 00:00:00.000 UTC
@@ -671,6 +672,29 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         // can add an index2index & an index in one go.
         long minSize = Math.max(QueueUtil.testBlockSize(), 32L * indexCount());
         return Math.max(minSize, bs);
+    }
+
+    public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
+        if (useSparseFiles && OS.isLinux() && OS.is64Bit())
+            this.sparseCapacity = 512L << 30;
+        return this;
+    }
+
+    public SingleChronicleQueueBuilder sparseCapacity(long sparseCapacity) {
+        this.sparseCapacity = sparseCapacity;
+        return this;
+    }
+
+    public long sparseCapacity() {
+        long bs = sparseCapacity == null ? 512L << 30 : sparseCapacity;
+
+        // can add an index2index & an index in one go.
+        long minSize = Math.max(QueueUtil.testBlockSize(), 64L * indexCount());
+        return Math.max(minSize, bs);
+    }
+
+    public boolean useSparseFile() {
+        return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
     }
 
     /**
