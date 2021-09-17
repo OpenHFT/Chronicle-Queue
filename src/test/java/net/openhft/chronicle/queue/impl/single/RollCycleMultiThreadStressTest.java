@@ -98,15 +98,11 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     static void shutdownAll(int waitSecs, ExecutorService... ess) throws InterruptedException {
+        for (ExecutorService es : ess)
+            es.shutdownNow();
+
         for (ExecutorService es : ess) {
-            es.shutdown();
-        }
-        for (ExecutorService es : ess) {
-            if (!es.awaitTermination(waitSecs, TimeUnit.SECONDS))
-                es.shutdownNow();
-        }
-        for (ExecutorService es : ess) {
-            if (!es.awaitTermination(100, TimeUnit.MILLISECONDS))
+            if (!es.awaitTermination(waitSecs, TimeUnit.MILLISECONDS))
                 System.err.println(es + ": still running");
         }
     }
