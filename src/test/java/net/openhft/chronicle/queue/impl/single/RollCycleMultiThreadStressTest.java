@@ -105,9 +105,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             if (!es.awaitTermination(waitSecs, TimeUnit.SECONDS))
                 es.shutdownNow();
         }
-        Jvm.pause(50);
         for (ExecutorService es : ess) {
-            if (!es.isTerminated())
+            if (!es.awaitTermination(100, TimeUnit.MILLISECONDS))
                 System.err.println(es + ": still running");
         }
     }
