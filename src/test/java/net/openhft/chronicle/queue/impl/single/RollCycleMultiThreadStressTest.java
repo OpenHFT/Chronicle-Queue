@@ -107,6 +107,11 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         }
     }
 
+    @Before
+    public void recordExceptions() {
+        exceptions = Jvm.recordExceptions(false);
+    }
+
     @Test
     public void stress() throws Exception {
         assert warnIfAssertsAreOn();
