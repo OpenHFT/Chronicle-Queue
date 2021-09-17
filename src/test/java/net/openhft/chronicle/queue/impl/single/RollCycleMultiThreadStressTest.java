@@ -1,10 +1,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.*;
-import net.openhft.chronicle.core.onoes.ExceptionKey;
-import net.openhft.chronicle.core.onoes.LogLevel;
-import net.openhft.chronicle.core.threads.ThreadDump;
+import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.ClosedIllegalStateException;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -14,7 +14,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +21,6 @@ import org.junit.Test;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,12 +30,8 @@ import java.util.stream.Collectors;
 import static java.lang.Thread.currentThread;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-public class RollCycleMultiThreadStressTest {
-    static {
-        Jvm.disableDebugHandler();
-    }
+public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     final long SLEEP_PER_WRITE_NANOS;
     final int TEST_TIME;
@@ -55,8 +49,6 @@ public class RollCycleMultiThreadStressTest {
     final boolean DOUBLE_BUFFER;
     final SetTimeProvider timeProvider = new SetTimeProvider();
     PretoucherThread pretoucherThread = null;
-    private ThreadDump threadDump;
-    private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
     private ChronicleQueue sharedWriterQueue;
 
     public RollCycleMultiThreadStressTest() {
@@ -65,7 +57,7 @@ public class RollCycleMultiThreadStressTest {
 
     protected RollCycleMultiThreadStressTest(StressTestType type) {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
-        TEST_TIME = Integer.getInteger("testTime", 2);
+        TEST_TIME = Integer.getInteger("testTime", 5);
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 300);
         DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
         DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
@@ -79,7 +71,7 @@ public class RollCycleMultiThreadStressTest {
         SHARED_WRITE_QUEUE = type == StressTestType.SHAREDWRITEQ;
         DOUBLE_BUFFER = type == StressTestType.DOUBLEBUFFER;
 
-        if (TEST_TIME > 2) {
+        if (TEST_TIME > 5) {
             AbstractReferenceCounted.disableReferenceTracing();
             if (Jvm.isResourceTracing()) {
                 throw new IllegalStateException("This test will run out of memory - change your system properties");
@@ -103,6 +95,16 @@ public class RollCycleMultiThreadStressTest {
 
     public static void main(String[] args) throws Exception {
         new RollCycleMultiThreadStressTest().stress();
+    }
+
+    static void shutdownAll(int waitSecs, ExecutorService... ess) throws InterruptedException {
+        for (ExecutorService es : ess) {
+            es.shutdown();
+        }
+        for (ExecutorService es : ess) {
+            if (!es.awaitTermination(waitSecs, TimeUnit.SECONDS))
+                es.shutdownNow();
+        }
     }
 
     @Test
@@ -260,21 +262,8 @@ public class RollCycleMultiThreadStressTest {
 
             Jvm.resetExceptionHandlers();
 
-            executorServiceRead.shutdown();
-            executorServiceWrite.shutdown();
-            executorServicePretouch.shutdown();
-
-            if (!executorServiceRead.awaitTermination(10, TimeUnit.SECONDS))
-                executorServiceRead.shutdownNow();
-
-            if (!executorServiceWrite.awaitTermination(10, TimeUnit.SECONDS))
-                executorServiceWrite.shutdownNow();
-
-            Closeable.closeQuietly(pretoucherThread);
-
-            if (!executorServicePretouch.awaitTermination(10, TimeUnit.SECONDS))
-                executorServicePretouch.shutdownNow();
-
+            shutdownAll(10, executorServicePretouch, executorServiceWrite, executorServiceRead);
+            closeQuietly(pretoucherThread);
             closeQuietly(sharedWriterQueue);
             results.forEach(f -> {
                 try {
@@ -299,7 +288,9 @@ public class RollCycleMultiThreadStressTest {
     }
 
     private boolean warnIfAssertsAreOn() {
-        Jvm.warn().on(getClass(), "Reminder: asserts are on");
+        final String message = "Reminder: asserts are on";
+        expectException(message);
+        Jvm.warn().on(getClass(), message);
         return true;
     }
 
@@ -325,25 +316,6 @@ public class RollCycleMultiThreadStressTest {
     @Before
     public void multiCPU() {
         Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
-    }
-
-    @Before
-    public void before() {
-        threadDump = new ThreadDump();
-        exceptionKeyIntegerMap = Jvm.recordExceptions();
-    }
-
-    @After
-    public void after() {
-        threadDump.assertNoNewThreads();
-        // warnings are often expected
-        exceptionKeyIntegerMap.entrySet().removeIf(entry -> entry.getKey().level.equals(LogLevel.WARN));
-        if (Jvm.hasException(exceptionKeyIntegerMap)) {
-            Jvm.dumpException(exceptionKeyIntegerMap);
-            fail();
-        }
-        Jvm.resetExceptionHandlers();
-        AbstractReferenceCounted.assertReferencesReleased();
     }
 
     enum StressTestType {
@@ -579,7 +551,7 @@ public class RollCycleMultiThreadStressTest {
                 exception = e;
                 return e;
             } finally {
-                Closeable.closeQuietly(queue);
+                closeQuietly(queue);
             }
             return null;
         }
