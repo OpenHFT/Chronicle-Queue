@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.impl.single;
+package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.bytes.StopCharTesters;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;

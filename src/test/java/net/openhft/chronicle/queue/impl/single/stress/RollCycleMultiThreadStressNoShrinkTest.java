@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.impl.single;
+package net.openhft.chronicle.queue.impl.single.stress;
 
 import org.junit.Test;
 
