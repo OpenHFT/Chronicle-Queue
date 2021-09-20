@@ -66,7 +66,9 @@ class PretoucherState {
                 Thread thread = Thread.currentThread();
                 int count = 0, pretouch = 0;
                 for (; lastTouchedPage < neededEnd; lastTouchedPage += pageSize) {
-                    bytes.throwExceptionIfClosed();
+                    // null bytes is used when testing.
+                    if (bytes != null)
+                        bytes.throwExceptionIfClosed();
                     if (thread.isInterrupted())
                         break;
                     if (touchPage(bytes, lastTouchedPage))
