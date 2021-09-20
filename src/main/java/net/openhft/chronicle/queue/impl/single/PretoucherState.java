@@ -71,8 +71,11 @@ class PretoucherState {
                         bytes.throwExceptionIfClosed();
                     if (thread.isInterrupted())
                         break;
-                    if (touchPage(bytes, lastTouchedPage))
+                    if (touchPage(bytes, lastTouchedPage)) {
+                        // spurious call to a native method to detect an internal error.
+                        Thread.yield();
                         pretouch++;
+                    }
                     count++;
                 }
                 onTouched(count);
