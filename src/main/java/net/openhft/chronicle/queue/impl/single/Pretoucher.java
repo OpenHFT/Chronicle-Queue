@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.NewChunkListener;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.wire.Wire;
@@ -62,16 +63,18 @@ public final class Pretoucher extends AbstractCloseable {
     }
 
     public void execute() throws InvalidEventHandlerException {
-        if (isClosed())
-            throw new InvalidEventHandlerException();
-
-        throwExceptionIfClosed();
+        try {
+            throwExceptionIfClosed();
+        } catch (ClosedIllegalStateException e) {
+            throw new InvalidEventHandlerException(e);
+        }
 
         try {
             assignCurrentCycle();
 
             if (currentCycleMappedBytes != null)
                 pretoucherState.pretouch(currentCycleMappedBytes);
+
         } catch (IllegalStateException e) {
             if (queue.isClosed())
                 throw new InvalidEventHandlerException(e);
