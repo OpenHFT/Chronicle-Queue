@@ -59,7 +59,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     protected RollCycleMultiThreadStressTest(StressTestType type) {
         SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
-        TEST_TIME = Integer.getInteger("testTime", 5);
+        TEST_TIME = Integer.getInteger("testTime", 15);
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 300);
         DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
         DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
@@ -73,7 +73,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         SHARED_WRITE_QUEUE = type == StressTestType.SHAREDWRITEQ;
         DOUBLE_BUFFER = type == StressTestType.DOUBLEBUFFER;
 
-        if (TEST_TIME > 5) {
+        if (TEST_TIME > 15) {
             AbstractReferenceCounted.disableReferenceTracing();
             if (Jvm.isResourceTracing()) {
                 throw new IllegalStateException("This test will run out of memory - change your system properties");

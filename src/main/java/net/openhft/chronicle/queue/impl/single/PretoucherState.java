@@ -9,8 +9,8 @@ import java.io.File;
 import java.util.function.LongSupplier;
 
 class PretoucherState {
-    private static final int HEAD_ROOM = Integer.getInteger("PretoucherState.headRoom", 1 << 20);
     public static final int FACTOR = 4;
+    private static final int HEAD_ROOM = Integer.getInteger("PretoucherState.headRoom", 1 << 20);
     @NotNull
     private final LongSupplier posSupplier;
     private int minHeadRoom;
@@ -71,6 +71,8 @@ class PretoucherState {
                         bytes.throwExceptionIfClosed();
                     if (thread.isInterrupted())
                         break;
+                    final long realCapacity = bytes.realCapacity();
+                    final long capacity = bytes.bytesStore().capacity();
                     try {
                         if (touchPage(bytes, lastTouchedPage)) {
                             // spurious call to a native method to detect an internal error.
@@ -81,7 +83,7 @@ class PretoucherState {
                         try {
                             bytes.throwExceptionIfClosed();
                             bytes.throwExceptionIfReleased();
-                            throw new IllegalStateException(bytes.toDebugString());
+                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", lastTouchedPage: " + lastTouchedPage);
                         } catch (Exception e) {
                             e.initCause(t);
                             throw e;
