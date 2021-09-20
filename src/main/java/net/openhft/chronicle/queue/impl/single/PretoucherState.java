@@ -71,8 +71,13 @@ class PretoucherState {
                         bytes.throwExceptionIfClosed();
                     if (thread.isInterrupted())
                         break;
-                    final long realCapacity = bytes.realCapacity();
-                    final long capacity = bytes.bytesStore().capacity();
+                    final long realCapacity = bytes == null ? 0 : bytes.realCapacity();
+                    long capacity = 0;
+                    try {
+                        capacity = bytes == null ? -1 : bytes.bytesStore().capacity();
+                    } catch (ClassCastException e) {
+                        // ignored.
+                    }
                     try {
                         if (touchPage(bytes, lastTouchedPage)) {
                             // spurious call to a native method to detect an internal error.
