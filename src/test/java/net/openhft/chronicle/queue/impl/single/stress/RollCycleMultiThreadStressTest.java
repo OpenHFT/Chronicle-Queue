@@ -550,7 +550,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             try (final ExcerptAppender appender = queue.acquireAppender()) {
                 while (running.get()) {
                     appender.pretouch();
-                    Jvm.pause(50);
+                    Jvm.pause(5);
                 }
             } catch (Throwable e) {
                 if (e instanceof ClosedIllegalStateException || queue.isClosed())
