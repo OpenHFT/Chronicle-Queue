@@ -269,7 +269,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
             Jvm.resetExceptionHandlers();
 
-            shutdownAll(10, executorServicePretouch, executorServiceWrite, executorServiceRead);
+            shutdownAll(10, executorServicePretouch);
+            shutdownAll(10, executorServiceWrite, executorServiceRead);
             closeQuietly(pretoucherThread);
             closeQuietly(sharedWriterQueue);
             results.forEach(f -> {
@@ -550,7 +551,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             try (final ExcerptAppender appender = queue.acquireAppender()) {
                 while (running.get()) {
                     appender.pretouch();
-                    Jvm.pause(5);
+                    // allow it to be interrupted
+                    Thread.sleep(5);
                 }
             } catch (Throwable e) {
                 if (e instanceof ClosedIllegalStateException || queue.isClosed())
