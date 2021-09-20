@@ -71,10 +71,21 @@ class PretoucherState {
                         bytes.throwExceptionIfClosed();
                     if (thread.isInterrupted())
                         break;
-                    if (touchPage(bytes, lastTouchedPage)) {
-                        // spurious call to a native method to detect an internal error.
-                        Thread.yield();
-                        pretouch++;
+                    try {
+                        if (touchPage(bytes, lastTouchedPage)) {
+                            // spurious call to a native method to detect an internal error.
+                            Thread.yield();
+                            pretouch++;
+                        }
+                    } catch (Throwable t) {
+                        try {
+                            bytes.throwExceptionIfClosed();
+                            bytes.throwExceptionIfReleased();
+                            throw new IllegalStateException(bytes.toDebugString());
+                        } catch (Exception e) {
+                            e.initCause(t);
+                            throw e;
+                        }
                     }
                     count++;
                 }
