@@ -128,7 +128,8 @@ class PretoucherState {
     }
 
     protected boolean touchPage(MappedBytes bytes, long offset) {
-        return bytes != null && bytes.compareAndSwapLong(offset, 0L, 0L);
+        return false;
+//        return bytes != null && bytes.compareAndSwapLong(offset, 0L, 0L);
     }
 
     protected void onTouched(int count) {
