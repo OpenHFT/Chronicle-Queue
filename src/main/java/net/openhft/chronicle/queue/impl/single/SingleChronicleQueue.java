@@ -986,6 +986,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
 
+                throwExceptionIfClosed();
                 if (createIfAbsent && !path.exists() && !dateValue.pathExists)
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
 
