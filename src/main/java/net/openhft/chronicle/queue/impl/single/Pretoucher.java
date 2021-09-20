@@ -75,6 +75,9 @@ public final class Pretoucher extends AbstractCloseable {
             if (currentCycleMappedBytes != null)
                 pretoucherState.pretouch(currentCycleMappedBytes);
 
+        } catch (ClassCastException cce) {
+            Jvm.warn().on(getClass(), cce);
+
         } catch (IllegalStateException e) {
             if (queue.isClosed())
                 throw new InvalidEventHandlerException(e);
