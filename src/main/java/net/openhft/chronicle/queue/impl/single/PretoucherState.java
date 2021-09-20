@@ -78,6 +78,12 @@ class PretoucherState {
                     } catch (ClassCastException e) {
                         // ignored.
                     }
+                    long safeLimit = 0;
+                    try {
+                        safeLimit = bytes == null ? -1 : bytes.bytesStore().safeLimit();
+                    } catch (ClassCastException e) {
+                        // ignored.
+                    }
                     try {
                         if (touchPage(bytes, lastTouchedPage)) {
                             // spurious call to a native method to detect an internal error.
@@ -88,7 +94,7 @@ class PretoucherState {
                         try {
                             bytes.throwExceptionIfClosed();
                             bytes.throwExceptionIfReleased();
-                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", lastTouchedPage: " + lastTouchedPage);
+                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", bytes:safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage);
                         } catch (Exception e) {
                             e.initCause(t);
                             throw e;
