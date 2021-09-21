@@ -57,11 +57,15 @@ public class QueueTestCommon {
     }
 
     public void ignoreException(String message) {
-        ignoreException(k -> k.message.contains(message) || (k.throwable != null && k.throwable.getMessage().contains(message)), message);
+        ignoreException(k -> contains(k.message, message) || (k.throwable != null && k.throwable.getMessage().contains(message)), message);
+    }
+
+    static boolean contains(String text, String message) {
+        return text != null && text.contains(message);
     }
 
     public void expectException(String message) {
-        expectException(k -> k.message.contains(message) || (k.throwable != null && k.throwable.getMessage().contains(message)), message);
+        expectException(k -> contains(k.message, message) || (k.throwable != null && contains(k.throwable.getMessage(), message)), message);
     }
 
     public void ignoreException(Predicate<ExceptionKey> predicate, String description) {
@@ -93,20 +97,15 @@ public class QueueTestCommon {
         }
     }
 
-    protected boolean hasExceptions(Map<ExceptionKey, Integer> exceptions) {
-        return Jvm.hasException(this.exceptions);
-    }
-
     @After
     public void afterChecks() {
-        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
         preAfter();
-
+        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
         CleaningThread.performCleanup(Thread.currentThread());
 
         // find any discarded resources.
         System.gc();
-        AbstractCloseable.waitForCloseablesToClose(100);
+        AbstractCloseable.waitForCloseablesToClose(1000);
 
         if (finishedNormally) {
             assertReferencesReleased();
@@ -118,7 +117,6 @@ public class QueueTestCommon {
     }
 
     protected void preAfter() {
-
     }
 
     protected void tearDown() {

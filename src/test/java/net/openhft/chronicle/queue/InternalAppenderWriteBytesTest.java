@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
@@ -16,7 +15,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
@@ -30,13 +28,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     public void before() {
         if (OS.isMacOSX())
             ignoreException(exceptionKey -> exceptionKey.clazz == DirectoryUtils.class, "Ignore DirectoryUtils");
-    }
-
-    @Override
-    protected boolean hasExceptions(Map<ExceptionKey, Integer> exceptions) {
-        // as we check for DEBUG exceptions in this test, don't call the standard Jvm.hasExceptions
-        exceptions.keySet().removeIf(k -> k.level == LogLevel.PERF);
-        return !exceptions.isEmpty();
+        ignoreException(e -> e.level == LogLevel.PERF, "ignore all PERF");
     }
 
     @Test
