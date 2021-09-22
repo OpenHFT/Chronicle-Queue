@@ -1197,8 +1197,6 @@ class StoreTailer extends AbstractCloseable
     }
 
     public void setCycle(final int cycle) {
-        throwExceptionIfClosedInSetter();
-
         this.cycle = cycle;
     }
 
