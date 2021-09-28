@@ -68,7 +68,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test
+    @Test(timeout = 5_000)
     public void testIsLockedByCurrentProcess() {
         AtomicLong actualPid = new AtomicLong(-1);
         try (final TableStoreWriteLock testLock = createTestLock()) {
@@ -109,7 +109,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test
+    @Test(timeout = 5_000)
     public void unlockWillWarnIfNotLocked() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.unlock();
@@ -181,7 +181,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test
+    @Test(timeout = 15_000)
     public void lockPreventsConcurrentAcquisition() {
         AtomicBoolean lockIsAcquired = new AtomicBoolean(false);
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 10_000)) {
@@ -202,7 +202,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test
+    @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws IOException, TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(true);
         try (TableStoreWriteLock lock = createTestLock()) {
@@ -214,7 +214,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         lockingProcess.waitFor(5_000, TimeUnit.SECONDS);
     }
 
-    @Test
+    @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws IOException, TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(false);
         try (TableStoreWriteLock lock = createTestLock()) {
@@ -226,7 +226,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test
+    @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockIsNotLocked() {
         try (TableStoreWriteLock lock = createTestLock()) {
             assertTrue(lock.forceUnlockIfProcessIsDead());
