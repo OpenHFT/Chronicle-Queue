@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 public class TableStoreWriteLockTest extends QueueTestCommon {
 
@@ -121,6 +122,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void unlockWillNotUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
+        assumeFalse("Temporarily disable - https://github.com/OpenHFT/Chronicle-Queue/issues/911", Jvm.isJava15Plus());
+
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
@@ -136,6 +139,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void forceUnlockWillUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
+        assumeFalse("Temporarily disable - https://github.com/OpenHFT/Chronicle-Queue/issues/911", Jvm.isJava15Plus());
+
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
@@ -171,6 +176,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void forceUnlockQuietlyWillUnlockWithNoWarningIfLockedByAnotherProcess() throws IOException, TimeoutException, InterruptedException {
+        assumeFalse("Temporarily disable - https://github.com/OpenHFT/Chronicle-Queue/issues/911", Jvm.isJava15Plus());
+
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
@@ -204,6 +211,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws IOException, TimeoutException, InterruptedException {
+        assumeFalse("Temporarily disable - https://github.com/OpenHFT/Chronicle-Queue/issues/911", Jvm.isJava15Plus());
+
         Process lockingProcess = runLockingProcess(true);
         try (TableStoreWriteLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
@@ -216,6 +225,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws IOException, TimeoutException, InterruptedException {
+        assumeFalse("Temporarily disable - https://github.com/OpenHFT/Chronicle-Queue/issues/911", Jvm.isJava15Plus());
+
         Process lockingProcess = runLockingProcess(false);
         try (TableStoreWriteLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);

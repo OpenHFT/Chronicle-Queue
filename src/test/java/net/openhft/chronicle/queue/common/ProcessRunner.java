@@ -33,6 +33,8 @@ public class ProcessRunner {
         allArgs.add(className);
         allArgs.addAll(Arrays.asList(args));
         ProcessBuilder processBuilder = new ProcessBuilder(allArgs.toArray(new String[]{}));
+        if (Jvm.isDebug()) // inheritIO does not work with maven - here we assume we are in the IDE if we are debugging
+            processBuilder.inheritIO();
         return processBuilder.start();
     }
 
