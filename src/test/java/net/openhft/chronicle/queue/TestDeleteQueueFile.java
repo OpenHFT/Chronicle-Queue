@@ -1,11 +1,11 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -13,174 +13,186 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
-@Ignore("flaky test - see https://github.com/OpenHFT/Chronicle-Queue/issues/908")
+
 public class TestDeleteQueueFile extends ChronicleQueueTestBase {
 
-    private Path tempQueueDir = getTmpDir().toPath();
+    private final Path tempQueueDir = getTmpDir().toPath();
 
     @Test
     public void testQueueFileDeletionWhileInUse() throws IOException {
-
         assumeFalse(OS.isWindows());
 
         SetTimeProvider timeProvider = new SetTimeProvider();
+        QueueStoreFileListener listener = new QueueStoreFileListener();
 
-        String queueName = "unitTestQueue";
-
-        QueueStoreFileListener listener = new QueueStoreFileListener(queueName);
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempQueueDir + "/" + queueName).
-                timeProvider(timeProvider).storeFileListener(listener)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
+                .timeProvider(timeProvider)
+                .storeFileListener(listener)
                 .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
 
-           // System.out.println("first index : " + queue.firstIndex());
-            Assert.assertEquals(Long.MAX_VALUE, queue.firstIndex());
+            assertEquals(Long.MAX_VALUE, queue.firstIndex());
 
-            //write 10 records should go to first day file
-            for (int i = 0; i < 10; i++) {
-                appender.writeText("test");
-            }
+            // write 10 records should go to first day file
+            writeTextAndReturnFirstIndex(appender, 10, "test");
 
-            long firstIndex = queue.firstIndex();
+            // roll to next day file
+            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
 
-            long indexAfter10Records = appender.lastIndexAppended();
-           // System.out.println("index after writing 10 records: " + indexAfter10Records);
+            // write 5 records to second roll cycle
+            long firstIndexOfSecondCycle = writeTextAndReturnFirstIndex(appender, 5, "test2");
 
-            //roll to next day file
-            timeProvider.advanceMillis(24 * 60 * 60 * 1000);
+            BackgroundResourceReleaser.releasePendingResources();
 
-            appender.writeText("test2");
-            long firstIndexOfSecondCycle = appender.lastIndexAppended();
-
-            //write 5 records in next file
-            for (int i = 0; i < 4; i++) {
-                appender.writeText("test2");
-            }
-
-            Map<String, List<String>> queueToRollFilesOnAcquireMap = listener.getQueueToRollFilesOnAcquireMap();
-            Map<String, List<String>> queueToRollFilesOnReleaseMap = listener.getQueueToRollFilesOnReleaseMap();
-
-            Assert.assertEquals(1, queueToRollFilesOnAcquireMap.size());
-            List<String> files = queueToRollFilesOnAcquireMap.get(queueName);
-            Assert.assertEquals(1, files.size());
-            String secondFile = files.get(0);
-
-            //other will have 1 as only first file is released
-            files = queueToRollFilesOnReleaseMap.get(queueName);
-            Assert.assertEquals(1, files.size());
-            String firstFile = files.get(0);
-
+            // There should be a single released file and a single acquired-but-not-released file
+            String firstFile = getOnlyItem(listener.getReleasedFiles());
+            String secondFile = getOnlyItem(listener.getAcquiredButNotReleasedFiles());
             Assert.assertNotEquals(firstFile, secondFile);
 
-            long indexAfter5Records = appender.lastIndexAppended();
-           // System.out.println("index after writing 5 records: " + indexAfter5Records);
+            long indexAfter15Records = appender.lastIndexAppended();
 
-            //now lets create one reader which will read all content
+            // now let's create one tailer which will read all content
             ExcerptTailer excerptTailer = queue.createTailer();
-            for (int i = 0; i < 10; i++) {
-                Assert.assertEquals("test", excerptTailer.readText());
-            }
+            readText(excerptTailer, 10, "test");
+            readText(excerptTailer, 5, "test2");
 
-           // System.out.println("index after reading 10 records: " + excerptTailer.index());
-            Assert.assertEquals(firstIndex, excerptTailer.index() - 10);
-            for (int i = 0; i < 5; i++) {
-                Assert.assertEquals("test2", excerptTailer.readText());
-            }
+            assertEquals(indexAfter15Records, excerptTailer.index() - 1);
 
-           // System.out.println("index after reading 5 records: " + excerptTailer.index());
-            Assert.assertEquals(indexAfter5Records, excerptTailer.index() - 1);
-
-            //lets delete first file
-           // System.out.println("Deleting first release file: " + firstFile);
-
+            // lets delete first file
             Files.delete(Paths.get(firstFile));
 
             queue.refreshDirectoryListing();
 
-            Assert.assertEquals(queue.firstIndex(), firstIndexOfSecondCycle);
+            assertEquals(queue.firstIndex(), firstIndexOfSecondCycle);
 
-            // and create a tailer it should only read
-            //data in second file
+            // and create a tailer it should only read data in second file
             ExcerptTailer excerptTailer2 = queue.createTailer();
-           // System.out.println("index before reading 5: " + excerptTailer2.index());
+            assertEquals(firstIndexOfSecondCycle, excerptTailer2.index());
+            readText(excerptTailer2, 5, "test2");
+        }
+    }
 
-            //AFTER CREATING A BRAND NEW TAILER, BELOW ASSERTION ALSO FAILS
-            //WAS EXPECTING THAT TAILER CAN READ FROM START OF QUEUE BUT INDEX IS LONG.MAX
+    @Test
+    public void firstAndLastIndicesAreRefreshedAfterSixtySeconds() throws IOException {
+        assumeFalse(OS.isWindows());
 
-            Assert.assertEquals(indexAfter5Records - 5, excerptTailer2.index() - 1);
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        QueueStoreFileListener listener = new QueueStoreFileListener();
 
-            //BELOW THROWS NPE, WAS EXPECTING THAT WE CAN READ FROM SECOND DAILY QUEUE FILE
-           // System.out.println("excerptTailer2: " + excerptTailer2.peekDocument());
-            for (int i = 0; i < 5; i++) {
-                Assert.assertEquals("test2", excerptTailer2.readText());
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
+                .timeProvider(timeProvider)
+                .storeFileListener(listener)
+                .build()) {
+
+            ExcerptAppender appender = queue.acquireAppender();
+
+            assertEquals(Long.MAX_VALUE, queue.firstIndex());
+
+            // write 10 records should go to first day file
+            writeTextAndReturnFirstIndex(appender, 10, "test");
+
+            // roll to next day file
+            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
+
+            // write 5 records to second roll cycle
+            writeTextAndReturnFirstIndex(appender, 5, "test2");
+
+            BackgroundResourceReleaser.releasePendingResources();
+
+            // There should be a single released file and a single acquired-but-not-released file
+            String firstFile = getOnlyItem(listener.getReleasedFiles());
+            String secondFile = getOnlyItem(listener.getAcquiredButNotReleasedFiles());
+            Assert.assertNotEquals(firstFile, secondFile);
+
+            final ExcerptTailer tailer = queue.createTailer();
+
+            // delete the roll cycle files
+            Files.delete(Paths.get(firstFile));
+            Files.delete(Paths.get(secondFile));
+
+            // this will throw
+            try {
+                tailer.toEnd();
+                fail("tailer.toEnd() used to fail when files were deleted under it: " + tailer.index());
+            } catch (IllegalStateException expected) {
+                // do nothing
+            }
+
+            timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65));
+
+            // this will succeed
+            assertEquals(0, tailer.toEnd().index());
+            assertEquals(0, tailer.toStart().index());
+        }
+    }
+
+    /**
+     * Write the specified text the specified number of times, return the index of the first entry written
+     */
+    private long writeTextAndReturnFirstIndex(ExcerptAppender appender, int times, String text) {
+        long firstIndex = -1;
+        for (int i = 0; i < times; i++) {
+            appender.writeText(text);
+            if (firstIndex < 0) {
+                firstIndex = appender.lastIndexAppended();
             }
         }
- }
+        return firstIndex;
+    }
 
-    final class QueueStoreFileListener implements StoreFileListener {
-
-        private String queueName;
-        private Map<String, List<String>> queueToRollFilesOnReleaseMap = new HashMap<>();
-        private Map<String, List<String>> queueToRollFilesOnAcquireMap = new HashMap<>();
-
-        public QueueStoreFileListener(String queueName) {
-            this.queueName = queueName;
+    /**
+     * Read the specified text the specified number of times
+     */
+    private void readText(ExcerptTailer tailer, int times, String text) {
+        for (int i = 0; i < times; i++) {
+            assertEquals(text, tailer.readText());
         }
+    }
+
+    /**
+     * Assert that a set contains a single item and retrieve it
+     */
+    private <T> T getOnlyItem(Set<T> files) {
+        if (files.size() != 1) {
+            throw new AssertionError("Expected a single entry, got: " + files);
+        }
+        return files.stream().findFirst().orElseThrow(() -> new AssertionError("This should never happen"));
+    }
+
+    static final class QueueStoreFileListener implements StoreFileListener {
+
+        private final Set<String> releasedFiles = new HashSet<>();
+        private final Set<String> acquiredButNotReleasedFiles = new HashSet<>();
 
         @Override
         public void onReleased(int cycle, File file) {
-           // System.out.println("onReleased called cycle: " + cycle + "file: " + file);
-
-            List<String> files = queueToRollFilesOnReleaseMap.get(queueName);
-            if (files == null) {
-                files = new ArrayList<>();
-            }
-
-            String fileAbsPath = file.getAbsolutePath();
-            if (!files.contains(fileAbsPath)) {
-                files.add(fileAbsPath);
-            }
-            queueToRollFilesOnReleaseMap.put(queueName, files);
+            System.out.println("onReleased called cycle: " + cycle + ", file: " + file);
+            releasedFiles.add(file.getAbsolutePath());
 
             //update acquire file map
-            List<String> acqfiles = queueToRollFilesOnAcquireMap.get(queueName);
-            acqfiles.remove(file.getAbsolutePath());
-            queueToRollFilesOnAcquireMap.put(queueName, acqfiles);
-
+            acquiredButNotReleasedFiles.remove(file.getAbsolutePath());
         }
 
         @Override
         public void onAcquired(int cycle, File file) {
-           // System.out.println("onAcquired called cycle: " + cycle + "file: " + file);
-
-            List<String> files = queueToRollFilesOnAcquireMap.get(queueName);
-            if (files == null) {
-                files = new ArrayList<>();
-            }
-
-            String fileAbsPath = file.getAbsolutePath();
-            if (!files.contains(fileAbsPath)) {
-                files.add(fileAbsPath);
-            }
-
-            queueToRollFilesOnAcquireMap.put(queueName, files);
-
+            System.out.println("onAcquired called cycle: " + cycle + ", file: " + file);
+            acquiredButNotReleasedFiles.add(file.getAbsolutePath());
         }
 
-        public Map<String, List<String>> getQueueToRollFilesOnAcquireMap() {
-            return queueToRollFilesOnAcquireMap;
+        public Set<String> getAcquiredButNotReleasedFiles() {
+            return acquiredButNotReleasedFiles;
         }
 
-        public Map<String, List<String>> getQueueToRollFilesOnReleaseMap() {
-            return queueToRollFilesOnReleaseMap;
+        public Set<String> getReleasedFiles() {
+            return releasedFiles;
         }
     }
 }

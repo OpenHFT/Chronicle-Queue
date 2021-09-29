@@ -174,7 +174,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             if (readOnly) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
             } else {
-                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction(), false);
+                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction(), time);
                 directoryListing.init();
             }
 
@@ -759,7 +759,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private void setFirstAndLastCycle() {
-        long now = System.currentTimeMillis();
+        long now = time.currentTimeMillis();
         if (now <= directoryListing.lastRefreshTimeMS()) {
             return;
         }

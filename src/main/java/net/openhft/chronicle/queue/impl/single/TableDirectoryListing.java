@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +22,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     private final TableStore<?> tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
-    private final boolean readOnly;
+    private final TimeProvider timeProvider;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue modCount;
@@ -31,12 +32,15 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
             final @NotNull TableStore<?> tableStore,
             final Path queuePath,
             final ToIntFunction<File> fileToCycleFunction,
-            final boolean readOnly) {
+            final TimeProvider timeProvider) {
         this.tableStore = tableStore;
         this.queuePath = queuePath;
         this.fileToCycleFunction = fileToCycleFunction;
-        this.readOnly = readOnly;
+        this.timeProvider = timeProvider;
 
+        if (tableStore.readOnly()) {
+            throw new IllegalArgumentException(getClass().getSimpleName() + " should only be used for writable queues");
+        }
         disableThreadSafetyCheck(true);
     }
 
@@ -59,11 +63,11 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     @Override
     public void refresh(final boolean force) {
 
-        if (readOnly || !force) {
+        if (!force) {
             return;
         }
 
-        lastRefreshTimeMS = System.currentTimeMillis();
+        lastRefreshTimeMS = timeProvider.currentTimeMillis();
 
         final long currentMin0 = minCycleValue.getVolatileValue();
         final long currentMax0 = maxCycleValue.getVolatileValue();
@@ -98,10 +102,6 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public void onFileCreated(final File file, final int cycle) {
-        if (readOnly) {
-            Jvm.warn().on(getClass(), "DirectoryListing is read-only, not updating listing");
-            return;
-        }
         onRoll(cycle);
     }
 

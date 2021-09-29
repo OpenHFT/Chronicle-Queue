@@ -749,7 +749,7 @@ class StoreTailer extends AbstractCloseable
                 lastCycle, queue.epoch(), false, this.store);
         this.setCycle(lastCycle);
         if (wireStore == null)
-            throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed?");
+            throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
 
         if (this.store != wireStore) {
             releaseStore();
@@ -888,7 +888,7 @@ class StoreTailer extends AbstractCloseable
                     lastCycle, queue.epoch(), false, this.store);
             this.setCycle(lastCycle);
             if (wireStore == null)
-                throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? lastCycle=" + lastCycle);
+                throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
 
             if (this.store != wireStore) {
                 releaseStore();
