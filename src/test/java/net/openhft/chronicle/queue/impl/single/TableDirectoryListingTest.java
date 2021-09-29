@@ -35,7 +35,7 @@ public class TableDirectoryListingTest extends ChronicleQueueTestBase {
         listing = new TableDirectoryListing(tablestore,
                 testDirectory.toPath(),
                 f -> Integer.parseInt(f.getName().split("\\.")[0]),
-                false);
+                System::currentTimeMillis);
         listing.init();
         tempFile = File.createTempFile("foo", "bar");
         tempFile.deleteOnExit();
