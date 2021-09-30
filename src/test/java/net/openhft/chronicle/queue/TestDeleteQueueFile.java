@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -81,7 +82,7 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void firstAndLastIndicesAreRefreshedAfterSixtySeconds() throws IOException {
+    public void firstAndLastIndicesAreRefreshedAfterForceDirectoryListingRefreshInterval() throws IOException {
         assumeFalse(OS.isWindows());
 
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -90,6 +91,7 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
                 .timeProvider(timeProvider)
                 .storeFileListener(listener)
+                .forceDirectoryListingRefreshIntervalMs(200)
                 .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
@@ -126,7 +128,7 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
                 // do nothing
             }
 
-            timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65));
+            Jvm.pause(250);
 
             // this will succeed
             assertEquals(0, tailer.toEnd().index());

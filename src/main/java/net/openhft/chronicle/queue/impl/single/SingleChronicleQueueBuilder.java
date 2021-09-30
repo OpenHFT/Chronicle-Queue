@@ -152,6 +152,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private QueueOffsetSpec queueOffsetSpec;
     private boolean doubleBuffer;
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
+    private long forceDirectoryListingRefreshIntervalMs = 60_000;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -1127,6 +1128,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public SingleChronicleQueueBuilder checkInterrupts(boolean checkInterrupts) {
         this.checkInterrupts = checkInterrupts;
+        return this;
+    }
+
+    public long forceDirectoryListingRefreshIntervalMs() {
+        return forceDirectoryListingRefreshIntervalMs;
+    }
+
+    public SingleChronicleQueueBuilder forceDirectoryListingRefreshIntervalMs(long forceDirectoryListingRefreshIntervalMs) {
+        this.forceDirectoryListingRefreshIntervalMs = forceDirectoryListingRefreshIntervalMs;
         return this;
     }
 
