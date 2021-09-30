@@ -5,6 +5,8 @@ import net.openhft.chronicle.core.Jvm;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,11 +25,18 @@ public class ProcessRunner {
      * @throws IOException if there is an error starting the process
      */
     public static Process runClass(Class<?> clazz, String... args) throws IOException {
+        // Because Java17 must be run using various module flags, these must be propagated
+        // to the child processes
+        // https://stackoverflow.com/questions/1490869/how-to-get-vm-arguments-from-inside-of-java-application
+        final RuntimeMXBean runtimeMxBean = ManagementFactory.getRuntimeMXBean();
+        final List<String> jvmArguments = runtimeMxBean.getInputArguments();
+
         String classPath = System.getProperty("java.class.path");
         String className = clazz.getName();
         String javaBin = findJavaBinPath().toString();
         List<String> allArgs = new ArrayList<>();
         allArgs.add(javaBin);
+        allArgs.addAll(jvmArguments);
         allArgs.add("-cp");
         allArgs.add(classPath);
         allArgs.add(className);
