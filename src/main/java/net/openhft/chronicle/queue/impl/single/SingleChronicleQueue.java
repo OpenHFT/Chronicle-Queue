@@ -125,6 +125,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
+    private final long forceDirectoryListingRefreshIntervalMs;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -168,7 +169,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             if (readOnly) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
             } else {
-                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction(), time);
+                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction());
                 directoryListing.init();
             }
 
@@ -192,6 +193,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
 
             this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
+            this.forceDirectoryListingRefreshIntervalMs = builder.forceDirectoryListingRefreshIntervalMs();
 
             sourceId = builder.sourceId();
 
@@ -747,12 +749,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private void setFirstAndLastCycle() {
-        long now = time.currentTimeMillis();
+        long now = System.currentTimeMillis();
         if (now <= directoryListing.lastRefreshTimeMS()) {
             return;
         }
 
-        boolean force = now - directoryListing.lastRefreshTimeMS() > 60_000;
+        boolean force = now - directoryListing.lastRefreshTimeMS() > forceDirectoryListingRefreshIntervalMs;
         directoryListing.refresh(force);
     }
 
