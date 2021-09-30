@@ -22,7 +22,6 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     private final TableStore<?> tableStore;
     private final Path queuePath;
     private final ToIntFunction<File> fileToCycleFunction;
-    private final TimeProvider timeProvider;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue modCount;
@@ -31,12 +30,10 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     TableDirectoryListing(
             final @NotNull TableStore<?> tableStore,
             final Path queuePath,
-            final ToIntFunction<File> fileToCycleFunction,
-            final TimeProvider timeProvider) {
+            final ToIntFunction<File> fileToCycleFunction) {
         this.tableStore = tableStore;
         this.queuePath = queuePath;
         this.fileToCycleFunction = fileToCycleFunction;
-        this.timeProvider = timeProvider;
 
         if (tableStore.readOnly()) {
             throw new IllegalArgumentException(getClass().getSimpleName() + " should only be used for writable queues");
@@ -67,7 +64,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
             return;
         }
 
-        lastRefreshTimeMS = timeProvider.currentTimeMillis();
+        lastRefreshTimeMS = System.currentTimeMillis();
 
         final long currentMin0 = minCycleValue.getVolatileValue();
         final long currentMax0 = maxCycleValue.getVolatileValue();
