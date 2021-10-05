@@ -10,7 +10,7 @@ image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="ht
 //image:https://javadoc-badge.appspot.com/net.openhft/chronicle-queue.svg?label=javadoc[JavaDoc, link=https://www.javadoc.io/doc/net.openhft/chronicle-queue]
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
-image:https://img.shields.io/badge/release%20notes-subscribe-brightgreen[link=”https://chronicle.software/release-notes/”]
+image:https://img.shields.io/badge/release%20notes-subscribe-brightgreen[link="https://chronicle.software/release-notes/"]
 
 image::docs/images/Queue_line.png[]
 
