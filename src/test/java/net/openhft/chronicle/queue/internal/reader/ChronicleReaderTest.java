@@ -258,7 +258,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         String first = capturedOutput.poll();
         assertTrue(first.startsWith("0x"));
         String second = capturedOutput.poll();
-        assertTrue(second, second.matches("VanillaMessageHistory.sources: .. timings: .[0-9]+. addSourceDetails=false}\n" +
+        assertTrue(second, second.matches("VanillaMessageHistory.sources: .. timings: .[0-9]+. addSourceDetails=false}" +
+                System.lineSeparator() +
                 "say: hello\n" +
                 "...\n"));
     }
