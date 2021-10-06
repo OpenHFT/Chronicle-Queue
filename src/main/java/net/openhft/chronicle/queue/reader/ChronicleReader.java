@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.bytes.MethodWriterBuilder;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -31,10 +32,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -112,6 +110,7 @@ public class ChronicleReader implements Reader {
             try (final ChronicleQueue queue = createQueue();
                  final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
                 final ExcerptTailer tailer = queue.createTailer();
+                MessageHistory.set(new VanillaMessageHistory());
 
                 tlTailer = ThreadLocal.withInitial(queue::createTailer);
 
@@ -130,14 +129,23 @@ public class ChronicleReader implements Reader {
                         } else {
                             // TODO: consider unifying this with messageConverter
                             Bytes<ByteBuffer> bytes = Bytes.elasticHeapByteBuffer(256);
-                            Object writer = wireType.apply(bytes).methodWriter(methodReaderInterface);
-                            MethodReader methodReader = tailer.methodReader(writer);
+                            Wire wire = wireType.apply(bytes);
+                            if (wire instanceof TextWire)
+                                ((TextWire)wire).useTextDocuments();
+                            MethodWriterBuilder<?> mwb = wire.methodWriterBuilder(methodReaderInterface);
+                            if (showMessageHistory)
+                                mwb.updateInterceptor((methodName, t) -> {
+                                    MessageHistory messageHistory = MessageHistory.get();
+                                    // this is an attempt to recognise that no MH was read and instead the method reader called reset(...) on it
+                                    if (messageHistory.sources() != 1 || messageHistory.timings() != 1)
+                                        bytes.append(messageHistory + System.lineSeparator());
+                                    return true;
+                                });
+                            MethodReader methodReader = tailer.methodReader(mwb.build());
                             readOne = () -> {
                                 boolean found = methodReader.readOne();
-                                if (found) {
-                                    String msg = showMessageHistory ? (MessageHistory.get().toString() + System.lineSeparator()) : "";
-                                    messageConsumer.accept(msg + bytes);
-                                }
+                                if (found)
+                                    messageConsumer.accept(bytes.toString());
                                 bytes.clear();
                                 return found;
                             };

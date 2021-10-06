@@ -255,7 +255,12 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 showMessageHistory(true).
                 execute();
 
-        assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("MessageHistory")));
+        String first = capturedOutput.poll();
+        assertTrue(first.startsWith("0x"));
+        String second = capturedOutput.poll();
+        assertTrue(second, second.matches("VanillaMessageHistory.sources: .. timings: .[0-9]+. addSourceDetails=false}\n" +
+                "say: hello\n" +
+                "...\n"));
     }
 
     @Test(timeout = 5000)

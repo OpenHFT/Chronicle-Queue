@@ -293,7 +293,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * when using replication to another host, this is the maxiumum last index that has been sent to any of the remote host(s).
+     * when using replication to another host, this is the maximum last index that has been sent to any of the remote host(s).
      */
     @Override
     public long lastIndexReplicated() {
