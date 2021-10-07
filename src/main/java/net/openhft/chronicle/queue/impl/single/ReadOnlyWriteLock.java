@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import java.util.function.LongConsumer;
+
 public class ReadOnlyWriteLock implements WriteLock {
     @Override
     public void lock() {
@@ -30,5 +32,16 @@ public class ReadOnlyWriteLock implements WriteLock {
 
     @Override
     public void close() {
+    }
+
+    @Override
+    public boolean forceUnlockIfProcessIsDead() {
+        throw new IllegalStateException("Queue is read-only");
+    }
+
+    @Override
+    public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
+        notCurrentProcessConsumer.accept(Long.MAX_VALUE);
+        return false;
     }
 }
