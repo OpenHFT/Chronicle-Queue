@@ -127,7 +127,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     protected int sourceId;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
-    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::newAppender);
+    protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::createNewAppenderOnceConditionIsMet);
     private final long forceDirectoryListingRefreshIntervalMs;
     private long[] chunkCount = {0};
 
@@ -439,14 +439,35 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return this.eventLoop;
     }
 
+    /**
+     * Construct a new {@link ExcerptAppender} once the {@link #createAppenderCondition} is met.
+     * <p>
+     * This should be called by any sub-classes that require an appender but don't want to use
+     * the thread-local one that can be acquired via {@link #acquireAppender()}
+     *
+     * @return The new appender
+     */
     @NotNull
-    protected ExcerptAppender newAppender() {
+    protected ExcerptAppender createNewAppenderOnceConditionIsMet() {
         try {
             createAppenderCondition.await();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new InterruptedRuntimeException("Interrupted waiting for condition to create appender", e);
         }
+        return constructAppender();
+    }
+
+    /**
+     * Construct a new {@link ExcerptAppender}.
+     * <p>
+     * This is protected so sub-classes can override the creation of an appender,
+     * to create a new appender, sub-classes should call {@link #createNewAppenderOnceConditionIsMet()}
+     *
+     * @return The new appender
+     */
+    @NotNull
+    protected ExcerptAppender constructAppender() {
         final WireStorePool newPool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
         return new StoreAppender(this, newPool, checkInterrupts);
     }
@@ -470,7 +491,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         ExcerptAppender res = strongExcerptAppenderThreadLocal.get();
 
         if (res.isClosing())
-            strongExcerptAppenderThreadLocal.set(res = newAppender());
+            strongExcerptAppenderThreadLocal.set(res = createNewAppenderOnceConditionIsMet());
 
         return res;
     }
