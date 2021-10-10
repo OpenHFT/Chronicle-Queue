@@ -62,7 +62,7 @@ The set of hosts onto which the queue is replicated, is defined as a `cluster`. 
 ```
 
 In the configuration shown above, the queue, `queue1`, is set to be replicated from `host1`
-(as indicated by `masterId`) to all other hosts defined for the cluster, without acknowledgemnt.
+(as indicated by `masterId`) to all other hosts defined for the cluster, without acknowledgement.
 
 Queues will use storage paths defined by `baseSourcePath` and `baseSinkPath` for `source` and `sink`, respectively, followed by the queue name. For this example, the `source` queue will be at `replica/source/queue1`, while the `sink` will be written to `replica/sink/queue1`.
 
@@ -154,7 +154,7 @@ This is the default configuration for replication and is configured by setting
 `software.chronicle.enterprise.queue.config.ReplicatedQueueCfg.acknowledge` false, and no
 custom config on tailers or appenders.
 
-==== Local tailer will only see messages which have been replicated,
+==== Local tailer will only see messages which have been replicated
 This is enabled with `net.openhft.chronicle.queue.ExcerptTailer.readAfterReplicaAcknowledged(boolean)`
 and setting this to true on a source queue ensures that the tailer will not read until at least one of
 the sinks has acknowledged receipt of the excerpt. This will block forever if no sinks acknowledge receipt.
