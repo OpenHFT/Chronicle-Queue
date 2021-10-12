@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.jetbrains.annotations.NotNull;
@@ -17,11 +16,13 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String MOD_COUNT = "listing.modCount";
-    private static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
-    private static final int UNSET_MIN_CYCLE = Integer.MAX_VALUE;
+    static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
+    static final int UNSET_MIN_CYCLE = Integer.MAX_VALUE;
+    static final String INITIAL_MIN_FILENAME = Character.toString(Character.MAX_VALUE);
+    static final String INITIAL_MAX_FILENAME = Character.toString(Character.MIN_VALUE);
     private final TableStore<?> tableStore;
     private final Path queuePath;
-    private final ToIntFunction<File> fileToCycleFunction;
+    private final ToIntFunction<String> fileNameToCycleFunction;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue modCount;
@@ -30,10 +31,10 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
     TableDirectoryListing(
             final @NotNull TableStore<?> tableStore,
             final Path queuePath,
-            final ToIntFunction<File> fileToCycleFunction) {
+            final ToIntFunction<String> fileNameToCycleFunction) {
         this.tableStore = tableStore;
         this.queuePath = queuePath;
-        this.fileToCycleFunction = fileToCycleFunction;
+        this.fileNameToCycleFunction = fileNameToCycleFunction;
 
         if (tableStore.readOnly()) {
             throw new IllegalArgumentException(getClass().getSimpleName() + " should only be used for writable queues");
@@ -74,20 +75,33 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
             tableStore.throwExceptionIfClosed();
             Jvm.safepoint();
             final long currentMax = maxCycleValue.getVolatileValue();
-            Jvm.safepoint();
-            final File[] queueFiles = queuePath.toFile().
-                    listFiles((d, f) -> f.endsWith(SingleChronicleQueue.SUFFIX));
-            int min = UNSET_MIN_CYCLE;
-            int max = UNSET_MAX_CYCLE;
-            if (queueFiles != null) {
-                for (File queueFile : queueFiles) {
-                    int cycle = fileToCycleFunction.applyAsInt(queueFile);
-                    min = Math.min(cycle, min);
-                    max = Math.max(cycle, max);
+
+            final String[] fileNamesList = queuePath.toFile().list();
+            String minFilename = INITIAL_MIN_FILENAME;
+            String maxFilename = INITIAL_MAX_FILENAME;
+            if (fileNamesList != null) {
+                for (String fileName : fileNamesList) {
+                    if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
+                        if (minFilename.compareTo(fileName) > 0)
+                            minFilename = fileName;
+
+                        if (maxFilename.compareTo(fileName) < 0)
+                            maxFilename = fileName;
+                    }
                 }
             }
+
+            int min = UNSET_MIN_CYCLE;
+            if (!INITIAL_MIN_FILENAME.equals(minFilename))
+                min = fileNameToCycleFunction.applyAsInt(minFilename);
+
+            int max = UNSET_MAX_CYCLE;
+            if (!INITIAL_MAX_FILENAME.equals(maxFilename))
+                max = fileNameToCycleFunction.applyAsInt(maxFilename);
+
             if (currentMin0 == min && currentMax0 == max)
                 return;
+
             minCycleValue.setOrderedValue(min);
             if (maxCycleValue.compareAndSwapValue(currentMax, max)) {
                 modCount.addAtomicValue(1);
