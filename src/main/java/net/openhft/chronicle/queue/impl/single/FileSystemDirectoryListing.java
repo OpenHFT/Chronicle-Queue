@@ -5,17 +5,19 @@ import net.openhft.chronicle.core.io.SimpleCloseable;
 import java.io.File;
 import java.util.function.ToIntFunction;
 
+import static net.openhft.chronicle.queue.impl.single.TableDirectoryListing.*;
+
 final class FileSystemDirectoryListing extends SimpleCloseable implements DirectoryListing {
     private final File queueDir;
-    private final ToIntFunction<File> fileToCycleFunction;
+    private final ToIntFunction<String> fileNameToCycleFunction;
     private int minCreatedCycle = Integer.MAX_VALUE;
     private int maxCreatedCycle = Integer.MIN_VALUE;
     private long lastRefreshTimeMS;
 
     FileSystemDirectoryListing(final File queueDir,
-                               final ToIntFunction<File> fileToCycleFunction) {
+                               final ToIntFunction<String> fileNameToCycleFunction) {
         this.queueDir = queueDir;
-        this.fileToCycleFunction = fileToCycleFunction;
+        this.fileNameToCycleFunction = fileNameToCycleFunction;
     }
 
     @Override
@@ -26,18 +28,32 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     @Override
     public void refresh(boolean force) {
         lastRefreshTimeMS = System.currentTimeMillis();
-        int minCycle = Integer.MAX_VALUE;
-        int maxCycle = Integer.MIN_VALUE;
-        final File[] files = queueDir.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
-        if (files != null) {
-            for (File file : files) {
-                int cycle = fileToCycleFunction.applyAsInt(file);
-                minCycle = Math.min(minCycle, cycle);
-                maxCycle = Math.max(maxCycle, cycle);
+
+        final String[] fileNamesList = queueDir.list();
+        String minFilename = INITIAL_MIN_FILENAME;
+        String maxFilename = INITIAL_MAX_FILENAME;
+        if (fileNamesList != null) {
+            for (String fileName : fileNamesList) {
+                if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
+                    if (minFilename.compareTo(fileName) > 0)
+                        minFilename = fileName;
+
+                    if (maxFilename.compareTo(fileName) < 0)
+                        maxFilename = fileName;
+                }
             }
         }
-        minCreatedCycle = minCycle;
-        maxCreatedCycle = maxCycle;
+
+        int min = UNSET_MIN_CYCLE;
+        if (!INITIAL_MIN_FILENAME.equals(minFilename))
+            min = fileNameToCycleFunction.applyAsInt(minFilename);
+
+        int max = UNSET_MAX_CYCLE;
+        if (!INITIAL_MAX_FILENAME.equals(maxFilename))
+            max = fileNameToCycleFunction.applyAsInt(maxFilename);
+
+        minCreatedCycle = min;
+        maxCreatedCycle = max;
     }
 
     @Override
