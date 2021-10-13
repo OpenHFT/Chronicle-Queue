@@ -30,6 +30,8 @@ public interface RollCycle {
      *     <li>"yyyyMMdd-HHmm" (MINUTELY)</li>
      *     <li>"yyyyMMdd" (DAILY)</li>
      * </ul>
+     * Lexicographical order of formatted cycles must preserve chronological order, i.e. if cycle1 < cycle2,
+     * the same relation must be kept for their string representations.
      *
      * @return the format that is to be applied when file names are calculated for a new roll cycle
      */

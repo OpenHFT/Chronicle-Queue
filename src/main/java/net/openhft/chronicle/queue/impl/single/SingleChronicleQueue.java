@@ -173,9 +173,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
 
             if (readOnly) {
-                this.directoryListing = new FileSystemDirectoryListing(path, fileToCycleFunction());
+                this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction());
             } else {
-                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileToCycleFunction());
+                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileNameToCycleFunction());
                 directoryListing.init();
             }
 
@@ -812,8 +812,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return directoryListing.getMaxCreatedCycle();
     }
 
+    @Deprecated(/* to be removed in x.23 */)
     protected int fileToCycle(final File queueFile) {
-        return fileToCycleFunction().applyAsInt(queueFile);
+        return fileNameToCycleFunction().applyAsInt(queueFile.getName());
     }
 
     @NotNull
@@ -872,11 +873,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     @NotNull
-    private ToIntFunction<File> fileToCycleFunction() {
-        return f -> {
-            final String name = f.getName();
-            return dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
-        };
+    private ToIntFunction<String> fileNameToCycleFunction() {
+        return name -> dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
     }
 
     void removeCloseListener(final StoreTailer storeTailer) {
