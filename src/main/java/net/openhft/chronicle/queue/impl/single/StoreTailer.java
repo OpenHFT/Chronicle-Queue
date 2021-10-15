@@ -687,9 +687,7 @@ class StoreTailer extends AbstractCloseable
         return scanResult;
     }
 
-    @NotNull
-    @Override
-    public final ExcerptTailer toStart() {
+    private ExcerptTailer doToStart() {
         assert direction != BACKWARD;
         final int firstCycle = queue.firstCycle();
         if (firstCycle == Integer.MAX_VALUE) {
@@ -700,9 +698,10 @@ class StoreTailer extends AbstractCloseable
         if (firstCycle != this.cycle) {
             // moves to the expected cycle
             final boolean found = cycle(firstCycle);
-            assert found || store == null;
             if (found)
                 state = FOUND_IN_CYCLE;
+            else if (store != null)
+                throw new MissingStoreFileException("Missing first store file cycle=" + firstCycle);
         }
         index(queue.rollCycle().toIndex(cycle, 0));
 
@@ -713,6 +712,17 @@ class StoreTailer extends AbstractCloseable
             address = wire.bytes().addressForRead(0);
         }
         return this;
+    }
+
+    @NotNull
+    @Override
+    public final ExcerptTailer toStart() {
+        try {
+            return doToStart();
+        } catch (MissingStoreFileException e) {
+            queue.refreshDirectoryListing();
+            return doToStart();
+        }
     }
 
     private boolean moveToIndexInternal(final long index) {
@@ -749,7 +759,7 @@ class StoreTailer extends AbstractCloseable
                 lastCycle, queue.epoch(), false, this.store);
         this.setCycle(lastCycle);
         if (wireStore == null)
-            throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
+            throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
 
         if (this.store != wireStore) {
             releaseStore();
@@ -769,7 +779,7 @@ class StoreTailer extends AbstractCloseable
                 lastCycle--;
                 try {
                     return approximateLastCycle2(lastCycle);
-                } catch (IllegalStateException e) {
+                } catch (MissingStoreFileException e) {
                     // try again.
                 }
             }
@@ -837,7 +847,16 @@ class StoreTailer extends AbstractCloseable
             return callOriginalToEnd();
         }
 
-        return optimizedToEnd();
+        return callOptimizedToEnd();
+    }
+
+    private ExcerptTailer callOptimizedToEnd() {
+        try {
+            return optimizedToEnd();
+        } catch (MissingStoreFileException e) {
+            queue.refreshDirectoryListing();
+            return optimizedToEnd();
+        }
     }
 
     @NotNull
@@ -888,7 +907,7 @@ class StoreTailer extends AbstractCloseable
                     lastCycle, queue.epoch(), false, this.store);
             this.setCycle(lastCycle);
             if (wireStore == null)
-                throw new IllegalStateException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
+                throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
 
             if (this.store != wireStore) {
                 releaseStore();
@@ -919,7 +938,6 @@ class StoreTailer extends AbstractCloseable
     }
 
     @NotNull
-
     public ExcerptTailer originalToEnd() {
         throwExceptionIfClosed();
 

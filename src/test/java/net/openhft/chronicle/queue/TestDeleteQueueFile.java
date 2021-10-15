@@ -2,11 +2,14 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -14,134 +17,255 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
 public class TestDeleteQueueFile extends ChronicleQueueTestBase {
 
+    private static final int NUM_REPEATS = 10;
     private final Path tempQueueDir = getTmpDir().toPath();
 
     @Test
-    public void testQueueFileDeletionWhileInUse() throws IOException {
+    public void testRefreshDirectoryListingWillUpdateFirstAndLastIndicesCorrectly() throws IOException {
         assumeFalse(OS.isWindows());
 
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        QueueStoreFileListener listener = new QueueStoreFileListener();
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
-                .timeProvider(timeProvider)
-                .storeFileListener(listener)
-                .build()) {
+            // delete the first and last files
+            Files.delete(Paths.get(queueWithCycleDetails.rollCycles.get(0).filename));
+            Files.delete(Paths.get(queueWithCycleDetails.rollCycles.get(2).filename));
 
-            ExcerptAppender appender = queue.acquireAppender();
-
-            assertEquals(Long.MAX_VALUE, queue.firstIndex());
-
-            // write 10 records should go to first day file
-            writeTextAndReturnFirstIndex(appender, 10, "test");
-
-            // roll to next day file
-            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
-
-            // write 5 records to second roll cycle
-            long firstIndexOfSecondCycle = writeTextAndReturnFirstIndex(appender, 5, "test2");
-
-            BackgroundResourceReleaser.releasePendingResources();
-
-            // There should be a single released file and a single acquired-but-not-released file
-            String firstFile = getOnlyItem(listener.getReleasedFiles());
-            String secondFile = getOnlyItem(listener.getAcquiredButNotReleasedFiles());
-            Assert.assertNotEquals(firstFile, secondFile);
-
-            long indexAfter15Records = appender.lastIndexAppended();
-
-            // now let's create one tailer which will read all content
-            ExcerptTailer excerptTailer = queue.createTailer();
-            readText(excerptTailer, 10, "test");
-            readText(excerptTailer, 5, "test2");
-
-            assertEquals(indexAfter15Records, excerptTailer.index() - 1);
-
-            // lets delete first file
-            Files.delete(Paths.get(firstFile));
-
+            final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             queue.refreshDirectoryListing();
 
-            assertEquals(queue.firstIndex(), firstIndexOfSecondCycle);
+            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            assertEquals(Long.toHexString(secondCycle.firstIndex), Long.toHexString(queue.firstIndex()));
+            assertEquals(Long.toHexString(secondCycle.lastIndex), Long.toHexString(queue.lastIndex()));
 
             // and create a tailer it should only read data in second file
             ExcerptTailer excerptTailer2 = queue.createTailer();
-            assertEquals(firstIndexOfSecondCycle, excerptTailer2.index());
-            readText(excerptTailer2, 5, "test2");
+            assertEquals(Long.toHexString(secondCycle.firstIndex), Long.toHexString(excerptTailer2.index()));
+            readText(excerptTailer2, "test2");
         }
     }
 
     @Test
-    public void firstAndLastIndicesAreRefreshedAfterForceDirectoryListingRefreshInterval() throws IOException {
+    public void tailerToStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
+
+            final SingleChronicleQueue queue = queueWithCycleDetails.queue;
+            RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
+            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            // while the queue is intact
+            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(tailer.toStart().index()));
+            assertEquals(Long.toHexString(thirdCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
+
+            // delete the first store
+            Files.delete(Paths.get(firstCycle.filename));
+
+            // should be at correct index
+            assertEquals(Long.toHexString(secondCycle.firstIndex), Long.toHexString(tailer.toStart().index()));
+        }
+    }
+
+    @Ignore("still doesn't work")
+    @Test
+    public void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
+        assumeFalse(OS.isWindows());
+
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
+
+            final SingleChronicleQueue queue = queueWithCycleDetails.queue;
+            RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
+            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            // while the queue is intact
+            assertEquals(Long.toHexString(thirdCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
+            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(tailer.toStart().index()));
+
+            // delete the first store
+            Files.delete(Paths.get(firstCycle.filename));
+
+            // should be at correct index
+            assertEquals(Long.toHexString(secondCycle.firstIndex), Long.toHexString(tailer.toStart().index()));
+        }
+    }
+
+    @Test
+    public void tailerToEndWorksInFaceOfDeletedStoreFile() throws IOException {
+        assumeFalse(OS.isWindows());
+
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
+
+            final SingleChronicleQueue queue = queueWithCycleDetails.queue;
+            RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
+            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            // while the queue is intact
+            assertEquals(Long.toHexString(thirdCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
+            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(tailer.toStart().index()));
+
+            // delete the last store
+            Files.delete(Paths.get(thirdCycle.filename));
+
+            // should be at correct index
+            assertEquals(Long.toHexString(secondCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
+        }
+    }
+
+    @Test
+    public void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
+        assumeFalse(OS.isWindows());
+
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
+
+            final SingleChronicleQueue queue = queueWithCycleDetails.queue;
+            RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
+            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            // while the queue is intact
+            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(tailer.toStart().index()));
+            assertEquals(Long.toHexString(thirdCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
+
+            // delete the last store
+            Files.delete(Paths.get(thirdCycle.filename));
+
+            // should be at correct index
+            assertEquals(Long.toHexString(secondCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
+        }
+    }
+
+    @Test
+    public void firstAndLastIndexAreRefreshedAfterForceRefreshInterval() throws IOException {
+        assumeFalse(OS.isWindows());
+
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, builder -> builder.forceDirectoryListingRefreshIntervalMs(250))) {
+
+            final SingleChronicleQueue queue = queueWithCycleDetails.queue;
+            RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
+            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            // while the queue is intact
+            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(tailer.toStart().index()));
+            assertEquals(Long.toHexString(thirdCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
+
+            // delete the first store
+            Files.delete(Paths.get(firstCycle.filename));
+
+            // using old cached value
+            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(queue.firstIndex()));
+            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(queue.firstIndex()));
+
+            // wait for cache to expire
+            Jvm.pause(260);
+
+            // using correct value
+            assertEquals(Long.toHexString(secondCycle.firstIndex), Long.toHexString(queue.firstIndex()));
+        }
+    }
+
+    /**
+     * Create a queue with N roll cycles
+     *
+     * @param numberOfCycles  The number of cycles to create
+     * @param builderConsumer A consumer that can optionally modify the queue settings
+     * @return The queue and the details of the roll cycles created
+     */
+    private QueueWithCycleDetails createQueueWithNRollCycles(int numberOfCycles, Consumer<SingleChronicleQueueBuilder> builderConsumer) {
         SetTimeProvider timeProvider = new SetTimeProvider();
         QueueStoreFileListener listener = new QueueStoreFileListener();
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
+        final SingleChronicleQueueBuilder queueBuilder = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
                 .timeProvider(timeProvider)
-                .storeFileListener(listener)
-                .forceDirectoryListingRefreshIntervalMs(200)
-                .build()) {
+                .storeFileListener(listener);
+        if (builderConsumer != null) {
+            builderConsumer.accept(queueBuilder);
+        }
+        SingleChronicleQueue queue = queueBuilder
+                .build();
 
-            ExcerptAppender appender = queue.acquireAppender();
+        ExcerptAppender appender = queue.acquireAppender();
 
-            assertEquals(Long.MAX_VALUE, queue.firstIndex());
+        assertEquals(Long.MAX_VALUE, queue.firstIndex());
 
-            // write 10 records should go to first day file
-            writeTextAndReturnFirstIndex(appender, 10, "test");
+        final List<RollCycleDetails> rollCycleDetails = IntStream.range(0, numberOfCycles)
+                .mapToObj(i -> {
+                    // write 10 records should go to first day file
+                    long firstIndexInCycle = writeTextAndReturnFirstIndex(appender, "test" + (i + 1));
+                    long lastIndexInCycle = appender.lastIndexAppended();
+//                    assertEquals("Something weird happened, last cycle was unexpected", i, listener.lastCycleAcquired);
+                    timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
+                    return new RollCycleDetails(firstIndexInCycle, lastIndexInCycle, listener.lastFileAcquired.getAbsolutePath());
+                }).collect(Collectors.toList());
 
-            // roll to next day file
-            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
+        // There should be 3 acquired files, for roll cycles 1, 2, 3
+        Assert.assertEquals(numberOfCycles, rollCycleDetails.size());
 
-            // write 5 records to second roll cycle
-            writeTextAndReturnFirstIndex(appender, 5, "test2");
+        // now let's create one tailer which will read all content
+        ExcerptTailer excerptTailer = queue.createTailer();
+        for (int i = 0; i < numberOfCycles; i++) {
+            readText(excerptTailer, "test" + (i + 1));
+        }
 
-            BackgroundResourceReleaser.releasePendingResources();
+        return new QueueWithCycleDetails(queue, rollCycleDetails);
+    }
 
-            // There should be a single released file and a single acquired-but-not-released file
-            String firstFile = getOnlyItem(listener.getReleasedFiles());
-            String secondFile = getOnlyItem(listener.getAcquiredButNotReleasedFiles());
-            Assert.assertNotEquals(firstFile, secondFile);
+    static class QueueWithCycleDetails extends AbstractCloseable {
+        final SingleChronicleQueue queue;
+        final List<RollCycleDetails> rollCycles;
 
-            final ExcerptTailer tailer = queue.createTailer();
+        QueueWithCycleDetails(SingleChronicleQueue queue, List<RollCycleDetails> rollCycles) {
+            this.queue = queue;
+            this.rollCycles = rollCycles;
+        }
 
-            // delete the roll cycle files
-            Files.delete(Paths.get(firstFile));
-            Files.delete(Paths.get(secondFile));
+        @Override
+        protected void performClose() throws IllegalStateException {
+            Closeable.closeQuietly(queue);
+        }
+    }
 
-            // this will throw
-            try {
-                tailer.toEnd();
-                fail("tailer.toEnd() used to fail when files were deleted under it: " + tailer.index());
-            } catch (IllegalStateException expected) {
-                // do nothing
-            }
+    static class RollCycleDetails {
+        final long firstIndex;
+        final long lastIndex;
+        final String filename;
 
-            Jvm.pause(250);
-
-            // this will succeed
-            assertEquals(0, tailer.toEnd().index());
-            assertEquals(0, tailer.toStart().index());
+        RollCycleDetails(long firstIndex, long lastIndex, String filename) {
+            this.firstIndex = firstIndex;
+            this.lastIndex = lastIndex;
+            this.filename = filename;
         }
     }
 
     /**
      * Write the specified text the specified number of times, return the index of the first entry written
      */
-    private long writeTextAndReturnFirstIndex(ExcerptAppender appender, int times, String text) {
+    private long writeTextAndReturnFirstIndex(ExcerptAppender appender, String text) {
         long firstIndex = -1;
-        for (int i = 0; i < times; i++) {
+        for (int i = 0; i < NUM_REPEATS; i++) {
             appender.writeText(text);
             if (firstIndex < 0) {
                 firstIndex = appender.lastIndexAppended();
@@ -153,48 +277,26 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
     /**
      * Read the specified text the specified number of times
      */
-    private void readText(ExcerptTailer tailer, int times, String text) {
-        for (int i = 0; i < times; i++) {
+    private void readText(ExcerptTailer tailer, String text) {
+        for (int i = 0; i < NUM_REPEATS; i++) {
             assertEquals(text, tailer.readText());
         }
     }
 
-    /**
-     * Assert that a set contains a single item and retrieve it
-     */
-    private <T> T getOnlyItem(Set<T> files) {
-        if (files.size() != 1) {
-            throw new AssertionError("Expected a single entry, got: " + files);
-        }
-        return files.stream().findFirst().orElseThrow(() -> new AssertionError("This should never happen"));
-    }
-
     static final class QueueStoreFileListener implements StoreFileListener {
 
-        private final Set<String> releasedFiles = new HashSet<>();
-        private final Set<String> acquiredButNotReleasedFiles = new HashSet<>();
+        private File lastFileAcquired;
+        private int lastCycleAcquired;
 
         @Override
         public void onReleased(int cycle, File file) {
-            System.out.println("onReleased called cycle: " + cycle + ", file: " + file);
-            releasedFiles.add(file.getAbsolutePath());
-
-            //update acquire file map
-            acquiredButNotReleasedFiles.remove(file.getAbsolutePath());
         }
 
         @Override
         public void onAcquired(int cycle, File file) {
             System.out.println("onAcquired called cycle: " + cycle + ", file: " + file);
-            acquiredButNotReleasedFiles.add(file.getAbsolutePath());
-        }
-
-        public Set<String> getAcquiredButNotReleasedFiles() {
-            return acquiredButNotReleasedFiles;
-        }
-
-        public Set<String> getReleasedFiles() {
-            return releasedFiles;
+            lastCycleAcquired = cycle;
+            lastFileAcquired = file;
         }
     }
 }
