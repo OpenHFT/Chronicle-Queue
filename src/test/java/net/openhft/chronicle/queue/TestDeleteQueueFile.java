@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
@@ -213,11 +214,10 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
 
         final List<RollCycleDetails> rollCycleDetails = IntStream.range(0, numberOfCycles)
                 .mapToObj(i -> {
-                    // write 10 records should go to first day file
                     long firstIndexInCycle = writeTextAndReturnFirstIndex(appender, "test" + (i + 1));
                     long lastIndexInCycle = appender.lastIndexAppended();
-//                    assertEquals("Something weird happened, last cycle was unexpected", i, listener.lastCycleAcquired);
                     timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
+                    BackgroundResourceReleaser.releasePendingResources();
                     return new RollCycleDetails(firstIndexInCycle, lastIndexInCycle, listener.lastFileAcquired.getAbsolutePath());
                 }).collect(Collectors.toList());
 
@@ -286,7 +286,6 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
     static final class QueueStoreFileListener implements StoreFileListener {
 
         private File lastFileAcquired;
-        private int lastCycleAcquired;
 
         @Override
         public void onReleased(int cycle, File file) {
@@ -295,7 +294,6 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
         @Override
         public void onAcquired(int cycle, File file) {
             System.out.println("onAcquired called cycle: " + cycle + ", file: " + file);
-            lastCycleAcquired = cycle;
             lastFileAcquired = file;
         }
     }
