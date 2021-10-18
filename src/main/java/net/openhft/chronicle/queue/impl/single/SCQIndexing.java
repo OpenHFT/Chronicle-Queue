@@ -40,6 +40,7 @@ import java.io.StreamCorruptedException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
@@ -64,6 +65,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     private final WriteMarshallable index2IndexTemplate;
     @NotNull
     private final WriteMarshallable indexTemplate;
+    /** Extracted as field to prevent lambda creation on every method reference pass. */
+    private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
+
     LongValue writePosition;
     Sequence sequence;
     // visible for testing
@@ -116,12 +120,12 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     @NotNull
     private LongArrayValuesHolder getIndex2IndexArray() {
-        return ThreadLocalHelper.getTL(index2indexArray, longArraySupplier, this::newLogArrayValuesHolder);
+        return ThreadLocalHelper.getTL(index2indexArray, longArraySupplier, arrayValuesSupplierCall);
     }
 
     @NotNull
     private LongArrayValuesHolder getIndexArray() {
-        return ThreadLocalHelper.getTL(indexArray, longArraySupplier, this::newLogArrayValuesHolder);
+        return ThreadLocalHelper.getTL(indexArray, longArraySupplier, arrayValuesSupplierCall);
     }
 
     public long toAddress0(long index) {
