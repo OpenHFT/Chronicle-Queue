@@ -50,3 +50,5 @@ local.properties
 ### Queue files
 *.cq4t
 #*.cq4
+
+benchmarks/dependency-reduced-pom.xml

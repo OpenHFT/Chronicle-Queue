@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.benchmark;
 import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.StackSampler;
@@ -249,7 +250,7 @@ public class LatencyDistributionMain {
                 long next = System.nanoTime();
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
-                NativeBytesStore bytes24 = NativeBytesStore.from(new byte[Main.size - 16]);
+                BytesStore<?, ?> bytes24 = BytesStore.nativeStoreFrom(new byte[Main.size - 16]);
                 for (int i = -WARMUP; i < iterations; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
