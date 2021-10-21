@@ -11,7 +11,8 @@ import static org.junit.Assert.assertEquals;
 public class ChunkCountTest {
     @Test
     public void chunks() {
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(IOTools.createTempFile("chunks")).blockSize(64 << 10).rollCycle(RollCycles.DAILY).build();
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(IOTools.createTempFile("chunks")).blockSize(64 << 10).rollCycle(RollCycles.DAILY);
+        try (SingleChronicleQueue queue = builder.build();
              ExcerptAppender appender = queue.acquireAppender()) {
             assertEquals(0, queue.chunkCount());
             appender.writeText("Hello");
@@ -23,7 +24,9 @@ public class ChunkCountTest {
                     pos = dc.wire().bytes().writePosition();
                     dc.wire().bytes().writeSkip(16000);
                 }
-                assertEquals("i: " + i, 1 + (pos >> 18), queue.chunkCount());
+                final long expected = builder.useSparseFiles() ? 1 : 1 + (pos >> 18);
+
+                assertEquals("i: " + i, expected, queue.chunkCount());
             }
         }
     }

@@ -150,7 +150,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             wireType = builder.wireType();
             blockSize = builder.blockSize();
             overlapSize = Math.max(64 << 10, builder.blockSize() / 4);
-            useSparseFile = builder.useSparseFile();
+            useSparseFile = builder.useSparseFiles();
             sparseCapacity = builder.sparseCapacity();
             eventLoop = builder.eventLoop();
             bufferCapacity = builder.bufferCapacity();

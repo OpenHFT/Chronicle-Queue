@@ -74,8 +74,8 @@ import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
+    public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
-
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
 
@@ -102,6 +102,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
+    private Boolean useSparseFiles;
     private Long sparseCapacity;
     private File path;
     private RollCycle rollCycle;
@@ -324,6 +325,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public SingleChronicleQueue build() {
         boolean needEnterprise = checkEnterpriseFeaturesRequested();
         preBuild();
+        if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null && rollCycle != null && rollCycle.lengthInMillis() > 60_000) {
+            RollCycle rc = rollCycle == null ? RollCycles.FAST_DAILY : rollCycle;
+            final long msgs = rc.maxMessagesPerCycle();
+            sparseCapacity = Math.min(512L << 30, Math.max(4L << 30, msgs * 128));
+            useSparseFiles = true;
+        }
 
         SingleChronicleQueue chronicleQueue;
         if (needEnterprise)
@@ -677,7 +684,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
         if (useSparseFiles && OS.isLinux() && OS.is64Bit())
-            this.sparseCapacity = 512L << 30;
+            this.useSparseFiles = useSparseFiles;
+        if (!useSparseFiles)
+            this.useSparseFiles = useSparseFiles;
         return this;
     }
 
@@ -687,14 +696,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public long sparseCapacity() {
-        long bs = sparseCapacity == null ? 512L << 30 : sparseCapacity;
+        long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
 
         // can add an index2index & an index in one go.
         long minSize = Math.max(QueueUtil.testBlockSize(), 64L * indexCount());
         return Math.max(minSize, bs);
     }
 
-    public boolean useSparseFile() {
+    public boolean useSparseFiles() {
         return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
     }
 

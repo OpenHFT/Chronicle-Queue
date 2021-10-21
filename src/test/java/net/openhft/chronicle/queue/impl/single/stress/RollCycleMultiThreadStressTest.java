@@ -116,6 +116,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     @Test
     public void stress() throws Exception {
+        finishedNormally = false;
         assert warnIfAssertsAreOn();
 
         File file = DirectoryUtils.tempDir("stress");
@@ -289,6 +290,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         IOTools.deleteDirWithFiles("stress");
         // System.out.println("Test complete");
+        finishedNormally = true;
     }
 
     protected ReaderCheckingStrategy getReaderCheckingStrategy() {
@@ -419,6 +421,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
                 Jvm.pause(random.nextInt(DELAY_READER_RANDOM_MS));
+                tailer.toStart();
                 while (lastRead != expectedNumberOfMessages - 1) {
                     if (Thread.currentThread().isInterrupted())
                         return null;

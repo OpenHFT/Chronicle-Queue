@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -76,11 +77,13 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
     @Test
     public void testWriteBytesAndDump() {
         File dir = getTmpDir();
-        try (ChronicleQueue queue = binary(dir)
+        final SingleChronicleQueueBuilder builder = binary(dir)
                 .testBlockSize()
                 .rollCycle(TEST4_DAILY)
-                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
+                .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
+        try (ChronicleQueue queue = builder
                 .build()) {
+            final boolean useSparseFiles = builder.useSparseFiles();
 
             ExcerptAppender appender = queue.acquireAppender();
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
@@ -1139,7 +1142,9 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "--- !!data\n" +
                     "\u007F\u007F\u007F\u007F\u007F\u007F\u007F\u007F\n" +
                     "...\n" +
-                    "# 126936 bytes remaining\n", queue.dump());
+                    (useSparseFiles
+                            ? "# 4294963160 bytes remaining\n"
+                            : "# 126936 bytes remaining\n"), queue.dump());
 
         } finally {
             try {

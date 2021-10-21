@@ -214,8 +214,7 @@ public class RollingCycleTest extends QueueTestCommon {
                     "000001f0 65 5f 2d 31 31 35 34 37  31 35 30 37 39 90 45 c5 e_-11547 15079·E·\n" +
                     "00000200 e6 f7 b9 1a 4b ea c3 2f  7f 17 5f 10 01 5c 6e 62 ····K··/ ··_··\\nb\n" +
                     "00000210 fc cc 5e cc da                                   ··^··            \n" +
-                    "...\n" +
-                    "# 130532 bytes remaining\n";
+                    "...\n";
 
            // System.out.println("Wrote: " + numWritten + " messages");
 
