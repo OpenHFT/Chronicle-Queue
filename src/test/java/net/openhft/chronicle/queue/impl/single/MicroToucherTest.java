@@ -19,12 +19,12 @@ public class MicroToucherTest {
     @Test
     public void touchPageSparse() {
         assumeTrue(OS.isLinux());
-        touchPage(b -> b.useSparseFiles(true).rollCycle(RollCycles.HUGE_DAILY), 25098);
+        touchPage(b -> b.useSparseFiles(true).rollCycle(RollCycles.HUGE_DAILY), 66561);
     }
 
     @Test
     public void touchPageTestBlockSize() {
-        touchPage(b -> b.blockSize(64 << 20), 25098);
+        touchPage(b -> b.blockSize(64 << 20), 66561);
     }
 
     public void touchPage(Consumer<SingleChronicleQueueBuilder> configure, int pagesExpected) {
@@ -51,12 +51,13 @@ public class MicroToucherTest {
             long lastPage = 0;
             for (int i = 0; i < (1 << 20); i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().bytes().writeSkip(1024);
+                    dc.wire().bytes().writeSkip(256);
                 }
                 long page = (appender.lastPosition + 0xFFF) & ~0xFFF;
                 boolean touch = page != lastPage && appender.wire().bytes().bytesStore().inside(page, 8);
                 lastPage = page;
-                assertEquals("i: " + i, touch, appender.microTouch());
+                if (touch != appender.microTouch())
+                    assertEquals("i: " + i, touch, appender.microTouch());
                 if (touch)
                     pages++;
             }
