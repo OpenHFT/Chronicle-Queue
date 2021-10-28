@@ -70,7 +70,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
             });
         } finally {
             es.shutdown();
-            assert es.awaitTermination(5, TimeUnit.SECONDS) : "Copier threads didn't stop";
+            assert es.awaitTermination(30, TimeUnit.SECONDS) : "Copier threads didn't stop";
         }
     }
 
