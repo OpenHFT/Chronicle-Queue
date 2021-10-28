@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -17,6 +18,7 @@ import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
+import net.openhft.chronicle.queue.util.MicroTouched;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +32,7 @@ import java.nio.BufferOverflowException;
 import static net.openhft.chronicle.wire.Wires.*;
 
 class StoreAppender extends AbstractCloseable
-        implements ExcerptAppender, ExcerptContext, InternalAppender {
+        implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
     @NotNull
     private final SingleChronicleQueue queue;
     @NotNull
@@ -45,6 +47,7 @@ class StoreAppender extends AbstractCloseable
     private final Finalizer finalizer;
     @Nullable
     SingleChronicleQueueStore store;
+    long lastPosition;
     private int cycle = Integer.MIN_VALUE;
     @Nullable
     private Wire wire;
@@ -52,10 +55,10 @@ class StoreAppender extends AbstractCloseable
     private Wire wireForIndex;
     private long positionOfHeader = 0;
     private long lastIndex = Long.MIN_VALUE;
-    private long lastPosition;
     private int lastCycle;
     @Nullable
     private Pretoucher pretoucher = null;
+    private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
     private int count = 0;
 
@@ -190,6 +193,27 @@ class StoreAppender extends AbstractCloseable
             Jvm.warn().on(getClass(), e);
             throw Jvm.rethrow(e);
         }
+    }
+
+    @Override
+    public boolean microTouch() {
+        throwExceptionIfClosed();
+
+        if (microtoucher == null)
+            microtoucher = new MicroToucher(this);
+
+        return microtoucher.execute();
+    }
+
+    @Override
+    public void bgMicroTouch() {
+        if (isClosed())
+            throw new ClosedIllegalStateException(getClass().getName() + " closed for " + Thread.currentThread().getName(), closedHere);
+
+        if (microtoucher == null)
+            microtoucher = new MicroToucher(this);
+
+        microtoucher.bgExecute();
     }
 
     @Nullable
