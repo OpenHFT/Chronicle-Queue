@@ -17,6 +17,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
@@ -25,6 +26,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assume.assumeTrue;
 
 @RequiredForClient
 public class WriteReadTextTest extends QueueTestCommon {
@@ -55,6 +58,7 @@ public class WriteReadTextTest extends QueueTestCommon {
 
     @Test
     public void testExtremelyLarge() {
+        assumeTrue(Jvm.is64bit());
         doTest(EXTREMELY_LARGE);
     }
 
