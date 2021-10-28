@@ -29,8 +29,7 @@ public class MicroToucherTest {
 
     public void touchPage(Consumer<SingleChronicleQueueBuilder> configure, int pagesExpected) {
         long start = System.nanoTime();
-//        String path = OS.getTarget() + "/touchPage-" + System.nanoTime();
-        String path = "/data/tmp/touchPage-" + System.nanoTime();
+        String path = OS.getTarget() + "/touchPage-" + System.nanoTime();
         int pages = 0;
         final SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
         configure.accept(builder);
