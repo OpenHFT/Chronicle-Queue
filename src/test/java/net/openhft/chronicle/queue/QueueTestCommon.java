@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
@@ -77,6 +78,8 @@ public class QueueTestCommon {
     }
 
     public void checkExceptions() {
+        if (OS.isWindows())
+            ignoreException("Read-only mode is not supported on Windows® platforms, defaulting to read/write");
         for (Map.Entry<Predicate<ExceptionKey>, String> expectedException : expectedExceptions.entrySet()) {
             if (!exceptions.keySet().removeIf(expectedException.getKey()))
                 throw new AssertionError("No error for " + expectedException.getValue());

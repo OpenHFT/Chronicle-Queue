@@ -30,7 +30,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
         expectException("reading control code as text");
         ignoreException("Unable to copy TimedStoreRecovery safely");
         expectException("Queues should be configured with the queue directory, not a specific filename");
-        expectException("Metadata file not found in readOnly mode");
+        ignoreException("Metadata file not found in readOnly mode");
 
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");

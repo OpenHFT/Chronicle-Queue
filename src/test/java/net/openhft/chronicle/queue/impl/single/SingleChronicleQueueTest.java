@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -33,10 +32,11 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.*;
-import net.openhft.posix.Mapping;
-import net.openhft.posix.ProcMaps;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -55,7 +55,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -63,7 +62,6 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
-import static net.openhft.posix.ProcMaps.forSelf;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
@@ -75,7 +73,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @NotNull
     protected final WireType wireType;
     protected final boolean encryption;
-    private ProcMaps procMaps;
 
     // *************************************************************************
     //
@@ -144,36 +141,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
         fail(message);
-    }
-
-    @NotNull
-    private static Object[] testConfiguration(final WireType binary, final boolean encrypted) {
-        return new Object[]{binary.name() + " - " + (encrypted ? "" : "not ") + "encrypted", binary, encrypted};
-    }
-
-    private static boolean isThrowingIllegalStateException(ExceptionKey k) {
-        return k.throwable instanceof IllegalStateException;
-    }
-
-    @Before
-    public void maps() throws IOException {
-        procMaps = forSelf();
-    }
-
-    @Override
-    protected void preAfter() {
-        super.preAfter();
-        try {
-            ProcMaps procMaps2 = forSelf();
-            final Map<String, Mapping> map = procMaps2.list().stream().collect(Collectors.toMap(Mapping::toString, m -> m));
-            final Map<String, Mapping> map2 = procMaps2.list().stream().collect(Collectors.toMap(Mapping::toString, m -> m));
-            map2.keySet().removeAll(map.keySet());
-            if (!map2.isEmpty())
-                throw new AssertionError(map2.toString());
-
-        } catch (IOException ioe) {
-            throw new AssertionError(ioe);
-        }
     }
 
     @Test
