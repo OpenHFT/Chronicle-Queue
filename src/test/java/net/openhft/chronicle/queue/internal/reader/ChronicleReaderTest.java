@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -760,6 +761,37 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void findByBinarySearchWithDeletedRollCyles() {
+        final File queueDir = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir)
+                .timeProvider(timeProvider)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build()) {
+
+            for (int i = 0; i < 5; i++) {
+                int entries = 10, reps = 5;
+                populateQueueWithTimestamps(queue, entries, reps, i);
+                timeProvider.advanceMillis(3_000);
+            }
+
+            // delete the 4th roll cycle
+            assertTrue("Couldn't delete cycle, test is broken", queue.file().toPath().resolve("19700101-000009T.cq4").toFile().delete());
+
+            // this should be before the start
+            long tsToLookFor = getTimestampAtIndex(22); // third index in 3rd roll cycle, should be ({reps=5} * 8) + ({remaining_cycles=1} * ({reps=5} * {entries=10})) = 90 in output
+            System.out.println(tsToLookFor);
+            ChronicleReader reader = new ChronicleReader()
+                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                    .withBasePath(queueDir.toPath())
+                    .withMessageSink(capturedOutput::add);
+            reader.execute();
+            assertEquals(90 * 2, capturedOutput.size());
+        }
+    }
+
+    @Test
     public void shouldRespectWireType() {
         basicReader().
                 asMethodReader(Say.class.getName()).
@@ -772,13 +804,18 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     }
 
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {
+        populateQueueWithTimestamps(queue, entries, repeatsPerEntry, 0);
+    }
+
+    private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry, int batch) {
         try (ExcerptAppender appender = queue.acquireAppender()) {
             for (int i = 0; i < entries; i++) {
+                int effectiveIndex = i + (entries * batch);
                 // write multiple so we can confirm that binary search finds the 1st
                 for (int j = 0; j < repeatsPerEntry; j++) {
-                    final long timestampAtIndex = getTimestampAtIndex(i);
+                    final long timestampAtIndex = getTimestampAtIndex(effectiveIndex);
                     writeTimestamp(appender, timestampAtIndex);
-                    System.out.printf("%s:%s -- %s%n", (i * repeatsPerEntry) + j, appender.lastIndexAppended(), timestampAtIndex);
+                    System.out.printf("%s:%s -- %s%n", (effectiveIndex * repeatsPerEntry) + j, Long.toHexString(appender.lastIndexAppended()), timestampAtIndex);
                 }
             }
         }
