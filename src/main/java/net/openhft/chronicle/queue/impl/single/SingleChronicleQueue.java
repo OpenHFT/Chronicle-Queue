@@ -1019,6 +1019,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     createFile(path);
                     mappedBytes = mappedFileCache.get(path);
                 }
+                mappedBytes.disableThreadSafetyCheck(true);
                 mappedBytes.chunkCount(chunkCount);
 
 //                pauseUnderload();
