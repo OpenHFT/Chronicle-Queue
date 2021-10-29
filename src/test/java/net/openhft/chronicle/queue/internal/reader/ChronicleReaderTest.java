@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -774,21 +775,23 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 populateQueueWithTimestamps(queue, entries, reps, i);
                 timeProvider.advanceMillis(3_000);
             }
-
-            // delete the 4th roll cycle
-            assertTrue("Couldn't delete cycle, test is broken", queue.file().toPath().resolve("19700101-000009T.cq4").toFile().delete());
-
-            // this should be before the start
-            long tsToLookFor = getTimestampAtIndex(22); // third index in 3rd roll cycle, should be ({reps=5} * 8) + ({remaining_cycles=1} * ({reps=5} * {entries=10})) = 90 in output
-            System.out.println(tsToLookFor);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(90 * 2, capturedOutput.size());
         }
+        // Just make sure Windows has closed all the files before we try to delete
+        BackgroundResourceReleaser.releasePendingResources();
+
+        // delete the 4th roll cycle
+        assertTrue("Couldn't delete cycle, test is broken", queueDir.toPath().resolve("19700101-000009T.cq4").toFile().delete());
+
+        // this should be before the start
+        long tsToLookFor = getTimestampAtIndex(22); // third index in 3rd roll cycle, should be ({reps=5} * 8) + ({remaining_cycles=1} * ({reps=5} * {entries=10})) = 90 in output
+        System.out.println(tsToLookFor);
+        ChronicleReader reader = new ChronicleReader()
+                .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                .withBasePath(queueDir.toPath())
+                .withMessageSink(capturedOutput::add);
+        reader.execute();
+        assertEquals(90 * 2, capturedOutput.size());
     }
 
     @Test
