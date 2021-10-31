@@ -11,7 +11,7 @@ image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="ht
 image:https://img.shields.io/github/license/OpenHFT/Chronicle-Queue[GitHub]
 image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="https://gitter.im/OpenHFT/Lobby"]
 image:https://img.shields.io/badge/release%20notes-subscribe-brightgreen[link="https://chronicle.software/release-notes/"]
-image:https://sonarcloud.io/api/project_badges/measure?project=OpenHFT_Chronicle-Wire&metric=alert_status[link="https://sonarcloud.io/dashboard?id=OpenHFT_Chronicle-Wire"]
+image:https://sonarcloud.io/api/project_badges/measure?project=OpenHFT_Chronicle-Queue&metric=alert_status[link="https://sonarcloud.io/dashboard?id=OpenHFT_Chronicle-Queue"]
 
 
 image::docs/images/Queue_line.png[]
