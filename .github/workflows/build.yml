@@ -2,7 +2,8 @@ name: Build
 on:
   push:
     branches:
-      - *
+      - ea
+      - develop
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
