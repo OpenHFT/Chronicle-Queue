@@ -33,6 +33,8 @@
     <description>Java library for persisted low latency messaging (Java 8+)</description>
     <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
+        <sonar.organization>openhft</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     </properties>
 
     <dependencyManagement>
