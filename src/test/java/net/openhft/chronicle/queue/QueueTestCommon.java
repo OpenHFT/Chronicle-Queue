@@ -58,7 +58,7 @@ public class QueueTestCommon {
     }
 
     public void ignoreException(String message) {
-        ignoreException(k -> contains(k.message, message) || (k.throwable != null && k.throwable.getMessage().contains(message)), message);
+        ignoreException(k -> contains(k.message, message) || (k.throwable != null && contains(k.throwable.getMessage(), message)), message);
     }
 
     static boolean contains(String text, String message) {
