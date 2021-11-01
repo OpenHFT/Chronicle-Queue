@@ -54,7 +54,8 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
                 .iterations(ITERATIONS)
                 .throughput(100_000)
                 // disable as otherwise single GC event skews results heavily
-                .recordOSJitter(false).accountForCoordinatedOmission(false)
+                .recordOSJitter(false)
+                .accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
                 .runs(5)
                 .jlbhTask(new QueueMultiThreadedJLBHBenchmark());
@@ -68,8 +69,10 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
         sourceQueue = single("replica").build();
         sinkQueue = single("replica").build();
-        appender = sourceQueue.acquireAppender();
-        tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
+        appender = sourceQueue.acquireAppender()
+                .disableThreadSafetyCheck(true);
+        tailer = sinkQueue.createTailer()
+                .disableThreadSafetyCheck(true);
 
         NanoSampler readProbe = jlbh.addProbe("read");
         writeProbe = jlbh.addProbe("write");
@@ -123,7 +126,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         @Override
         public void writeMarshallable(BytesOut bytes) {
             bytes.writeLong(ts);
-            bytes.write(filler);
+            bytes.writeSkip(filler.length);
         }
     }
 }

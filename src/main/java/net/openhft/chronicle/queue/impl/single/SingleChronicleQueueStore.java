@@ -292,7 +292,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public MappedBytes bytes() {
         throwExceptionIfClosed();
 
-        return MappedBytes.mappedBytes(mappedFile);
+        return MappedBytes.mappedBytes(mappedFile)
+                .disableThreadSafetyCheck(true);
     }
 
     @Override
