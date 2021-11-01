@@ -33,6 +33,7 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
@@ -73,42 +74,44 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         tailer = queue.createTailer().disableThreadSafetyCheck(true);
         tailer.toStart();
         writerThread1 = new Thread(() -> {
-            AffinityLock.acquireCore();
-            final ExcerptAppender app = queue.acquireAppender();
+            try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
+                final ExcerptAppender app = queue.acquireAppender();
 
-            while (!stopped) {
-                if (write.get() <= 0)
-                    continue;
-                write.decrementAndGet();
-                final long start = System.nanoTime();
-                datum2.ts = start;
-                datum2.username = "" + start;
-                try (DocumentContext dc = app.writingDocument()) {
-                    dc.wire().write("datum").marshallable(datum2);
+                while (!stopped) {
+                    if (write.get() <= 0)
+                        continue;
+                    write.decrementAndGet();
+                    final long start = System.nanoTime();
+                    datum2.ts = start;
+                    datum2.username = "" + start;
+                    try (DocumentContext dc = app.writingDocument()) {
+                        dc.wire().write("datum").marshallable(datum2);
+                    }
+                    this.concurrent2.sampleNanos(System.nanoTime() - start);
                 }
-                this.concurrent2.sampleNanos(System.nanoTime() - start);
+                queue.close();
             }
-            queue.close();
         });
         writerThread1.start();
 
         writerThread2 = new Thread(() -> {
-            AffinityLock.acquireCore();
-            final ExcerptAppender app = queue.acquireAppender();
+            try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
+                final ExcerptAppender app = queue.acquireAppender();
 
-            while (!stopped) {
-                if (write.get() <= 0)
-                    continue;
-                write.decrementAndGet();
-                final long start = System.nanoTime();
-                datum.ts = start;
-                datum.username = "" + start;
-                try (DocumentContext dc = app.writingDocument()) {
-                    dc.wire().write("datum").marshallable(datum);
+                while (!stopped) {
+                    if (write.get() <= 0)
+                        continue;
+                    write.decrementAndGet();
+                    final long start = System.nanoTime();
+                    datum.ts = start;
+                    datum.username = "" + start;
+                    try (DocumentContext dc = app.writingDocument()) {
+                        dc.wire().write("datum").marshallable(datum);
+                    }
+                    concurrent.sampleNanos(System.nanoTime() - start);
                 }
-                concurrent.sampleNanos(System.nanoTime() - start);
+                queue.close();
             }
-            queue.close();
         });
         writerThread2.start();
     }
@@ -141,14 +144,6 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         join(writerThread2);
         queue.close();
         TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
-    }
-
-    private void join(Thread t) {
-        try {
-            t.join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 
     private static class Datum extends SelfDescribingMarshallable {
