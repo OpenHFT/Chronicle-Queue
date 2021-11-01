@@ -39,6 +39,8 @@ import java.nio.file.Files;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
+
 public class MethodReaderBenchmark implements JLBHTask {
     private static int iterations;
     private JLBH jlbh;
@@ -59,6 +61,7 @@ public class MethodReaderBenchmark implements JLBHTask {
     private OrderDTO nextOrder;
 
     private MethodReader reader;
+    private Thread consumerThread;
 
     private volatile boolean stopped = false;
 
@@ -107,10 +110,8 @@ public class MethodReaderBenchmark implements JLBHTask {
         nextExecutionReport = new ExecutionReportDTO(ThreadLocalRandom.current());
         nextOrder = new OrderDTO(ThreadLocalRandom.current());
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                AffinityLock.acquireCore();
+        consumerThread = new Thread(() -> {
+            try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
 
                 tailer = queue.createTailer().disableThreadSafetyCheck(true);
 
@@ -141,7 +142,8 @@ public class MethodReaderBenchmark implements JLBHTask {
                     }
                 }
             }
-        }).start();
+        });
+        consumerThread.start();
 
     }
 
@@ -196,6 +198,7 @@ public class MethodReaderBenchmark implements JLBHTask {
     public void complete() {
         stopped = true;
         queue.close();
+        join(consumerThread);
         TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
     }
 

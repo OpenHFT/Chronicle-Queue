@@ -41,6 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueMultiThreadedJLBHBenchmark2 implements JLBHTask {
@@ -181,11 +182,7 @@ public class QueueMultiThreadedJLBHBenchmark2 implements JLBHTask {
     public void complete() {
         pretoucher.shutdownNow();
         stopped = true;
-        try {
-            tailerThread.join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        join(tailerThread);
         sinkQueue.close();
         sourceQueue.close();
         TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);

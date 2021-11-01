@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.bench;
 
+import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.BytesIn;
 import net.openhft.chronicle.bytes.BytesMarshallable;
 import net.openhft.chronicle.bytes.BytesOut;
@@ -32,6 +33,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 
+import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
@@ -72,16 +74,18 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         NanoSampler readProbe = jlbh.addProbe("read");
         writeProbe = jlbh.addProbe("write");
         tailerThread = new Thread(() -> {
-            Datum datum2 = new Datum();
-            while (!stopped) {
-                long beforeReadNs = System.nanoTime();
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (dc.wire() == null)
-                        continue;
-                    datum2.readMarshallable(dc.wire().bytes());
-                    long now = System.nanoTime();
-                    jlbh.sample(now - datum2.ts);
-                    readProbe.sampleNanos(now - beforeReadNs);
+            try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
+                Datum datum2 = new Datum();
+                while (!stopped) {
+                    long beforeReadNs = System.nanoTime();
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (dc.wire() == null)
+                            continue;
+                        datum2.readMarshallable(dc.wire().bytes());
+                        long now = System.nanoTime();
+                        jlbh.sample(now - datum2.ts);
+                        readProbe.sampleNanos(now - beforeReadNs);
+                    }
                 }
             }
         });
@@ -100,11 +104,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     @Override
     public void complete() {
         stopped = true;
-        try {
-            tailerThread.join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        join(tailerThread);
         sinkQueue.close();
         sourceQueue.close();
         TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
