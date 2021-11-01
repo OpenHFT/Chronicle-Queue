@@ -14,7 +14,7 @@ image:https://img.shields.io/badge/release%20notes-subscribe-brightgreen[link="h
 image:https://sonarcloud.io/api/project_badges/measure?project=OpenHFT_Chronicle-Queue&metric=alert_status[link="https://sonarcloud.io/dashboard?id=OpenHFT_Chronicle-Queue"]
 
 
-image::docs/images/Queue_line.png[]
+image::docs/images/Queue_line.png[width=20%]
 
 toc::[]
 
