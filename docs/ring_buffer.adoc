@@ -89,6 +89,9 @@ Chronicle Queue. Reads are made from the underlying queue. This use-case is desi
 which cannot afford to be blocked by a slow underlying disk sub-system. The ring buffer's buffer size must be carefully
 chosen to allow for the maximum burst size.
 
+NOTE: if you want multiple ring-backed queues to share the same drainer thread you can configure their
+`SingleChronicleQueueBuilder`s `eventLoop` to share the same event loop.
+
 ====== Example:
 
 ```
