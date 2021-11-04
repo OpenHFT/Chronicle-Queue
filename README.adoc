@@ -613,7 +613,7 @@ In particular, the following wire types are not supported:
 * *blockSize*
 
 When a queue is read/written, part of the file currently being read/written is mapped to a memory segment.
-This parameter controls the size of the memory mapping block. You can change this parameter using the methode `SingleChronicleQueueBuilder.blockSize(long blockSize)` if it is necessary.
+This parameter controls the size of the memory mapping block. You can change this parameter using the method `SingleChronicleQueueBuilder.blockSize(long blockSize)` if it is necessary.
 
 NOTE: You should avoid changing `blockSize` unnecessarily.
 
