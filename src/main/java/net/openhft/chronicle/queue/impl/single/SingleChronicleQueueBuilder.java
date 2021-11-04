@@ -597,7 +597,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Creator for BytesStore for underlying ring buffer. Allows visibility of RB's data to be controlled.
-     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE, EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_MAPPED_FILE
+     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE, EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_MAPPED_FILE.
+     * <p>
+     * If you are using more than one {@link ChronicleQueue} object to access the ring buffer'd queue then you
+     * will need to set this. If this is not set then each queue will create its own in-memory ring buffer
      *
      * @return bufferBytesStoreCreator
      */
