@@ -89,6 +89,9 @@ Chronicle Queue. Reads are made from the underlying queue. This use-case is desi
 which cannot afford to be blocked by a slow underlying disk sub-system. The ring buffer's buffer size must be carefully
 chosen to allow for the maximum burst size.
 
+NOTE: if you want multiple ring-backed queues to share the same drainer thread you can configure their
+`SingleChronicleQueueBuilder`s `eventLoop` to share the same event loop.
+
 ====== Example:
 
 ```
@@ -113,8 +116,9 @@ loop to drain the ring buffer in to the underlying (disk-backed) Chronicle Queue
 
 ====== Example for asynchronous reads and writes using a memory-mapped file and two processes
 
-If you don't need access across processes, then no need to set `bufferBytesStoreCreator`. The default bufferBytesStoreCreator
-will create an in-memory `ByteStore`.
+If you don't need access across processes (actually `ChronicleQueue` instances), then no need to set `bufferBytesStoreCreator`.
+The default bufferBytesStoreCreator will create an in-memory `ByteStore`. If you do not set this, and try and access
+the ring buffer'd queue with multiple `ChronicleQueue` instances then each queue instance will create its own in-memory ring buffer.
 
 NOTE: This example won't work on Windows as it refers to tmpfs - if you want to test your code on Windows then you may want to adapt accordingly. If you are conducting performance tests on Windows and using a memory mapped file then you will gain no benefit -
  the only benefit to be gained with a memory mapped file is if it mapped to a fast filesystem like tmpfs on unix.
