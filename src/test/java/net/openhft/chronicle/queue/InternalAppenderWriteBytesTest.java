@@ -33,6 +33,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Bytes/pull/261")
     public void writeJustAfterLastIndex() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
@@ -57,6 +58,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Bytes/pull/261")
     public void dontOverwriteExisting() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         Bytes result = Bytes.elasticHeapByteBuffer();
@@ -252,6 +254,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Bytes/pull/261")
     public void appendToPreviousCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
