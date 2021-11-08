@@ -43,7 +43,8 @@ public class MicroToucher {
 
     public void bgExecute() {
         final long lastPage = this.lastPageToSync;
-        final long length = lastPage - this.lastPageSynced;
+        final long start = this.lastPageSynced;
+        final long length = Math.min(8 << 20, lastPage - start);
 //        System.out.println("len "+length);
         if (length < 8 << 20)
             return;
@@ -53,9 +54,8 @@ public class MicroToucher {
             return;
 
         BytesStore bytes = bufferWire.bytes().bytesStore();
-        final long start = this.lastPageSynced;
         sync(bytes, start, length);
-        this.lastPageSynced = lastPage;
+        this.lastPageSynced += length;
     }
 
     private void sync(BytesStore bytes, long start, long length) {

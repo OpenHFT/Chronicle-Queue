@@ -325,7 +325,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public SingleChronicleQueue build() {
         boolean needEnterprise = checkEnterpriseFeaturesRequested();
         preBuild();
-        if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null && rollCycle != null && rollCycle.lengthInMillis() > 60_000) {
+        if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null &&
+                (rollCycle == null || rollCycle.lengthInMillis() > 60_000)) {
             RollCycle rc = rollCycle == null ? RollCycles.FAST_DAILY : rollCycle;
             final long msgs = rc.maxMessagesPerCycle();
             sparseCapacity = Math.min(512L << 30, Math.max(4L << 30, msgs * 128));
