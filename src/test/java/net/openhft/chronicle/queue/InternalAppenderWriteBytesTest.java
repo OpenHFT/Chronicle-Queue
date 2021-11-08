@@ -12,6 +12,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -75,6 +76,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Bytes/pull/261")
     public void dontOverwriteExistingDifferentQueueInstance() {
         expectException("Trying to overwrite index 0 which is before the end of the queue");
         expectException("Trying to overwrite index 1 which is before the end of the queue");
