@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -21,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -189,6 +191,49 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
         }
     }
 
+    @Test
+    public void tailingThroughDeletedCyclesWillRefreshThenRetry_Writable() throws IOException {
+        tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> qwcd.queue);
+    }
+
+    @Test
+    public void tailingThroughDeletedCyclesWillRefreshThenRetry_ReadOnly() throws IOException {
+        tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())
+                .rollCycle(RollCycles.FAST_DAILY)
+                .readOnly(true)
+                .build());
+    }
+
+    public void tailingThroughDeletedCyclesWillRefreshThenRetry(Function<QueueWithCycleDetails, SingleChronicleQueue> queueCreator) throws IOException {
+        assumeFalse(OS.isWindows());
+
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null);
+             SingleChronicleQueue queue = queueCreator.apply(queueWithCycleDetails)
+        ) {
+            RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
+            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            // delete the store files
+            Files.delete(Paths.get(firstCycle.filename));
+            Files.delete(Paths.get(secondCycle.filename));
+            Files.delete(Paths.get(thirdCycle.filename));
+
+            int counter = 0;
+            while (true) {
+                try (final DocumentContext documentContext = tailer.readingDocument()) {
+                    if (!documentContext.isPresent()) {
+                        break;
+                    }
+                    counter++;
+                }
+            }
+            assertEquals(10, counter); // we still get 10 because the current store is in memory
+        }
+    }
+
     /**
      * Create a queue with N roll cycles
      *
@@ -200,6 +245,7 @@ public class TestDeleteQueueFile extends ChronicleQueueTestBase {
         SetTimeProvider timeProvider = new SetTimeProvider();
         QueueStoreFileListener listener = new QueueStoreFileListener();
         final SingleChronicleQueueBuilder queueBuilder = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
+                .rollCycle(RollCycles.FAST_DAILY)
                 .timeProvider(timeProvider)
                 .storeFileListener(listener);
         if (builderConsumer != null) {
