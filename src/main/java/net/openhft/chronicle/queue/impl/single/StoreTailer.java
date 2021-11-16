@@ -500,6 +500,15 @@ class StoreTailer extends AbstractCloseable
     }
 
     private long nextIndexWithNextAvailableCycle(final int cycle) {
+        try {
+            return nextIndexWithNextAvailableCycle0(cycle);
+        } catch (MissingStoreFileException e) {
+            queue.refreshDirectoryListing();
+            return nextIndexWithNextAvailableCycle0(cycle);
+        }
+    }
+
+    private long nextIndexWithNextAvailableCycle0(final int cycle) {
         assert cycle != Integer.MIN_VALUE : "cycle == Integer.MIN_VALUE";
 
         if (cycle > queue.lastCycle() || direction == TailerDirection.NONE) {

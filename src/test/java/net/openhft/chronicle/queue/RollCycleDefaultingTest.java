@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -13,6 +14,11 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     @Test
     public void alias() {
         assertEquals(RollCycles.class, ObjectUtils.implementationToUse(RollCycle.class));
+    }
+
+    @After
+    public void clearDefaultRollCycleProperty() {
+        System.clearProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
     }
 
     @Test
@@ -99,6 +105,6 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         public long maxMessagesPerCycle() {
             return 0;
         }
-        
+
     }
 }

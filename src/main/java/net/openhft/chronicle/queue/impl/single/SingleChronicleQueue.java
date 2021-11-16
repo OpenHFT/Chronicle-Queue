@@ -1223,7 +1223,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                 if (!fileFound) {
                     directoryListing.refresh(true);
-                    throw new IllegalStateException(
+                    throw new MissingStoreFileException(
                             String.format("Expected file to exist for cycle: %d, file: %s.%nminCycle: %d, maxCycle: %d%n" +
                                             "Available files: %s",
                                     currentCycle, currentCycleFile,
@@ -1240,7 +1240,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 file = tree.get(key);
             }
             if (file == null) {
-                throw new AssertionError("missing currentCycle, file=" + currentCycleFile);
+                throw new MissingStoreFileException("missing currentCycle, file=" + currentCycleFile);
             }
 
             switch (direction) {
