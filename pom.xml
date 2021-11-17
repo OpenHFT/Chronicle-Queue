@@ -143,6 +143,12 @@
         </dependency>
 
         <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-test-framework</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.xerial.snappy</groupId>
             <artifactId>snappy-java</artifactId>
             <scope>test</scope>
