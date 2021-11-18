@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -22,10 +23,16 @@ import static java.lang.String.format;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase {
 
     private static final int MESSAGES_TO_WRITE = 200;
+
+    @Before
+    public void check64bit() {
+        assumeTrue(Jvm.is64bit());
+    }
 
     @Test
     public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
