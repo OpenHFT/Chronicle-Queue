@@ -1,14 +1,16 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.main.DumpMain;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.main.DumpMain;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -25,6 +27,7 @@ import java.util.stream.IntStream;
 import static junit.framework.TestCase.fail;
 import static net.openhft.chronicle.queue.RollCycles.HOURLY;
 import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * check that method writes are thread safe when used with queue.methodWriter
@@ -49,6 +52,11 @@ public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
     @Parameterized.Parameters(name = "doubleBuffer={0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[]{true}, new Object[]{false});
+    }
+
+    @Before
+    public void check64bit() {
+        assumeTrue(Jvm.is64bit());
     }
 
     @Test
