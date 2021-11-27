@@ -152,6 +152,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private boolean doubleBuffer;
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
+    private AppenderListener appenderListener;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -1160,6 +1161,23 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public WriteLock appendLock() {
         return readOnly() ? WriteLock.NO_OP : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2, TableStoreWriteLock.APPEND_LOCK_KEY);
+    }
+
+    /**
+     * Set an AppenderListener which is called when an Excerpt is actually written.
+     * This is called while the writeLock is still held, after the messages has been written.
+     * For asynchronous writes, this is called in the background thread.
+     *
+     * @param appenderListener to call
+     * @return this
+     */
+    public SingleChronicleQueueBuilder appenderListener(AppenderListener appenderListener) {
+        this.appenderListener = appenderListener;
+        return this;
+    }
+
+    public AppenderListener appenderListener() {
+        return appenderListener;
     }
 
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {

@@ -128,6 +128,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final int deltaCheckpointInterval;
     private final boolean useSparseFile;
     private final long sparseCapacity;
+    final AppenderListener appenderListener;
     protected int sourceId;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
@@ -168,13 +169,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
-            doubleBuffer = false; //builder.doubleBuffer();
+            doubleBuffer = builder.doubleBuffer();
             if (metaStore.readOnly() && !builder.readOnly()) {
                 Jvm.warn().on(getClass(), "Forcing queue to be readOnly file=" + path);
                 // need to set this on builder as it is used elsewhere
                 builder.readOnly(metaStore.readOnly());
             }
             readOnly = builder.readOnly();
+            appenderListener = builder.appenderListener();
 
             if (readOnly) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction());
