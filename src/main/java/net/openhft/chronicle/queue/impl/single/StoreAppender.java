@@ -630,7 +630,9 @@ class StoreAppender extends AbstractCloseable
             openContext(metadata, safeLength);
 
             try {
-                writeContext.wire().bytes().write(bytes);
+                final Bytes<?> bytes0 = writeContext.wire().bytes();
+                bytes0.readPosition(bytes0.writePosition());
+                bytes0.write(bytes);
             } finally {
                 writeContext.close(false);
                 count = 0;
@@ -884,8 +886,12 @@ class StoreAppender extends AbstractCloseable
                     if (!metaData) {
                         lastIndex(wire.headerNumber());
                         store.writePosition(positionOfHeader);
-                        if (lastIndex != Long.MIN_VALUE)
+                        if (lastIndex != Long.MIN_VALUE) {
                             writeIndexForPosition(lastIndex, positionOfHeader);
+                            if (queue.appenderListener != null) {
+                                callAppenderListener();
+                            }
+                        }
                     }
 
                 } else if (wire != null) {
@@ -912,6 +918,18 @@ class StoreAppender extends AbstractCloseable
                     } catch (Exception ex) {
                         Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
                     }
+            }
+        }
+
+        private void callAppenderListener() {
+            final Bytes<?> bytes = wire.bytes();
+            long rp = bytes.readPosition();
+            long wp = bytes.writePosition();
+            try {
+                queue.appenderListener.onExcerpt(wire, lastIndex);
+            } finally {
+                bytes.readPosition(rp);
+                bytes.writePosition(wp);
             }
         }
 

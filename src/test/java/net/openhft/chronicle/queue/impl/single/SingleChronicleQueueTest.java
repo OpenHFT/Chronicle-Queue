@@ -85,16 +85,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         this.encryption = encryption;
     }
 
-    @Parameters(name = "wireType={0}, encrypted={1}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList( // {WireType.TEXT},
-                new Object[]{WireType.BINARY, false},
-                new Object[]{WireType.BINARY_LIGHT, false},
-                new Object[]{WireType.COMPRESSED_BINARY, false}
-               // {WireType.DELTA_BINARY}
-               // {WireType.FIELDLESS_BINARY}
-        );
-    }
+    Bytes appenderListenerDump = Bytes.allocateElasticOnHeap(256);
 
     private static List<String> getMappedQueueFileCount() throws IOException, InterruptedException {
 
@@ -143,10 +134,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         fail(message);
     }
 
+    @Parameters(name = "wireType={0}, encrypted={1}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList( // {WireType.TEXT},
+                new Object[]{WireType.BINARY, false},
+                new Object[]{WireType.BINARY_LIGHT, false},
+                new Object[]{WireType.COMPRESSED_BINARY, false}
+                // {WireType.DELTA_BINARY}
+                // {WireType.FIELDLESS_BINARY}
+        );
+    }
+
     @Test
     public void testAppend() {
         try (final ChronicleQueue queue =
-                     builder(getTmpDir(), wireType)
+                     builderWithAppendListener(getTmpDir(), wireType)
                              .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -158,17 +160,58 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             assertEquals(10L, countEntries(queue));
         }
-    }
-
-    @Test
-    public void testTextReadWrite() {
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue =
-                     builder(tmpDir, wireType)
-                             .build()) {
-            queue.acquireAppender().writeText("hello world");
-            assertEquals("hello world", queue.createTailer().readText());
-        }
+        assertEquals("" +
+                        "idx: 4a0400000000\n" +
+                        "# position: 776, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 0\n" +
+                        "\n" +
+                        "idx: 4a0400000001\n" +
+                        "# position: 788, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 1\n" +
+                        "\n" +
+                        "idx: 4a0400000002\n" +
+                        "# position: 800, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 2\n" +
+                        "\n" +
+                        "idx: 4a0400000003\n" +
+                        "# position: 812, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 3\n" +
+                        "\n" +
+                        "idx: 4a0400000004\n" +
+                        "# position: 824, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 4\n" +
+                        "\n" +
+                        "idx: 4a0400000005\n" +
+                        "# position: 836, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 5\n" +
+                        "\n" +
+                        "idx: 4a0400000006\n" +
+                        "# position: 848, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 6\n" +
+                        "\n" +
+                        "idx: 4a0400000007\n" +
+                        "# position: 860, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 7\n" +
+                        "\n" +
+                        "idx: 4a0400000008\n" +
+                        "# position: 872, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 8\n" +
+                        "\n" +
+                        "idx: 4a0400000009\n" +
+                        "# position: 884, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "test: 9\n" +
+                        "\n",
+                appenderListenerDump.toString());
     }
 
     @Test
@@ -206,7 +249,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("hello").text("world2");
-
             }
 
             ExcerptTailer tailer = queue.createTailer();
@@ -218,7 +260,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertEquals("world", dc.wire().read("hello").text());
-
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
@@ -337,18 +378,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testCanAppendWriteBytesInternalIfAppendLockIsSet() {
-        @NotNull Bytes<byte[]> test = Bytes.from("hello world");
+    public void testTextReadWrite() {
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
-            ((SingleChronicleQueue) queue).appendLock().lock();
-            Assume.assumeTrue(queue.acquireAppender() instanceof StoreAppender);
-            @NotNull ExcerptAppender appender = queue.acquireAppender();
-            assumeTrue(appender instanceof StoreAppender);
-            StoreAppender storeAppender = (StoreAppender) appender;
-            ((SingleChronicleQueue) queue).writeLock().lock();
-            storeAppender.writeBytesInternal(0, test);
+        try (final ChronicleQueue queue =
+                     builderWithAppendListener(tmpDir, wireType)
+                             .build()) {
+            queue.acquireAppender().writeText("hello world");
+            assertEquals("hello world", queue.createTailer().readText());
         }
+        assertEquals("idx: 4a0400000000\n" +
+                "# position: 776, header: 0\n" +
+                "--- !!data #binary\n" +
+                "hello world\n" +
+                "\n", appenderListenerDump.toString());
     }
 
     @Test
@@ -406,105 +448,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testMetaIndexTest() {
-
+    public void testCanAppendWriteBytesInternalIfAppendLockIsSet() {
+        @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue q = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-            {
-                ExcerptAppender appender = q.acquireAppender();
-                try (DocumentContext documentContext = appender.writingDocument()) {
-                    documentContext.wire().getValueOut().text("one");
-                }
-                try (DocumentContext documentContext = appender.writingDocument()) {
-                    documentContext.wire().getValueOut().text("two");
-                }
-                try (DocumentContext documentContext = appender.writingDocument(true)) {
-                    documentContext.wire().getValueOut().text("meta1");
-                }
-
-                try (DocumentContext documentContext = appender.writingDocument()) {
-                    documentContext.wire().getValueOut().text("three");
-                }
-
-                try (DocumentContext documentContext = appender.writingDocument(true)) {
-                    documentContext.wire().getValueOut().text("meta2");
-                }
-                try (DocumentContext documentContext = appender.writingDocument(true)) {
-                    documentContext.wire().getValueOut().text("meta3");
-                }
-                try (DocumentContext documentContext = appender.writingDocument()) {
-                    documentContext.wire().getValueOut().text("four");
-                }
-            }
-            {
-
-                ExcerptTailer tailer = q.createTailer();
-
-                try (DocumentContext documentContext2 = tailer.readingDocument()) {
-                    assertEquals(0, toSeq(q, documentContext2.index()));
-                    assertFalse(documentContext2.isMetaData());
-                    assertEquals("one", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(1, toSeq(q, documentContext2.index()));
-                    assertFalse(documentContext2.isMetaData());
-                    assertEquals("two", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(2, toSeq(q, documentContext2.index()));
-                    assertTrue(documentContext2.isMetaData());
-                    assertEquals("meta1", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(2, toSeq(q, documentContext2.index()));
-                    assertFalse(documentContext2.isMetaData());
-                    assertEquals("three", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(3, toSeq(q, documentContext2.index()));
-                    assertTrue(documentContext2.isMetaData());
-                    assertEquals("meta2", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(3, toSeq(q, documentContext2.index()));
-                    assertTrue(documentContext2.isMetaData());
-                    assertEquals("meta3", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(3, toSeq(q, documentContext2.index()));
-                    assertFalse(documentContext2.isMetaData());
-                    assertEquals("four", documentContext2.wire().getValueIn().text());
-                }
-            }
-
-            {
-                ExcerptTailer tailer = q.createTailer();
-
-                try (DocumentContext documentContext2 = tailer.readingDocument()) {
-                    assertEquals(0, toSeq(q, documentContext2.index()));
-                    assertFalse(documentContext2.isMetaData());
-                    assertEquals("one", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
-                    assertEquals(1, toSeq(q, documentContext2.index()));
-                    assertFalse(documentContext2.isMetaData());
-                    assertEquals("two", documentContext2.wire().getValueIn().text());
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
-                    assertEquals(2, toSeq(q, documentContext2.index()));
-                    assertFalse(documentContext2.isMetaData());
-                    assertEquals("three", documentContext2.wire().getValueIn().text());
-                }
-            }
+        try (final ChronicleQueue queue = builderWithAppendListener(tmpDir, wireType).build()) {
+            ((SingleChronicleQueue) queue).appendLock().lock();
+            Assume.assumeTrue(queue.acquireAppender() instanceof StoreAppender);
+            @NotNull ExcerptAppender appender = queue.acquireAppender();
+            assumeTrue(appender instanceof StoreAppender);
+            StoreAppender storeAppender = (StoreAppender) appender;
+            ((SingleChronicleQueue) queue).writeLock().lock();
+            storeAppender.writeBytesInternal(0, test);
         }
+        assertEquals("idx: 0\n" +
+                "# position: 776, header: 0\n" +
+                "--- !!data\n" +
+                "hello world\n" +
+                "\n", appenderListenerDump.toString());
     }
 
     private long toSeq(final ChronicleQueue q, final long index) {
@@ -1185,42 +1145,128 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("long running test")
     @Test
-    public void testReadAtIndex4MB() {
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), this.wireType).rollCycle(SMALL_DAILY)
-                .build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+    public void testMetaIndexTest() {
 
-           // System.out.print("Percent written=");
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue q = builderWithAppendListener(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            {
+                ExcerptAppender appender = q.acquireAppender();
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("one");
+                }
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("two");
+                }
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
+                    documentContext.wire().getValueOut().text("meta1");
+                }
 
-            for (long i = 0; i < TIMES; i++) {
-                final long j = i;
-                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("three");
+                }
 
-               // if (i % (TIMES / 20) == 0) {
-                   // System.out.println("" + (i * 100 / TIMES) + "%, ");
-               // }
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
+                    documentContext.wire().getValueOut().text("meta2");
+                }
+                try (DocumentContext documentContext = appender.writingDocument(true)) {
+                    documentContext.wire().getValueOut().text("meta3");
+                }
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().getValueOut().text("four");
+                }
             }
-            long lastIndex = appender.lastIndexAppended();
+            {
 
-            final int cycle = queue.rollCycle().toCycle(lastIndex);
+                ExcerptTailer tailer = q.createTailer();
 
-            final ExcerptTailer tailer = queue.createTailer();
+                try (DocumentContext documentContext2 = tailer.readingDocument()) {
+                    assertEquals(0, toSeq(q, documentContext2.index()));
+                    assertFalse(documentContext2.isMetaData());
+                    assertEquals("one", documentContext2.wire().getValueIn().text());
+                }
 
-              // QueueDumpMain.dump(file, new PrintWriter(System.out));
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    assertEquals(1, toSeq(q, documentContext2.index()));
+                    assertFalse(documentContext2.isMetaData());
+                    assertEquals("two", documentContext2.wire().getValueIn().text());
+                }
 
-            StringBuilder sb = new StringBuilder();
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    assertEquals(2, toSeq(q, documentContext2.index()));
+                    assertTrue(documentContext2.isMetaData());
+                    assertEquals("meta1", documentContext2.wire().getValueIn().text());
+                }
 
-            for (long i = 0; i < (4L << 20L); i++) {
-                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)));
-                tailer.readDocument(wire -> wire.read("key").text(sb));
-                assertEquals("value=" + i, sb.toString());
-               // if (i % (TIMES / 20) == 0) {
-                   // System.out.println("Percent read= " + (i * 100 / TIMES) + "%");
-               // }
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    assertEquals(2, toSeq(q, documentContext2.index()));
+                    assertFalse(documentContext2.isMetaData());
+                    assertEquals("three", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    assertEquals(3, toSeq(q, documentContext2.index()));
+                    assertTrue(documentContext2.isMetaData());
+                    assertEquals("meta2", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    assertEquals(3, toSeq(q, documentContext2.index()));
+                    assertTrue(documentContext2.isMetaData());
+                    assertEquals("meta3", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
+                    assertEquals(3, toSeq(q, documentContext2.index()));
+                    assertFalse(documentContext2.isMetaData());
+                    assertEquals("four", documentContext2.wire().getValueIn().text());
+                }
+            }
+
+            {
+                ExcerptTailer tailer = q.createTailer();
+
+                try (DocumentContext documentContext2 = tailer.readingDocument()) {
+                    assertEquals(0, toSeq(q, documentContext2.index()));
+                    assertFalse(documentContext2.isMetaData());
+                    assertEquals("one", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
+                    assertEquals(1, toSeq(q, documentContext2.index()));
+                    assertFalse(documentContext2.isMetaData());
+                    assertEquals("two", documentContext2.wire().getValueIn().text());
+                }
+
+                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
+                    assertEquals(2, toSeq(q, documentContext2.index()));
+                    assertFalse(documentContext2.isMetaData());
+                    assertEquals("three", documentContext2.wire().getValueIn().text());
+                }
             }
         }
+        assertEquals("" +
+                        "idx: 6f06c00000000\n" +
+                        "# position: 65800, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "one\n" +
+                        "\n" +
+                        "idx: 6f06c00000001\n" +
+                        "# position: 65808, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "two\n" +
+                        "\n" +
+                        "idx: 6f06c00000002\n" +
+                        "# position: 65828, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "three\n" +
+                        "\n" +
+                        "idx: 6f06c00000003\n" +
+                        "# position: 65864, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "four\n" +
+                        "\n",
+                appenderListenerDump.toString());
     }
 
     @Test
@@ -1988,24 +2034,40 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore("long running test")
     @Test
-    public void testSomeMessages() {
-        try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
-                .rollCycle(TEST2_DAILY)
+    public void testReadAtIndex4MB() {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), this.wireType).rollCycle(SMALL_DAILY)
                 .build()) {
+            final ExcerptAppender appender = queue.acquireAppender();
 
-            ExcerptAppender appender = chronicle.acquireAppender();
-            ExcerptTailer tailer = chronicle.createTailer();
+            // System.out.print("Percent written=");
 
-            int entries = chronicle.rollCycle().defaultIndexSpacing() * 2 + 2;
+            for (long i = 0; i < TIMES; i++) {
+                final long j = i;
+                appender.writeDocument(wire -> wire.write("key").text("value=" + j));
 
-            for (long i = 0; i < entries; i++) {
-                long finalI = i;
-                appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
-                long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
-                assertEquals(i, seq);
-                     // System.out.println(chronicle.dump());
-                tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> assertEquals((long) a, b)));
+                // if (i % (TIMES / 20) == 0) {
+                // System.out.println("" + (i * 100 / TIMES) + "%, ");
+                // }
+            }
+            long lastIndex = appender.lastIndexAppended();
+
+            final int cycle = queue.rollCycle().toCycle(lastIndex);
+
+            final ExcerptTailer tailer = queue.createTailer();
+
+            // QueueDumpMain.dump(file, new PrintWriter(System.out));
+
+            StringBuilder sb = new StringBuilder();
+
+            for (long i = 0; i < (4L << 20L); i++) {
+                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)));
+                tailer.readDocument(wire -> wire.read("key").text(sb));
+                assertEquals("value=" + i, sb.toString());
+                // if (i % (TIMES / 20) == 0) {
+                // System.out.println("Percent read= " + (i * 100 / TIMES) + "%");
+                // }
             }
         }
     }
@@ -2136,17 +2198,24 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testLastIndexAppended() {
-        try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
+    public void testSomeMessages() {
+        try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
+                .rollCycle(TEST2_DAILY)
                 .build()) {
 
             ExcerptAppender appender = chronicle.acquireAppender();
-            appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
-            final long nextIndexToWrite = appender.lastIndexAppended() + 1;
-            appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
-                       // System.out.println(chronicle.dump());
-            assertEquals(nextIndexToWrite,
-                    appender.lastIndexAppended());
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            int entries = chronicle.rollCycle().defaultIndexSpacing() * 2 + 2;
+
+            for (long i = 0; i < entries; i++) {
+                long finalI = i;
+                appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
+                long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
+                assertEquals(i, seq);
+                // System.out.println(chronicle.dump());
+                tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> assertEquals((long) a, b)));
+            }
         }
     }
 
@@ -2221,31 +2290,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    /**
-     * if one appender if much further ahead than the other, then the new append should jump straight to the end rather than attempting to write a
-     * positions that are already occupied
-     */
     @Test
-    public void testAppendedSkipToEnd() {
-
-        try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
+    public void testLastIndexAppended() {
+        try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build()) {
 
-            ExcerptAppender appender = q.acquireAppender();
-            ExcerptAppender appender2 = q.acquireAppender();
-            int indexCount = 100;
-
-            for (int i = 0; i < indexCount; i++) {
-                try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write("key").text("some more " + 1);
-                    assertEquals(i, q.rollCycle().toSequenceNumber(dc.index()));
-                }
-            }
-
-            try (DocumentContext dc = appender2.writingDocument()) {
-                dc.wire().write("key").text("some data " + indexCount);
-                assertEquals(indexCount, q.rollCycle().toSequenceNumber(dc.index()));
-            }
+            ExcerptAppender appender = chronicle.acquireAppender();
+            appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
+            final long nextIndexToWrite = appender.lastIndexAppended() + 1;
+            appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
+            // System.out.println(chronicle.dump());
+            assertEquals(nextIndexToWrite,
+                    appender.lastIndexAppended());
         }
     }
 
@@ -2295,37 +2351,31 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return Long.toHexString(q.rollCycle().toCycle(index)) + "_" + Long.toHexString(q.rollCycle().toSequenceNumber(index));
     }
 
-    @Ignore("Long Running Test")
+    /**
+     * if one appender if much further ahead than the other, then the new append should jump straight to the end rather than attempting to write a
+     * positions that are already occupied
+     */
     @Test
-    public void testRandomConcurrentReadWrite() throws
-            InterruptedException {
+    public void testAppendedSkipToEnd() {
 
-        // some text to simulate load.
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
-        String text = sb.toString();
+        try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
+                .build()) {
 
-        for (int i = 0; i < 20; i++) {
-            ExecutorService executor = Executors.newWorkStealingPool(8);
-            try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
-                    .rollCycle(MINUTELY)
-                    .build()) {
+            ExcerptAppender appender = q.acquireAppender();
+            ExcerptAppender appender2 = q.acquireAppender();
+            int indexCount = 100;
 
-                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
-                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
-
-                int size = 20_000_000;
-
-                for (int j = 0; j < size; j++)
-                    executor.execute(() -> doSomething(tl, tlt, text));
-
-                executor.shutdown();
-                if (!executor.awaitTermination(10_000, TimeUnit.SECONDS))
-                    executor.shutdownNow();
-
-               // System.out.println(". " + i);
-                Jvm.pause(1000);
+            for (int i = 0; i < indexCount; i++) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("key").text("some more " + 1);
+                }
+                assertEquals(i, q.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
+
+            try (DocumentContext dc = appender2.writingDocument()) {
+                dc.wire().write("key").text("some data " + indexCount);
+            }
+            assertEquals(indexCount, q.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
         }
     }
 
@@ -2395,41 +2445,37 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
+    @Ignore("Long Running Test")
     @Test
-    public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() {
-        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
-        File dir = getTmpDir();
-        try (ChronicleQueue q = builder(dir, wireType)
-                .rollCycle(TEST_SECONDLY)
-                .timeProvider(clock::get)
-                .build()) {
+    public void testRandomConcurrentReadWrite() throws
+            InterruptedException {
 
-            q.acquireAppender()
-                    .writeText("first");
-        }
+        // some text to simulate load.
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
+        String text = sb.toString();
 
-        clock.addAndGet(1100);
+        for (int i = 0; i < 20; i++) {
+            ExecutorService executor = Executors.newWorkStealingPool(8);
+            try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
+                    .rollCycle(MINUTELY)
+                    .build()) {
 
-        // this will write an EOF
-        try (ChronicleQueue q = builder(dir, wireType)
-                .rollCycle(TEST_SECONDLY)
-                .timeProvider(clock::get)
-                .build();
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
+                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
-             ExcerptTailer tailer = q.createTailer()) {
+                int size = 20_000_000;
 
-            assertEquals("first", tailer.readText());
-            GcControls.waitForGcCycle();
-            final long startCollectionCount = GcControls.getGcCount();
+                for (int j = 0; j < size; j++)
+                    executor.execute(() -> doSomething(tl, tlt, text));
 
-            // allow a few GCs due to possible side-effect or re-used JVM
-            final long maxAllowedGcCycles = 6;
-            final long endCollectionCount = GcControls.getGcCount();
-            final long actualGcCycles = endCollectionCount - startCollectionCount;
+                executor.shutdown();
+                if (!executor.awaitTermination(10_000, TimeUnit.SECONDS))
+                    executor.shutdownNow();
 
-            assertTrue(String.format("Too many GC cycles. Expected <= %d, but was %d",
-                    maxAllowedGcCycles, actualGcCycles),
-                    actualGcCycles <= maxAllowedGcCycles);
+                // System.out.println(". " + i);
+                Jvm.pause(1000);
+            }
         }
     }
 
@@ -2604,50 +2650,40 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testCountExceptsBetweenCycles() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
+    public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        File dir = getTmpDir();
+        try (ChronicleQueue q = builder(dir, wireType)
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
+                .build()) {
 
-        try (final RollingChronicleQueue queue = binary(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY)
-                .timeProvider(timeProvider)
+            q.acquireAppender()
+                    .writeText("first");
+        }
+
+        clock.addAndGet(1100);
+
+        // this will write an EOF
+        try (ChronicleQueue q = builder(dir, wireType)
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
                 .build();
-             final ExcerptAppender appender = queue.acquireAppender()) {
 
-            long[] indexs = new long[10];
-            for (int i = 0; i < indexs.length; i++) {
-               // System.out.println(".");
-                try (DocumentContext writingContext = appender.writingDocument()) {
-                    writingContext.wire().write().text("some-text-" + i);
-                    indexs[i] = writingContext.index();
-                }
+             ExcerptTailer tailer = q.createTailer()) {
 
-                // we add the pause times to vary the test, to ensure it can handle when cycles are
-                // skipped
-                if ((i + 1) % 5 == 0)
-                    timeProvider.advanceMillis(2000);
-                else if ((i + 1) % 3 == 0)
-                    timeProvider.advanceMillis(1000);
-            }
+            assertEquals("first", tailer.readText());
+            GcControls.waitForGcCycle();
+            final long startCollectionCount = GcControls.getGcCount();
 
-            for (int lower = 0; lower < indexs.length; lower++) {
-                for (int upper = lower; upper < indexs.length; upper++) {
-                   // System.out.println("lower=" + lower + ",upper=" + upper);
-                    assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
-                            indexs[upper]));
-                }
-            }
+            // allow a few GCs due to possible side-effect or re-used JVM
+            final long maxAllowedGcCycles = 6;
+            final long endCollectionCount = GcControls.getGcCount();
+            final long actualGcCycles = endCollectionCount - startCollectionCount;
 
-            // check the base line of the test below
-            assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]));
-
-            /// check for the case when the last index has a sequence number of -1
-            assertEquals(0, queue.rollCycle().toSequenceNumber(indexs[6]));
-            assertEquals(5, queue.countExcerpts(indexs[0],
-                    indexs[6] - 1));
-
-            /// check for the case when the first index has a sequence number of -1
-            assertEquals(7, queue.countExcerpts(indexs[0] - 1,
-                    indexs[6]));
+            assertTrue(String.format("Too many GC cycles. Expected <= %d, but was %d",
+                            maxAllowedGcCycles, actualGcCycles),
+                    actualGcCycles <= maxAllowedGcCycles);
         }
     }
 
@@ -2788,53 +2824,50 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testTailerSnappingRollWithNewAppender() throws InterruptedException, ExecutionException, TimeoutException {
+    public void testCountExceptsBetweenCycles() {
         SetTimeProvider timeProvider = new SetTimeProvider();
-        timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
-        final File dir = getTmpDir();
-        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
-        // write first message
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
-            ExcerptAppender excerptAppender = queue.acquireAppender();
-            excerptAppender.writeText("someText");
+        try (final RollingChronicleQueue queue = binary(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(timeProvider)
+                .build();
+             final ExcerptAppender appender = queue.acquireAppender()) {
 
-            ExecutorService executorService = Executors.newFixedThreadPool(2,
-                    new NamedThreadFactory("test"));
-
-            Future<?> f1 = executorService.submit(() -> {
-
-                try (ChronicleQueue queue2 = binary(dir)
-                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
-                    queue2.acquireAppender().writeText("someText more");
+            long[] indexs = new long[10];
+            for (int i = 0; i < indexs.length; i++) {
+                // System.out.println(".");
+                try (DocumentContext writingContext = appender.writingDocument()) {
+                    writingContext.wire().write().text("some-text-" + i);
+                    indexs[i] = writingContext.index();
                 }
-                timeProvider.advanceMillis(1100);
-                try (ChronicleQueue queue2 = binary(dir)
-                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
-                    queue2.acquireAppender().writeText("someText more");
+
+                // we add the pause times to vary the test, to ensure it can handle when cycles are
+                // skipped
+                if ((i + 1) % 5 == 0)
+                    timeProvider.advanceMillis(2000);
+                else if ((i + 1) % 3 == 0)
+                    timeProvider.advanceMillis(1000);
+            }
+
+            for (int lower = 0; lower < indexs.length; lower++) {
+                for (int upper = lower; upper < indexs.length; upper++) {
+                    // System.out.println("lower=" + lower + ",upper=" + upper);
+                    assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
+                            indexs[upper]));
                 }
-            });
+            }
 
-            Future<?> f2 = executorService.submit(() -> {
+            // check the base line of the test below
+            assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]));
 
-                // write second message
-                try (ChronicleQueue queue2 = binary(dir)
-                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
+            /// check for the case when the last index has a sequence number of -1
+            assertEquals(0, queue.rollCycle().toSequenceNumber(indexs[6]));
+            assertEquals(5, queue.countExcerpts(indexs[0],
+                    indexs[6] - 1));
 
-                    for (int i = 0; i < 5; i++) {
-                        queue2.acquireAppender().writeText("someText more");
-                        timeProvider.advanceMillis(400);
-                    }
-                }
-            });
-
-            f1.get(10, TimeUnit.SECONDS);
-           // System.out.println(queue.dump().replaceAll("(?m)^#.+$\\n", ""));
-            f2.get(10, TimeUnit.SECONDS);
-
-            executorService.shutdownNow();
+            /// check for the case when the first index has a sequence number of -1
+            assertEquals(7, queue.countExcerpts(indexs[0] - 1,
+                    indexs[6]));
         }
     }
 
@@ -3242,6 +3275,71 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
+    }
+
+    @Test
+    public void testTailerSnappingRollWithNewAppender() throws InterruptedException, ExecutionException, TimeoutException {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
+        final File dir = getTmpDir();
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+
+        // write first message
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
+            ExcerptAppender excerptAppender = queue.acquireAppender();
+            excerptAppender.writeText("someText");
+
+            ExecutorService executorService = Executors.newFixedThreadPool(2,
+                    new NamedThreadFactory("test"));
+
+            Future<?> f1 = executorService.submit(() -> {
+
+                try (ChronicleQueue queue2 = binary(dir)
+                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
+                    queue2.acquireAppender().writeText("someText more");
+                }
+                timeProvider.advanceMillis(1100);
+                try (ChronicleQueue queue2 = binary(dir)
+                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
+                    queue2.acquireAppender().writeText("someText more");
+                }
+            });
+
+            Future<?> f2 = executorService.submit(() -> {
+
+                // write second message
+                try (ChronicleQueue queue2 = binary(dir)
+                        .rollCycle(rollCycle).timeProvider(timeProvider).build()) {
+
+                    for (int i = 0; i < 5; i++) {
+                        queue2.acquireAppender().writeText("someText more");
+                        timeProvider.advanceMillis(400);
+                    }
+                }
+            });
+
+            f1.get(10, TimeUnit.SECONDS);
+            // System.out.println(queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            f2.get(10, TimeUnit.SECONDS);
+
+            executorService.shutdownNow();
+        }
+    }
+
+    @NotNull
+    protected SingleChronicleQueueBuilder builderWithAppendListener(@NotNull File file, @NotNull WireType wireType) {
+        appenderListenerDump.clear();
+        return SingleChronicleQueueBuilder.builder(file, wireType)
+                .rollCycle(RollCycles.TEST4_DAILY)
+                .timeProvider(new SetTimeProvider("2021/11/17T12:34:56").advanceMillis(1000))
+                .appenderListener((w, idx) -> {
+                    appenderListenerDump.append("idx: ").append(Long.toHexString(idx)).append("\n");
+                    w.bytes().readSkip(-4);
+                    appenderListenerDump.append(Wires.fromSizePrefixedBlobs(w)).append("\n");
+                })
+                .testBlockSize();
     }
 
     @NotNull
