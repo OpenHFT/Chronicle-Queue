@@ -84,11 +84,12 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     @Test
     public void testReadMarshallable() {
         expectException("Overriding roll epoch from existing metadata");
+        final String tmpDir = getTmpDir().toString();
         SingleChronicleQueueBuilder builder = Marshallable.fromString("!net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder {\n" +
                 "  writeBufferMode: None,\n" +
                 "  readBufferMode: None,\n" +
                 "  wireType: BINARY_LIGHT,\n" +
-                "  path: " + getTmpDir() +
+                "  path: " + tmpDir + ",\n" +
                 "  rollCycle: !net.openhft.chronicle.queue.RollCycles DAILY,\n" +
                 "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +
                 "  rollTime: 17:02,\n" +
