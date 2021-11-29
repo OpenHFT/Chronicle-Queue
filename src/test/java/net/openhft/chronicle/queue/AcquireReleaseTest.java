@@ -5,12 +5,18 @@ import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
 public class AcquireReleaseTest extends ChronicleQueueTestBase {
@@ -81,5 +87,46 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
                 tailer.readText();
             }
         }
+    }
+
+    @Test
+    public void testWithCleanupStoreFilesWithNoDataAcquireAndRelease() throws InterruptedException, ExecutionException {
+        final File dir = getTmpDir();
+        final SetTimeProvider stp = new SetTimeProvider();
+        final AtomicInteger acount = new AtomicInteger();
+        final AtomicInteger qcount = new AtomicInteger();
+        final StoreFileListener storeFileListener = new StoreFileListener() {
+            public void onAcquired(int cycle, File file) {
+                acount.incrementAndGet();
+            }
+
+            @Override
+            public void onReleased(int cycle, File file) {
+                qcount.incrementAndGet();
+            }
+        };
+
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
+                .storeFileListener(storeFileListener)
+                .timeProvider(stp)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();) {
+            // new appender created
+            final ExcerptAppender appender = queue.acquireAppender();
+            appender.writeText("Main thread: Hello world");
+            assertEquals(1, acount.get());
+
+            stp.advanceMillis(1000L); // advance 1 cycle, so that cleanupStoreFilesWithNoData() acquires store
+
+            // other appender is created
+            CompletableFuture.runAsync(queue::acquireAppender).get();  // Here store is Acquired twice (second time in cleanupStoreFilesWithNoData())
+
+            Thread.sleep(10); // Let BackgroundResourceReleaser run onAcquired()/onReleased() callbacks
+        }
+
+        // Once is called when creating first appender, and twice when creating second appender ( extra time in cleanupStoreFilesWithNoData())
+        assertEquals(3, acount.get());
+
+        assertEquals(3, qcount.get());
     }
 }
