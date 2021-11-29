@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.*;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -891,6 +892,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         writeLock.lock();
 
+        Runnable fireOnReleasedEvent = null;
         try {
             int cycle = cycle();
             for (int lastCycle = lastCycle(); lastCycle < cycle && lastCycle >= 0; lastCycle--) {
@@ -911,12 +913,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         }
                         continue;
                     }
+                    fireOnReleasedEvent = () -> storeFileListener.onReleased(store.cycle(), store.file());
                     break;
                 }
             }
             directoryListing.refresh(true);
         } finally {
             writeLock.unlock();
+            if(fireOnReleasedEvent != null)
+                BackgroundResourceReleaser.run(fireOnReleasedEvent);
         }
     }
 
