@@ -1,6 +1,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
@@ -165,5 +167,20 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
                 .build()) {
             // This will throw if we attempt to create the createAppender condition
         }
+    }
+
+    @Test
+    public void openFileTest() {
+        File tmpDir = new File(OS.getTarget(), "open_file_test");
+
+        SingleChronicleQueueBuilder.single(tmpDir)
+                .build()
+                .close();
+
+        BackgroundResourceReleaser.releasePendingResources();
+        System.gc();
+        Jvm.pause(100);
+        IOTools.deleteDirWithFiles(tmpDir);
+        assertFalse(tmpDir.exists());
     }
 }
