@@ -145,7 +145,7 @@ public class IndexForIDTest {
                             this::first,
                             this::mid,
                             this::end)
-                    .parallel() // comment out to run sequentially
+//                    .parallel() // comment out to run sequentially
                     .forEach(Runnable::run);
 
         }
