@@ -89,11 +89,12 @@ public class IndexForIDTest {
     private void copy(String fromID, TimeSetter setTime, String toID) {
         Facade datum = Values.newNativeReference(Facade.class);
         long datumSize = datum.maxSize();
-        long end = System.currentTimeMillis() + (Jvm.isCodeCoverage() ? 90_000 : 60_000);
+        long end = System.currentTimeMillis() + (Jvm.isCodeCoverage() ? 240_000 : 60_000);
         try (ExcerptTailer tailer = queue.createTailer();
              LongValue fromIndex = queue.indexForId(fromID);
              LongValue toIndex = queue.indexForId(toID)) {
 
+            long start = System.currentTimeMillis();
             for (int i = 0; i < count; i++) {
                 final long index;
                 try (final DocumentContext dc = tailer.readingDocument()) {
@@ -118,6 +119,10 @@ public class IndexForIDTest {
                     toIndex.setVolatileValue(index);
                 }
             }
+
+            long rate = count * 1000L / (System.currentTimeMillis() - start);
+            System.out.println("IndexForIDTest: rate: " + rate + " msg/sec");
+
         } catch (Throwable t) {
             t.printStackTrace();
             throw t;
@@ -129,15 +134,15 @@ public class IndexForIDTest {
         assumeFalse(Jvm.isArm());
 
         Path staged = IOTools.createTempDirectory("staged");
-        this.count = 1_000_000;
+        this.count = 10_000;
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(staged).build()) {
             this.queue = queue;
 
             Stream.<Runnable>of(
-                    this::producer,
-                    this::first,
-                    this::mid,
-                    this::end)
+                            this::producer,
+                            this::first,
+                            this::mid,
+                            this::end)
                     .parallel() // comment out to run sequentially
                     .forEach(Runnable::run);
 
