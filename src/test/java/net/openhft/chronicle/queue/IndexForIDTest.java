@@ -100,11 +100,13 @@ public class IndexForIDTest {
                 try (final DocumentContext dc = tailer.readingDocument()) {
                     if (!dc.isPresent()) {
                         Jvm.nanoPause();
-                        i--;
                         // commented out newly introduced fail which is blowing up in TeamCity
                         // https://github.com/OpenHFT/Chronicle-Queue/issues/897
                         if (end < System.currentTimeMillis())
                             fail("Timed out i: " + i);
+                        if (i == 0)
+                            tailer.toStart();
+                        i--;
                         continue;
                     }
                     index = dc.index();
