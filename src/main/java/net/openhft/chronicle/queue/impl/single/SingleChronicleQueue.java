@@ -541,6 +541,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return storeTailer;
     }
 
+    /**
+     * The last index read for a named tailer.
+     *
+     * @param id of the last index
+     * @return the LongValue reference to this value.
+     */
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {

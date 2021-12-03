@@ -47,7 +47,7 @@ class StoreTailer extends AbstractCloseable
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
     private final Finalizer finalizer;
-    long index; // index of the next read.
+    long index, indexChecker; // index of the next read.
     long lastReadIndex; // index of the last read message
     @Nullable
     SingleChronicleQueueStore store;
@@ -187,12 +187,37 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
+        return indexValue == null
+                ? readingDocumentUnnamed(includeMetaData)
+                : readingDocumentNamed(includeMetaData);
+    }
+
+    DocumentContext readingDocumentUnnamed(final boolean includeMetaData) {
         DocumentContext documentContext = readingDocument0(includeMetaData);
         // this check was added after a strange behaviour seen by one client. I should be impossible.
         if (documentContext.wire() != null)
             if (documentContext.wire().bytes().readRemaining() >= 1 << 30)
                 throw new AssertionError("readRemaining " + documentContext.wire().bytes().readRemaining());
         return documentContext;
+    }
+
+    DocumentContext readingDocumentNamed(final boolean includeMetaData) {
+        for (int i = 0; i < 100; i++) {
+            this.indexChecker = indexValue.getVolatileValue();
+            if (this.index != indexChecker)
+                moveToIndex(this.indexChecker);
+
+            DocumentContext documentContext = readingDocument0(includeMetaData);
+
+            if (indexChecker != Long.MIN_VALUE) {
+                this.index = indexChecker;
+                if (context.isPresent() && !context.isMetaData())
+                    incrementIndex();
+                return documentContext;
+            }
+            documentContext.close();
+        }
+        throw new AssertionError();
     }
 
     DocumentContext readingDocument0(final boolean includeMetaData) {
@@ -293,12 +318,16 @@ class StoreTailer extends AbstractCloseable
                     } else {
                         if (!moveToIndexInternal(firstIndex))
                             return false;
+                        // had to reset the index.
+                        this.indexChecker = index();
                     }
                     break;
 
                 case NOT_REACHED_IN_CYCLE:
                     if (!moveToIndexInternal(index))
                         return false;
+                    // had to reset the index.
+                    this.indexChecker = index();
                     break;
 
                 case FOUND_IN_CYCLE: {
@@ -577,7 +606,7 @@ class StoreTailer extends AbstractCloseable
      */
     @Override
     public long index() {
-        return indexValue == null ? this.index : indexValue.getValue();
+        return context.isPresent() || indexValue == null ? this.index : indexValue.getVolatileValue();
     }
 
     @Override
@@ -588,9 +617,18 @@ class StoreTailer extends AbstractCloseable
     @Override
     public boolean moveToIndex(final long index) {
         throwExceptionIfClosed();
+        if (moveToIndex0(index)) {
+            if (indexValue != null)
+                indexValue.setOrderedValue(index);
+            return true;
+        }
+        return false;
+    }
 
+    boolean moveToIndex0(final long index) {
         if (moveToState.canReuseLastIndexMove(index, state, direction, queue, privateWire())) {
             return setAddress(true);
+
         } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
             final long knownIndex = moveToState.lastMovedToIndex;
             final boolean found =
@@ -1083,10 +1121,11 @@ class StoreTailer extends AbstractCloseable
     }
 
     void index0(final long index) {
-        if (indexValue == null)
+        if (indexValue == null) {
             this.index = index;
-        else
-            indexValue.setValue(index);
+        } else if (!indexValue.compareAndSwapValue(this.indexChecker, index)) {
+            this.indexChecker = Long.MIN_VALUE; // invalid.
+        }
     }
 
     // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
@@ -1327,7 +1366,7 @@ class StoreTailer extends AbstractCloseable
             if (rollbackIfNeeded())
                 return;
 
-            if (isPresent() && !isMetaData())
+            if (isPresent() && !isMetaData() && indexValue == null)
                 incrementIndex();
 
             super.close();
