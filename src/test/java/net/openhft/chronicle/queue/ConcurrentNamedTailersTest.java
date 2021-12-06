@@ -7,6 +7,8 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -16,7 +18,10 @@ import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -135,6 +140,93 @@ public class ConcurrentNamedTailersTest {
             IOTools.deleteDirWithFiles(tmpDir);
         }
     }
+
+    @Test
+    public void concurrency() {
+        File tmpDir = new File(OS.getTarget(), IOTools.tempName("concurrency"));
+
+        final String tailerName = "named";
+        final int numberOfEntries = 1_000_000;
+
+        // populate the queue
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).build();
+             final ExcerptAppender appender = q.acquireAppender()) {
+            for (int i = 0; i < numberOfEntries; i++) {
+                try (final DocumentContext documentContext = appender.writingDocument()) {
+                    documentContext.wire().write("index").int64(i);
+                }
+            }
+        }
+        Jvm.startup().on(ConcurrentNamedTailersTest.class, "Wrote " + numberOfEntries + " entries");
+
+        final int numReaders = 6;
+        final AtomicLong counter = new AtomicLong(-1);
+        final CyclicBarrier cyclicBarrier = new CyclicBarrier(numReaders);
+        final ExecutorService executorService = Executors.newFixedThreadPool(numReaders);
+        final List<Future<?>> futures = IntStream.range(0, numReaders)
+                .mapToObj(i -> executorService.submit(new CompetingConsumer(tmpDir, tailerName, numberOfEntries, counter, cyclicBarrier)))
+                .collect(Collectors.toList());
+        futures.forEach(future -> {
+            try {
+                future.get();
+            } catch (Exception e) {
+                throw new AssertionError("Error in Consumer", e);
+            }
+        });
+
+        IOTools.deleteDirWithFiles(tmpDir);
+    }
+
+    private static class CompetingConsumer implements Runnable {
+
+        private static final int LOG_EVERY = 10_000;
+
+        private final File queueDir;
+        private final String tailerName;
+        private final long highestIndex;
+        private final AtomicLong counter;
+        private final CyclicBarrier barrier;
+
+        public CompetingConsumer(File queueDir, String tailerName, long numberOfEntries, AtomicLong counter, CyclicBarrier barrier) {
+            this.queueDir = queueDir;
+            this.tailerName = tailerName;
+            this.highestIndex = numberOfEntries - 1;
+            this.counter = counter;
+            this.barrier = barrier;
+        }
+
+        @Override
+        public void run() {
+            try (ChronicleQueue q = SingleChronicleQueueBuilder.single(queueDir).testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).build();
+                 final ExcerptTailer namedTailer = q.createTailer(tailerName)) {
+
+                try {
+                    Jvm.startup().on(ConcurrentNamedTailersTest.class, "Waiting at barrier");
+                    barrier.await(10, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    throw new AssertionError("Failed waiting at barrier", e);
+                }
+                TimingPauser pauser = Pauser.balanced();
+                while (counter.get() < highestIndex) {
+                    try (final DocumentContext documentContext = namedTailer.readingDocument()) {
+                        final long index = documentContext.wire().read("index").int64();
+                        if (index % LOG_EVERY == 0) {
+                            Jvm.startup().on(ConcurrentNamedTailersTest.class, "Read index " + index);
+                        }
+                        while (!counter.compareAndSet(index - 1, index)) {
+                            try {
+                                pauser.pause(1, TimeUnit.SECONDS);
+                            } catch (TimeoutException e) {
+                                throw new AssertionError("Timed out trying to write " + index + " current value is " + counter.get());
+                            }
+                        }
+                        pauser.reset();
+                    }
+                }
+            }
+        }
+    }
+
 
     interface Tasker {
         void task(int taskId);
