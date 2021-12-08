@@ -1825,7 +1825,6 @@ image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/ima
 
 * http://stackoverflow.com/tags/chronicle/info[Chronicle support on StackOverflow]
 * https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle[Chronicle support on Google Groups]
-* https://higherfrequencytrading.atlassian.net/browse/CHRON[Development Tasks - JIRA]
 
 == Chronicle Software Release Notes
 https://chronicle.software/release-notes[Leave your e-mail] to get information about the latest releases and patches to stay up-to-date. 
