@@ -31,14 +31,32 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(Parameterized.class)
 public class RollingCycleTest extends QueueTestCommon {
+    protected final boolean named;
+
+    public RollingCycleTest(boolean named) {
+        this.named = named;
+    }
+
+    @Parameterized.Parameters(name = "named={0}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(
+                new Object[]{true},
+                new Object[]{false}
+        );
+    }
 
     @BeforeClass
     public static void sync() {
@@ -216,13 +234,13 @@ public class RollingCycleTest extends QueueTestCommon {
                     "00000210 fc cc 5e cc da                                   ··^··            \n" +
                     "...\n";
 
-           // System.out.println("Wrote: " + numWritten + " messages");
+            // System.out.println("Wrote: " + numWritten + " messages");
 
             long numRead = 0;
             final TestBytesMarshallable reusableData = new TestBytesMarshallable(0);
-            final ExcerptTailer currentPosTailer = queue.createTailer()
+            final ExcerptTailer currentPosTailer = queue.createTailer(named ? "named" : null)
                     .toStart();
-            final ExcerptTailer endPosTailer = queue.createTailer().toEnd();
+            final ExcerptTailer endPosTailer = queue.createTailer(named ? "named2" : null).toEnd();
             while (currentPosTailer.index() < endPosTailer.index()) {
                 try {
                     assertTrue(currentPosTailer.readBytes(reusableData));
@@ -239,7 +257,7 @@ public class RollingCycleTest extends QueueTestCommon {
             }
             assertFalse(currentPosTailer.readBytes(reusableData));
 
-           // System.out.println("Wrote " + numWritten + " Read " + numRead);
+            // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
             assertTrue(dump.contains(expectedEagerFile1));

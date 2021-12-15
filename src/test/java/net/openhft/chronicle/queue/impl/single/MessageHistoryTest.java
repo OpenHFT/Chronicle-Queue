@@ -11,13 +11,18 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
 public final class MessageHistoryTest extends ChronicleQueueTestBase {
     @Rule
     public final TestName testName = new TestName();
@@ -25,6 +30,19 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
     private File inputQueueDir;
     private File middleQueueDir;
     private File outputQueueDir;
+    protected final boolean named;
+
+    public MessageHistoryTest(boolean named) {
+        this.named = named;
+    }
+
+    @Parameterized.Parameters(name = "named={0}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(
+                new Object[]{true},
+                new Object[]{false}
+        );
+    }
 
     @Before
     public void setUp() {
@@ -42,7 +60,7 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
             generateTestData(inputQueue, outputQueue);
 
-            final ExcerptTailer tailer = outputQueue.createTailer();
+            final ExcerptTailer tailer = outputQueue.createTailer(named ? "named" : null);
 
             final ValidatingSecond validatingSecond = new ValidatingSecond();
             final MethodReader validator = tailer.methodReader(validatingSecond);
@@ -58,7 +76,7 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
             generateTestData(inputQueue, outputQueue);
 
-            final ExcerptTailer tailer = outputQueue.createTailer();
+            final ExcerptTailer tailer = outputQueue.createTailer(named ? "named" : null);
             tailer.direction(TailerDirection.BACKWARD).toEnd();
 
             final ValidatingSecond validatingSecond = new ValidatingSecond();
@@ -76,10 +94,10 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
              final ChronicleQueue outputQueue = createQueue(middleQueueDir, 2)) {
             generateTestData(inputQueue, middleQueue);
 
-            MethodReader reader = middleQueue.createTailer().methodReader(outputQueue.methodWriter(First.class));
+            MethodReader reader = middleQueue.createTailer(named ? "named" : null).methodReader(outputQueue.methodWriter(First.class));
             for (int i = 0; i < 3; i++)
                 assertTrue(reader.readOne());
-            MethodReader reader2 = outputQueue.createTailer().methodReader((First) this::say3);
+            MethodReader reader2 = outputQueue.createTailer(named ? "named2" : null).methodReader((First) this::say3);
             for (int i = 0; i < 3; i++)
                 assertTrue(reader2.readOne());
         }
@@ -103,7 +121,7 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
                 new LoggingFirst(outputQueue.acquireAppender().
                         methodWriterBuilder(Second.class).build());
 
-        final MethodReader reader = inputQueue.createTailer().
+        final MethodReader reader = inputQueue.createTailer(named ? "named" : null).
                 methodReaderBuilder().build(loggingFirst);
 
         assertTrue(reader.readOne());
