@@ -1,0 +1,97 @@
+= Read/write proxies
+keywords: queue, java, proxy, appending, tailing, chronicle
+author: Julia Gustafsson
+:reftext: Read/write proxies
+:navtitle: Read/write proxies
+:source-highlighter: highlight.js
+
+Chronicle v4.4+ supports the use of proxies to write and read messages. You start by defining an asynchronous `interface`, where all methods have:
+
+- Arguments which are only inputs
+- No return value or exceptions expected.
+
+.A simple asynchronous interface
+[source, java]
+----
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
+interface MessageListener {
+    void method1(Message1 message);
+
+    void method2(Message2 message);
+}
+
+static class Message1 extends SelfDescribingMarshallable {
+    String text;
+
+    public Message1(String text) {
+        this.text = text;
+    }
+}
+
+static class Message2 extends SelfDescribingMarshallable {
+    long number;
+
+    public Message2(long number) {
+        this.number = number;
+    }
+}
+----
+
+To write to the queue you can call a proxy which implements this interface.
+
+[source, java]
+----
+SingleChronicleQueue queue1 = ChronicleQueue.singleBuilder(path).build();
+
+MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
+
+// call method on the interface to send messages
+writer1.method1(new Message1("hello"));
+writer1.method2(new Message2(234));
+----
+
+These calls produce messages which can be dumped as follows.
+
+[source, yaml]
+----
+# position: 262568, header: 0
+--- !!data #binary
+method1: {
+  text: hello
+}
+# position: 262597, header: 1
+--- !!data #binary
+method2: {
+  number: !int 234
+}
+----
+
+To read the messages, you can provide a reader which calls your implementation with the same calls that you made.
+
+[source, java]
+----
+// a proxy which print each method called on it
+MessageListener processor = ObjectUtils.printAll(MessageListener.class)
+// a queue reader which turns messages into method calls.
+MethodReader reader1 = queue1.createTailer().methodReader(processor);
+
+assertTrue(reader1.readOne());
+assertTrue(reader1.readOne());
+assertFalse(reader1.readOne());
+----
+
+Running this example prints:
+
+[source, json]
+----
+method1 [!Message1 {
+  text: hello
+}
+]
+method2 [!Message2 {
+  number: 234
+}
+]
+----
+
+NOTE: For more details, read the article https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and view the https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest].

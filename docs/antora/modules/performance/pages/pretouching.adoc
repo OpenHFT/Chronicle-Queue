@@ -1,0 +1,67 @@
+= Pre-touching
+keywords: chronicle queue, queue, java, performance, low-latency, preloader, pre-touching
+author: Niel Clifford, Julia Gustafsson
+:reftext: Pre-touching
+:navtitle: Pre-touching
+:source-highlighter: highlight.js
+
+During the write process, there is significant write-speed variation as the process has to find new memory to write to. This can be mitigated by _pre-touching_ storage resources for the current queue to allow appenders to exhibit more predictable latencies.
+
+[NOTE]
+.Pre-touching
+====
+Pre-touching involves accessing pages of files/memory that are likely accessed in a
+near future and may also involve accessing/acquiring future cycle files.
+====
+
+There are two ways to perform pre-touching, outlined below:
+
+* **Triggering pre-touches manually** - Perform pre-touching once for the current appender using `ExcerptAppender.pretouch()`
+* **Automatically pre-touching using Chronicle's preloader ★** - The preloader automatically pre-touches segments at a given time interval _(Enterprise feature)_.
+
+== Pre-touching once
+A single pre-touching operation can be performed by the appender by calling `pretouch()` as follows:
+
+[source, java]
+----
+queue.acquireAppender().pretouch();
+----
+
+IMPORTANT: The pre-toucher must be invoked from the same thread that created the appender, as the call to `pretouch()` is not thread safe.
+
+Albeit not required, it is suggested to perform pre-touching in a background thread (not the main business thread) to avoid contention. The below example spins up a thread that performs pre-touching every second.
+
+[source, java]
+----
+newSingleThreadScheduledExecutor().scheduleAtFixedRate(
+    () -> queue.acquireAppender().pretouch(), #<1>
+    0, #<2>
+    1, #<3>
+    TimeUnit.SECONDS #<4>
+);
+----
+<1> The task to execute
+<2> The time to delay first execution
+<3> The period between successive executions
+<4> The time unit of the `initialDelay` and period parameters
+
+== Automatic pre-touching ★
+The easiest way to configure periodical pre-touching is by using Chronicle's out-of-process preloader. It can be activated in the Chronicle Queue Builder as follows:
+
+[source, java]
+----
+ChronicleQueue queue = ChronicleQueue.singleBuilder(".")
+    .enablePreloader(1000) #<1>
+    .build();
+----
+<1> Interval in milliseconds to invoke the preloader
+
+IMPORTANT: The preloader is part of Chronicle Queue Enterprise.
+
+=== Benchmarks
+The graph below shows the comparative speeds between using, and not using the preloader. It is clear that the preloader both significantly improves the average write-speed and decreases outliers.
+
+.Comparative performance when the preloader is enabled v.s. disabled
+image::pretoucher-test.png[Pretoucer test, width=600px]
+
+NOTE: Normally, the preloader would be run in a background thread, but for the purposes of the performance test shown above it was run in the same thread, but not timed.

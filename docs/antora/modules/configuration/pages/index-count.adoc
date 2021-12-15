@@ -1,0 +1,31 @@
+= Index count
+keywords: index count, chronicle queue, queue, java
+author: Julia Gustafsson
+:reftext: Index count
+:navtitle: Index count
+:source-highlighter: highlight.js
+
+It is possible to cap the total number of index arrays per queue file, hence also determine the size of each index array. This is done by configuring the parameter `indexCount(int indexCount)` when building the queue.
+
+[source, java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
+    .indexCount(10)
+    .build();
+----
+
+NOTE: (Index count)^2^ is the maximum number of indexed queue entries.
+
+The default index count varies depending on the link:roll-cycle.adoc[roll cycle], per the table below.
+|===
+| Roll-cycle | Default index count
+| `HALF_HOURLY`, `TWENTY_MINUTELY`, `TEN_MINUTELY`, `FIVE_MINUTELY`, `MINUTELY`, `LARGE_HOURLY_XSPARSE` | 2048
+| `SIX_HOURLY`, `FOUR_HOURLY`, `TWO_HOURLY`, `FAST_HOURLY`, `HOURLY`, `LARGE_HOURLY_XSPARSE`, `FAST_DAILY`  | 4096
+| `DAILY`, `LARGE_HOURLY` | 8192
+| `HUGE_DAILY_XSPARSE` | 16384
+| `LARGE_DAILY` | 32768
+| `XLARGE_DAILY` | 131072
+| `HUGE_DAILY` | 524288
+|===
+
+TIP: For more information about queue indexing, see link:../../queue-operations/pages/indexing.adoc[Indexing].

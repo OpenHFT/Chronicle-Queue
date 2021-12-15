@@ -1,0 +1,29 @@
+site:
+  title: Chronicle Queue
+  start_page: chronicle-queue:introduction:introduction.adoc
+  # The following URL is only used when building locally. In the future, this should be set to the URL
+  # where the page is really served
+  url: /build
+content:
+  sources:
+    - url: https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise
+      # Only generate from git tags (and not branches)
+      branches: [develop]
+      start_path: docs
+      tags: [2.22*]
+ui:
+  bundle:
+    url: ui-bundle.zip # As of now, the UI bundle is built locally on Julia's laptop. Contact her to make changes.
+  supplemental_files: ./supplemental_ui
+    #path: ui.yml
+    #  contents: |
+    #    static_files: [ .nojekyll ]
+    #  path: .nojekyll
+asciidoc:
+  attributes:
+    page-pagination: true
+    extensions:
+      - highlightjs
+# Uncomment the below if you want to build the page to another directory. The default dir is /build
+#output:
+#  dir:

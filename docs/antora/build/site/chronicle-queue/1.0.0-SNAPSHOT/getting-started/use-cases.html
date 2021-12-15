@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Use cases :: Chronicle Queue</title>
+    <meta name="generator" content="Antora 2.3.4">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" href="../../../_/img/chronicle-favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+	  <script src="prism.js"></script>
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."></a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="../../..">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
+            <a class="navbar-item" href="https://chronicle.software">Website</a>
+            <a class="navbar-item" href="https://github.com/OpenHFT/Chronicle-Queuer">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<script src="prism.js"></script>
+<div class="nav-container" data-component="chronicle-queue" data-version="1.0.0-SNAPSHOT">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../introduction/introduction.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../what-is-chronicle-queue/what-is-chronicle-queue.html">What is Chronicle Queue?</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <span class="nav-text">Getting started</span>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="quick-start.html">Get started with Chronicle Queue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="glossary.html">Glossary</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../configuration/app_configuration.html">Configuration</a>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/roll-cycle.html">Roll cycle</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/wire-type.html">Wire type</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/block-size.html">Block size</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-count.html">Index count</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-spacing.html">Index spacing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../appending/appending.html">Appending</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../tailing/tailing.html">Tailing</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../performance/performance.html">Performance tuning</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../replication/replication.html">★ Queue Replication</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../encryption/encryption.html">★ Encryption</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Chronicle Queue User Guide</span>
+    <span class="version">1.0.0-SNAPSHOT</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">Chronicle Queue User Guide</span>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../introduction/introduction.html">1.0.0-SNAPSHOT</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+</div>
+  <div class="content">
+<article class="doc">
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../introduction/introduction.html">Chronicle Queue User Guide</a></li>
+    <li><a href="use-cases.html">Use cases</a></li>
+  </ul>
+</nav>
+<h1 class="page">Use cases</h1>
+<div class="sect1">
+<h2 id="_producer_centric_systems"><a class="anchor" href="#_producer_centric_systems"></a>Producer-centric systems</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue is most often used for producer-centric systems where you need to retain a lot of data for days or years.</p>
+</div>
+<div class="paragraph">
+<p>Most messaging systems are consumer-centric. Flow control is implemented to avoid the consumer ever getting overloaded; even momentarily. A common example is a server supporting multiple GUI users. Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times. For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.</p>
+</div>
+<div class="paragraph">
+<p>Chronicle Queue is a producer-centric solution and does everything possible to never push back on the producer, or tell it to slow down. This makes it a powerful tool, providing a big buffer between your system, and an upstream producer over which you have little, or no, control.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Chronicle Queue does <strong>not</strong> support operating off any network file system, be it NFS, AFS, SAN-based storage or anything else.
+The reason for this is those file systems do not provide all the required primitives for memory-mapped files Chronicle Queue uses.
+If any networking is needed (e.g. to make the data accessible to multiple hosts), the only supported way is Chronicle Queue Replication (Enterprise feature).
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_market_data"><a class="anchor" href="#_market_data"></a>Market data</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Market data publishers don&#8217;t give you the option to push back on the producer for long; if at all.
+A few of our users consume data from CME OPRA. This produces peaks of 10 million events per minute, sent as UDP packets without any retry.
+If you miss, or drop a packet, then it is lost.
+You have to consume and record those packets as fast as they come to you, with very little buffering in the network adapter.
+For market data in particular, real time means in a <strong>few microseconds</strong>; it doesn&#8217;t mean intra-day (during the day).</p>
+</div>
+<div class="paragraph">
+<p>Chronicle Queue is fast and efficient, and has been used to increase the speed that data is passed between threads.
+In addition, it also keeps a record of every message passed allowing you to significantly reduce the amount of logging that you need to do.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_compliance_systems"><a class="anchor" href="#_compliance_systems"></a>Compliance systems</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Compliance systems are required by more and more systems these days.
+Everyone has to have them, but no one wants to be slowed down by them.
+By using Chronicle Queue to buffer data between monitored systems and the compliance system, you don&#8217;t need to worry about the impact of compliance recording for your monitored systems.
+Again, Chronicle Queue can support millions of events per-second, per-server, and access data which has been retained for years.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_latency_sensitive_micro_services"><a class="anchor" href="#_latency_sensitive_micro_services"></a>Latency sensitive micro-services</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine in the order of magnitude of 1 microsecond; as well as between machines with a typical latency of 10 microseconds for modest throughputs of a few hundred thousands.
+Chronicle Queue supports throughputs of millions of events per second, with stable microsecond latencies.</p>
+</div>
+<div class="paragraph">
+<p>See <a href="https://vanilla-java.github.io/tag/Microservices/">Articles on the use of Chronicle Queue in Microservices</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_log_replacement"><a class="anchor" href="#_log_replacement"></a>Log replacement</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A Chronicle Queue can be used to build state machines.
+All the information about the state of those components can be reproduced externally, without direct access to the components, or to their state.
+This significantly reduces the need for additional logging.
+However, any logging you do need can be recorded in great detail.
+This makes enabling <code>DEBUG</code> logging in production practical.
+This is because the cost of logging is very low; less than 10 microseconds.
+Logs can be replicated centrally for log consolidation.
+Chronicle Queue is being used to store 100+ TB of data, which can be replayed from any point in time.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_lambda_stream_processing"><a class="anchor" href="#_lambda_stream_processing"></a>Lambda Stream Processing</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Non-batching streaming components are highly performant, deterministic, and reproducible.
+You can reproduce bugs which only show up after a million events played in a particular order, with accelerated realistic timings.
+This makes using Stream processing attractive for systems which need a high degree of quality outcomes.</p>
+</div>
+</div>
+</div>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>© 2021 Chronicle Software. All rights reserved.</p>
+</footer>
+<script src="../../../_/js/site.js"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+= Get started with Chronicle Queue
+keywords: chronicle queue, queue, java
+author: Julia Gustafsson
+:reftext: Get started with Chronicle Queue
+:navtitle: Get started with Chronicle Queue
+:source-highlighter: highlight.js
+
+This section helps you get started with Chronicle Queue in a few minutes. The process can be summed up in five steps:
+
+. <<Installing Chronicle Queue>>
+. <<Creating a new queue>>
+. <<Writing to a queue>>
+. <<Reading from a queue>>
+. <<Cleaning up>>
+
+The provided guide does not intend to be an exhaustive explanation of these steps but rather provide enough information to get you up and running quickly. Hence, most of the topics are explained in greater depth throughout the Chronicle Queue documentation.
+
+== Requirements
+Before starting with the set up, make sure your development environment meets the following requirements:
+
+* Maven 3.6.x or later
+* Java 8 update 180+ or later
+* Access to the internet to allow Maven or Gradle to download the JARs needed
+
+== Installing Chronicle Queue
+The installation is performed by notifying your build tool that the Chronicle Queue dependency is required to compile your source code. Below are instructions for installation using Maven or Gradle.
+
+=== Maven
+Install Chronicle Queue with Maven by adding the following code in the project's pom.xml-file:
+
+[source,xml]
+----
+<dependency>
+  <groupId>net.openhft</groupId>
+  <artifactId>chronicle-queue</artifactId>
+  <version><!--Latest version--></version> #<1>
+</dependency>
+----
+<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central].
+
+=== Gradle
+Install Chronicle Queue with Gradle by adding the following code in the project's build.gradle-file:
+
+[source, yaml]
+----
+dependencies {
+  implementation 'net.openhft:chronicle-queue:<Latest version>' #<1>
+}
+----
+<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central].
+
+== Hello World with Chronicle Queue
+Now that the installation is complete it is time to create a first queue and try appending and reading messages from it.
+
+=== Creating a new queue
+A new Chronicle Queue is obtained from a builder by passing the field `singleBuilder` the path where the queue is to be stored. The example below creates an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
+
+[source, java]
+----
+    String basePath = OS.getTarget() + "/getting-started"
+    ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build()
+----
+
+The queue files will reside in the directory `getting-started` and files are named with the current date on the following format:
+
+[source, shell script]
+----
+${java.io.tmpdir}/getting-started/{today}.cq4
+----
+
+=== Writing to a queue
+Messages are written, or appended, to a queue using an appender. The appender writes messages to the end of the queue only, there is no way to insert messages at a specific location.
+
+Here is how you can append a simple text message containing the text "Hello World!":
+[source, java]
+----
+ExcerptAppender appender = queue.acquireAppender(); #<1>
+
+appender.writeText("Hello World!"); #<2>
+----
+<1> Creates an appender
+<2> Writes "Hello World!" to the queue
+
+=== Reading from a queue
+Reading a from a queue is easiest done using a tailer, namely `ExcerptTailer`. The term _tailing_ stems from reading from the queue's tail, i.e. the end of the queue. However, you are not limited to only read from the end of the queue using the tailer.
+
+Here is how it is used to read the "Hello World" message that was just written to the queue:
+
+[source, java]
+----
+ExcerptTailer tailer = queue.createTailer(); #<1>
+
+assertEquals("Hello World!", tailer.readText()); #<2>
+----
+<1> Creates a tailer
+<2> Reads the written message "Hello World!" from the queue
+
+You can also dump the raw contents of the queue to the console using the method `dump()`:
+
+[source, java]
+----
+queue.dump();
+----
+
+=== Cleaning up
+Chronicle Queue stores its data off-heap, therefore it is recommended that you call `.close()` once you have finished working with Chronicle Queue to free up resources.
+
+[source, java]
+----
+queue.close();
+----
+
+IMPORTANT: No data will be lost when closing the queue. This procedure only cleans up resources that were used at runtime.
+
+=== Putting it all together
+
+Putting these instructions together, the application looks as follows:
+
+[source, java]
+----
+String basePath = OS.getTarget() + "/getting-started"
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build()) {
+
+    ExcerptAppender appender = queue.acquireAppender();
+    appender.writeText("TestMessage");
+
+    ExcerptTailer tailer = queue.createTailer();
+    assertEquals("TestMessage", tailer.readText());
+
+    queue.close();
+}
+----
+
+
+

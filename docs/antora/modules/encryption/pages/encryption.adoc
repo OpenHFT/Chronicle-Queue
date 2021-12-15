@@ -1,0 +1,58 @@
+= Encryption
+keywords: queue, java, encryption
+author: Julia Gustafsson
+:reftext: Encryption
+:navtitle: Encryption
+:source-highlighter: highlight.js
+
+Chronicle Queue Enterprise introduces the ability to encrypt your message queues and the constituent messages.
+
+[IMPORTANT]
+====
+* Encrypted queues are written to disk in their encrypted state.
+* Encrypted queues are replicated in their encrypted state.
+* The same encryption key must be available when accessing these encrypted queue files.
+====
+
+== AES encryption
+AES 64-bit encryption can be used by specifying `aesEncryption` at queue build time, and supplying an 8-bit encryption key.
+
+For example:
+[source, java]
+....
+public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
+        if (keyBytes == null) {
+            codingSuppliers(null, null);
+            return this;
+        }
+        SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+        Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier = () -> new VanillaCipher(Cipher.ENCRYPT_MODE, key);
+        Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier = () -> new VanillaCipher(Cipher.DECRYPT_MODE, key);
+        codingSuppliers(encodingSupplier, decodingSupplier);
+        messageHeader(MessageHeader.SALT_64, MessageHeader.SALT_64);
+        return this;
+    }
+....
+
+== Customer specified encryption
+You can supply a bespoke encryption method to encrypt your messages using, perhaps, a more complex encryption method.
+
+For example, you could perhaps combine encryption with salting, and/or compression.
+
+Another example could be to write simple custom code that will encrypt the more important messages, while saving on overhead by not encrypting unimportant messages.
+
+To enable this form of queue encryption, specify `codingSuppliers` at queue build time and supply the bespoke encryption method.
+
+For example:
+
+[source, java]
+....
+public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
+                                                           @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
+        if ((encodingSupplier == null) != (decodingSupplier == null))
+            throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
+        this.encodingSupplier = encodingSupplier;
+        this.decodingSupplier = decodingSupplier;
+        return this;
+    }
+....

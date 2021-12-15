@@ -1,0 +1,25 @@
+= Block size
+keywords: block size, chronicle queue, queue, java
+author: Julia Gustafsson
+:reftext: Block size
+:navtitle: Block size
+:source-highlighter: highlight.js
+
+When a queue is read/written, part of the current queue file is mapped to a memory segment. The size of the memory mapping blocks can be set using the method `blockSize(long blockSize)`, e.g. when creating the queue:
+
+[source, java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .blockSize(128 << 20) #<1>
+    .build();
+----
+<1> Block size in bytes (128 << 20 = 134217728).
+
+NOTE: The minimum block size is 2^16^ bytes.
+
+== General advice on block size
+The block size should preferably be adapted to the size of the queue messages. A good rule of thumb is to use a block size that is at least *four times* the message size. If trying to write a message  to the queue that exceeds the block size, an `IllegalStateException` is thrown and the write is aborted.
+
+It is also recommended using the same block size for each queue instance when replicating queues. The block size is not written to the queue's metadata, so should ideally be set to the same value when creating the queue instances.
+
+NOTE: Avoid changing the `blockSize` unnecessarily.
