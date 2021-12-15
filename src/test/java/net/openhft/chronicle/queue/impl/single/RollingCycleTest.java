@@ -267,11 +267,11 @@ public class RollingCycleTest extends QueueTestCommon {
                     "000001e0 35 92 f9 4d 68 e5 f1 2c  55 f0 b8 46 09          5··Mh··, U··F·   \n" +
                     "# position: 496, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "000001f0             10 6e 61 6d  65 5f 2d 31 31 35 34 37     ·nam e_-11547\n" +
-                    "00000200 31 35 30 37 39 90 45 c5  e6 f7 b9 1a 4b ea c3 2f 15079·E· ····K··/\n" +
-                    "00000210 7f 17 5f 10 01 5c 6e 62  fc cc 5e cc da          ··_··\\nb ··^··   \n" +
-                    "...\n" +
-                    "# 130524 bytes remaining\n";
+                    "000001e0                                      10 6e 61 6d              ·nam\n" +
+                    "000001f0 65 5f 2d 31 31 35 34 37  31 35 30 37 39 90 45 c5 e_-11547 15079·E·\n" +
+                    "00000200 e6 f7 b9 1a 4b ea c3 2f  7f 17 5f 10 01 5c 6e 62 ····K··/ ··_··\\nb\n" +
+                    "00000210 fc cc 5e cc da                                   ··^··            \n" +
+                    "...\n";
 
             long numRead = 0;
             final TestBytesMarshallable reusableData = new TestBytesMarshallable(0);

@@ -83,13 +83,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Parameters(name = "wireType={0}, named={1}")
     public static Collection<Object[]> data() {
-        return Arrays.asList( // {WireType.TEXT},
+        return Arrays.asList(
                 new Object[]{WireType.BINARY_LIGHT, true},
                 new Object[]{WireType.BINARY, false},
                 new Object[]{WireType.BINARY_LIGHT, false}
-                // new Object[]{WireType.COMPRESSED_BINARY, false}
-                // {WireType.DELTA_BINARY}
-                // {WireType.FIELDLESS_BINARY}
         );
     }
 
@@ -1952,7 +1949,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 dc.wire().write("FirstName").text("Steve");
             }
 
-            final ExcerptTailer tailer = chronicle.createTailer();
+            final ExcerptTailer tailer = chronicle.createTailer(named ? "named" : null);
 
             StringBuilder event = new StringBuilder();
             while (true) {
@@ -3243,6 +3240,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             System.err.println("#460 Cannot test read only mode on windows");
             return;
         }
+        assumeFalse(named);
 
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = builder(queueDir, wireType).
@@ -3259,7 +3257,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = builder(queueDir, wireType).
                 readOnly(true).
                 testBlockSize().build()) {
-            assertTrue(queue.createTailer().readingDocument().isPresent());
+            assertTrue(queue.createTailer(named ? "named" : null).readingDocument().isPresent());
         }
     }
 
@@ -3343,11 +3341,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return SingleChronicleQueueBuilder.builder(file, wireType)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .timeProvider(new SetTimeProvider("2021/11/17T12:34:56").advanceMillis(1000))
-                .appenderListener((w, idx) -> {
+/*                .appenderListener((w, idx) -> {
                     appenderListenerDump.append("idx: ").append(Long.toHexString(idx)).append("\n");
                     w.bytes().readSkip(-4);
                     appenderListenerDump.append(Wires.fromSizePrefixedBlobs(w)).append("\n");
-                })
+                })*/
                 .testBlockSize();
     }
 
@@ -3659,6 +3657,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadUsingReadOnly() {
         assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+        assumeFalse(named);
 
         File tmpDir = getTmpDir();
         String expected = "hello world";
@@ -3675,7 +3674,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .readOnly(true)
                 .build()) {
             StringBuilder sb = new StringBuilder();
-            try (DocumentContext dc = out.createTailer().readingDocument()) {
+            try (DocumentContext dc = out.createTailer(named ? "named" : null).readingDocument()) {
                 dc.wire().getValueIn().text(sb);
             }
 
