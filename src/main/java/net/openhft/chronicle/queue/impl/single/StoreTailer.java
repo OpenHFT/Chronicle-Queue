@@ -37,6 +37,7 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
  */
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
+    public static final long INVALID_INDEX = Long.MIN_VALUE;
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
     static final StringBuilderPool SBP = new StringBuilderPool();
     static final EOFException EOF_EXCEPTION = new EOFException();
@@ -57,7 +58,7 @@ class StoreTailer extends AbstractCloseable
     private boolean readAfterReplicaAcknowledged;
     @NotNull
     private TailerState state = UNINITIALISED;
-    private long indexAtCreation = Long.MIN_VALUE;
+    private long indexAtCreation = INVALID_INDEX;
     private boolean readingDocumentFound = false;
     private long address = NO_PAGE;
     private boolean striding = false;
@@ -177,7 +178,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public String toString() {
-        final long index = index();
+        final long index = this.index; // don't use index() as this confuses the debugger
         return "StoreTailer{" +
                 "index sequence=" + queue.rollCycle().toSequenceNumber(index) +
                 ", index cycle=" + queue.rollCycle().toCycle(index) +
@@ -202,20 +203,22 @@ class StoreTailer extends AbstractCloseable
     }
 
     DocumentContext readingDocumentNamed(final boolean includeMetaData) {
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1_000_000; i++) {
             this.indexChecker = indexValue.getVolatileValue();
             if (this.index != indexChecker)
                 moveToIndex(this.indexChecker);
 
             DocumentContext documentContext = readingDocument0(includeMetaData);
 
-            if (indexChecker != Long.MIN_VALUE) {
+            if (indexChecker != INVALID_INDEX) {
                 this.index = indexChecker;
                 if (context.isPresent() && !context.isMetaData())
                     incrementIndex();
                 return documentContext;
             }
             documentContext.close();
+            if (i > 1000)
+                Thread.yield();
         }
         throw new AssertionError();
     }
@@ -369,7 +372,7 @@ class StoreTailer extends AbstractCloseable
         final int currentCycle = queue.rollCycle().toCycle(oldIndex);
         final long nextIndex = nextIndexWithNextAvailableCycle(currentCycle);
 
-        if (nextIndex != Long.MIN_VALUE) {
+        if (nextIndex != INVALID_INDEX) {
             return nextEndOfCycle(queue.rollCycle().toCycle(nextIndex));
         } else {
             state = END_OF_CYCLE;
@@ -429,7 +432,7 @@ class StoreTailer extends AbstractCloseable
         final int cycle = queue.rollCycle().toCycle(index());
         final long nextIndex = nextIndexWithNextAvailableCycle(cycle);
 
-        if (nextIndex != Long.MIN_VALUE) {
+        if (nextIndex != INVALID_INDEX) {
             moveToIndexInternal(nextIndex);
             state = FOUND_IN_CYCLE;
             return true;
@@ -440,7 +443,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean nextCycleNotFound() {
-        if (index() == Long.MIN_VALUE) {
+        if (index() == INVALID_INDEX) {
             if (this.store != null)
                 queue.closeStore(this.store);
             this.store = null;
@@ -541,7 +544,7 @@ class StoreTailer extends AbstractCloseable
         assert cycle != Integer.MIN_VALUE : "cycle == Integer.MIN_VALUE";
 
         if (cycle > queue.lastCycle() || direction == TailerDirection.NONE) {
-            return Long.MIN_VALUE;
+            return INVALID_INDEX;
         }
 
         long nextIndex;
@@ -553,7 +556,7 @@ class StoreTailer extends AbstractCloseable
             try {
                 final int nextCycle0 = queue.nextCycle(this.cycle, direction);
                 if (nextCycle0 == -1)
-                    return Long.MIN_VALUE;
+                    return INVALID_INDEX;
 
                 nextIndex = nextIndexWithinFoundCycle(nextCycle0);
 
@@ -563,7 +566,7 @@ class StoreTailer extends AbstractCloseable
 
         if (Jvm.isResourceTracing()) {
             final int nextIndexCycle = queue.rollCycle().toCycle(nextIndex);
-            if (nextIndex != Long.MIN_VALUE && nextIndexCycle - 1 != cycle) {
+            if (nextIndex != INVALID_INDEX && nextIndexCycle - 1 != cycle) {
 
                 /*
                  * lets say that you were using a roll cycle of TEST_SECONDLY
@@ -736,6 +739,9 @@ class StoreTailer extends AbstractCloseable
 
     private ExcerptTailer doToStart() {
         assert direction != BACKWARD;
+
+        this.indexChecker = INVALID_INDEX;
+
         final int firstCycle = queue.firstCycle();
         if (firstCycle == Integer.MAX_VALUE) {
             state = UNINITIALISED;
@@ -790,7 +796,7 @@ class StoreTailer extends AbstractCloseable
         final int lastCycle = queue.lastCycle();
         try {
             if (lastCycle == Integer.MIN_VALUE)
-                return Long.MIN_VALUE;
+                return INVALID_INDEX;
 
             return approximateLastCycle2(lastCycle);
 
@@ -939,6 +945,8 @@ class StoreTailer extends AbstractCloseable
 
     @NotNull
     private ExcerptTailer optimizedToEnd() {
+        this.indexChecker = INVALID_INDEX;
+
         final RollCycle rollCycle = queue.rollCycle();
         final int lastCycle = queue.lastCycle();
         try {
@@ -990,7 +998,7 @@ class StoreTailer extends AbstractCloseable
 
         long index = approximateLastIndex();
 
-        if (index == Long.MIN_VALUE) {
+        if (index == INVALID_INDEX) {
             if (state() == TailerState.CYCLE_NOT_FOUND)
                 state = UNINITIALISED;
             return this;
@@ -1130,9 +1138,15 @@ class StoreTailer extends AbstractCloseable
 
     // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
     void index(final long index) {
-        index0(index);
+        this.index = index;
+        if (indexValue != null) {
+            if (this.indexChecker == INVALID_INDEX) {
+                indexValue.setValue(index);
+            } else if (!indexValue.compareAndSwapValue(this.indexChecker, index))
+                this.indexChecker = INVALID_INDEX;
+        }
 
-        if (indexAtCreation == Long.MIN_VALUE) {
+        if (indexAtCreation == INVALID_INDEX) {
             indexAtCreation = index;
         }
 
@@ -1286,9 +1300,9 @@ class StoreTailer extends AbstractCloseable
     }
 
     static final class MoveToState {
-        private long lastMovedToIndex = Long.MIN_VALUE;
+        private long lastMovedToIndex = INVALID_INDEX;
         private TailerDirection directionAtLastMoveTo = TailerDirection.NONE;
-        private long readPositionAtLastMove = Long.MIN_VALUE;
+        private long readPositionAtLastMove = INVALID_INDEX;
         private int indexMoveCount = 0;
 
         void onSuccessfulLookup(final long movedToIndex,
@@ -1308,16 +1322,16 @@ class StoreTailer extends AbstractCloseable
         }
 
         void reset() {
-            lastMovedToIndex = Long.MIN_VALUE;
+            lastMovedToIndex = INVALID_INDEX;
             directionAtLastMoveTo = TailerDirection.NONE;
-            readPositionAtLastMove = Long.MIN_VALUE;
+            readPositionAtLastMove = INVALID_INDEX;
         }
 
         private boolean indexIsCloseToAndAheadOfLastIndexMove(final long index,
                                                               final TailerState state,
                                                               final TailerDirection direction,
                                                               final ChronicleQueue queue) {
-            return lastMovedToIndex != Long.MIN_VALUE &&
+            return lastMovedToIndex != INVALID_INDEX &&
                     index - lastMovedToIndex < INDEXING_LINEAR_SCAN_THRESHOLD &&
                     state == FOUND_IN_CYCLE &&
                     direction == directionAtLastMoveTo &&
@@ -1359,6 +1373,13 @@ class StoreTailer extends AbstractCloseable
         @Override
         public int sourceId() {
             return StoreTailer.this.sourceId();
+        }
+
+        @Override
+        public void rollbackOnClose() {
+            if (indexValue != null)
+                throw new IllegalStateException("Can't roll back a named tailer");
+            super.rollbackOnClose();
         }
 
         @Override

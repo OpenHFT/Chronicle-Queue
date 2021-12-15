@@ -132,7 +132,7 @@ public class ConcurrentNamedTailersTest {
             indexValue.getValues.add(0x4a1400000007L);
 
             try (DocumentContext dc0 = tailer0.readingDocument()) {
-                assertEquals(0x4a1400000007L, tailer0.index());
+                assertEquals(Long.toHexString(0x4a1400000007L), Long.toHexString(tailer0.index()));
             }
             assertEquals("[4a1400000002, 4a1400000003, 4a1400000007, 4a1400000007, 4a1400000008]",
                     indexValue.setValues.stream().map(Long::toHexString).collect(Collectors.toList()).toString());
@@ -177,6 +177,10 @@ public class ConcurrentNamedTailersTest {
         IOTools.deleteDirWithFiles(tmpDir);
     }
 
+    interface Tasker {
+        void task(int taskId);
+    }
+
     private static class CompetingConsumer implements Runnable {
 
         private static final int LOG_EVERY = 10_000;
@@ -208,8 +212,8 @@ public class ConcurrentNamedTailersTest {
                 }
                 TimingPauser pauser = Pauser.balanced();
                 while (counter.get() < highestIndex) {
-                    try (final DocumentContext documentContext = namedTailer.readingDocument()) {
-                        final long index = documentContext.wire().read("index").int64();
+                    try (final DocumentContext dc = namedTailer.readingDocument()) {
+                        final long index = dc.wire().read("index").int64();
                         if (index % LOG_EVERY == 0) {
                             Jvm.startup().on(ConcurrentNamedTailersTest.class, "Read index " + index);
                         }
@@ -217,7 +221,7 @@ public class ConcurrentNamedTailersTest {
                             try {
                                 pauser.pause(1, TimeUnit.SECONDS);
                             } catch (TimeoutException e) {
-                                throw new AssertionError("Timed out trying to write " + index + " current value is " + counter.get());
+                                throw new AssertionError(Long.toHexString(dc.index()) + ": Timed out trying to read " + index + " current value is " + counter.get());
                             }
                         }
                         pauser.reset();
@@ -225,11 +229,6 @@ public class ConcurrentNamedTailersTest {
                 }
             }
         }
-    }
-
-
-    interface Tasker {
-        void task(int taskId);
     }
 
     static class DummyLongReference implements LongReference {
@@ -298,6 +297,11 @@ public class ConcurrentNamedTailersTest {
                 return true;
             }
             return false;
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getName() + "@" + Integer.toHexString(hashCode());
         }
     }
 }

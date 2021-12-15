@@ -195,6 +195,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testRollbackOnAppend() {
+        assumeFalse(named);
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), wireType)
                              .build()) {
@@ -1193,15 +1194,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
-           // System.out.print("Percent written=");
+            // System.out.print("Percent written=");
 
             for (long i = 0; i < TIMES; i++) {
                 final long j = i;
                 appender.writeDocument(wire -> wire.write("key").text("value=" + j));
 
-               // if (i % (TIMES / 20) == 0) {
-                   // System.out.println("" + (i * 100 / TIMES) + "%, ");
-               // }
+                // if (i % (TIMES / 20) == 0) {
+                // System.out.println("" + (i * 100 / TIMES) + "%, ");
+                // }
             }
             long lastIndex = appender.lastIndexAppended();
 
@@ -1209,7 +1210,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
 
-              // QueueDumpMain.dump(file, new PrintWriter(System.out));
+            // QueueDumpMain.dump(file, new PrintWriter(System.out));
 
             StringBuilder sb = new StringBuilder();
 
@@ -1217,9 +1218,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)));
                 tailer.readDocument(wire -> wire.read("key").text(sb));
                 assertEquals("value=" + i, sb.toString());
-               // if (i % (TIMES / 20) == 0) {
-                   // System.out.println("Percent read= " + (i * 100 / TIMES) + "%");
-               // }
+                // if (i % (TIMES / 20) == 0) {
+                // System.out.println("Percent read= " + (i * 100 / TIMES) + "%");
+                // }
             }
         }
     }
@@ -1764,7 +1765,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .forEach(path -> assertTrue(path.toFile().delete()));
 
             try (ChronicleQueue q2 = builder(dir, wireType).build()) {
-                tailer = q2.createTailer(named ? "named" : null);
+                tailer = q2.createTailer(named ? "named2" : null);
                 tailer.toEnd();
                 assertEquals(TailerState.UNINITIALISED, tailer.state());
                 append = q2.acquireAppender();
@@ -1794,10 +1795,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         .text("text"));
             }
 
-            ExcerptTailer tailer = chronicle.createTailer(named ? "named" : null);
-            ExcerptTailer tailer2 = chronicle.createTailer(named ? "named" : null);
-            ExcerptTailer tailer3 = chronicle.createTailer(named ? "named" : null);
-            ExcerptTailer tailer4 = chronicle.createTailer(named ? "named" : null);
+            ExcerptTailer tailer = chronicle.createTailer(named ? "named1" : null);
+            ExcerptTailer tailer2 = chronicle.createTailer(named ? "named2" : null);
+            ExcerptTailer tailer3 = chronicle.createTailer(named ? "named3" : null);
+            ExcerptTailer tailer4 = chronicle.createTailer(named ? "named4" : null);
             for (int i = 0; i < runs; i++) {
                 if (i % 10000 == 0)
                     System.gc();
@@ -2006,7 +2007,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
                 long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
                 assertEquals(i, seq);
-                     // System.out.println(chronicle.dump());
+                // System.out.println(chronicle.dump());
                 tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> assertEquals((long) a, b)));
             }
         }
@@ -2073,6 +2074,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     void readBackward(@NotNull ChronicleQueue chronicle, int entries) {
+        assumeFalse(named);
         ExcerptTailer backwardTailer = chronicle.createTailer(named ? "named" : null)
                 .direction(TailerDirection.BACKWARD)
                 .toEnd();
@@ -2146,7 +2148,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
             final long nextIndexToWrite = appender.lastIndexAppended() + 1;
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
-                       // System.out.println(chronicle.dump());
+            // System.out.println(chronicle.dump());
             assertEquals(nextIndexToWrite,
                     appender.lastIndexAppended());
         }
@@ -2325,7 +2327,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 if (!executor.awaitTermination(10_000, TimeUnit.SECONDS))
                     executor.shutdownNow();
 
-               // System.out.println(". " + i);
+                // System.out.println(". " + i);
                 Jvm.pause(1000);
             }
         }
@@ -2333,7 +2335,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testToEndPrevCycleEOF() {
-        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        final AtomicLong clock = new AtomicLong(1639580990000L);
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType)
                 .rollCycle(TEST_SECONDLY)
@@ -2384,17 +2386,21 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .timeProvider(clock::get)
                 .build()) {
 
-            ExcerptTailer excerptTailerBeforeAppend = q.createTailer(named ? "named" : null).toEnd();
-            q.acquireAppender().writeText("more text");
-            ExcerptTailer excerptTailerAfterAppend = q.createTailer(named ? "named" : null).toEnd();
-            q.acquireAppender().writeText("even more text");
+            final ExcerptAppender appender = q.acquireAppender();
+            appender.writeText("first text");
+            ExcerptTailer excerptTailerBeforeAppend = q.createTailer(named ? "named" : null)
+                    .toEnd();
+            appender.writeText("more text");
+            System.out.println(Long.toHexString(appender.lastIndexAppended()));
+            ExcerptTailer excerptTailerAfterAppend = q.createTailer(named ? "named2" : null)
+                    .toEnd();
+            appender.writeText("even more text");
+            System.out.println(Long.toHexString(appender.lastIndexAppended()));
 
             assertEquals("more text", excerptTailerBeforeAppend.readText());
             assertEquals("even more text", excerptTailerAfterAppend.readText());
             assertEquals("even more text", excerptTailerBeforeAppend.readText());
         }
-        AbstractCloseable.assertCloseablesClosed();
-
     }
 
     @Test
@@ -2430,7 +2436,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final long actualGcCycles = endCollectionCount - startCollectionCount;
 
             assertTrue(String.format("Too many GC cycles. Expected <= %d, but was %d",
-                    maxAllowedGcCycles, actualGcCycles),
+                            maxAllowedGcCycles, actualGcCycles),
                     actualGcCycles <= maxAllowedGcCycles);
         }
     }
@@ -2617,7 +2623,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             long[] indexs = new long[10];
             for (int i = 0; i < indexs.length; i++) {
-               // System.out.println(".");
+                // System.out.println(".");
                 try (DocumentContext writingContext = appender.writingDocument()) {
                     writingContext.wire().write().text("some-text-" + i);
                     indexs[i] = writingContext.index();
@@ -2633,7 +2639,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             for (int lower = 0; lower < indexs.length; lower++) {
                 for (int upper = lower; upper < indexs.length; upper++) {
-                   // System.out.println("lower=" + lower + ",upper=" + upper);
+                    // System.out.println("lower=" + lower + ",upper=" + upper);
                     assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
                             indexs[upper]));
                 }
@@ -2736,6 +2742,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             queue.acquireAppender().writeText("second message");
         }
 
+        assumeFalse(named);
         // read both messages
         try (ChronicleQueue queue = binary(dir).rollCycle(rollCycle).timeProvider(timeProvider).build();
              ExcerptTailer tailer = queue.createTailer(named ? "named" : null)) {
@@ -2762,8 +2769,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .build();
 
                  final ExcerptAppender appender2 = q2.acquireAppender();
-                 final ExcerptTailer tailer1 = q1.createTailer(named ? "named" : null);
-                 final ExcerptTailer tailer2 = q2.createTailer(named ? "named" : null)) {
+                 final ExcerptTailer tailer1 = q1.createTailer(named ? "named1" : null);
+                 final ExcerptTailer tailer2 = q2.createTailer(named ? "named2" : null)) {
 
                 try (final DocumentContext dc = appender2.writingDocument()) {
                     dc.wire().write().text("some data");
@@ -2833,7 +2840,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
 
             f1.get(10, TimeUnit.SECONDS);
-           // System.out.println(queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            // System.out.println(queue.dump().replaceAll("(?m)^#.+$\\n", ""));
             f2.get(10, TimeUnit.SECONDS);
 
             executorService.shutdownNow();
@@ -3377,7 +3384,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void rollbackTest() {
-
+        assumeFalse(named);
         File file = getTmpDir();
         try (final ChronicleQueue sourceQueue =
                      builder(file, wireType).
@@ -3548,38 +3555,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    private static class MapWrapper extends SelfDescribingMarshallable {
-        final Map<CharSequence, Double> map = new HashMap<>();
-    }
-
-    static class MyMarshable extends SelfDescribingMarshallable implements Demarshallable {
-        @UsedViaReflection
-        String name;
-
-        @UsedViaReflection
-        public MyMarshable(@NotNull WireIn wire) {
-            readMarshallable(wire);
-        }
-
-        public MyMarshable() {
-        }
-    }
-
-    private static class BytesWithIndex implements Closeable {
-        private BytesStore bytes;
-        private long index;
-
-        public BytesWithIndex(Bytes<?> bytes, long index) {
-            this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
-            this.index = index;
-        }
-
-        @Override
-        public void close() {
-            bytes.releaseLast();
-        }
-    }
-
     /**
      * relates to https://github.com/OpenHFT/Chronicle-Queue/issues/699
      */
@@ -3686,6 +3661,38 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             while (!gotAppender.get()) {
                 pauser.pause(1, TimeUnit.SECONDS);
             }
+        }
+    }
+
+    private static class MapWrapper extends SelfDescribingMarshallable {
+        final Map<CharSequence, Double> map = new HashMap<>();
+    }
+
+    static class MyMarshable extends SelfDescribingMarshallable implements Demarshallable {
+        @UsedViaReflection
+        String name;
+
+        @UsedViaReflection
+        public MyMarshable(@NotNull WireIn wire) {
+            readMarshallable(wire);
+        }
+
+        public MyMarshable() {
+        }
+    }
+
+    private static class BytesWithIndex implements Closeable {
+        private BytesStore bytes;
+        private long index;
+
+        public BytesWithIndex(Bytes<?> bytes, long index) {
+            this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
+            this.index = index;
+        }
+
+        @Override
+        public void close() {
+            bytes.releaseLast();
         }
     }
 }

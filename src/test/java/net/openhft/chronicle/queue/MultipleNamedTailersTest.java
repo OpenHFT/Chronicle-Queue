@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -26,8 +27,8 @@ public class MultipleNamedTailersTest {
     @Parameterized.Parameters(name = "empty={0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(
-                new Object[]{true},
-                new Object[]{false}
+                new Object[]{false},
+                new Object[]{true}
         );
     }
 
@@ -36,35 +37,45 @@ public class MultipleNamedTailersTest {
         File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
 
         try (ChronicleQueue q1 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize()
-//                .timeProvider(new SetTimeProvider("2021/12/15T11:22:33").advanceMicros(10))
-                .rollCycle(RollCycles.TEST_SECONDLY).build();
-             ExcerptAppender appender = q1.acquireAppender();
-             ExcerptTailer tailer1 = q1.createTailer();
-             ExcerptTailer namedTailer1 = q1.createTailer("named1");
-             ChronicleQueue q2 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().build();
-             ExcerptTailer tailer2 = q2.createTailer();
-             ExcerptTailer namedTailer2 = q2.createTailer("named2")) {
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
+             ExcerptAppender appender = q1.acquireAppender()) {
+
             if (!empty)
                 appender.writeText("0");
-            for (int i = 0; i < 1_000_000; i++) {
-                final String id0 = "" + (i + (empty ? 0 : 1));
-                appender.writeText(id0);
-                final long index0 = appender.lastIndexAppended();
-                check(tailer1, id0, index0);
-                check(namedTailer1, id0, index0);
-                check(tailer2, id0, index0);
-                check(namedTailer2, id0, index0);
+
+            try (ExcerptTailer tailer1 = q1.createTailer();
+                 ExcerptTailer namedTailer1 = q1.createTailer("named1");
+                 ChronicleQueue q2 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().build();
+                 ExcerptTailer tailer2 = q2.createTailer();
+                 ExcerptTailer namedTailer2 = q2.createTailer("named2")) {
+                for (int i = 0; i < 3_000; i++) {
+                    final String id0 = "" + i;
+                    if (i > 0 || empty)
+                        appender.writeText(id0);
+                    long index0 = appender.lastIndexAppended();
+                    if ((int) index0 == 0 && i > 0)
+                        System.out.println("index: " + Long.toHexString(index0));
+                    check(tailer1, id0, index0);
+                    check(namedTailer1, id0, index0);
+                    check(tailer2, id0, index0);
+                    check(namedTailer2, id0, index0);
+                    Jvm.pause(1);
+                }
             }
         }
         IOTools.deleteDirWithFiles(tmpDir);
     }
 
-    private void check(ExcerptTailer tailer1, String id0, long index0) {
-        try (DocumentContext dc = tailer1.readingDocument()) {
+    private void check(ExcerptTailer tailer, String id0, long index0) {
+        try (DocumentContext dc = tailer.readingDocument()) {
             assertTrue(dc.isPresent());
-            assertEquals(Long.toHexString(index0), Long.toHexString(tailer1.index()));
-            assertEquals(index0, tailer1.index());
-            assertEquals(id0, dc.wire().getValueIn().text());
+            final String text = dc.wire().getValueIn().text();
+            assertEquals(id0, text);
+            assertEquals(Long.toHexString(index0), Long.toHexString(tailer.index()));
+            assertEquals(index0, tailer.index());
         }
+        final long index2 = tailer.index();
+        assertEquals(index0 + 1, index2);
     }
 }

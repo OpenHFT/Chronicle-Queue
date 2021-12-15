@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 @RunWith(Parameterized.class)
 public final class MessageHistoryTest extends ChronicleQueueTestBase {
@@ -72,6 +73,7 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() {
+        assumeFalse(named);
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
             generateTestData(inputQueue, outputQueue);
@@ -89,6 +91,7 @@ public final class MessageHistoryTest extends ChronicleQueueTestBase {
 
     @Test
     public void chainedMessageHistory() {
+        assumeFalse(named);
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);
              final ChronicleQueue outputQueue = createQueue(middleQueueDir, 2)) {
