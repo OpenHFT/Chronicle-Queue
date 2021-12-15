@@ -1,0 +1,1 @@
+* xref:ring-buffer.adoc[Ring buffer ★]

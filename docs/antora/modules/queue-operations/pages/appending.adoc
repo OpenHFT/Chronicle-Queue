@@ -1,0 +1,327 @@
+= Appending
+keywords: queue, java, appending
+author: Julia Gustafsson
+:reftext: Appending
+:navtitle: Appending
+:source-highlighter: highlight.js
+
+Chronicle Queue uses an link:../../getting-started/pages/glossary.adoc#a[appender] to write to the queue and a link:../../getting-started/pages/glossary.adoc#t[tailer] to read from the queue.
+
+There are two main ways to write data to a queue. You can acquire an `ExcerptAppender`, or use a `MethodReader`.
+// TODO Describe benefits and down-sides of the two methods
+
+To write data to a Chronicle Queue, you must first create an appender:
+
+[source,Java]
+----
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
+   final ExcerptAppender appender = queue.acquireAppender();
+}
+----
+
+Chronicle Queue uses the following low-level interface to write the data:
+
+[source,Java]
+----
+try (final DocumentContext dc = appender.writingDocument()) {
+      dc.wire().write().text(“your text data“);
+}
+----
+
+The close on the try-with-resources, is the point when the length of the data is written to the header. You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below). You can later use this index to move-to/look up this excerpt. Each Chronicle Queue excerpt has a unique index.
+
+[source,Java]
+----
+try (final DocumentContext dc = appender.writingDocument()) {
+    dc.wire().write().text(“your text data“);
+    System.out.println("your data was store to index="+ dc.index());
+}
+----
+
+The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing. The actual code of `writeText(CharSequence text)` looks like this:
+
+[source,Java]
+----
+/**
+ * @param text the message to write
+ */
+void writeText(CharSequence text) {
+    try (DocumentContext dc = writingDocument()) {
+        dc.wire().bytes().append8bit(text);
+    }
+}
+----
+
+So you have a choice of a number of high-level interfaces, down to a low-level API, to raw memory.
+
+This is the highest-level API which hides the fact you are writing to messaging at all. The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
+
+[source,Java]
+----
+// using the method writer interface.
+RiskMonitor riskMonitor = appender.methodWriter(RiskMonitor.class);
+final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
+riskMonitor.trade(new TradeDetails(now, "GBPUSD", 1.3095, 10e6, Side.Buy, "peter"));
+----
+
+You can write a "self-describing message". Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
+
+[source,Java]
+----
+// writing a self describing message
+appender.writeDocument(w -> w.write("trade").marshallable(
+        m -> m.write("timestamp").dateTime(now)
+                .write("symbol").text("EURUSD")
+                .write("price").float64(1.1101)
+                .write("quantity").float64(15e6)
+                .write("side").object(Side.class, Side.Sell)
+                .write("trader").text("peter")));
+----
+
+
+[source, java]
+----
+package net.openhft.chronicle.queue;
+
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.Marshallable;
+
+import java.io.IOException;
+import java.nio.file.Files;
+
+public class Example {
+
+    static class MyObject implements Marshallable {
+        String name;
+        int age;
+
+        @Override
+        public String toString() {
+            return Marshallable.$toString(this);
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+
+        // will write the .cq4 file to working directory
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files
+                .createTempDirectory("queue").toFile()).build();
+        ExcerptAppender appender = queue.acquireAppender();
+        ExcerptTailer tailer = queue.createTailer();
+
+        MyObject me = new MyObject();
+        me.name = "rob";
+        me.age = 40;
+
+        // write 'MyObject' to the queue
+        appender.writeDocument(me);
+
+        // read 'MyObject' from the queue
+        MyObject result = new MyObject();
+        tailer.readDocument(result);
+
+       // System.out.println(result);
+    }
+}
+----
+
+outputs the following:
+
+----
+!net.openhft.chronicle.queue.Example$MyObject {
+  name: rob,
+  age: 40
+}
+----
+
+== Writing an object
+[source, java]
+----
+package net.openhft.chronicle.queue;
+
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.Marshallable;
+
+import java.io.IOException;
+import java.nio.file.Files;
+
+public class Example {
+
+    static class MyObject implements Marshallable {
+        String name;
+        int age;
+
+        @Override
+        public String toString() {
+            return Marshallable.$toString(this);
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+
+        // will write the .cq4 file to working directory
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files
+                .createTempDirectory("queue").toFile()).build();
+        ExcerptAppender appender = queue.acquireAppender();
+        ExcerptTailer tailer = queue.createTailer();
+
+        MyObject me = new MyObject();
+        me.name = "rob";
+        me.age = 40;
+
+        // write 'MyObject' to the queue
+        appender.writeDocument(me);
+
+        // read 'MyObject' from the queue
+        MyObject result = new MyObject();
+        tailer.readDocument(result);
+
+       // System.out.println(result);
+    }
+}
+----
+
+outputs the following:
+
+----
+!net.openhft.chronicle.queue.Example$MyObject {
+  name: rob,
+  age: 40
+}
+----
+
+== Writing raw data
+You can write "raw data" which is self-describing. The types will always be correct; position is the only indication as to the meaning of those values.
+
+[source,Java]
+----
+// writing just data
+appender.writeDocument(w -> w
+        .getValueOut().int32(0x123456)
+        .getValueOut().int64(0x999000999000L)
+        .getValueOut().text("Hello World"));
+----
+
+You can write "raw data" which is not self-describing. Your reader must know what this data means, and the types that were used.
+
+[source,Java]
+----
+// writing raw data
+appender.writeBytes(b -> b
+        .writeByte((byte) 0x12)
+        .writeInt(0x345678)
+        .writeLong(0x999000999000L)
+        .writeUtf8("Hello World"));
+----
+
+Below, the lowest level way to write data is illustrated. You get an address to raw memory and you can write whatever you want.
+
+[source,Java]
+----
+// Unsafe low level
+appender.writeBytes(b -> {
+    long address = b.address(b.writePosition());
+    Unsafe unsafe = UnsafeMemory.UNSAFE;
+    unsafe.putByte(address, (byte) 0x12);
+    address += 1;
+    unsafe.putInt(address, 0x345678);
+    address += 4;
+    unsafe.putLong(address, 0x999000999000L);
+    address += 8;
+    byte[] bytes = "Hello World".getBytes(StandardCharsets.ISO_8859_1);
+    unsafe.copyMemory(bytes, Jvm.arrayByteBaseOffset(), null, address, bytes.length);
+    b.writeSkip(1 + 4 + 8 + bytes.length);
+});
+----
+
+You can print the contents of the queue. You can see the first two, and last two messages store the same data.
+
+[source,Java]
+----
+// dump the content of the queue
+System.out.println(queue.dump());
+----
+prints:
+
+[source,Yaml]
+----
+# position: 262568, header: 0
+--- !!data #binary
+trade: {
+  timestamp: 2016-07-17T15:18:41.141,
+  symbol: GBPUSD,
+  price: 1.3095,
+  quantity: 10000000.0,
+  side: Buy,
+  trader: peter
+}
+# position: 262684, header: 1
+--- !!data #binary
+trade: {
+  timestamp: 2016-07-17T15:18:41.141,
+  symbol: EURUSD,
+  price: 1.1101,
+  quantity: 15000000.0,
+  side: Sell,
+  trader: peter
+}
+# position: 262800, header: 2
+--- !!data #binary
+!int 1193046
+168843764404224
+Hello World
+# position: 262830, header: 3
+--- !!data #binary
+000402b0       12 78 56 34 00 00  90 99 00 90 99 00 00 0B   ·xV4·· ········
+000402c0 48 65 6C 6C 6F 20 57 6F  72 6C 64                Hello Wo rld
+# position: 262859, header: 4
+--- !!data #binary
+000402c0                                               12                 ·
+000402d0 78 56 34 00 00 90 99 00  90 99 00 00 0B 48 65 6C xV4····· ·····Hel
+000402e0 6C 6F 20 57 6F 72 6C 64                          lo World
+----
+
+== Writing to a queue using `ChronicleWriter`
+
+If using `MethodReader` and `MethodWriter` then you can write single-argument method calls to a queue
+using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
+
+[source,bash]
+usage: ChronicleWriterMain files.. -d <directory> [-i <interface>] -m <method>
+Missing required options: m, d
+ -d <directory>   Directory containing chronicle queue to write to
+ -i <interface>   Interface to write via
+ -m <method>      Method name
+
+If you want to write to the below "doit" method
+
+[source,java]
+public interface MyInterface {
+    void doit(DTO dto);
+}
+public class DTO extends SelfDescribingMarshallable {
+    private int age;
+    private String name;
+}
+
+Then you can call `ChronicleWriterMain -d queue doit x.yaml` with either (or both) of the below Yamls:
+
+[source,yaml]
+{
+  age: 19,
+  name: Henry
+}
+
+or
+[source,yaml]
+!x.y.z.DTO {
+  age: 42,
+  name: Percy
+}
+
+If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
+
+== Preloading
+// TODO: Link to performance chapter on preloading

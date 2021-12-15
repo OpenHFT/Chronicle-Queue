@@ -1,0 +1,22 @@
+= ★ Buffer modes
+keywords: buffer modes, chronicle queue, queue, java
+author: Julia Gustafsson
+:reftext: Buffer modes
+:navtitle: Buffer modes
+:source-highlighter: highlight.js
+
+These parameters define BufferMode for reads or writes that have the following options:
+
+* *readBufferMode, writeBufferMode*
+
+These parameters define BufferMode for reads or writes that have the following options:
+
+*-* `None` - The default (and the only one available for open source users), no buffering;
+
+*-* `Copy` - used in conjunction with encryption;
+
+*-* `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
+
+* *bufferCapacity*
+
+RingBuffer capacity in bytes when using `bufferMode: Asynchronous`

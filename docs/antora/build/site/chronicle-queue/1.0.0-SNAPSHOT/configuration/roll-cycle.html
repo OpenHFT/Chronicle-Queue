@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Roll cycle :: Chronicle Queue</title>
+    <link rel="prev" href="app_configuration.html">
+    <link rel="next" href="wire-type.html">
+    <meta name="generator" content="Antora 2.3.4">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" href="../../../_/img/chronicle-favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+	  <script src="prism.js"></script>
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."></a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="../../..">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
+            <a class="navbar-item" href="https://chronicle.software">Website</a>
+            <a class="navbar-item" href="https://github.com/OpenHFT/Chronicle-Queuer">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<script src="prism.js"></script>
+<div class="nav-container" data-component="chronicle-queue" data-version="1.0.0-SNAPSHOT">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../introduction/introduction.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../what-is-chronicle-queue/what-is-chronicle-queue.html">What is Chronicle Queue?</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <span class="nav-text">Getting started</span>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/quick-start.html">Get started with Chronicle Queue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/glossary.html">Glossary</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="app_configuration.html">Configuration</a>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="roll-cycle.html">Roll cycle</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="wire-type.html">Wire type</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="block-size.html">Block size</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="index-count.html">Index count</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="index-spacing.html">Index spacing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../appending/appending.html">Appending</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../tailing/tailing.html">Tailing</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../performance/performance.html">Performance tuning</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../replication/replication.html">★ Queue Replication</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../encryption/encryption.html">★ Encryption</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Chronicle Queue User Guide</span>
+    <span class="version">1.0.0-SNAPSHOT</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">Chronicle Queue User Guide</span>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../introduction/introduction.html">1.0.0-SNAPSHOT</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+</div>
+  <div class="content">
+<article class="doc">
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../introduction/introduction.html">Chronicle Queue User Guide</a></li>
+    <li><a href="app_configuration.html">Configuration</a></li>
+    <li><a href="roll-cycle.html">Roll cycle</a></li>
+  </ul>
+</nav>
+<h1 class="page">Roll cycle</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>By default, Chronicle Queue creates a new queue file each hour - this file will have the extension <code>.cq4</code>.Writing to a new Chronicle Queue file is referred to as Queue Rolling.This section describes how rolling is performed and shows how the roll cycle interval can be customized.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_how_rolling_works"><a class="anchor" href="#_how_rolling_works"></a>How rolling works</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>When the queue reaches the point in time when it should roll, the appender will atomically write an end-of-file (EOF) mark at the end of the current file, to indicate that no other appender should write to it. Likewise, no tailer should read further than this mark.</p>
+</div>
+<div class="paragraph">
+<p>If the process was shut down and later restarted after rolling should have occurred, the appender will try to locate the old file(s) and write the EOF marker. However, after a certain timeout, the tailers will act as if there is an EOF mark in the file(s) regardless.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_roll_cycle_configuration"><a class="anchor" href="#_roll_cycle_configuration"></a>Roll cycle configuration</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The interval for rolling is configured using the queue&#8217;s attribute <code>rollCycle</code>.As an example, the queue can be configured to roll its file (i.e. create a new file) every day by providing the <code>RollCycle.DAILY</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .rollCycle(RollCycles.DAILY)
+    .build();</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>All available roll-cycles can be shown under <a href="#_available_roll_cycles">Available roll-cycles</a>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The default roll-cycle is <code>RollCycle.HOURLY</code>.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Overriding the roll cycle</div>
+<div class="paragraph">
+<p>Once a queue’s roll-cycle has been set, it cannot be changed at a later time.More formally, after the first append has been made to a Chronicle Queue, any further instances of <code>SingleChronicleQueue</code> configured to use the same path must be configured to use the same roll-cycle.Trying to set this option twice will throw an exception.</p>
+</div>
+<div class="paragraph">
+<p>In the case where another Chronicle Queue instance is created before any appends have been made, and there is a subsequent append operation with a different roll-cycle, then the roll-cycle will be updated to match the persisted roll-cycle.In this case, a warning log message will be printed in order to notify the library user of the situation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>[main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY. Overriding this queue to use HOURLY</pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="epoch"><a class="anchor" href="#epoch"></a>Controlling the exact roll time</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue is UTC time based and uses <code>System.currentTimeMillis()</code> to evaluate when it is time to roll the queue. Rolling occurs whenever a new time frame of the selected kind is started, meaning for minutely rolling a new queue is created when a new minute begins and daily rolls occurs at midnight UTC time.</p>
+</div>
+<div class="paragraph">
+<p>This behavior can be changed using Chronicle Queue’s attribute <code>epoch()</code>.Epoch refers to a milliseconds offset to the set time frame.In other words, if you set the epoch to be <code>epoch(1)</code> and use <code>RollCycle.DAILY</code> the queue will roll at 1 millisecond past midnight UTC time.Putting it together:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .rollCycle(RollCycle.DAILY)
+    .epoch(1)
+    .build();</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The current time can also be used as the roll time by providing <code>System.currentTimeMillis()</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .rollCycle(RollCycle.DAILY)
+    .epoch(System.currentTimeMillis())
+    .build();</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+We do not recommend that you change the epoch on systems which already has <code>.cq4</code> files created, which are using a different epoch setting.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_available_roll_cycles"><a class="anchor" href="#_available_roll_cycles"></a>Available roll-cycles</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>As described earlier, the roll-cycle determines how often a new queue is created. However, each roll-cycle also leverages queues with a varying message capacity. This results in different roll-cycles having a maximum capacity in terms of throughput.</p>
+</div>
+<div class="paragraph">
+<p>The available roll-cycles and their capacities are summarized in the table below:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Roll-cycle name</th>
+<th class="tableblock halign-left valign-top">Max nr of messages in each cycle in decimal</th>
+<th class="tableblock halign-left valign-top">Max nr of messages in each cycle in hexadecimal</th>
+<th class="tableblock halign-left valign-top">Max nr of messages per second over the length of the cycle (on average)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">FIVE_MINUTELY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,073,741,824</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x40000000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3,579,139</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEN_MINUTELY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,073,741,824</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x40000000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,789,569</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TWENTY_MINUTELY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,073,741,824</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x40000000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,491,308</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HALF_HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,073,741,824</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x40000000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">596,523</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">FAST_HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,193,046</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TWO_HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">596,523</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">FOUR_HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">298,261</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SIX_HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">198,841</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">FAST_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">49,710</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MINUTELY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">67,108,864</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x4000000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,118,481</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">268,435,456</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x10000000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">74,565</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">49,710</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">LARGE_HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">49,710</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">LARGE_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">137,438,953,471</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x1fffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,590,728</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">XLARGE_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,398,046,511,103</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x3ffffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">50,903,316</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HUGE_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">281,474,976,710,655</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3,257,812,230</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SMALL_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">536,870,912</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x20000000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6,213</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">LARGE_HOURLY_SPARSE</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">17,179,869,183</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x3ffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,772,185</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">LARGE_HOURLY_XSPARSE</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,398,046,511,103</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x3ffffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,221,679,586</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HUGE_DAILY_XSPARSE</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">281,474,976,710,655</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">78,187,493,530</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEST_SECONDLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0xffffffff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,294,967,295</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEST4_SECONDLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,096</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x1000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,096</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEST_HOURLY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,024</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x400</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEST_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">64</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x40</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEST2_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">512</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x200</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEST4_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4,096</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x1000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TEST8_DAILY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">131,072</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x20000</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Roll-cycles named <em>TEST*</em> should only be used in test environments.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_timezone_rollover"><a class="anchor" href="#_timezone_rollover"></a>★ Timezone rollover</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue bases its roll times on the UTC time zone. However, Chronicle Queue Enterprise supports time zone rollover. This allows specifying a time and periodicity of queue rollovers which takes account of the user&#8217;s local timezone, rather than UTC.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Time zone roll cycles is an <strong>Enterprise feature</strong> and only applies to daily rollovers, i.e. when the roll cycle is one of:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>SMALL_DAILY</code></p>
+</li>
+<li>
+<p><code>DAILY</code></p>
+</li>
+<li>
+<p><code>LARGE_DAILY</code></p>
+</li>
+<li>
+<p><code>XLARGE_DAILY</code></p>
+</li>
+<li>
+<p><code>HUGE_DAILY</code></p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_configuration"><a class="anchor" href="#_configuration"></a>Configuration</h3>
+<div class="paragraph">
+<p>Timezone rolling is set using the configuration method <code>rollTime(LocalTime rollTime, ZoneId zoneId)</code>. It is provided an instance of <code>LocalTime.of(int hour, int minute)</code> describing at what hour and minute of the day to roll, relative to the given time zone. If no time zone is provided, the default is UTC.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Read more about available ZoneId:s in the <a href="https://docs.oracle.com/javase/8/docs/api/java/util/TimeZone.html">here</a>.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Below is an example of a queue that performs daily rolls a 5 PM, London time:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
+    .rollTime(LocalTime.of(17, 0), ZoneId.of("Europe/London"))
+    .rollCycle(RollCycle.DAILY)
+    .timeProvider(System.currentTimeMillis())
+    .build();</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Required time provider</div>
+<div class="paragraph">
+<p>To use timezone rolling. The queue <strong>must be</strong> configured to use Chronicle&#8217;s time provider, <code>net.openhft.chronicle.core.time.SystemTimeProvider</code> as shown above.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_general_advice_on_rolling"><a class="anchor" href="#_general_advice_on_rolling"></a>General advice on rolling</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>At roll-time, a few unavoidable objects and memory mappings are created, and the old memory mappings are released. This activity can introduce slight jitter to your application. Chronicle aim&#8217;s to keep this to a minimum, and control when it occurs. However, it is still recommended avoiding rolling at critical points in time to the extent possible.</p>
+</div>
+<div class="sect2">
+<h3 id="_adapt_to_down_time"><a class="anchor" href="#_adapt_to_down_time"></a>Adapt to down-time</h3>
+<div class="paragraph">
+<p>In systems that are not always active, it is advised to schedule rolls during the down-time. However, for applications with a buzy feed and no down-time, Chronicle recommends using minutely rolling (a new queue is created every minute). This keep jitter to a minimum, as only one minute’s worth of data has to be unmapped on a queue-roll.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_avoid_large_files"><a class="anchor" href="#_avoid_large_files"></a>Avoid large files</h3>
+<div class="paragraph">
+<p>It is generally recommended limiting the size of queue files to around &lt; 250GB as unmapping a large <code>.cq4</code> file has can cause unwanted jitter. Therefore, if possible, use a more regular roll-cycle to avoid any performance penalties associated with unmapping large files.</p>
+</div>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="app_configuration.html">Configuration</a></span>
+  <span class="next"><a href="wire-type.html">Wire type</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>© 2021 Chronicle Software. All rights reserved.</p>
+</footer>
+<script src="../../../_/js/site.js"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

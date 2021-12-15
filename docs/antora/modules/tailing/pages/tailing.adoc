@@ -1,0 +1,362 @@
+= Tailing
+keywords: queue, java, tailing
+author: Julia Gustafsson
+:reftext: Tailing
+:navtitle: Tailing
+:source-highlighter: highlight.js
+
+Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
+
+Unlike other Java queuing solutions, messages are not lost when they are read with a tailer. This is covered in more detail in the section below on "Reading from a queue using a tailer".
+
+.Start Reading
+[source, java]
+----
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
+   final ExcerptTailer tailer = queue.createTailer();
+}
+----
+
+You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments. Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
+
+[source, java]
+----
+// reading using method calls
+RiskMonitor monitor = System.out::println;
+MethodReader reader = tailer.methodReader(monitor);
+// read one message
+assertTrue(reader.readOne());
+----
+
+You can decode the message yourself.
+
+NOTE: The names, type, and order of the fields doesn't have to match.
+
+[source, java]
+----
+assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
+        m -> {
+            LocalDateTime timestamp = m.read("timestamp").dateTime();
+            String symbol = m.read("symbol").text();
+            double price = m.read("price").float64();
+            double quantity = m.read("quantity").float64();
+            Side side = m.read("side").object(Side.class);
+            String trader = m.read("trader").text();
+            // do something with values.
+        })));
+----
+
+You can read self-describing data values. This will check the types are correct, and convert as required.
+
+[source, java]
+----
+assertTrue(tailer.readDocument(w -> {
+    ValueIn in = w.getValueIn();
+    int num = in.int32();
+    long num2 = in.int64();
+    String text = in.text();
+    // do something with values
+}));
+----
+
+You can read raw data as primitives and strings.
+
+[source, java]
+----
+assertTrue(tailer.readBytes(in -> {
+    int code = in.readByte();
+    int num = in.readInt();
+    long num2 = in.readLong();
+    String text = in.readUtf8();
+    assertEquals("Hello World", text);
+    // do something with values
+}));
+----
+
+or, you can get the underlying memory address and access the native memory.
+
+[source, java]
+----
+assertTrue(tailer.readBytes(b -> {
+    long address = b.address(b.readPosition());
+    Unsafe unsafe = UnsafeMemory.UNSAFE;
+    int code = unsafe.getByte(address);
+    address++;
+    int num = unsafe.getInt(address);
+    address += 4;
+    long num2 = unsafe.getLong(address);
+    address += 8;
+    int length = unsafe.getByte(address);
+    address++;
+    byte[] bytes = new byte[length];
+    unsafe.copyMemory(null, address, bytes, Jvm.arrayByteBaseOffset(), bytes.length);
+    String text = new String(bytes, StandardCharsets.UTF_8);
+    assertEquals("Hello World", text);
+    // do something with values
+}));
+----
+
+NOTE: Every tailer sees every message.
+
+An abstraction can be added to filter messages, or assign messages to just one message processor. However, in general you only need one main tailer for a topic, with possibly, some supporting tailers for monitoring etc.
+
+As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic. Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
+
+== Tailers and file handlers clean up
+
+Chronicle Queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
+If you are writing your code not have GC pauses and you explicitly want to clean up the file handlers, you can call the following:
+
+[source, java]
+----
+((StoreTailer)tailer).releaseResources()
+----
+
+=== Using `ExcerptTailer.toEnd()`
+
+In some applications, it may be necessary to start reading from the end of the queue (e.g. in a restart scenario).
+For this use-case, `ExcerptTailer` provides the `toEnd()` method.
+When the tailer direction is `FORWARD` (by default, or as set by the `ExcerptTailer.direction`
+method), then calling `toEnd()` will place the tailer just *after* the last existing record in the queue.
+In this case, the tailer is now ready for reading any new records appended to the queue.
+Until any new messages are appended to the queue, there will be no new `DocumentContext`
+available for reading:
+
+[source,java]
+----
+// this will be false until new messages are appended to the queue
+boolean messageAvailable = tailer.toEnd().readingDocument().isPresent();
+----
+
+If it is necessary to read backwards through the queue from the end, then the tailer can be set to read backwards:
+
+[source,java]
+----
+ExcerptTailer tailer = queue.createTailer();
+tailer.direction(TailerDirection.BACKWARD).toEnd();
+----
+
+When reading backwards, then the `toEnd()` method will move the tailer to the last record in the queue. If the queue is not empty, then there will be a
+`DocumentContext` available for reading:
+
+[source, java]
+----
+// this will be true if there is at least one message in the queue
+boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
+        readingDocument().isPresent();
+----
+
+== Restartable tailers
+
+AKA named tailers.
+
+It can be useful to have a tailer which continues from where it was up to on restart of the application.
+
+[source, java]
+----
+try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
+    ExcerptTailer atailer = cq.createTailer("a");
+    assertEquals("test 0", atailer.readText());
+    assertEquals("test 1", atailer.readText());
+    assertEquals("test 2", atailer.readText()); #<1>
+
+    ExcerptTailer btailer = cq.createTailer("b");
+    assertEquals("test 0", btailer.readText()); #<3>
+}
+
+try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
+    ExcerptTailer atailer = cq.createTailer("a");
+    assertEquals("test 3", atailer.readText()); #<2>
+    assertEquals("test 4", atailer.readText());
+    assertEquals("test 5", atailer.readText());
+
+    ExcerptTailer btailer = cq.createTailer("b");
+    assertEquals("test 1", btailer.readText()); #<4>
+}
+----
+<1> Tailer "a" last reads message 2
+<2> Tailer "a" next reads message 3
+<3> Tailer "b" last reads message 0
+<4> Tailer "b" next reads message 1
+
+This is from the `RestartableTailerTest` where there are two tailers, each with a unique name.
+These tailers store their index within the Queue itself and this index is maintained as the tailer uses `toStart()`, `toEnd()`, `moveToIndex()` or reads a message.
+
+NOTE: The `direction()` is not preserved across restarts, only the next index to be read.
+
+NOTE: The index of a tailer is only progressed when the `DocumentContext.close()` is called.
+If this is prevented by an error, the same message will be read on each restart.
+
+== Command line tools - reading and writing a Chronicle Queue
+
+Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
+
+[source, text]
+----
+\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
+ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
+���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß
+���������������������������������������������������������������������������������������������
+���������������������������������������������������������������������������������������������
+���������������������������������������������������������������������������������������������
+���������������������������������������������������������������������������������������������
+�����������������������������������������������������������������
+----
+
+This can often be a bit difficult to read, so it is better to dump the `cq4` files as text. This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
+
+You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue. They can both be run from the command line in a number of ways described below.
+
+== DumpMain
+
+If you have a project pom file that includes the Chronicle-Queue artifact, you can read a `cq4` file with the following command:
+
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -Dexec.args="myqueue"
+----
+
+In the above command _myqueue_ is the directory containing your .cq4 files
+
+You can also set up any dependent files manually. This requires the `chronicle-queue.jar`, from any version 4.5.3 or later, and that all dependent files are present on the class path. The dependent jars are listed below:
+
+[source, shell script]
+----
+$ ls -ltr
+total 9920
+-rw-r--r--  1 robaustin  staff   112557 28 Jul 14:52 chronicle-queue-5.20.108.jar
+-rw-r--r--  1 robaustin  staff   209268 28 Jul 14:53 chronicle-bytes-2.20.104.jar
+-rw-r--r--  1 robaustin  staff   136434 28 Jul 14:56 chronicle-core-2.20.114.jar
+-rw-r--r--  1 robaustin  staff    33562 28 Jul 15:03 slf4j-api-1.7.30.jar
+-rw-r--r--  1 robaustin  staff    33562 28 Jul 15:03 slf4j-simple-1.7.30.jar
+-rw-r--r--  1 robaustin  staff   324302 28 Jul 15:04 chronicle-wire-2.20.105.jar
+-rw-r--r--  1 robaustin  staff    35112 28 Jul 15:05 chronicle-threads-2.20.101.jar
+-rw-r--r--  1 robaustin  staff   344235 28 Jul 15:05 affinity-3.20.0.jar
+-rw-r--r--  1 robaustin  staff   124332 28 Jul 15:05 commons-cli-1.4.jar
+-rw-r--r--  1 robaustin  staff  4198400 28 Jul 15:06 19700101-02.cq4
+----
+
+TIP: To find out which version of jars to include please, refer to the link:https://github.com/OpenHFT/OpenHFT/blob/74808dc7f0b55094d4fd6fce1817842baab5b87b/chronicle-bom/pom.xml[`chronicle-bom`].
+
+Once the dependencies are present on the class path, you can run:
+
+[source, shell script]
+----
+$ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.main.DumpMain 19700101-02.cq4
+----
+
+This will dump the `19700101-02.cq4` file out as text, as shown below:
+
+[source, yaml]
+----
+!!meta-data #binary
+header: !SCQStore {
+  wireType: !WireType BINARY,
+  writePosition: 0,
+  roll: !SCQSRoll {
+    length: !int 3600000,
+    format: yyyyMMdd-HH,
+    epoch: !int 3600000
+  },
+  indexing: !SCQSIndexing {
+    indexCount: !short 4096,
+    indexSpacing: 4,
+    index2Index: 0,
+    lastIndex: 0
+  },
+  lastAcknowledgedIndexReplicated: -1,
+  recovery: !TimedStoreRecovery {
+    timeStamp: 0
+  }
+}
+
+...
+# 4198044 bytes remaining
+----
+
+NOTE: The example above does not show any user data, because no user data was written to this example file.
+
+There is also a script named `dump_queue.sh` located in the `Chonicle-Queue/bin`-folder that gathers the needed dependencies in a shaded jar and uses it to dump the queue with `DumpMain`. The script can be run from the `Chronicle-Queue` root folder like this:
+
+[source, shell script]
+----
+$ ./bin/dump_queue.sh <file path>
+----
+
+'''
+=== Reading a queue using `ChronicleReaderMain`
+
+The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project). As mentioned above, it is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
+
+Below is the command line interface used to configure `ChronicleReaderMain`:
+
+----
+usage: ChronicleReaderMain
+ -d <directory>       Directory containing chronicle queue files
+ -e <exclude-regex>   Do not display records containing this regular
+                      expression
+ -f                   Tail behaviour - wait for new records to arrive
+ -h                   Print this help and exit
+ -i <include-regex>   Display records containing this regular expression
+ -l                   Squash each output message into a single line
+ -m <max-history>     Show this many records from the end of the data set
+ -n <from-index>      Start reading from this index (e.g. 0x123ABE)
+ -r <interface>       Use when reading from a queue generated using a MethodWriter
+ -s                   Display index
+ -w <wire-type>       Control output i.e. JSON
+----
+
+Just as with `DumpQueue` you need the classes in the example above present on the class path. This can again be achieved by manually adding them and then run:
+
+[source, shell script]
+----
+$ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.ChronicleReaderMain -d <directory>
+----
+
+Another option is to create an Uber Jar using the Maven shade plugin. It is configured as follows:
+
+[source, xml]
+----
+ <build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.1.1</version>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                    <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <includes>
+                                    <include>net/openhft/**</include>
+                                    <include>software/chronicle/**</include>
+                                </includes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+----
+
+Once the Uber jar is present, you can run `ChronicleReaderMain` from the command line via:
+
+----
+java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "19700101-02.cq4"
+----
+
+Lastly, there is a script for running the reader named `queue_reader.sh` which again is located in the `Chonicle-Queue/bin`-folder. It automatically gathers the needed dependencies in a shaded jar and uses it to run `ChronicleReaderMain`. The script can be run from the `Chronicle-Queue` root folder like this:
+
+[source, shell script]
+----
+$ ./bin/queue_reader.sh <options>
+----
+

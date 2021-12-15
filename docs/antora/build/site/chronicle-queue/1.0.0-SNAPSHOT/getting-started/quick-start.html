@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Get started with Chronicle Queue :: Chronicle Queue</title>
+    <link rel="prev" href="../what-is-chronicle-queue/what-is-chronicle-queue.html">
+    <link rel="next" href="glossary.html">
+    <meta name="generator" content="Antora 2.3.4">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" href="../../../_/img/chronicle-favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+	  <script src="prism.js"></script>
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."></a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="../../..">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
+            <a class="navbar-item" href="https://chronicle.software">Website</a>
+            <a class="navbar-item" href="https://github.com/OpenHFT/Chronicle-Queuer">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<script src="prism.js"></script>
+<div class="nav-container" data-component="chronicle-queue" data-version="1.0.0-SNAPSHOT">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../introduction/introduction.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../what-is-chronicle-queue/what-is-chronicle-queue.html">What is Chronicle Queue?</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <span class="nav-text">Getting started</span>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="quick-start.html">Get started with Chronicle Queue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="glossary.html">Glossary</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../configuration/app_configuration.html">Configuration</a>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/roll-cycle.html">Roll cycle</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/wire-type.html">Wire type</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/block-size.html">Block size</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-count.html">Index count</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-spacing.html">Index spacing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../appending/appending.html">Appending</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../tailing/tailing.html">Tailing</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../performance/performance.html">Performance tuning</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../replication/replication.html">★ Queue Replication</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../encryption/encryption.html">★ Encryption</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Chronicle Queue User Guide</span>
+    <span class="version">1.0.0-SNAPSHOT</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">Chronicle Queue User Guide</span>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../introduction/introduction.html">1.0.0-SNAPSHOT</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+</div>
+  <div class="content">
+<article class="doc">
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../introduction/introduction.html">Chronicle Queue User Guide</a></li>
+    <li>Getting started</li>
+    <li><a href="quick-start.html">Get started with Chronicle Queue</a></li>
+  </ul>
+</nav>
+<h1 class="page">Get started with Chronicle Queue</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This section helps you get started with Chronicle Queue in a few minutes. The process can be summed up in five steps:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><a href="#_installing_chronicle_queue">Installing Chronicle Queue</a></p>
+</li>
+<li>
+<p><a href="#_creating_a_new_queue">Creating a new queue</a></p>
+</li>
+<li>
+<p><a href="#_writing_to_a_queue">Writing to a queue</a></p>
+</li>
+<li>
+<p><a href="#_reading_from_a_queue">Reading from a queue</a></p>
+</li>
+<li>
+<p><a href="#_cleaning_up">Cleaning up</a></p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The provided guide does not intend to be an exhaustive explanation of these steps but rather provide enough information to get you up and running quickly. Hence, most of the topics are explained in greater depth throughout the Chronicle Queue documentation.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_requirements"><a class="anchor" href="#_requirements"></a>Requirements</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before starting with the set up, make sure your development environment meets the following requirements:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Maven 3.6.x or later</p>
+</li>
+<li>
+<p>Java 8 update 180+ or later</p>
+</li>
+<li>
+<p>Access to the internet to allow Maven or Gradle to download the JARs needed</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_installing_chronicle_queue"><a class="anchor" href="#_installing_chronicle_queue"></a>Installing Chronicle Queue</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The installation is performed by notifying your build tool that the Chronicle Queue dependency is required to compile your source code. Below are instructions for installation using Maven or Gradle.</p>
+</div>
+<div class="sect2">
+<h3 id="_maven"><a class="anchor" href="#_maven"></a>Maven</h3>
+<div class="paragraph">
+<p>Install Chronicle Queue with Maven by adding the following code in the project&#8217;s pom.xml-file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-xml hljs" data-lang="xml">&lt;dependency&gt;
+  &lt;groupId&gt;net.openhft&lt;/groupId&gt;
+  &lt;artifactId&gt;chronicle-queue&lt;/artifactId&gt;
+  &lt;version&gt;&lt;!--Latest version--&gt;&lt;/version&gt; <i class="conum" data-value="1"></i><b>(1)</b>
+&lt;/dependency&gt;</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>To be replaced with the latest version on <a href="https://search.maven.org/artifact/net.openhft/chronicle-queue">Maven Central</a>.</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_gradle"><a class="anchor" href="#_gradle"></a>Gradle</h3>
+<div class="paragraph">
+<p>Install Chronicle Queue with Gradle by adding the following code in the project&#8217;s build.gradle-file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">dependencies {
+  implementation 'net.openhft:chronicle-queue:&lt;Latest version&gt;' <i class="conum" data-value="1"></i><b>(1)</b>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>To be replaced with the latest version on <a href="https://search.maven.org/artifact/net.openhft/chronicle-queue">Maven Central</a>.</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hello_world_with_chronicle_queue"><a class="anchor" href="#_hello_world_with_chronicle_queue"></a>Hello World with Chronicle Queue</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Now that the installation is complete it is time to create a first queue and try appending and reading messages from it.</p>
+</div>
+<div class="sect2">
+<h3 id="_creating_a_new_queue"><a class="anchor" href="#_creating_a_new_queue"></a>Creating a new queue</h3>
+<div class="paragraph">
+<p>A new Chronicle Queue is obtained from a builder by passing the field <code>singleBuilder</code> the path where the queue is to be stored. The example below creates an <code>IndexedChronicle</code> which creates two <code>RandomAccessFiles</code>; one for indexes, and one for data having names relatively:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">    String basePath = OS.getTarget() + "/getting-started"
+    ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The queue files will reside in the directory <code>getting-started</code> and files are named with the current date on the following format:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell script hljs" data-lang="shell script">${java.io.tmpdir}/getting-started/{today}.cq4</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_writing_to_a_queue"><a class="anchor" href="#_writing_to_a_queue"></a>Writing to a queue</h3>
+<div class="paragraph">
+<p>Messages are written, or appended, to a queue using an appender. The appender writes messages to the end of the queue only, there is no way to insert messages at a specific location.</p>
+</div>
+<div class="paragraph">
+<p>Here is how you can append a simple text message containing the text "Hello World!":</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">ExcerptAppender appender = queue.acquireAppender(); <i class="conum" data-value="1"></i><b>(1)</b>
+
+appender.writeText("Hello World!"); <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Creates an appender</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Writes "Hello World!" to the queue</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_reading_from_a_queue"><a class="anchor" href="#_reading_from_a_queue"></a>Reading from a queue</h3>
+<div class="paragraph">
+<p>Reading a from a queue is easiest done using a tailer, namely <code>ExcerptTailer</code>. The term <em>tailing</em> stems from reading from the queue&#8217;s tail, i.e. the end of the queue. However, you are not limited to only read from the end of the queue using the tailer.</p>
+</div>
+<div class="paragraph">
+<p>Here is how it is used to read the "Hello World" message that was just written to the queue:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">ExcerptTailer tailer = queue.createTailer(); <i class="conum" data-value="1"></i><b>(1)</b>
+
+assertEquals("Hello World!", tailer.readText()); <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Creates a tailer</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Reads the written message "Hello World!" from the queue</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>You can also dump the raw contents of the queue to the console using the method <code>dump()</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">queue.dump();</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cleaning_up"><a class="anchor" href="#_cleaning_up"></a>Cleaning up</h3>
+<div class="paragraph">
+<p>Chronicle Queue stores its data off-heap, therefore it is recommended that you call <code>.close()</code> once you have finished working with Chronicle Queue to free up resources.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">queue.close();</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+No data will be lost when closing the queue. This procedure only cleans up resources that were used at runtime.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_putting_it_all_together"><a class="anchor" href="#_putting_it_all_together"></a>Putting it all together</h3>
+<div class="paragraph">
+<p>Putting these instructions together, the application looks as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">String basePath = OS.getTarget() + "/getting-started"
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build()) {
+
+    ExcerptAppender appender = queue.acquireAppender();
+    appender.writeText("TestMessage");
+
+    ExcerptTailer tailer = queue.createTailer();
+    assertEquals("TestMessage", tailer.readText());
+
+    queue.close();
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../what-is-chronicle-queue/what-is-chronicle-queue.html">What is Chronicle Queue?</a></span>
+  <span class="next"><a href="glossary.html">Glossary</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>© 2021 Chronicle Software. All rights reserved.</p>
+</footer>
+<script src="../../../_/js/site.js"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

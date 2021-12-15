@@ -1,0 +1,43 @@
+= Performance tuning
+keywords: chronicle queue, queue java, performance, low-latency
+author: Julia Gustafsson
+:reftext: Performance tuning
+:navtitle: Performance tuning
+:source-highlighter: highlight.js
+
+NOTE: TBW, I have only pasted text here that seems to fit under this category
+
+== Using high resolution timings across machines
+On most systems `System.nanoTime()` is roughly the number of nanoseconds since the system last rebooted (although different JVMs may behave differently). This is the same across JVMs on the same machine, but wildly different between machines. The absolute difference when it comes to machines is meaningless. However, the information can be used to detect outliers; you can’t determine what the best latency is, but you can determine how far off the best latencies you are. This is useful if you are focusing on the 99th percentile latencies. We have a class called `RunningMinimum` to obtain timings from different machines, while compensating for a drift in the nanoTime between machines. The more often you take measurements, the more accurate this running minimum is.
+
+== Avoid Interrupts
+For performance reasons, Chronicle Queue does not check for interrupts. Because of this, it is recommended to avoid using Chronicle Queue with code that generates interrupts. If you can not avoid generating interrupts then we suggest that you create a separate instance of Chronicle Queue per thread.
+
+== Performance between Disk and RAM. Should we specify faster RAM or a faster disk to Chronicle improve read/write performance?
+
+Chronicle recommends lots of high-speed RAM. This is because Chronicle uses the page cache and RAM is in effect a cache to the disk.
+
+There are two cases where having a high-speed disk will give you a real benefit:
+
+=== Data rate
+If the rate of data that you are writing exceeds the disk write speed. In most applications this is unlikely to occur.
+
+=== Page cache miss
+For Chronicle queues which write and read messages lineally across memory, we mitigate this situation with the use of the Chronicle pre-toucher. The pre-toucher ensures that the page is loaded into the page cache before being written into the queue.
+
+For Chronicle Map, it is somewhat more complicated because Chronicle Map reads and writes your entries with random access across both the memory and disk. In this situation, if the entire map can be held within the page cache, then a read, or write, to the map will not have to access the disk. The operating system will work in the background ensuring that entries written to the page cache are propagated to the disk, but this is done via the operating system and is not on the critical path.
+
+It follows that if you have quite a few maps, especially large maps, and your page cache is not large enough to hold all of these maps, then a read, or write, to a random entry may cause a cache miss. This in turn would cause a disk read or write. If you were going to install high-speed SSDs, Chronicle recommends that you use them to store the Chronicle maps and leave the slower cheap disks for the Chronicle queues. In addition, you should avoid using network attached storage, as this usually offers worst performance than local disks.
+
+== How do we reduce garbage?
+
+For the most latency-sensitive systems, you may want to keep your allocation rate to below `300` KB/s.
+At this rate you will produce less than `24` GB of garbage a day, and
+if your `Eden space` is larger than this, you can run all day without a minor collection.  A GC is something that you can do as an overnight maintainence task.
+Reduce your garbage-per-day to less than `5` GB, and you might be able to run all week without a GC.
+
+We have a number of strategies to minimise garbage; the key one being that we translate directly between on-heap and native memory without intermediate temporary objects.
+
+We use object pools where appropriate, and we support reading into mutable objects.
+
+For text data we support both a `String` pool and reading to/from `StringBuilder`.

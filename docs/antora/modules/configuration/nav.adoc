@@ -1,0 +1,7 @@
+* xref:app_configuration.adoc[Configuration]
+** xref:roll-cycle.adoc[Roll cycle]
+** xref:wire-type.adoc[Wire type]
+** xref:block-size.adoc[Block size]
+** xref:index-count.adoc[Index count]
+** xref:index-spacing.adoc[Index spacing]
+** xref:buffer-modes.adoc[Buffer modes ★]

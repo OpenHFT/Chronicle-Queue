@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>What is Chronicle Queue? :: Chronicle Queue</title>
+    <link rel="prev" href="../introduction/introduction.html">
+    <link rel="next" href="../getting-started/quick-start.html">
+    <meta name="generator" content="Antora 2.3.4">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" href="../../../_/img/chronicle-favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+	  <script src="prism.js"></script>
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."></a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="../../..">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
+            <a class="navbar-item" href="https://chronicle.software">Website</a>
+            <a class="navbar-item" href="https://github.com/OpenHFT/Chronicle-Queuer">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<script src="prism.js"></script>
+<div class="nav-container" data-component="chronicle-queue" data-version="1.0.0-SNAPSHOT">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../introduction/introduction.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="what-is-chronicle-queue.html">What is Chronicle Queue?</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <span class="nav-text">Getting started</span>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/quick-start.html">Get started with Chronicle Queue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/glossary.html">Glossary</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../configuration/app_configuration.html">Configuration</a>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/roll-cycle.html">Roll cycle</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/wire-type.html">Wire type</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/block-size.html">Block size</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-count.html">Index count</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-spacing.html">Index spacing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../appending/appending.html">Appending</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../tailing/tailing.html">Tailing</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../performance/performance.html">Performance tuning</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../replication/replication.html">★ Queue Replication</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../encryption/encryption.html">★ Encryption</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Chronicle Queue User Guide</span>
+    <span class="version">1.0.0-SNAPSHOT</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">Chronicle Queue User Guide</span>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../introduction/introduction.html">1.0.0-SNAPSHOT</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+</div>
+  <div class="content">
+<article class="doc">
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../introduction/introduction.html">Chronicle Queue User Guide</a></li>
+    <li><a href="what-is-chronicle-queue.html">What is Chronicle Queue?</a></li>
+  </ul>
+</nav>
+<h1 class="page">What is Chronicle Queue?</h1>
+<div class="sect1">
+<h2 id="_a_low_latency_message_queue"><a class="anchor" href="#_a_low_latency_message_queue"></a>A Low-latency message queue</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue is a "record everything" message queue which operates with microsecond real-time latency. It can be used for rapid Interprocess Communication (IPC) without affecting your system performance. Hence, it is tailored to transfer and store large amounts of data in low-latency environments, where recording of information is a central e.g. the most demanding High Frequency Trading systems.</p>
+</div>
+<div class="paragraph">
+<p>You could consider Chronicle Queue to be similar to a low-latency broker-less durable/persisted JVM topic. It is a distributed, unbounded, and persisted queue that:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>supports asynchronous RMI and Publish/Subscribe interfaces with microsecond latencies.</p>
+</li>
+<li>
+<p>passes messages between JVMs in under a microsecond (in optimised examples).</p>
+</li>
+<li>
+<p>passes messages between JVMs on different machines via replication in under 10 microseconds (in optimised examples).</p>
+</li>
+<li>
+<p>provides stable, soft, real-time latencies into the millions of messages per second for a single thread to one queue; with total ordering of every event.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_efficiency"><a class="anchor" href="#_efficiency"></a>Efficiency</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue aims to achieve latencies of under 40 microseconds for 99% to 99.99% of the time. Without replication, Chronicle Queue delivers latencies below 40 microseconds end-to-end across multiple services. Often the 99% latency is entirely dependent on the choice of operating system and hard disk sub-system.</p>
+</div>
+<div class="sect2">
+<h3 id="_benchmarks"><a class="anchor" href="#_benchmarks"></a>Benchmarks</h3>
+<div class="paragraph">
+<p>When publishing 40-byte messages, a high percentage of the Chronicle Queue yields latencies under 1 microsecond. In the tables below, the 99th percentile latency is the worst 1 in 100, and the 99.9th percentile is the worst 1 in 1000 latency.</p>
+</div>
+<table class="tableblock frame-all grid-all" style="width: 60%;">
+<caption class="title">Table 1. Latency to send/receive on the same machine.</caption>
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Batch Size</th>
+<th class="tableblock halign-left valign-top">10 million events per minute</th>
+<th class="tableblock halign-left valign-top">60 million events per minute</th>
+<th class="tableblock halign-left valign-top">100 million events per minute</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">99%ile</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.78 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.78 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2 &micro;s</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">99.9%ile</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.3 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.5 &micro;s</p></td>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all" style="width: 60%;">
+<caption class="title">Table 2. Latency to send/receive on a second machine.</caption>
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Batch Size</th>
+<th class="tableblock halign-left valign-top">10 million events per minute</th>
+<th class="tableblock halign-left valign-top">60 million events per minute</th>
+<th class="tableblock halign-left valign-top">100 million events per minute</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">99%ile</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">20 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">28 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">176 &micro;s</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">99.9%ile</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">901 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">705 &micro;s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5,370 &micro;s</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+100 million events per minute is sending an event every 660 nanoseconds; replicated and persisted.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+This performance is not achieved using a <strong>large cluster of machines</strong>.
+This is using one thread to publish, and one thread to consume.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_no_garbage_collection"><a class="anchor" href="#_no_garbage_collection"></a>No garbage collection</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>High-performance applications simply cannot tolerate the non-deterministic slowdowns that the Java garbage collector yields when cleaning the heap. Therefore, Chronicle Queue avoids garbage collection altogether by managing the memory stack manually with <code>RandomAccessFiles</code>. This means a Chronicle Queue can be viewed as a management interface over off-heap memory, on which anyone can build their own solution. E.g. it is suitable for exceptionally fast interprocess communication (IPC) with no negative impact on the system performance.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_persistent"><a class="anchor" href="#_persistent"></a>Persistent</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue assumes disk space is cheap compared with memory. It makes full use of the disk space available, hence is not limited to the main memory of the machine. A complementary spinning HDD can store many TBs of disk space for little cost. Further, all data is saved in memory-mapped files which have a trivial on-heap overhead, even with 100 TB of data.</p>
+</div>
+<div class="paragraph">
+<p>Instead of using a broker, Chronicle Queue relies on the operating system (OS) to do all the work. If the application dies, the OS keeps running for seconds longer, meaning no data is lost; even without replication.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_compression"><a class="anchor" href="#_compression"></a>Compression</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Replication for Chronicle Queue supports Chronicle Wire Enterprise. This enables real-time compression by calculating the deltas for individual objects, as they are written. This can reduce the size of messages by a factor of 10, or better, without the need for batching; that is, without introducing significant latency.</p>
+</div>
+<div class="paragraph">
+<p>Chronicle Queue also supports LZW, Snappy, and GZIP compression. These formats however add significant latency. These are only useful if you have strict limitations on network bandwidth.</p>
+</div>
+<div class="sect2">
+<h3 id="_delivery_mode_semantics"><a class="anchor" href="#_delivery_mode_semantics"></a>Delivery mode semantics</h3>
+<div class="paragraph">
+<p>Chronicle Queue supports a number of semantics:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Every message is replayed on restart.</p>
+</li>
+<li>
+<p>Only new messages are played on restart.</p>
+</li>
+<li>
+<p>Restart from any known point using the index of the entry.</p>
+</li>
+<li>
+<p>Replay only the messages you have missed. This is supported directly using the methodReader/methodWriter builders.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../introduction/introduction.html">Introduction</a></span>
+  <span class="next"><a href="../getting-started/quick-start.html">Get started with Chronicle Queue</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>© 2021 Chronicle Software. All rights reserved.</p>
+</footer>
+<script src="../../../_/js/site.js"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
