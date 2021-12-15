@@ -6,11 +6,11 @@ site:
   url: /build
 content:
   sources:
-    - url: https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise
+    - url: https://github.com/OpenHFT/Chronicle-Queue
       # Only generate from git tags (and not branches)
       branches: [develop]
-      start_path: docs
-      tags: [2.22*]
+      start_path: docs/antora
+      tags: [testdoc]
 ui:
   bundle:
     url: ui-bundle.zip # As of now, the UI bundle is built locally on Julia's laptop. Contact her to make changes.
