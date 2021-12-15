@@ -1,0 +1,44 @@
+= Chronicle Queue Glossary
+keywords: chronicle queue, queue, java, glossary
+author: Julia Gustafsson
+:reftext: Chronicle Queue Glossary
+:navtitle: Chronicle Queue Glossary
+:source-highlighter: highlight.js
+
+[#a]
+== A
+* *Appender:* An appender is the message source.You add data by appending it to the Chronicle Queue.Sequential writes can be performed by appending to the end of queue only.There is no way to insert, or delete excerpts.
+
+[#d]
+== D
+* *Document:* Chronicle Queue reads and writes documents.Each document comprises a 4-byte header, followed by the data excerpt.
+
+[#e]
+== E
+* *Exerpt:* An excerpt is the part of the documents that Chronicle Queue writes, that contains the actual data.When writing message to a Chronicle Queue, a new link:./glossary.adoc#d[document] (containing an excerpt) is created and written to.
+
+[#m]
+== M
+* *Marshallable:* TBW
+
+[#r]
+== R
+* *Ring Buffer:* TBW
+* *Roll cycle:* TBW
+* *Rolling:* Chronicle refers to writing to a new Chronicle Queue `.cq4` file as Queue Rolling.
+
+[#t]
+== T
+* *Tailer:* A tailer is an excerpt reader optimized for sequential reads. It can perform sequential and random reads, both forwards and backwards. Tailers read the next available message each time they are called.
+* *Topic:* A topic is a directory of queue files. If you have a topic called `mytopic`, the layout could look like this:
+----
+- mytopic/
+    - 20160710.cq4
+    - 20160711.cq4
+    - 20160712.cq4
+    - 20160713.cq4
+----
+
+
+
+

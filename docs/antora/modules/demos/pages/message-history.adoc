@@ -1,0 +1,100 @@
+= Message History
+keywords: demo, queue, java, chronicle, history
+author: Peter Lawrey
+:reftext: Demos
+:navtitle: Demos
+:source-highlighter: highlight.js
+
+This demo shows a publisher writing to a queue while a bridger process writes to a second queue, while `MessageHistory` messages are added to each entry.
+
+NOTE: The source code for this demo can be found link:https://github.com/OpenHFT/Chronicle-Queue-Demo/tree/master/message-history-demo[here].
+
+== Running the demo from IntelliJ
+The following steps are needed
+
+- Open the `pom.xml` as a project
+- Run `BridgeMain`, note it don't complete until the `PublisherMain` is run
+- Run `PublisherMain`
+- Run `DumpOutMain`
+
+NOTE: You can run the `PublisherMain` with `-Devents=1000000` for more events, and `-Drate=5000` to adjust the rate per second of messages.
+
+== Running the demo from Maven
+
+.Prebuilding the code
+[source,sh]
+mvn package
+
+.First run the bridge so it is warm before you publish.
+[source,sh]
+mvn exec:java@BridgeMain
+
+In another window
+
+.Next publish to the queue the bridge is listening to
+[source,sh]
+mvn exec:java@PublisherMain
+
+Afterwards you can read the output as many times as you need.
+.Dump the data
+
+[source,sh]
+mvn exec:java@DumpOutMain
+
+Or you can dump with the chronicle queue tool `net.openhft.chronicle.queue.ChronicleHistoryReaderMain`.
+.CHRM
+
+[source,sh]
+mvn exec:java@CHRM
+
+which will output like the below
+```
+Timings below in MICROSECONDS
+sourceId                   1     startTo1
+count:                100001       100001
+50:                        1            1
+90:                        3            2
+99:                       31           40
+99.9:                     62           80
+99.99:                   108          120
+```
+`1` is time taken to cross the bridge microservice and `startTo1` the time taken to get from publisher to bridge microservice.
+
+=== Common Errors
+
+If you are using Java 9+ you will get this warning.
+
+----
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by net.openhft.compiler.MyJavaFileManager (file:/C:/Users/peter/.m2/repository/net/openhft/compiler/2.3.4/compiler-2.3.4.jar) to method com.sun.tools.javac.file.JavacFileManager.listLocationsForModules(javax.tools.JavaFileManager$Location)
+----
+
+== Expected output
+
+The microsecond timestamps are based on wall clock, however the nanosecond time stamps are based on the uptime of the machine.
+
+To decode this, you need to take the first nano-second time stamp and adjust further timestamps as deltas on the micro-second timestamp.
+
+The `DumpOutMain` writes the decoded messages as well as the bytes representing the first message.
+
+NOTE: All values are in Little Endian which is easier to encode and decode on a `x64` system.
+
+----
+VanillaMessageHistory{sources: [1=0x474c00000000,2=0x474c00000000] timings: [613056255568600,613056286396600,613056336886100,618767110988300] addSourceDetails=true} - 1, source: publisher, ts: 2019-12-22T14:37:19.426755
+84 00 00 00                                     # msg-length
+b9 07 68 69 73 74 6f 72 79                      # history
+82 5b 00 00 00                                  # VanillaMessageHistory
+c7 73 6f 75 72 63 65 73 82 14 00 00 00          # sources
+01 af 00 00 00 00 4c 47 00 00                   # source id & index
+02 af 00 00 00 00 4c 47 00 00                   # source id & index
+c7 74 69 6d 69 6e 67 73 82 2d 00 00 00          # timings
+a7 d8 2a 57 48 92 2d 02 00                      # timing in nanos
+a7 b8 90 2d 4a 92 2d 02 00                      # timing in nanos
+a7 54 f9 2f 4d 92 2d 02 00                      # timing in nanos
+a7 0c 62 d9 f1 c3 32 02 00 a7 54 d5 d3 36 c4 32 # timing in nanos
+02 00 ba 01                                     # eventOne
+82 14 00 00 00                                  # EventOne
+   09 70 75 62 6c 69 73 68 65 72                   # eventSource
+   c3 68 1e d9 4b 9a 05 00                         # eventTimeStamp
+   80 00                                           # text
+----

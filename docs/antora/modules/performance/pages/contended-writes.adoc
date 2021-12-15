@@ -1,0 +1,117 @@
+= Contended writes
+keywords: contended writes, chronicle queue, queue, java, performance, low-latency
+author: Niel Clifford, Julia Gustafsson
+:reftext: Contended writes
+:navtitle: Contended writes
+:source-highlighter: highlight.js
+
+Normally, all writes to the queue are serialized based on the write-lock acquisition. Each time `ExcerptAppender#writingDocument()` is called, the appender tries to acquire the write-lock on the queue. If not free, it waits until the write-lock is unlocked, and in turn locks the queue for itself. This may degrade the performance whenever there is significant contention.
+
+To mitigate this issue, Chronicle queue supports _double-buffering_ which to avoid stopping appenders from making progress. Instead of waiting whenever the write-lock cannot be acquired, the appender returns immediately with a context pointing to a secondary buffer. This defers the lock acquisition until `context.close()` is called (normally with try-with-resources pattern it is at the end of the try block). Hence, users are allowed to go ahead with writing data, and then essentially perform a `memcpy` on the serialized data (thus reducing cost of serialization).
+
+Double-buffering is disabled by default, but can be enabled when building the queue:
+
+[source, java]
+----
+ChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
+    .doubleBuffer(true)
+    .build()
+----
+
+IMPORTANT: During a buffered write, `DocumentContext.index()` will throw an `IndexNotAvailableException`. This is because no index is assigned until the buffer is written back to the queue, which happens when the `DocumentContext` is closed.
+
+== General advice on double buffering
+Double buffering is only useful if:
+
+* the majority of the objects being written to the queue are big enough
+* their marshalling is not straight-forward (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down)
+* there is a heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate)
+
+== Benchmarks
+Below are benchmark results for various data sizes at the frequency of 10 KHz for a cumbersome message (see `net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark`).
+
+=== 1 KB messages
+==== Double-buffer disabled
+----
+------------------ SUMMARY (Concurrent) --------------------
+Percentile   run1         run2         run3      % Variation
+50:            90.40        90.59        91.17         0.42
+90:           179.52       180.29        97.50        36.14
+99:           187.33       186.69       186.82         0.05
+99.7:         213.57       198.72       217.28         5.86
+worst:      82345.98     73039.87     55820.29        17.06
+------------------------------------------------------------
+
+------------------ SUMMARY (Concurrent2) -------------------
+Percentile   run1         run2         run3      % Variation
+50:           179.14       179.26       180.93         0.62
+90:           183.49       183.36       185.92         0.92
+99:           192.19       190.02       215.49         8.20
+99.7:         240.70       228.16       258.88         8.24
+worst:      82477.06     45891.58     28172.29        29.54
+------------------------------------------------------------
+----
+
+==== Double-buffer enabled
+----
+------------------ SUMMARY (Concurrent) --------------------
+Percentile   run1         run2         run3      % Variation
+50:            86.05        85.60        86.24         0.50
+90:           170.18       169.79       170.30         0.20
+99:           176.83       176.58       177.09         0.19
+99.7:         183.36       185.92       183.49         0.88
+worst:      68911.10     28368.90     28860.42         1.14
+------------------------------------------------------------
+
+------------------ SUMMARY (Concurrent2) -------------------
+Percentile   run1         run2         run3      % Variation
+50:            86.24        85.98        86.11         0.10
+90:            89.89        89.44        89.63         0.14
+99:           169.66       169.79       170.05         0.10
+99.7:         175.42       176.32       176.45         0.05
+worst:      69042.18     28368.90     28876.80         1.18
+------------------------------------------------------------
+----
+
+=== 4 KB messages
+==== Double-buffer disabled
+----
+------------------ SUMMARY (Concurrent) --------------------
+Percentile   run1         run2         run3      % Variation
+50:           691.46       699.65       701.18         0.15
+90:           717.57       722.69       721.15         0.14
+99:           752.90       748.29       748.29         0.00
+99.7:        1872.38      1743.36      1780.22         1.39
+worst:      39731.20     43171.84     88834.05        41.35
+------------------------------------------------------------
+
+------------------ SUMMARY (Concurrent2) -------------------
+Percentile   run1         run2         run3      % Variation
+50:           350.59       353.66       353.41         0.05
+90:           691.46       701.18       697.60         0.34
+99:           732.42       733.95       729.34         0.42
+99.7:        1377.79      1279.49      1302.02         1.16
+worst:      35504.13     42778.62     87130.11        40.87
+------------------------------------------------------------
+----
+
+==== Double-buffer enabled
+----
+------------------ SUMMARY (Concurrent) --------------------
+Percentile   run1         run2         run3      % Variation
+50:           342.40       344.96       344.45         0.10
+90:           357.25       360.32       359.04         0.24
+99:           688.38       691.97       691.46         0.05
+99.7:        1376.77      1480.19      1383.94         4.43
+worst:      71532.54      2391.04      2491.39         2.72
+------------------------------------------------------------
+
+------------------ SUMMARY (Concurrent2) -------------------
+Percentile   run1         run2         run3      % Variation
+50:           343.68       345.47       346.24         0.15
+90:           360.06       362.11       363.14         0.19
+99:           694.02       698.62       699.14         0.05
+99.7:        1400.32      1510.91      1435.14         3.40
+worst:      71925.76     80314.37     62537.73        15.93
+------------------------------------------------------------
+----

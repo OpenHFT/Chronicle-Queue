@@ -1,0 +1,37 @@
+= Wire type
+keywords: wire type, chronicle queue, queue, java
+author: Julia Gustafsson
+:reftext: Wire type
+:navtitle: Wire type
+:source-highlighter: highlight.js
+
+// TODO: Structure with suitable headlines
+
+
+It's possible to configure how Chronicle Queue will store the data by explicitly setting the `WireType`:
+
+For example:
+
+[source, java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .wireType(RollCycles.DAILY)
+    .build();
+----
+
+NOTE: The default `WireType` is `BINARY_LIGHT`.
+
+[WARNING]
+.Supported wire types
+====
+Although it's possible to explicitly provide `WireType` when creating a builder, it is discouraged as not all wire types are supported by Chronicle Queue yet.
+
+In particular, the following wire types are not supported:
+
+* `TEXT` (and essentially all based on text, including JSON and CSV)
+
+* `RAW`
+
+* `READ_ANY`
+====
+

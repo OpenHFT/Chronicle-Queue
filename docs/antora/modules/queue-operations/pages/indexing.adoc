@@ -1,0 +1,9 @@
+= Indexing
+keywords: queue, java, proxy, appending, tailing, chronicle
+author: Julia Gustafsson
+:reftext: Indexing
+:navtitle: Indexing
+:source-highlighter: highlight.js
+
+// TODO: Write chapter about how Chronicle queue indexing works
+

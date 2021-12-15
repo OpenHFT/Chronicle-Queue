@@ -1,0 +1,62 @@
+= Demos
+keywords: demo, queue, java, chronicle
+author: Julia Gustafsson
+:reftext: Demos
+:navtitle: Demos
+:source-highlighter: highlight.js
+
+Chronicle have tutorials in
+The TensorFlow tutorials are written as Jupyter notebooks and run directly in Google Colab—a hosted notebook environment that requires no setup. Click the Run in Google Colab button.
+
+== What you need to get started
+- Maven 3.6.x
+- Java 8 update 180+
+- Intellij CE or another IDE
+- Access to the internet for Maven to download the JARs needed
+
+== Order Processor
+
+image::Two-hop-latency.PNG[]
+
+https://github.com/OpenHFT/Chronicle-Queue-Demo/tree/master/order-processor
+
+== Downloading and running sample programs
+
+If you're running Windows, you will need to install the `git` client and `open-ssh` Cygwin, https://cygwin.com/install.html[here],
+with a guide showing installation and packages http://www.mcclean-cooper.com/valentino/cygwin_install/[here].
+This allows you to install Linux packages that aren't already on Windows.
+
+When this asks you which packages you want to install, search for and add `git`. This is under `Development` and you need to click `skip` so it says to `install`.
+
+image::gitpack.png[]
+
+Ensure you have the JDK for Java 8, you could use http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html[this].
+
+Open Intelij or your https://en.wikipedia.org/wiki/Integrated_development_environment[IDE], or https://www.jetbrains.com/idea/download/#section=windows[install Intelij] first if you haven't already.
+Intelij is used for this tutorial.
+
+Go to `Check out from Version Control` and select `Git`, opening the `Clone Repository`.
+This is where you will get a copy of the Chronicle Queue Sample code.
+
+image::homegit.png[]
+
+Next, copy the URL below into the `Git Repository URL`,
+and remember to take note of the `Parent Directory`. Press `Clone`.
+
+[source]
+----
+https://github.com/OpenHFT/Chronicle-Queue-Sample.git
+----
+
+image::Clone.png[]
+
+Should you choose you close the Project under `File`, you an open it again by going to `Open`.
+Then you can find the repository in the directory that you saved it in earlier.
+
+image::Open.png[]
+
+image::directory.png[]
+
+Then you can run the first example https://github.com/OpenHFT/Chronicle-Queue-Sample/tree/master/simple-input[Simple Input]
+
+The second example is https://github.com/OpenHFT/Chronicle-Queue-Sample/tree/master/simple-translator[Simple Translator]

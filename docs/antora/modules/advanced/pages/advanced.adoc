@@ -1,0 +1,87 @@
+= Advanced
+keywords: advanced, java, queue, chronicle
+author: Julia Gustafsson
+:reftext: Advanced
+:navtitle: Advanced
+:source-highlighter: highlight.js
+
+This chapter explains and motivates the low-level implementation details of Chronicle Queue.
+
+== Append-only data structure
+Chronicle Queue is designed for sequential writes and reads. It also supports random access, and updates in-place. Although the size of an existing entry cannot be changed, an entry can be padded for future use.
+
+This append-only structure is more efficient for passing data between threads using the `CPU L2 cache` coherence bus. It can also be faster than attempting to pass an object between threads, as it avoids random access which can be common in `Java` objects where there can be a lot of reference chasing. Further, it is more efficient for persistence to disk; HDD and SSD are much more efficient when being accessed sequentially and simplifies replication.
+
+== Why memory mapped files?
+Chronicle Queue is built on a class called `MappedBytes` in Chronicle Bytes. This visualises the file to act as an unbounded array of bytes mapped to a file. As data is appended, the queue will add memory mappings transparently, growing whenever data is written.
+
+The key benefit of using memory-mapped files is that the queue is no longer limited by the size of the JVM, or even the size of the main memory. Instead, the limitation is the available disk space. If you want to load 100 TB into a JVM for replay the operating system does all the heavy lifting for you.
+
+Another benefit of using a memory-mapped file is the ability to bind a portion of memory to an object. The key attributes in the header are bound when first loading, and after that they work like a normal object, updating off-heap memory and the file in a thread-safe manner.
+Enabling operations like `compareAndSet`, atomic add, or set max value (a set which only ever increases the value). As the data access is thread-safe, it can be shared between threads, or processes, as fast as the time it takes for an L2 cache miss; up to 25 nano-seconds.
+
+== Queue header
+Every queue starts with a header that stores basic information e.g. the wire type, the roll cycle, and how indexing is performed.
+
+Below follows an example of a queue header:
+[source, yaml]
+----
+--- !!meta-data #binary # <1>
+header: !SCQStore { # <2>
+  wireType: !WireType BINARY,
+  writePosition: 413, # <3>
+  roll: !SCQSRoll { # <4>
+    length: !int 86400000,
+    format: yyyyMMdd,
+    epoch: 0
+  },
+  indexing: !SCQSIndexing { # <5>
+    indexCount: !short 16384,
+    indexSpacing: 16,
+    index2Index: 0,
+    lastIndex: 0
+  },
+  lastAcknowledgedIndexReplicated: 0 # <6>
+}
+----
+<1> First message is meta-data written in binary
+<2> Type of header is aliased as the name `SCQStore`.
+<3> `writePosition` is the first bound value. It is the highest known byte which has been written to, and is updated atomically.
+<4> Roll cycle is daily.
+<5> This class controls how it will be indexed on-demand. It adds meta-data entries for indexed lookup.
+<6> The highest message index which was acknowledged by a replica.
+
+NOTE: The `SCQStore` "bootstraps" the queue itself. A custom implementation could be provided to adapt the behavior of the queue, provided it supports the same interface. The rolling and indexing strategies can also be customized.
+
+[#_queue_documents]
+== Queue documents
+A queue message comprise two parts, a 4-byte header followed by an link:../../getting-started/pages/glossary.adoc#e[excerpt]. The excerpt , also referred to as the message, contains the actual data, which could be of any type, including text, numbers, or serialised blobs. Regardless of the type, all information is stored as a series of bytes in the excerpt.
+
+.A Chronicle Queue stores an ordered collection of messages
+image::queue-document.svg[Chronicle Queue Messages,width=600px]
+
+The first 30-bits of the header contains the length of the data in order for readers to know the size of the excerpt. The two remaining bits are reserved for:
+
+* Whether this message is user-data, or meta-data required to support the queue itself, used internally.
+* Whether the message is complete or not.
+
+.A logical representation of the Queue message header. The actual alignment in memory depends on the link:https://en.wikipedia.org/wiki/Endianness[endianness].
+image::message-header.svg[Queue Message Header, width=800px]
+
+[NOTE]
+.Incomplete messages
+====
+When the message is not complete, it cannot be read.  However, if the length is known, a writer can skip such messages and attempt to write after it.
+
+For example:
+
+* Thread 1 is in the middle of writing a message, but it knows the message length; it can start by completing the header.
+
+* Thread 2 can see the incomplete message header, and skip this message when looking for a place to write.
+
+This way, multiple threads can be writing to the queue concurrently.
+Any message which is detected as bad (for example, the thread died), can be marked as meta-data and skipped by the reader.
+====
+
+
+

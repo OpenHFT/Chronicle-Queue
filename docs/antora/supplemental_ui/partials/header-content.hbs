@@ -1,0 +1,28 @@
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item logo" href="{{or site.url (or siteRootUrl siteRootPath)}}"></a>
+        <div class="navbar-item">
+          <input id="search-input" type="text" placeholder="Search docs">
+        </div>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="{{{or site.url (or siteRootUrl siteRootPath)}}}">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
+            <a class="navbar-item" href="https://chronicle.software">Website</a>
+            <a class="navbar-item" href="https://github.com/OpenHFT/Chronicle-Queuer">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>

@@ -1,0 +1,182 @@
+= Roll cycle
+keywords: roll cycle, chronicle queue, queue, java
+author: Julia Gustafsson
+:reftext: Roll cycle
+:navtitle: Roll cycle
+:source-highlighter: highlight.js
+
+A Chronicle Queue is a logical view of a directory on the file-system.
+The queue data itself is split across multiple files, each of which contains
+data belonging to a single _cycle_. The length of the cycle is determined by
+the `rollCycle` parameter passed to the queue builder.
+
+Example configuration of `rollCycle`:
+
+* `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
+* `RollCycles.HOURLY` every hour, a new queue file will be created for written events
+
+As new files are created (the queue is rolled) to accommodate events being written to the queue, a persisted data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
+_cycle_ numbers present in the directory. Maintaining this table allows an `ExcerptTailer` to busy-spin waiting for new data to be appended to the queue, without the need to make costly calls to the file-system to check for the existence of new queue files.
+
+The following sections describe how rolling is performed, how the roll cycle interval can be customized, and finally provide some general advice to consider when deciding the rolling schedule.
+
+== How rolling works
+When the queue reaches the point in time when it should roll, the appender will atomically write an end-of-file (EOF) mark at the end of the current file, to indicate that no other appender should write to it. Likewise, no tailer should read further than this mark.
+
+If the process was shut down and later restarted after rolling should have occurred, the appender will try to locate the old file(s) and write the EOF marker. However, after a certain timeout, the tailers will act as if there is an EOF mark in the file(s) regardless.
+
+== Roll cycle configuration
+The interval for rolling is configured using the queue's attribute `rollCycle`. As an example, the queue can be configured to roll its file (i.e. create a new file) every day by providing the `RollCycle.DAILY`:
+
+[source, java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .rollCycle(RollCycles.DAILY)
+    .build();
+----
+All available roll-cycles can be shown under <<Available roll-cycles>>.
+
+NOTE: The default roll-cycle is `RollCycle.HOURLY`.
+
+[IMPORTANT]
+.Overriding the roll cycle
+====
+Once a queue’s roll-cycle has been set, it cannot be changed at a later time.More formally, after the first append has been made to a Chronicle Queue, any further instances of `SingleChronicleQueue` configured to use the same path must be configured to use the same roll-cycle.Trying to set this option twice will throw an exception.
+
+In the case where another Chronicle Queue instance is created before any appends have been made, and there is a subsequent append operation with a different roll-cycle, then the roll-cycle will be updated to match the persisted roll-cycle. In this case, a warning log message will be printed in order to notify the library user of the situation:
+----
+[main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY. Overriding this queue to use HOURLY
+----
+====
+
+[#epoch]
+== Controlling the exact roll time
+Chronicle Queue is UTC time based and uses `System.currentTimeMillis()` to evaluate when it is time to roll the queue. Rolling occurs whenever a new time frame of the selected kind is started, meaning for minutely rolling a new queue is created when a new minute begins and daily rolls occurs at midnight UTC time.
+
+This behavior can be changed using Chronicle Queue’s attribute `epoch()`. Epoch refers to a milliseconds offset to the set time frame.In other words, if you set the epoch to be `epoch(1)` and use `RollCycle.DAILY` the queue will roll at 1 millisecond past midnight UTC time.Putting it together:
+
+[source,java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .rollCycle(RollCycle.DAILY)
+    .epoch(1)
+    .build();
+----
+
+The current time can also be used as the roll time by providing `System.currentTimeMillis()`.
+
+[source, java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .rollCycle(RollCycle.DAILY)
+    .epoch(System.currentTimeMillis())
+    .build();
+----
+
+IMPORTANT: We do not recommend that you change the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
+
+== Available roll-cycles
+As described earlier, the roll-cycle determines how often a new queue is created. However, each roll-cycle also leverages queues with a varying message capacity. This results in different roll-cycles having a maximum capacity in terms of throughput.
+
+The available roll-cycles and their capacities are summarized in the table below:
+|===
+| Roll-cycle name | Max nr of messages in each cycle in decimal | Max nr of messages in each cycle in hexadecimal | Max nr of messages per second over the length of the cycle (on average)
+
+| FIVE_MINUTELY | 1,073,741,824| 0x40000000 | 3,579,139
+| TEN_MINUTELY | 1,073,741,824| 0x40000000 | 1,789,569
+| TWENTY_MINUTELY | 1,073,741,824| 0x40000000 | 1,491,308
+| HALF_HOURLY | 1,073,741,824| 0x40000000 | 596,523
+| FAST_HOURLY | 4,294,967,295| 0xffffffff | 1,193,046
+| TWO_HOURLY | 4,294,967,295| 0xffffffff | 596,523
+| FOUR_HOURLY | 4,294,967,295| 0xffffffff | 298,261
+| SIX_HOURLY | 4,294,967,295| 0xffffffff | 198,841
+| FAST_DAILY | 4,294,967,295| 0xffffffff | 49,710
+| MINUTELY | 67,108,864| 0x4000000 | 1,118,481
+| HOURLY | 268,435,456| 0x10000000 | 74,565
+| DAILY | 4,294,967,295| 0xffffffff | 49,710
+| LARGE_HOURLY | 4,294,967,295| 0xffffffff | 49,710
+| LARGE_DAILY | 137,438,953,471| 0x1fffffffff | 1,590,728
+| XLARGE_DAILY | 4,398,046,511,103| 0x3ffffffffff | 50,903,316
+| HUGE_DAILY | 281,474,976,710,655| 0xffffffffffff | 3,257,812,230
+| SMALL_DAILY | 536,870,912| 0x20000000 | 6,213
+| LARGE_HOURLY_SPARSE | 17,179,869,183| 0x3ffffffff | 4,772,185
+| LARGE_HOURLY_XSPARSE | 4,398,046,511,103| 0x3ffffffffff | 1,221,679,586
+| HUGE_DAILY_XSPARSE | 281,474,976,710,655| 0xffffffffffff | 78,187,493,530
+| TEST_SECONDLY | 4,294,967,295| 0xffffffff | 4,294,967,295
+| TEST4_SECONDLY | 4,096| 0x1000 | 4,096
+| TEST_HOURLY | 1,024| 0x400 | 0
+| TEST_DAILY | 64| 0x40 | 0
+| TEST2_DAILY | 512| 0x200 | 0
+| TEST4_DAILY | 4,096| 0x1000 | 0
+| TEST8_DAILY | 131,072| 0x20000 | 1
+|===
+
+IMPORTANT: Roll-cycles named _TEST*_ should only be used in test environments.
+
+== Timezone rollover ★
+Chronicle Queue bases its roll times on the UTC time zone. However, Chronicle Queue Enterprise supports time zone rollover. This allows specifying a time and periodicity of queue rollovers which takes account of the user's local timezone, rather than UTC.
+
+[IMPORTANT]
+====
+Time zone roll cycles is an *Enterprise feature* and only applies to daily rollovers, i.e. when the roll cycle is one of:
+
+* `SMALL_DAILY`
+* `DAILY`
+* `LARGE_DAILY`
+* `XLARGE_DAILY`
+* `HUGE_DAILY`
+
+====
+
+=== Configuration
+Timezone rolling is set using the configuration method `rollTime(LocalTime rollTime, ZoneId zoneId)`. It is provided an instance of `LocalTime.of(int hour, int minute)` describing at what hour and minute of the day to roll, relative to the given time zone. If no time zone is provided, the default is UTC.
+
+NOTE: Read more about available ZoneId:s in the link:https://docs.oracle.com/javase/8/docs/api/java/util/TimeZone.html[here].
+
+Below is an example of a queue that performs daily rolls at 5 PM, London time:
+
+[source, java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
+    .rollTime(LocalTime.of(17, 0), ZoneId.of("Europe/London"))
+    .rollCycle(RollCycle.DAILY)
+    .timeProvider(System.currentTimeMillis())
+    .build();
+----
+
+== Archiving old queue files ★
+Over time, it may become necessary to automatically delete or archive old queue files. An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete.
+
+To facilitate this operation, Chronicle Queue Enterprise tracks references to its _roll-cycle_ files internally. Ensuring there are no references to a given file it is done by checking that `ChronicleQueue.numberOfReferences()` returns zero.
+
+The suggested approach is to perform the maintenance operation from a separate JVM to the application, in the following manner:
+
+[source, java]
+----
+public void removeOldQueueFiles() throws IOException {
+    final Path queuePath = Paths.get("/path/to/queue");
+    try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.
+            binary(queuePath).build()) {
+
+        try (final Stream<Path> queueFiles = Files.list(queuePath).
+                filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX))) {
+
+            queueFiles.filter(p -> isReadyForDelete(p)).map(Path::toFile).
+                    filter(f -> queue.numberOfReferences(f) == 0).
+                    forEach(File::delete);
+
+        }
+    }
+}
+----
+
+== General advice on rolling
+At roll-time, a few unavoidable objects and memory mappings are created, and the old memory mappings are released. This activity can introduce slight jitter to your application. Chronicle aim's to keep this to a minimum, and control when it occurs. However, it is still recommended avoiding rolling at critical points in time to the extent possible.
+
+=== Adapt to down-time
+In systems that are not always active, it is advised to schedule rolls during the down-time. However, for applications with a buzy feed and no down-time, Chronicle recommends using minutely rolling (a new queue is created every minute). This keep jitter to a minimum, as only one minute’s worth of data has to be unmapped on a queue-roll.
+
+=== Avoid large files
+It is generally recommended limiting the size of queue files to around < 250GB as unmapping a large `.cq4` file has can cause unwanted jitter. Therefore, if possible, use a more regular roll-cycle to avoid any performance penalties associated with unmapping large files.
+
+

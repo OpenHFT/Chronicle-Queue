@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Wire type :: Chronicle Queue</title>
+    <link rel="prev" href="roll-cycle.html">
+    <link rel="next" href="block-size.html">
+    <meta name="generator" content="Antora 2.3.4">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" href="../../../_/img/chronicle-favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+	  <script src="prism.js"></script>
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."></a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="../../..">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
+            <a class="navbar-item" href="https://chronicle.software">Website</a>
+            <a class="navbar-item" href="https://github.com/OpenHFT/Chronicle-Queuer">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<script src="prism.js"></script>
+<div class="nav-container" data-component="chronicle-queue" data-version="1.0.0-SNAPSHOT">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../introduction/introduction.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../what-is-chronicle-queue/what-is-chronicle-queue.html">What is Chronicle Queue?</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <span class="nav-text">Getting started</span>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/quick-start.html">Get started with Chronicle Queue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/glossary.html">Glossary</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="app_configuration.html">Configuration</a>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="roll-cycle.html">Roll cycle</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="wire-type.html">Wire type</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="block-size.html">Block size</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="index-count.html">Index count</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="index-spacing.html">Index spacing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../appending/appending.html">Appending</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../tailing/tailing.html">Tailing</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../performance/performance.html">Performance tuning</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../replication/replication.html">★ Queue Replication</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../encryption/encryption.html">★ Encryption</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Chronicle Queue User Guide</span>
+    <span class="version">1.0.0-SNAPSHOT</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">Chronicle Queue User Guide</span>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../introduction/introduction.html">1.0.0-SNAPSHOT</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+</div>
+  <div class="content">
+<article class="doc">
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../introduction/introduction.html">Chronicle Queue User Guide</a></li>
+    <li><a href="app_configuration.html">Configuration</a></li>
+    <li><a href="wire-type.html">Wire type</a></li>
+  </ul>
+</nav>
+<h1 class="page">Wire type</h1>
+<div class="sect1">
+<h2 id="_how_wire_type_works"><a class="anchor" href="#_how_wire_type_works"></a>How wire type works</h2>
+<div class="sectionbody">
+
+</div>
+</div>
+<div class="sect1">
+<h2 id="_wire_type_configuration"><a class="anchor" href="#_wire_type_configuration"></a>Wire type configuration</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
+    .wireType(RollCycles.DAILY)
+    .build();</code></pre>
+</div>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="roll-cycle.html">Roll cycle</a></span>
+  <span class="next"><a href="block-size.html">Block size</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>© 2021 Chronicle Software. All rights reserved.</p>
+</footer>
+<script src="../../../_/js/site.js"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

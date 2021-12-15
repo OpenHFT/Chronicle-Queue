@@ -1,0 +1,32 @@
+= Index sizing
+keywords: index sizing, chronicle queue, queue, java
+author: Julia Gustafsson
+:reftext: Index sizing
+:navtitle: Index sizing
+:source-highlighter: highlight.js
+
+Each queue explicitly indexes certain excerpts with a fixed interval for quicker referencing. What excerpts are indexed is controlled with the parameter `indexSpacing(int spacing)`, a property that defines the space between indexed excerpts. In the extreme case of setting this property to 1, every excerpt is indexed.
+
+The natural trade-off associated with this value is that more frequent indexing yields faster random access read, but decreases the sequential write performance. However, the sequential read performance is not affected by this property at all.
+
+The index spacing can be set when building your Chronicle queue as follows:
+[source, java]
+----
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
+    .indexSpacing(16)
+    .build();
+----
+
+The default index spacing varies depending on the link:roll-cycle.adoc[roll cycle], per the table below.
+|===
+| Roll-cycle | Default index spacing
+| `SMALL_DAILY` | 8
+| `MINUTELY`, `HOURLY`  | 16
+| `DAILY`, `LARGE_HOURLY` | 64
+| `LARGE_DAILY` | 128
+| `XLARGE_DAILY`, `FAST_DAILY`, `SIX_HOURLY`, `FOUR_HOURLY`, `TWO_HOURLY`, `FAST_HOURLY`, `HALF_HOURLY`, `TWENTY_MINUTELY`, `TEN_MINUTELY`, `FIVE_MINUTELY` | 256
+| `HUGE_DAILY`, `LARGE_HOURLY_SPARSE` | 1024
+| `LARGE_HOURLY_XSPARSE`, `HUGE_DAILY_XSPARSE` | 1048576
+|===
+
+TIP: For more information about queue indexing, see link:../../queue-operations/pages/indexing.adoc[Indexing].

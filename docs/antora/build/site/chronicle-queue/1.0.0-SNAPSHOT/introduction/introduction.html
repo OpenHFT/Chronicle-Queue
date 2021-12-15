@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Chronicle Queue User Guide :: Chronicle Queue</title>
+    <link rel="next" href="../what-is-chronicle-queue/what-is-chronicle-queue.html">
+    <meta name="generator" content="Antora 2.3.4">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" href="../../../_/img/chronicle-favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+	  <script src="prism.js"></script>
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."></a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="../../..">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
+            <a class="navbar-item" href="https://chronicle.software">Website</a>
+            <a class="navbar-item" href="https://github.com/OpenHFT/Chronicle-Queuer">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<script src="prism.js"></script>
+<div class="nav-container" data-component="chronicle-queue" data-version="1.0.0-SNAPSHOT">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="introduction.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../what-is-chronicle-queue/what-is-chronicle-queue.html">What is Chronicle Queue?</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <span class="nav-text">Getting started</span>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/quick-start.html">Get started with Chronicle Queue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../getting-started/glossary.html">Glossary</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../configuration/app_configuration.html">Configuration</a>
+    <button class="nav-item-toggle"></button>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/roll-cycle.html">Roll cycle</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/wire-type.html">Wire type</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/block-size.html">Block size</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-count.html">Index count</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../configuration/index-spacing.html">Index spacing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../appending/appending.html">Appending</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../tailing/tailing.html">Tailing</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../performance/performance.html">Performance tuning</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../replication/replication.html">★ Queue Replication</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../encryption/encryption.html">★ Encryption</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Chronicle Queue User Guide</span>
+    <span class="version">1.0.0-SNAPSHOT</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">Chronicle Queue User Guide</span>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="introduction.html">1.0.0-SNAPSHOT</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+</div>
+  <div class="content">
+<article class="doc">
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="introduction.html">Chronicle Queue User Guide</a></li>
+    <li><a href="introduction.html">Introduction</a></li>
+  </ul>
+</nav>
+<h1 class="page">Chronicle Queue User Guide</h1>
+<div class="sect1">
+<h2 id="_a_high_performance_message_queue"><a class="anchor" href="#_a_high_performance_message_queue"></a>A high performance message queue</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue is a low-latency message queue that allows persistence of messages in high performance, mission critical applications. It can be used for low latency Interprocess Communication (IPC) without affecting your system performance, hence is tailored to transfer large amounts of data.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_overview_of_documentation"><a class="anchor" href="#_overview_of_documentation"></a>Overview of documentation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Chronicle Queue documentation comprises two parts of which the first is this comprehensive user guide, and the second a rich library of runnable code examples.</p>
+</div>
+<div class="sect2">
+<h3 id="_user_guide"><a class="anchor" href="#_user_guide"></a>User guide</h3>
+<div class="paragraph">
+<p>The user guide is structured as follows:</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+This section is under construction
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Getting started</strong> - An introduction to Chronicle Queue along with hands on instructions to get started. The glossary is a good place to look if any of the vocabulary is unfamiliar.</p>
+</li>
+<li>
+<p><strong>Configuration</strong> - Chronicle Queue is flexible and can be fined-tuned to suit a large variety of use cases. Read this chapter to learn about available options.</p>
+</li>
+<li>
+<p><strong>Appending</strong> - Learn how to write to a queue.</p>
+</li>
+<li>
+<p><strong>Tailing</strong> - Learn how to read from a queue.</p>
+</li>
+<li>
+<p><strong>Performance tuning</strong> - As every environment is different, this chapter points out key factors to obtain the best performance with Chronicle Queue.</p>
+</li>
+<li>
+<p><strong>★ Replication</strong> - Replication is an Enterprise feature allowing queues to be automatically replicated across machines or cores. This chapter teaches how that is accomplished.</p>
+</li>
+<li>
+<p><strong>★ Encryption</strong> - Learn how to protect the contents of a Chronicle Queue with encryption.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_runnable_demos"><a class="anchor" href="#_runnable_demos"></a>Runnable demos</h3>
+<div class="paragraph">
+<p>Chronicle has gathered all runnable code demonstrations on GitHub for easy access. The demos are great examples of how the learnings from the user guide can be put into practise.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The documentation primarily covers usage of Chronicle Queue with Java. If you are interested in the C++ version please contact <a href="mailto:sales@chronicle.software">sales@chronicle.software</a>.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_where_to_begin"><a class="anchor" href="#_where_to_begin"></a>Where to begin</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If this is your first time getting to know Chronicle Queue, you may want to familiarize yourself with the overall capabilities of Queue by reading <a href="../what-is-chronicle-queue/what-is-chronicle-queue.html" class="page">What is Chronicle Queue?</a>. Thereafter, follow the <a href="../getting-started/quick-start.html" class="page">Quick-start Guide</a> to get set up in minutes. Then you are ready to explore the rest of the chapters that explores</p>
+</div>
+<div class="paragraph">
+<p>In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You find our demonstrations [here].</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_chronicle_queue_enterprise"><a class="anchor" href="#_chronicle_queue_enterprise"></a>Chronicle Queue Enterprise</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue Enterprise is a commercially supported version of Chronicle Queue OSS. This documentation covers the open source functionality but is also extended by a few chapters describing enterprise specific features. These sections are clearly marked with a star-symbol (★) and include:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Encryption of message queues and messages.</p>
+</li>
+<li>
+<p>TCP/IP Replication between hosts to ensure real-time backup of all your queue data.</p>
+</li>
+<li>
+<p>Timezone adapted rollover schedule.</p>
+</li>
+<li>
+<p>Using Chronicle&#8217;s Ring Buffer for improved performance at high throughput on slower filesystems.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For more information on Chronicle Queue Enterprise, please contact <a href="mailto:sales@chronicle.software">sales@chronicle.software</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_phone_home"><a class="anchor" href="#_phone_home"></a>Phone home</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Chronicle Queue sends usage data and platform information via a secure connection to Google Analytics, a web analytics service provided by Google, Inc.("Google"). This data is collected to learn how Chronicle&#8217;s products are used, which in turn helps us focus our resources more efficiently in our effort to improve our libraries and provide better and more widely adopted solutions for the community.</p>
+</div>
+<div class="paragraph">
+<p>Learn more about what data is collected and why <a href="https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc">here.</a></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="next"><a href="../what-is-chronicle-queue/what-is-chronicle-queue.html">What is Chronicle Queue?</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>© 2021 Chronicle Software. All rights reserved.</p>
+</footer>
+<script src="../../../_/js/site.js"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
