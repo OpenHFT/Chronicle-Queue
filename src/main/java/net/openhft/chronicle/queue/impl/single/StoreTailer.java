@@ -205,8 +205,10 @@ class StoreTailer extends AbstractCloseable
     DocumentContext readingDocumentNamed(final boolean includeMetaData) {
         for (int i = 0; i < 1_000_000; i++) {
             this.indexChecker = indexValue.getVolatileValue();
-            if (this.index != indexChecker)
+            if (this.index != indexChecker) {
+                System.out.println("move " + Long.toHexString(this.index) + " to " + Long.toHexString(indexChecker));
                 moveToIndex(this.indexChecker);
+            }
 
             DocumentContext documentContext = readingDocument0(includeMetaData);
 
@@ -1142,8 +1144,12 @@ class StoreTailer extends AbstractCloseable
         if (indexValue != null) {
             if (this.indexChecker == INVALID_INDEX) {
                 indexValue.setValue(index);
-            } else if (!indexValue.compareAndSwapValue(this.indexChecker, index))
+            } else if (indexValue.compareAndSwapValue(this.indexChecker, index)) {
+                this.indexChecker = index;
+            } else {
                 this.indexChecker = INVALID_INDEX;
+            }
+
         }
 
         if (indexAtCreation == INVALID_INDEX) {
@@ -1389,6 +1395,8 @@ class StoreTailer extends AbstractCloseable
 
             if (isPresent() && !isMetaData() && indexValue == null)
                 incrementIndex();
+            else if (indexValue != null)
+                StoreTailer.this.index++; // it should be at this position if no other tailers read or appenders rolls.
 
             super.close();
             if (direction == FORWARD)

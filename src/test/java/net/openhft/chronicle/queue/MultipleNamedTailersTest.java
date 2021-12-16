@@ -33,6 +33,37 @@ public class MultipleNamedTailersTest {
     }
 
     @Test
+    public void multipleSharedTailers() {
+        File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
+
+        try (ChronicleQueue q1 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize()
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
+             ExcerptAppender appender = q1.acquireAppender()) {
+
+            if (!empty)
+                appender.writeText("0");
+
+            try (ExcerptTailer namedTailer1 = q1.createTailer("named1");
+                 ChronicleQueue q2 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().build();
+                 ExcerptTailer namedTailer2 = q2.createTailer("named2")) {
+                for (int i = 0; i < 3_000; i++) {
+                    final String id0 = "" + i;
+                    if (i > 0 || empty)
+                        appender.writeText(id0);
+                    long index0 = appender.lastIndexAppended();
+                    if (i % 2 == 0)
+                        check(namedTailer1, id0, index0);
+                    else
+                        check(namedTailer2, id0, index0);
+                    Jvm.pause(1);
+                }
+            }
+        }
+        IOTools.deleteDirWithFiles(tmpDir);
+    }
+
+    @Test
     public void multipleTailers() {
         File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
 
@@ -54,8 +85,8 @@ public class MultipleNamedTailersTest {
                     if (i > 0 || empty)
                         appender.writeText(id0);
                     long index0 = appender.lastIndexAppended();
-                    if ((int) index0 == 0 && i > 0)
-                        System.out.println("index: " + Long.toHexString(index0));
+//                    if ((int) index0 == 0 && i > 0)
+//                        System.out.println("index: " + Long.toHexString(index0));
                     check(tailer1, id0, index0);
                     check(namedTailer1, id0, index0);
                     check(tailer2, id0, index0);
@@ -76,6 +107,7 @@ public class MultipleNamedTailersTest {
             assertEquals(index0, tailer.index());
         }
         final long index2 = tailer.index();
+//        System.out.println("Was "+Long.toHexString(index0)+" now "+Long.toHexString(index2));
         assertEquals(index0 + 1, index2);
     }
 }
