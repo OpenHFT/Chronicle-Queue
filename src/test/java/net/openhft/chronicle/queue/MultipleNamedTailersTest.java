@@ -44,9 +44,9 @@ public class MultipleNamedTailersTest {
             if (!empty)
                 appender.writeText("0");
 
-            try (ExcerptTailer namedTailer1 = q1.createTailer("named1");
+            try (ExcerptTailer namedTailer1 = q1.createTailer("named");
                  ChronicleQueue q2 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().build();
-                 ExcerptTailer namedTailer2 = q2.createTailer("named2")) {
+                 ExcerptTailer namedTailer2 = q2.createTailer("named")) {
                 for (int i = 0; i < 3_000; i++) {
                     final String id0 = "" + i;
                     if (i > 0 || empty)

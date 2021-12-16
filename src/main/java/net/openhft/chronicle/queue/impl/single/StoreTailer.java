@@ -205,10 +205,8 @@ class StoreTailer extends AbstractCloseable
     DocumentContext readingDocumentNamed(final boolean includeMetaData) {
         for (int i = 0; i < 1_000_000; i++) {
             this.indexChecker = indexValue.getVolatileValue();
-            if (this.index != indexChecker) {
-                System.out.println("move " + Long.toHexString(this.index) + " to " + Long.toHexString(indexChecker));
+            if (this.index != indexChecker)
                 moveToIndex(this.indexChecker);
-            }
 
             DocumentContext documentContext = readingDocument0(includeMetaData);
 
