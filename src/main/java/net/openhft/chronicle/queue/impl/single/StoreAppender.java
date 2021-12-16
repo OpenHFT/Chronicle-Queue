@@ -415,12 +415,16 @@ class StoreAppender extends AbstractCloseable
      * Ensure any missing EOF markers are added back to previous cycles
      */
     public void normaliseEOFs() {
+        long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
             normaliseEOFs0();
         } finally {
             writeLock.unlock();
+            long tookMillis = (System.nanoTime() - start) / 1_000_000;
+            if (tookMillis > 100)
+                Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to normaliseEOFs");
         }
     }
 
