@@ -32,6 +32,12 @@ import java.util.function.Supplier;
 import static java.lang.String.format;
 import static net.openhft.chronicle.core.Jvm.getProcessId;
 
+/**
+ * Implements a lock using {@link LongValue} and primitives such as CAS.
+ * <p>
+ * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
+ * for a timed-out lock to be overridden.
+ */
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
     protected static final long PID = getProcessId();
     public static final long UNLOCKED = 1L << 63;

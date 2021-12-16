@@ -513,6 +513,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     /**
      * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to
      * coordinate writes from multiple threads and processes.
+     * <p>This lock should only be held for a short time, as it will block progress of any writers to
+     * this queue. The default behaviour of {@link TableStoreWriteLock} is to override the lock after a timeout.
+     *
      * <p>This is also used to protect rolling to the next cycle
      */
     @NotNull
