@@ -39,6 +39,7 @@ import static net.openhft.chronicle.core.Jvm.getProcessId;
  * for a timed-out lock to be overridden.
  */
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
+    protected static final String UNLOCK_MAIN_MSG = ". You can manually unlock with net.openhft.chronicle.queue.main.UnlockMain";
     protected static final long PID = getProcessId();
     public static final long UNLOCKED = 1L << 63;
     protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
@@ -78,7 +79,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         final long pid = this.lock.getVolatileValue();
-        if (pid==Jvm.getProcessId())
+        if (pid == Jvm.getProcessId())
             return true;
         notCurrentProcessConsumer.accept(pid);
         return false;
@@ -92,7 +93,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
      * Otherwise {@code false} is returned if the lock is held by this process or another live process.
      */
     public boolean forceUnlockIfProcessIsDead() {
-        long pid = 0;
+        long pid;
         for (; ; ) {
             pid = this.lock.getVolatileValue();
             if (pid == UNLOCKED)

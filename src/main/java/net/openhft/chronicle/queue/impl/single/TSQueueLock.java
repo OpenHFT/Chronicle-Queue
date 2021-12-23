@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
@@ -77,6 +79,9 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     private long getLockValueFromTid(long tid) {
+        int tidi = Maths.toInt32(tid);
+        if (tidi != tid)
+            Jvm.error().on(getClass(), "Lossy conversion of threadid " + Long.toHexString(tid) + " to " + tidi);
         return tid << 32 | PID;
     }
 
@@ -124,7 +129,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 "PID: " + pid + ", " +
                 "TID: " + (int) (value >>> 32);
         if (dontRecoverLockTimeout)
-            throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg));
+            throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         warn().on(getClass(), warningMsg + ". Unlocking forcibly");
     }
 
