@@ -87,7 +87,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
                     "for the lock file:" + path + ". " +
                     "Lock was held by " + lockedBy;
             if (dontRecoverLockTimeout)
-                throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg));
+                throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
             warn().on(getClass(), warningMsg + ". Unlocking forcibly");
             forceUnlock(value);
             // we should reset the pauser after a timeout exception
