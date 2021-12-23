@@ -40,9 +40,11 @@ import static net.openhft.chronicle.core.Jvm.getProcessId;
  */
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
     protected static final String UNLOCK_MAIN_MSG = ". You can manually unlock with net.openhft.chronicle.queue.main.UnlockMain";
+    protected static final String UNLOCKING_FORCIBLY_MSG = ". Unlocking forcibly. Note that this feature is designed to recover " +
+            "if another process died while holding a lock. If the other process is still alive, you may see queue corruption.";
     protected static final long PID = getProcessId();
     public static final long UNLOCKED = 1L << 63;
-    protected final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
+    protected final UnlockMode forceUnlockOnTimeoutWhen;
 
     protected final LongValue lock;
     protected final ThreadLocal<TimingPauser> pauser;
@@ -56,6 +58,17 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         this.pauser = ThreadLocal.withInitial(pauserSupplier);
         this.path = tableStore.file();
         this.lockKey = lockKey;
+
+        final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
+        if (dontRecoverLockTimeout) {
+            forceUnlockOnTimeoutWhen = UnlockMode.NEVER;
+            Jvm.warn().on(getClass(), "queue.dont.recover.lock.timeout property is deprecated and will be removed in a future version. " +
+                    "Use queue.force.unlock.mode=NEVER instead");
+        } else {
+            // TODO: x.24 change default to UnlockMode.LOCKING_PROCESS_DEAD
+            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(System.getProperty("queue.force.unlock.mode", UnlockMode.ALWAYS.name()));
+        }
+
         disableThreadSafetyCheck(true);
     }
 
@@ -65,7 +78,6 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
     /**
      * will only force unlock if you give it the correct pid
-     *
      */
     protected void forceUnlock(long value) {
         boolean unlocked = lock.compareAndSwapValue(value, UNLOCKED);
@@ -79,7 +91,9 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         final long pid = this.lock.getVolatileValue();
-        if (pid == Jvm.getProcessId())
+        // mask off thread (if used)
+        int realPid = (int) pid;
+        if (realPid == PID)
             return true;
         notCurrentProcessConsumer.accept(pid);
         return false;
@@ -99,10 +113,12 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             if (pid == UNLOCKED)
                 return true;
 
-            if (!Jvm.isProcessAlive(pid)) {
+            // mask off thread (if used)
+            int realPid = (int) pid;
+            if (!Jvm.isProcessAlive(realPid)) {
                 if (Jvm.isDebugEnabled(this.getClass()))
                     Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
-                            lockKey, this.path, pid), new StackTrace("Forced unlock"));
+                            lockKey, this.path, realPid), new StackTrace("Forced unlock"));
                 if (lock.compareAndSwapValue(pid, UNLOCKED))
                     return true;
             } else

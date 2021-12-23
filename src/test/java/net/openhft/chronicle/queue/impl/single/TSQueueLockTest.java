@@ -29,7 +29,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
 
-public class TableStoreWriteLockTest extends QueueTestCommon {
+public class TSQueueLockTest extends QueueTestCommon {
 
     private static final String TEST_LOCK_NAME = "testLock";
     private static final long TIMEOUT_MS = 100;
@@ -37,7 +37,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Before
     public void setUp() {
-        final Path tempDir = IOTools.createTempDirectory("namedTableStoreLockTest");
+        final Path tempDir = IOTools.createTempDirectory(this.getClass().getSimpleName());
         tempDir.toFile().mkdirs();
         Path storeDirectory = tempDir.resolve("test_store.cq4t");
         tableStore = SingleTableBuilder.binary(storeDirectory, Metadata.NoMeta.INSTANCE).build();
@@ -50,12 +50,12 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void lockWillThrowIllegalStateExceptionIfInterruptedWhileWaitingForLock() throws InterruptedException {
-        try (final TableStoreWriteLock testLock = createTestLock(tableStore, 5_000)) {
-            testLock.lock();
+        try (final TSQueueLock testLock = createTestLock(tableStore, 5_000)) {
+            testLock.acquireLock();
             AtomicBoolean threwException = new AtomicBoolean(false);
             Thread t = new Thread(() -> {
                 try {
-                    testLock.lock();
+                    testLock.acquireLock();
                 } catch (IllegalStateException e) {
                     threwException.set(true);
                 }
@@ -71,25 +71,25 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     @Test(timeout = 5_000)
     public void testIsLockedByCurrentProcess() {
         AtomicLong actualPid = new AtomicLong(-1);
-        try (final TableStoreWriteLock testLock = createTestLock()) {
-            testLock.lock();
+        try (final TSQueueLock testLock = createTestLock()) {
+            testLock.acquireLock();
             assertTrue(testLock.isLockedByCurrentProcess(actualPid::set));
             assertEquals(-1, actualPid.get());
             testLock.unlock();
             assertFalse(testLock.isLockedByCurrentProcess(actualPid::set));
-            assertEquals(TableStoreWriteLock.UNLOCKED, actualPid.get());
+            assertEquals(TSQueueLock.UNLOCKED, actualPid.get());
         }
     }
 
     @Test(timeout = 5_000)
     public void lockWillBeAcquiredAfterTimeoutWithAWarning() throws InterruptedException {
-        try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
-            Thread t = new Thread(testLock::lock);
+        try (final TSQueueLock testLock = createTestLock(tableStore, 50)) {
+            Thread t = new Thread(testLock::acquireLock);
             t.start();
             t.join();
-            testLock.lock();
+            testLock.acquireLock();
             assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Forced unlock")));
+                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TSQueueLock.class && ek.message.startsWith("Forced unlock")));
             expectException("Unlocking forcibly");
             expectException("Forced unlock");
         }
@@ -99,11 +99,11 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     public void lockWillThrowExceptionAfterTimeoutWhenDontRecoverLockTimeoutIsTrue() throws InterruptedException {
         expectException("queue.dont.recover.lock.timeout property is deprecated and will be removed");
         System.setProperty("queue.dont.recover.lock.timeout", "true");
-        try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
-            Thread t = new Thread(testLock::lock);
+        try (final TSQueueLock testLock = createTestLock(tableStore, 50)) {
+            Thread t = new Thread(testLock::acquireLock);
             t.start();
             t.join();
-            testLock.lock();
+            testLock.acquireLock();
             fail("Should have thrown trying to lock()");
         } finally {
             System.clearProperty("queue.dont.recover.lock.timeout");
@@ -113,11 +113,12 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     @Test(timeout = 5_000, expected = UnrecoverableTimeoutException.class)
     public void lockWillThrowExceptionAfterTimeoutWhenOnlyUnlockIfProcessDeadIsTrue() throws InterruptedException {
         System.setProperty("queue.force.unlock.mode", "LOCKING_PROCESS_DEAD");
-        try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
-            Thread t = new Thread(testLock::lock);
+        expectException("Couldn't acquire lock after");
+        try (final TSQueueLock testLock = createTestLock(tableStore, 50)) {
+            Thread t = new Thread(testLock::acquireLock);
             t.start();
             t.join();
-            testLock.lock();
+            testLock.acquireLock();
             fail("Should have thrown trying to lock()");
         } finally {
             System.clearProperty("queue.force.unlock.mode");
@@ -126,71 +127,24 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void unlockWillWarnIfNotLocked() {
-        try (final TableStoreWriteLock testLock = createTestLock()) {
+        try (final TSQueueLock testLock = createTestLock()) {
             testLock.unlock();
             assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Write lock was already unlocked.")));
-            expectException("Write lock was already unlocked.");
+                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TSQueueLock.class && ek.message.startsWith("Queue lock was locked by another thread")));
+            expectException("Queue lock was locked by another thread");
         }
     }
 
     @Test(timeout = 5_000)
     public void unlockWillNotUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
-        try (final TableStoreWriteLock testLock = createTestLock()) {
+        try (final TSQueueLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
             testLock.unlock();
-            assertTrue(testLock.locked());
+            assertTrue(testLock.isLocked());
             assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Write lock was locked by someone else!")));
-            expectException("Write lock was locked by someone else!");
-            process.destroy();
-            process.waitFor();
-        }
-    }
-
-    @Test(timeout = 5_000)
-    public void forceUnlockWillUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
-        try (final TableStoreWriteLock testLock = createTestLock()) {
-            final Process process = runLockingProcess(true);
-            waitForLockToBecomeLocked(testLock);
-            testLock.forceUnlock();
-            assertFalse(testLock.locked());
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Forced unlock for the lock")));
-            expectException("Forced unlock for the lock");
-            process.destroy();
-            process.waitFor();
-        }
-    }
-
-    @Test(timeout = 5_000)
-    public void forceUnlockWillNotWarnIfLockIsNotLocked() {
-        try (final TableStoreWriteLock testLock = createTestLock()) {
-            testLock.forceUnlock();
-            assertFalse(testLock.locked());
-        }
-    }
-
-    @Test(timeout = 5_000)
-    public void forceUnlockWillWarnIfLockIsLockedByCurrentProcess() {
-        try (final TableStoreWriteLock testLock = createTestLock()) {
-            testLock.lock();
-            testLock.forceUnlock();
-            assertFalse(testLock.locked());
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Forced unlock for the lock")));
-            expectException("Forced unlock for the lock");
-        }
-    }
-
-    @Test(timeout = 5_000)
-    public void forceUnlockQuietlyWillUnlockWithNoWarningIfLockedByAnotherProcess() throws IOException, TimeoutException, InterruptedException {
-        try (final TableStoreWriteLock testLock = createTestLock()) {
-            final Process process = runLockingProcess(true);
-            waitForLockToBecomeLocked(testLock);
-            testLock.forceUnlockQuietly();
-            assertFalse(testLock.locked());
+                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TSQueueLock.class && ek.message.startsWith("Queue lock was locked by another thread")));
+            expectException("Queue lock was locked by another thread");
             process.destroy();
             process.waitFor();
         }
@@ -199,7 +153,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     @Test(timeout = 15_000)
     public void lockPreventsConcurrentAcquisition() {
         AtomicBoolean lockIsAcquired = new AtomicBoolean(false);
-        try (final TableStoreWriteLock testLock = createTestLock(tableStore, 10_000)) {
+        try (final TSQueueLock testLock = createTestLock(tableStore, 10_000)) {
             int numThreads = Math.min(6, Runtime.getRuntime().availableProcessors());
             ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
             CyclicBarrier barrier = new CyclicBarrier(numThreads);
@@ -220,10 +174,10 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws IOException, TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(true);
-        try (TableStoreWriteLock lock = createTestLock()) {
+        try (TSQueueLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
             assertFalse(lock.forceUnlockIfProcessIsDead());
-            assertTrue(lock.locked());
+            assertTrue(lock.isLocked());
         }
         lockingProcess.destroy();
         lockingProcess.waitFor(5_000, TimeUnit.SECONDS);
@@ -232,26 +186,26 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws IOException, TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(false);
-        try (TableStoreWriteLock lock = createTestLock()) {
+        try (TSQueueLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
             lockingProcess.destroy();
             lockingProcess.waitFor(5_000, TimeUnit.SECONDS);
             assertTrue(lock.forceUnlockIfProcessIsDead());
-            assertFalse(lock.locked());
+            assertFalse(lock.isLocked());
         }
     }
 
     @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockIsNotLocked() {
-        try (TableStoreWriteLock lock = createTestLock()) {
+        try (TSQueueLock lock = createTestLock()) {
             assertTrue(lock.forceUnlockIfProcessIsDead());
-            assertFalse(lock.locked());
+            assertFalse(lock.isLocked());
         }
     }
 
-    private void waitForLockToBecomeLocked(TableStoreWriteLock lock) throws TimeoutException {
+    private void waitForLockToBecomeLocked(TSQueueLock lock) throws TimeoutException {
         Pauser p = Pauser.balanced();
-        while (!lock.locked()) {
+        while (!lock.isLocked()) {
             p.pause(5_000, TimeUnit.SECONDS);
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedRuntimeException("Interrupted waiting for lock to lock");
@@ -259,13 +213,13 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    private TableStoreWriteLock createTestLock() {
+    private TSQueueLock createTestLock() {
         return createTestLock(tableStore, TIMEOUT_MS);
     }
 
     @NotNull
-    private static TableStoreWriteLock createTestLock(TableStore<Metadata.NoMeta> tableStore, long timeoutMilliseconds) {
-        return new TableStoreWriteLock(tableStore, Pauser::balanced, timeoutMilliseconds, TEST_LOCK_NAME);
+    private static TSQueueLock createTestLock(TableStore<Metadata.NoMeta> tableStore, long timeoutMilliseconds) {
+        return new TSQueueLock(tableStore, Pauser::balanced, timeoutMilliseconds);
     }
 
     private Process runLockingProcess(boolean releaseAfterInterrupt) throws IOException {
@@ -275,8 +229,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     private static void lockAndHoldUntilInterrupted(String tableStorePath, boolean releaseWhenInterrupted) {
         try (TableStore<Metadata.NoMeta> tableStore = SingleTableBuilder.binary(tableStorePath, Metadata.NoMeta.INSTANCE).build();
-             TableStoreWriteLock lock = createTestLock(tableStore, 15_000)) {
-            lock.lock();
+             TSQueueLock lock = createTestLock(tableStore, 15_000)) {
+            lock.acquireLock();
             while (!Thread.currentThread().isInterrupted()) {
                 Jvm.pause(100);
             }
@@ -295,13 +249,13 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     static class LockAcquirer implements Runnable {
 
-        private final TableStoreWriteLock tableStoreWriteLock;
+        private final TSQueueLock TSQueueLock;
         private final AtomicBoolean lockIsAcquired;
         private final int numberOfIterations;
         private final CyclicBarrier barrier;
 
-        LockAcquirer(TableStoreWriteLock tableStoreWriteLock, AtomicBoolean lockIsAcquired, int numberOfIterations, CyclicBarrier barrier) {
-            this.tableStoreWriteLock = tableStoreWriteLock;
+        LockAcquirer(TSQueueLock TSQueueLock, AtomicBoolean lockIsAcquired, int numberOfIterations, CyclicBarrier barrier) {
+            this.TSQueueLock = TSQueueLock;
             this.lockIsAcquired = lockIsAcquired;
             this.numberOfIterations = numberOfIterations;
             this.barrier = barrier;
@@ -312,13 +266,13 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             try {
                 barrier.await();
                 for (int i = 0; i < numberOfIterations; i++) {
-                    tableStoreWriteLock.lock();
+                    TSQueueLock.acquireLock();
                     try {
                         lockIsAcquired.compareAndSet(false, true);
                         Jvm.pause(10);
                         lockIsAcquired.compareAndSet(true, false);
                     } finally {
-                        tableStoreWriteLock.unlock();
+                        TSQueueLock.unlock();
                         Jvm.pause(1);
                     }
                 }
