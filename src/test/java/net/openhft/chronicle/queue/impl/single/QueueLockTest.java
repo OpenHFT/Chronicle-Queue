@@ -19,6 +19,7 @@ public class QueueLockTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTimeout() throws InterruptedException {
+        expectException("queue.dont.recover.lock.timeout property is deprecated and will be removed");
         check(true);
     }
 

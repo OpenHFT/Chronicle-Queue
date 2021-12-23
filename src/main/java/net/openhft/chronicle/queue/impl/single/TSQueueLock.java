@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
+import net.openhft.chronicle.queue.impl.table.UnlockMode;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -70,8 +71,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
-            warnLock("Overriding the lock. Couldn't acquire lock", value);
-            forceUnlock(value);
+            warnAndForceUnlock("Couldn't acquire lock", value);
             acquireLock();
         } finally {
             tlPauser.reset();
@@ -108,8 +108,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
                 value = lock.getVolatileValue();
             }
         } catch (TimeoutException e) {
-            warnLock("Queue lock is still held", value);
-            forceUnlock(value);
+            warnAndForceUnlock("Queue lock is still held", value);
             // try again.
             waitForLock();
 
@@ -122,15 +121,25 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         }
     }
 
+    private void warnAndForceUnlock(String msg, long value) {
+        warnLock(msg, value);
+        if (forceUnlockOnTimeoutWhen == UnlockMode.LOCKING_PROCESS_DEAD) {
+            if (!forceUnlockIfProcessIsDead())
+                throw new UnrecoverableTimeoutException(new IllegalStateException(msg + UNLOCK_MAIN_MSG));
+        } else {
+            forceUnlock(value);
+        }
+    }
+
     private void warnLock(String msg, long value) {
         String pid = ((int) value == PID) ? "me" : Integer.toString((int) value);
         final String warningMsg = msg + " after " + timeout + "ms for " +
                 "the lock file:" + path + ". Lock is held by " +
                 "PID: " + pid + ", " +
                 "TID: " + (int) (value >>> 32);
-        if (dontRecoverLockTimeout)
+        if (forceUnlockOnTimeoutWhen == UnlockMode.NEVER)
             throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
-        warn().on(getClass(), warningMsg + ". Unlocking forcibly");
+        warn().on(getClass(), warningMsg + UNLOCKING_FORCIBLY_MSG);
     }
 
     /**
@@ -169,6 +178,6 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     }
 
     private boolean isLockHeldByCurrentThread(long tid) {
-        return lock.getVolatileValue()==getLockValueFromTid(tid);
+        return lock.getVolatileValue() == getLockValueFromTid(tid);
     }
 }
