@@ -21,7 +21,7 @@ import static org.junit.Assume.assumeFalse;
 
 public class IndexForIDTest {
     private int count;
-    private ChronicleQueue queue;
+    private String staged;
 
     private static void applyFlyweight(Facade datum, long datumSize, DocumentContext dc) {
         Wire wire = dc.wire();
@@ -33,23 +33,25 @@ public class IndexForIDTest {
         try {
             Facade datum = Values.newNativeReference(Facade.class);
             long datumSize = datum.maxSize();
-            assertEquals(512, datumSize);
+            assertEquals(256, datumSize);
 
-            try (ExcerptAppender appender = queue.acquireAppender();
-                 LongValue value = queue.indexForId("producer")) {
-                // always go to the end.
-                value.setOrderedValue(Long.MAX_VALUE);
-
-                Thread pretoucher = new Thread(() -> {
-                    ExcerptAppender appender0 = queue.acquireAppender();
-                    Thread thread = Thread.currentThread();
-                    while (!thread.isInterrupted()) {
+            Thread pretoucher = new Thread(() -> {
+                try (ChronicleQueue queue = ChronicleQueue.single(staged);
+                ExcerptAppender appender0 = queue.acquireAppender()) {
+                    while (!Thread.currentThread().isInterrupted()) {
                         appender0.pretouch();
                         Jvm.pause(10);
                     }
-                });
-                pretoucher.setDaemon(true);
-                pretoucher.start();
+                }
+            });
+            pretoucher.setDaemon(true);
+            pretoucher.start();
+
+            try (ChronicleQueue queue = ChronicleQueue.single(staged);
+                 ExcerptAppender appender = queue.acquireAppender();
+                 LongValue value = queue.indexForId("producer")) {
+                // always go to the end.
+                value.setOrderedValue(Long.MAX_VALUE);
 
                 for (int i = 0; i < count; i++) {
                     try (DocumentContext dc = appender.writingDocument()) {
@@ -90,7 +92,8 @@ public class IndexForIDTest {
         Facade datum = Values.newNativeReference(Facade.class);
         long datumSize = datum.maxSize();
         long end = System.currentTimeMillis() + (Jvm.isCodeCoverage() ? 90_000 : 60_000);
-        try (ExcerptTailer tailer = queue.createTailer();
+        try (ChronicleQueue queue = ChronicleQueue.single(staged);
+             ExcerptTailer tailer = queue.createTailer();
              LongValue fromIndex = queue.indexForId(fromID);
              LongValue toIndex = queue.indexForId(toID)) {
 
@@ -98,7 +101,7 @@ public class IndexForIDTest {
                 final long index;
                 try (final DocumentContext dc = tailer.readingDocument()) {
                     if (!dc.isPresent()) {
-                        Jvm.nanoPause();
+                        Jvm.pause(1);
                         i--;
                         // commented out newly introduced fail which is blowing up in TeamCity
                         // https://github.com/OpenHFT/Chronicle-Queue/issues/897
@@ -126,23 +129,16 @@ public class IndexForIDTest {
 
     @Test //(timeout = 10_000)
     public void staged() {
-        assumeFalse(Jvm.isArm());
-
-        Path staged = IOTools.createTempDirectory("staged");
-        this.count = 1_000_000;
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(staged).build()) {
-            this.queue = queue;
-
-            Stream.<Runnable>of(
-                    this::producer,
-                    this::first,
-                    this::mid,
-                    this::end)
-                    .parallel() // comment out to run sequentially
-                    .forEach(Runnable::run);
-
-        }
-        IOTools.deleteDirWithFiles(staged.toFile(), 3);
+        staged = IOTools.createTempDirectory("staged").toString();
+        this.count = Jvm.isArm() ? 10_000 : 1_000_000;
+        Stream.<Runnable>of(
+                this::producer,
+                this::first,
+                this::mid,
+                this::end)
+                .parallel() // comment out to run sequentially
+                .forEach(Runnable::run);
+        IOTools.deleteDirWithFiles(staged, 3);
     }
 
     @FunctionalInterface
@@ -167,7 +163,7 @@ public class IndexForIDTest {
 
         void setEndTime(long timeNS);
 
-        @Array(length = 60)
+        @Array(length = 28)
         double getValueAt(int index);
 
         void setValueAt(int index, double value);
