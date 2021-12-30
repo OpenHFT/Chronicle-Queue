@@ -5,19 +5,16 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.values.Array;
 import net.openhft.chronicle.values.Values;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.junit.Test;
 
-import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
 
 public class IndexForIDTest {
     private int count;
@@ -136,7 +133,7 @@ public class IndexForIDTest {
                 this::first,
                 this::mid,
                 this::end)
-                .parallel() // comment out to run sequentially
+//                .parallel() // comment out to run sequentially
                 .forEach(Runnable::run);
         IOTools.deleteDirWithFiles(staged, 3);
     }
