@@ -377,7 +377,7 @@ By using *Chronicle Datagrid*, a Java or C# client can publish to a queue to act
 
 - *File rolling and queue files*
 
-Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
+Chronicle Queue is designed to roll its files depending on the roll cycle chosen when queue is created (see https://github.com/OpenHFT/Chronicle-Queue/blob/ea/src/main/java/net/openhft/chronicle/queue/RollCycles.java[RollCycles]).
 In other words, a queue file is created for each roll cycle which has extension `cq4`. When the roll cycle reaches the point it should roll, appender will atomically write `EOF` mark at the end of current file to indicate that no other appender should write to this file and no tailer should read further, and instead everyone should use new file.
 
 If the process was shut down, and restarted later when the roll cycle should be using a new file, an appender will try to locate old files and write an `EOF` mark in them to help tailers reading them.
@@ -526,7 +526,7 @@ You can configure a Chronicle Queue using its configuration parameters or system
 ==== Queue configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
-For complete list of configuration parameters and system properties, refer to https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise-Demo/blob/master/docs/ConfigurationParameters.adoc#singlechroniclequeuebuilder[Configuration Parameters]. Please note that some configuration parameters on this page are only available for the Enterprise edition.
+For complete list of configuration parameters and system properties, refer to https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise-Demo/blob/ea/docs/ConfigurationParameters.adoc#singlechroniclequeuebuilder[Configuration Parameters]. Please note that some configuration parameters on this page are only available for the Enterprise edition.
 A few of the parameters that were most queried by our customers are explained below .
 
 * *RollCycle*
@@ -1320,7 +1320,7 @@ method2 [!Message2 {
 ]
 ----
 
-* For more details see, https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest]
+* For more details see, https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and https://github.com/OpenHFT/Chronicle-Queue/blob/ea/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest]
 
 ''''
 ==== Detailed tracing of timings
