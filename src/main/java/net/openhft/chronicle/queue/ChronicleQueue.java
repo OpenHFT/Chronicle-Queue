@@ -410,7 +410,7 @@ public interface ChronicleQueue extends Closeable {
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
     /**
-     * Refreshed this ChronicleQueue's view of the directory used for storing files.
+     * Refreshes this ChronicleQueue's view of the directory used for storing files.
      * <p>
      * Invoke this method if you delete file from a chronicle-queue directory
      * <p>

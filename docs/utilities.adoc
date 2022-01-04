@@ -51,7 +51,7 @@ The `-h` argument cannot be used in conjunction with other arguments.
 |===
 
 The Chronicle Reader main class is located at
-https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/main/java/net/openhft/chronicle/queue/ChronicleReaderMain.java
+https://github.com/OpenHFT/Chronicle-Queue/blob/ea/src/main/java/net/openhft/chronicle/queue/ChronicleReaderMain.java
 
 === Command-line examples
 
