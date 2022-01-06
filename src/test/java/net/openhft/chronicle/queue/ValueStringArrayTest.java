@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -12,6 +13,7 @@ public class ValueStringArrayTest extends ChronicleQueueTestBase {
     private static final String EXPECTED = "hello world";
     private final ValueStringArray using = new ValueStringArray();
 
+    @Ignore("see https://github.com/OpenHFT/Chronicle-Bytes/issues/326")
     @Test
     public void test() {
 
