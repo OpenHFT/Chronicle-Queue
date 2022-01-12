@@ -28,10 +28,7 @@ import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -55,6 +52,8 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     private final RollCycle rollCycle;
     private final boolean usePretoucher;
     private final boolean useSingleQueueInstance;
+    private final BufferMode readBufferMode;
+    private final BufferMode writeBufferMode;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
@@ -72,7 +71,8 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
     public QueueMultiThreadedJLBHBenchmark(int iterations, String path, String tailerAffinity, @Nullable RollCycle rollCycle,
                                            int messageSize, @Nullable Long blockSize, boolean usePretoucher,
-                                           boolean useSingleQueueInstance) {
+                                           boolean useSingleQueueInstance, @Nullable BufferMode readBufferMode,
+                                           @Nullable BufferMode writeBufferMode) {
         this.iterations = iterations;
         this.path = path;
         this.tailerAffinity = tailerAffinity;
@@ -81,6 +81,8 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         this.blockSize = blockSize;
         this.usePretoucher = usePretoucher;
         this.useSingleQueueInstance = useSingleQueueInstance;
+        this.readBufferMode = readBufferMode;
+        this.writeBufferMode = writeBufferMode;
         this.datum = new Datum(messageSize);
     }
 
@@ -131,6 +133,12 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         }
         if (rollCycle != null) {
             builder.rollCycle(rollCycle);
+        }
+        if (readBufferMode != null) {
+            builder.readBufferMode(readBufferMode);
+        }
+        if (writeBufferMode != null) {
+            builder.writeBufferMode(writeBufferMode);
         }
         return builder.build();
     }
@@ -189,11 +197,16 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         private int throughput = Integer.getInteger("throughput", 100_000);
         private boolean usePretoucher = Boolean.getBoolean("usePretoucher");
         private boolean useSingleQueueInstance = Boolean.getBoolean("useSingleQueue");
+        @Nullable
+        private BufferMode readBufferMode;
+        @Nullable
+        private BufferMode writeBufferMode;
+        @Nullable
         private RollCycle rollCycle = getRollCycle();
 
         public void run() {
             final QueueMultiThreadedJLBHBenchmark jlbhTask = new QueueMultiThreadedJLBHBenchmark(iterations, path, consumerAffinity,
-                    rollCycle, messageSize, blockSize, usePretoucher, useSingleQueueInstance);
+                    rollCycle, messageSize, blockSize, usePretoucher, useSingleQueueInstance, readBufferMode, writeBufferMode);
             JLBHOptions lth = new JLBHOptions()
                     .warmUpIterations(warmupIterations)
                     .iterations(iterations)
@@ -273,6 +286,16 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
         public Builder rollCycle(RollCycle rollCycle) {
             this.rollCycle = rollCycle;
+            return this;
+        }
+
+        public Builder readBufferMode(BufferMode readBufferMode) {
+            this.readBufferMode = readBufferMode;
+            return this;
+        }
+
+        public Builder writeBufferMode(BufferMode writeBufferMode) {
+            this.writeBufferMode = writeBufferMode;
             return this;
         }
     }
