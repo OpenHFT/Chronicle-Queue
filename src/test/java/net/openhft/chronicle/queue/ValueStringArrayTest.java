@@ -13,9 +13,10 @@ public class ValueStringArrayTest extends ChronicleQueueTestBase {
     private static final String EXPECTED = "hello world";
     private final ValueStringArray using = new ValueStringArray();
 
-    @Ignore("see https://github.com/OpenHFT/Chronicle-Bytes/issues/326")
     @Test
     public void test() {
+        // No explicit support of putting a Value into Wire.
+        expectException("BytesMarshallable found in field which is not matching exactly");
 
         ValueStringArray value = new ValueStringArray();
         value.setCsArrItem(1, EXPECTED);
@@ -35,8 +36,7 @@ public class ValueStringArrayTest extends ChronicleQueueTestBase {
                // System.out.println(actual);
                 Assert.assertEquals(EXPECTED, actual.toString());
             }
- }
-
+         }
     }
 }
 
