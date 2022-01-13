@@ -54,6 +54,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     private final boolean useSingleQueueInstance;
     private final BufferMode readBufferMode;
     private final BufferMode writeBufferMode;
+    private final Class<?> testClass;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
@@ -72,7 +73,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     public QueueMultiThreadedJLBHBenchmark(int iterations, String path, String tailerAffinity, @Nullable RollCycle rollCycle,
                                            int messageSize, @Nullable Long blockSize, boolean usePretoucher,
                                            boolean useSingleQueueInstance, @Nullable BufferMode readBufferMode,
-                                           @Nullable BufferMode writeBufferMode) {
+                                           @Nullable BufferMode writeBufferMode, @Nullable Class<?> testClass) {
         this.iterations = iterations;
         this.path = path;
         this.tailerAffinity = tailerAffinity;
@@ -83,6 +84,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         this.useSingleQueueInstance = useSingleQueueInstance;
         this.readBufferMode = readBufferMode;
         this.writeBufferMode = writeBufferMode;
+        this.testClass = testClass == null ? getClass() : testClass;
         this.datum = new Datum(messageSize);
     }
 
@@ -113,7 +115,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
                 while (!stopped) {
                     long beforeReadNs = System.nanoTime();
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        if (dc.wire() == null)
+                        if (!dc.isPresent())
                             continue;
                         datum2.readMarshallable(dc.wire().bytes());
                         long now = System.nanoTime();
@@ -161,7 +163,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         join(tailerThread);
         sinkQueue.close();
         sourceQueue.close();
-        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
+        TeamCityHelper.teamCityStatsLastRun(testClass.getSimpleName(), jlbh, iterations, System.out);
     }
 
     private static class Datum implements BytesMarshallable {
@@ -202,11 +204,13 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         @Nullable
         private BufferMode writeBufferMode;
         @Nullable
+        private Class<?> testClass;
+        @Nullable
         private RollCycle rollCycle = getRollCycle();
 
         public void run() {
             final QueueMultiThreadedJLBHBenchmark jlbhTask = new QueueMultiThreadedJLBHBenchmark(iterations, path, consumerAffinity,
-                    rollCycle, messageSize, blockSize, usePretoucher, useSingleQueueInstance, readBufferMode, writeBufferMode);
+                    rollCycle, messageSize, blockSize, usePretoucher, useSingleQueueInstance, readBufferMode, writeBufferMode, testClass);
             JLBHOptions lth = new JLBHOptions()
                     .warmUpIterations(warmupIterations)
                     .iterations(iterations)
@@ -296,6 +300,11 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
         public Builder writeBufferMode(BufferMode writeBufferMode) {
             this.writeBufferMode = writeBufferMode;
+            return this;
+        }
+
+        public Builder testClass(Class<?> testClass) {
+            this.testClass = testClass;
             return this;
         }
     }
