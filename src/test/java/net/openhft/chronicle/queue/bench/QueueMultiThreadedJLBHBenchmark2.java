@@ -42,7 +42,8 @@ public class QueueMultiThreadedJLBHBenchmark2 {
                 .useSingleQueueInstance(true)
                 .messageSize(MSGSIZE)
                 .blockSize(BLOCKSIZE)
-                .rollCycle(RollCycles.HUGE_DAILY);
+                .rollCycle(RollCycles.HUGE_DAILY)
+                .testClass(QueueMultiThreadedJLBHBenchmark2.class);
 
         for (int r = 0; r <= 1; r++) {
             int[] throughputs = {1_500_000, 250_000};
