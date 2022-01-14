@@ -1195,15 +1195,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
-            // System.out.print("Percent written=");
-
             for (long i = 0; i < TIMES; i++) {
                 final long j = i;
                 appender.writeDocument(wire -> wire.write("key").text("value=" + j));
-
-                // if (i % (TIMES / 20) == 0) {
-                // System.out.println("" + (i * 100 / TIMES) + "%, ");
-                // }
             }
             long lastIndex = appender.lastIndexAppended();
 
@@ -1211,17 +1205,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
 
-            // QueueDumpMain.dump(file, new PrintWriter(System.out));
-
             StringBuilder sb = new StringBuilder();
 
             for (long i = 0; i < (4L << 20L); i++) {
                 assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)));
                 tailer.readDocument(wire -> wire.read("key").text(sb));
                 assertEquals("value=" + i, sb.toString());
-                // if (i % (TIMES / 20) == 0) {
-                // System.out.println("Percent read= " + (i * 100 / TIMES) + "%");
-                // }
             }
         }
     }
@@ -2011,7 +2000,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
                 long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
                 assertEquals(i, seq);
-                // System.out.println(chronicle.dump());
                 tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> assertEquals((long) a, b)));
             }
         }
@@ -2330,7 +2318,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 if (!executor.awaitTermination(10_000, TimeUnit.SECONDS))
                     executor.shutdownNow();
 
-                // System.out.println(". " + i);
                 Jvm.pause(1000);
             }
         }
@@ -2623,7 +2610,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             long[] indexs = new long[10];
             for (int i = 0; i < indexs.length; i++) {
-                // System.out.println(".");
                 try (DocumentContext writingContext = appender.writingDocument()) {
                     writingContext.wire().write().text("some-text-" + i);
                     indexs[i] = writingContext.index();
@@ -2639,7 +2625,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             for (int lower = 0; lower < indexs.length; lower++) {
                 for (int upper = lower; upper < indexs.length; upper++) {
-                    // System.out.println("lower=" + lower + ",upper=" + upper);
                     assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
                             indexs[upper]));
                 }
