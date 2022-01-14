@@ -1150,15 +1150,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
-            // System.out.print("Percent written=");
-
             for (long i = 0; i < TIMES; i++) {
                 final long j = i;
                 appender.writeDocument(wire -> wire.write("key").text("value=" + j));
-
-                // if (i % (TIMES / 20) == 0) {
-                // System.out.println("" + (i * 100 / TIMES) + "%, ");
-                // }
             }
             long lastIndex = appender.lastIndexAppended();
 
@@ -1166,17 +1160,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
 
-            // QueueDumpMain.dump(file, new PrintWriter(System.out));
-
             StringBuilder sb = new StringBuilder();
 
             for (long i = 0; i < (4L << 20L); i++) {
                 assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)));
                 tailer.readDocument(wire -> wire.read("key").text(sb));
                 assertEquals("value=" + i, sb.toString());
-                // if (i % (TIMES / 20) == 0) {
-                // System.out.println("Percent read= " + (i * 100 / TIMES) + "%");
-                // }
             }
         }
     }
@@ -3599,7 +3588,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return clock;
     }
 
-    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException, InterruptedException {
+    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws
+            IOException, InterruptedException {
         String time = Instant.ofEpochMilli(clock.get()).toString();
 
         final Random random = new Random(0xDEADBEEF);
