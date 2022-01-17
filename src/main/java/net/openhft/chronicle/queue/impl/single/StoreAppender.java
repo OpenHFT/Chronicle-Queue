@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
 import static net.openhft.chronicle.wire.Wires.*;
 
 class StoreAppender extends AbstractCloseable
@@ -423,7 +424,7 @@ class StoreAppender extends AbstractCloseable
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
-            if (tookMillis > 100)
+            if (tookMillis > WARN_SLOW_APPENDER_MS)
                 Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to normaliseEOFs");
         }
     }
