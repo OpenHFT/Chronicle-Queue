@@ -857,6 +857,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     void cleanupStoreFilesWithNoData() {
 
+        long start = System.nanoTime();
         writeLock.lock();
 
         try {
@@ -885,6 +886,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             directoryListing.refresh(true);
         } finally {
             writeLock.unlock();
+            long tookMillis = (System.nanoTime() - start) / 1_000_000;
+            if (tookMillis > 100)
+                Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to cleanupStoreFilesWithNoData");
         }
     }
 
