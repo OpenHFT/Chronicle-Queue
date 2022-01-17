@@ -70,6 +70,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
+    static final int WARN_SLOW_APPENDER_MS = Integer.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
+
     @NotNull
     protected final EventLoop eventLoop;
     @NotNull
@@ -919,6 +921,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     void cleanupStoreFilesWithNoData() {
 
+        long start = System.nanoTime();
         writeLock.lock();
 
         Runnable fireOnReleasedEvent = null;
@@ -951,6 +954,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             writeLock.unlock();
             if(fireOnReleasedEvent != null)
                 BackgroundResourceReleaser.run(fireOnReleasedEvent);
+            long tookMillis = (System.nanoTime() - start) / 1_000_000;
+            if (tookMillis > WARN_SLOW_APPENDER_MS)
+                Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to cleanupStoreFilesWithNoData");
         }
     }
 
