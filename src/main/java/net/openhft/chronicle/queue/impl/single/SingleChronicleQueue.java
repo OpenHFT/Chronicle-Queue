@@ -206,7 +206,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             Announcer.announce("net.openhft", "chronicle-queue",
                     AnalyticsFacade.isEnabled()
-                            ? singletonMap("Analytics", "Chronicle Queue reports usage statistics. Learn more or turn off: https://github.com/OpenHFT/Chronicle-Queue/blob/master/DISCLAIMER.adoc")
+                            ? singletonMap("Analytics", "Chronicle Queue reports usage statistics. Learn more or turn off: https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc")
                             : emptyMap());
 
             final Map<String, String> additionalEventParameters = AnalyticsFacade.standardAdditionalProperties();
