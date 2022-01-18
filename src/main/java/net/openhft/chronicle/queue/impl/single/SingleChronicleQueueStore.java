@@ -304,10 +304,19 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @Override
+    @Deprecated
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        throwExceptionIfClosedInSetter();
+        return approximateLastSequenceNumber(ec);
+    }
 
-        return indexing.lastSequenceNumber(ec);
+    public long approximateLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
+        throwExceptionIfClosedInSetter();
+        return indexing.lastSequenceNumber(ec, true);
+    }
+
+    public long exactLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
+        throwExceptionIfClosedInSetter();
+        return indexing.lastSequenceNumber(ec, false);
     }
 
     @NotNull
