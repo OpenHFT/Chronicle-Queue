@@ -572,16 +572,42 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return pool.nextCycle(cycle, direction);
     }
 
+    /**
+     * Instead, {@link #approximateExcerptsInCycle(int)} or {@link #exactExcerptsInCycle(int)} should be called.
+     */
+    @Deprecated(/* For removal in x.23 */)
     public long exceptsPerCycle(int cycle) {
+        return approximateExcerptsInCycle(cycle);
+    }
+
+    /**
+     * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
+     * which is updated last during append operation so may be possible that a single entry is available for reading
+     * but not acknowledged by this method yet.
+     */
+    public long approximateExcerptsInCycle(int cycle) {
         throwExceptionIfClosed();
         // TODO: this function may require some re-work now that acquireTailer has been deprecated
         StoreTailer tailer = acquireTailer();
         try {
-            if (tailer.moveToCycle(cycle)) {
-                return tailer.store.lastSequenceNumber(tailer) + 1;
-            } else {
-                return -1;
-            }
+            return tailer.moveToCycle(cycle) ? tailer.store.approximateLastSequenceNumber(tailer) + 1 : -1;
+        } catch (StreamCorruptedException e) {
+            throw new IllegalStateException(e);
+        } finally {
+            tailer.releaseStore();
+        }
+    }
+
+    /**
+     * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
+     * expensive operation.
+     */
+    public long exactExcerptsInCycle(int cycle) {
+        throwExceptionIfClosed();
+        // TODO: this function may require some re-work now that acquireTailer has been deprecated
+        StoreTailer tailer = acquireTailer();
+        try {
+            return tailer.moveToCycle(cycle) ? tailer.store.exactLastSequenceNumber(tailer) + 1 : -1;
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
         } finally {
