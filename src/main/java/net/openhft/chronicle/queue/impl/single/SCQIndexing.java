@@ -658,12 +658,12 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         return (index & (indexSpacing - 1)) == 0;
     }
 
-    public long lastSequenceNumber(@NotNull ExcerptContext ec)
+    public long lastSequenceNumber(@NotNull ExcerptContext ec, boolean approximate)
             throws StreamCorruptedException {
         throwExceptionIfClosed();
 
         Sequence sequence1 = this.sequence;
-        if (sequence1 != null) {
+        if (approximate && sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
                 long address = writePosition.getVolatileValue(0);
