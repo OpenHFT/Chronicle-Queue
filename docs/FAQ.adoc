@@ -1,5 +1,4 @@
 = Frequently Asked Questions about Chronicle Queue
-Neil Clifford
 :toc: manual
 :toclevels: 1
 :css-signature: demo
@@ -623,7 +622,7 @@ You need to ensure that:
 
 Our performance tests have shown minimal performance degradation when compared to running directly on the host.
 
-If your containers are running on separate hosts then you will need to use
+If your containers are running on separate hosts, or your queues are not bind-mounted from the host, then you will need to use
 link:replication.adoc[Queue Replication].
 
 === Can I use Chronicle Queue v3 and v4 in the same project?

@@ -24,7 +24,7 @@ image::../docs/images/cq-performance-java.png[cq-performance-java.png]
 Chronicle Queue Zero ( abbreviated to Queue Zero ) is a high performance queue which trades some of Chronicle Queue's functionality for significantly higher performance with applicability across a wide range of applications. 
 Plots for equivalent tests using Queue Zero are shown below and demonstrate the significant performance benefit of Queue Zero vs Queue (around x10), and also the better scaling at high percentiles. 
 
-Further details of Queue Zero are available at the following link https://github.com/ChronicleEnterprise/Chronicle-Queue-Zero-Demo/blob/master/README.adoc or by contacting sales@chronicle.software
+Further details of Queue Zero are available by contacting sales@chronicle.software
 
 image::../docs/images/cqz-performance.png[cqz-performance.png]
 

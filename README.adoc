@@ -293,7 +293,7 @@ try (DocumentContext dc = tailer.readingDocument()) {
 
 === Chronicle Queue Enterprise Edition
 
-link:https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise[Chronicle Queue Enterprise Edition] is a commercially supported version of our successful open source Chronicle Queue.
+link:https://chronicle.software/products/queue-enterprise/[Chronicle Queue Enterprise Edition] is a commercially supported version of our successful open source Chronicle Queue.
 The open source documentation is extended by the following documents to describe the additional features that are available when you are licenced for Enterprise Edition.
 These are:
 
@@ -372,7 +372,7 @@ Messages by different appenders are interleaved,
 
 *-* when replicated, every replica has a copy of every message.
 
-Chronicle Queue is broker-less by default. You can use link:https://github.com/ChronicleEnterprise/Chronicle-Datagrid-Demo[*Chronicle Datagrid*] to act as a broker for remote access.
+Chronicle Queue is broker-less by default. You can use link:https://chronicle.software/products/datagrid/[*Chronicle Datagrid*] to act as a broker for remote access.
 By using *Chronicle Datagrid*, a Java or C# client can publish to a queue to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
 
 - *File rolling and queue files*
@@ -526,7 +526,6 @@ You can configure a Chronicle Queue using its configuration parameters or system
 ==== Queue configuration
 
 Chronicle Queue (CQ) can be configured via a number of methods on the `SingleChronicleQueueBuilder` class.
-For complete list of configuration parameters and system properties, refer to https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise-Demo/blob/ea/docs/ConfigurationParameters.adoc#singlechroniclequeuebuilder[Configuration Parameters]. Please note that some configuration parameters on this page are only available for the Enterprise edition.
 A few of the parameters that were most queried by our customers are explained below .
 
 * *RollCycle*
