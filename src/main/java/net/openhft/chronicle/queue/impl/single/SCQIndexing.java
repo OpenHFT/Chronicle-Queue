@@ -274,46 +274,42 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     @Nullable
     ScanResult moveToIndex0(@NotNull final ExcerptContext ec, final long index) {
 
-        try {
-            Wire wire = ec.wireForIndex();
-            LongArrayValues index2index = getIndex2index(wire);
-            long primaryOffset = toAddress0(index);
+        Wire wire = ec.wireForIndex();
+        LongArrayValues index2index = getIndex2index(wire);
+        long primaryOffset = toAddress0(index);
 
-            long secondaryAddress = 0;
-            long startIndex = index & -indexSpacing;
-            while (primaryOffset >= 0) {
-                secondaryAddress = index2index.getValueAt(primaryOffset);
-                if (secondaryAddress != 0)
-                    break;
-                startIndex -= indexCount * indexSpacing;
-                primaryOffset--;
-            }
-
-            if (secondaryAddress <= 0) {
-                return null;
-            }
-            @NotNull final LongArrayValues array1 = arrayForAddress(wire, secondaryAddress);
-            long secondaryOffset = toAddress1(index);
-
-            do {
-                long fromAddress = array1.getValueAt(secondaryOffset);
-                if (fromAddress == 0) {
-                    secondaryOffset--;
-                    startIndex -= indexSpacing;
-                    continue;
-                }
-
-                if (index == startIndex) {
-                    ec.wire().bytes().readPositionUnlimited(fromAddress);
-                    return ScanResult.FOUND;
-                } else {
-                    return linearScan(ec.wire(), index, startIndex, fromAddress);
-                }
-            } while (secondaryOffset >= 0);
-            return null; // no index,
-        } catch (IllegalStateException e) {
-            return linearScan(ec.wire(), index, -1, 0);
+        long secondaryAddress = 0;
+        long startIndex = index & -indexSpacing;
+        while (primaryOffset >= 0) {
+            secondaryAddress = index2index.getValueAt(primaryOffset);
+            if (secondaryAddress != 0)
+                break;
+            startIndex -= indexCount * indexSpacing;
+            primaryOffset--;
         }
+
+        if (secondaryAddress <= 0) {
+            return null;
+        }
+        @NotNull final LongArrayValues array1 = arrayForAddress(wire, secondaryAddress);
+        long secondaryOffset = toAddress1(index);
+
+        do {
+            long fromAddress = array1.getValueAt(secondaryOffset);
+            if (fromAddress == 0) {
+                secondaryOffset--;
+                startIndex -= indexSpacing;
+                continue;
+            }
+
+            if (index == startIndex) {
+                ec.wire().bytes().readPositionUnlimited(fromAddress);
+                return ScanResult.FOUND;
+            } else {
+                return linearScan(ec.wire(), index, startIndex, fromAddress);
+            }
+        } while (secondaryOffset >= 0);
+        return null; // no index,
     }
 
     /**
