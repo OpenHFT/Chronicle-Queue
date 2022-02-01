@@ -273,6 +273,8 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     // visible for testing
     @Nullable
     ScanResult moveToIndex0(@NotNull final ExcerptContext ec, final long index) {
+        if (index2Index.getVolatileValue() == NOT_INITIALIZED)
+            return null;
 
         Wire wire = ec.wireForIndex();
         LongArrayValues index2index = getIndex2index(wire);
@@ -309,6 +311,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                 return linearScan(ec.wire(), index, startIndex, fromAddress);
             }
         } while (secondaryOffset >= 0);
+
         return null; // no index,
     }
 
