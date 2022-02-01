@@ -36,8 +36,8 @@ import static org.junit.Assert.assertEquals;
 @RequiredForClient
 public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
-    private static final int NUMBER_OF_TAILERS = 10;
-    private static final long INTERVAL_US = 25;
+    private static final int NUMBER_OF_TAILERS = 20;
+    private static final long INTERVAL_US = 50;
     private static final long NUMBER_OF_MSG = 100_000; // this is working this  1_000_000 but
     // reduced so that it runs quicker for the continuous integration (CI)
 
@@ -52,7 +52,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
         Runnable reader = () -> {
             long count = 0;
             try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
-                    .fieldlessBinary(path)
+                    .binary(path)
                     .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY)
                     .build()) {
@@ -96,7 +96,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                 new NamedThreadFactory("appender"));
         Future<?> submit = executorService1.submit(() -> {
             ChronicleQueue wqueue = SingleChronicleQueueBuilder
-                    .fieldlessBinary(path)
+                    .binary(path)
                     .testBlockSize()
                     .rollCycle(TEST_SECONDLY)
                     .build();
