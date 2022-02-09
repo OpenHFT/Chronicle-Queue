@@ -39,7 +39,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
-                <version>3.19.19</version>
+                <version>3.22.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
