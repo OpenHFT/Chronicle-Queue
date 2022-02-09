@@ -190,7 +190,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     public static class Builder {
         private int runs = Integer.getInteger("runs", 5);
         private String path = Paths.get(System.getProperty("path", ".")).resolve("replica").normalize().toString();
-        private Integer messageSize = Integer.getInteger("messageSize", 4_096);
+        private Integer messageSize = Integer.getInteger("messageSize", 256);
         private Long blockSize = Long.getLong("blockSize"); // use default when not specified
         private String producerAffinity = System.getProperty("producerAffinity", "last-1");
         private String consumerAffinity = System.getProperty("consumerAffinity", "last-2");
@@ -209,6 +209,7 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         private RollCycle rollCycle = getRollCycle();
 
         public void run() {
+            System.out.println("-Dpath=" + path);
             final QueueMultiThreadedJLBHBenchmark jlbhTask = new QueueMultiThreadedJLBHBenchmark(iterations, path, consumerAffinity,
                     rollCycle, messageSize, blockSize, usePretoucher, useSingleQueueInstance, readBufferMode, writeBufferMode, testClass);
             JLBHOptions lth = new JLBHOptions()
