@@ -36,6 +36,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
+    public static final String PATH = System.getProperty("path", "replica");
     private static final int ITERATIONS = 1_000_000;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
@@ -52,7 +53,8 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
                 .warmUpIterations(50000)
                 .iterations(ITERATIONS)
                 .throughput(100_000)
-                .recordOSJitter(false).accountForCoordinatedOmission(false)
+                .recordOSJitter(false)
+                .accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
                 .runs(5)
                 .jlbhTask(new QueueSingleThreadedJLBHBenchmark());
@@ -62,7 +64,8 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     //@SuppressWarnings("unchecked")
     @Override
     public void init(JLBH jlbh) {
-        IOTools.deleteDirWithFiles("replica", 10);
+        System.out.println("-Dpath=" + PATH);
+        IOTools.deleteDirWithFiles(PATH, 10);
 
         Byteable byteable = (Byteable) datum;
         long capacity = byteable.maxSize();
@@ -70,8 +73,8 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         datumBytes = ((Byteable) datum).bytesStore();
         datumWrite = datumBytes.bytesForWrite();
 
-        sourceQueue = single("replica").build();
-        sinkQueue = single("replica").build();
+        sourceQueue = single(PATH).build();
+        sinkQueue = single(PATH).build();
         appender = sourceQueue.acquireAppender();
         tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
         this.jlbh = jlbh;
