@@ -30,8 +30,6 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -295,15 +293,5 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
             e.printStackTrace();
         }
 
-    }
-
-    @Before
-    public void enableCloseableTracing() {
-        AbstractCloseable.enableCloseableTracing();
-    }
-
-    @After
-    public void assertCloseablesClosed() {
-        AbstractCloseable.assertCloseablesClosed();
     }
 }
