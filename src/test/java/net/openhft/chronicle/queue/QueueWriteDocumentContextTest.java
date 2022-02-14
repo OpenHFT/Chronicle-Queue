@@ -13,7 +13,7 @@ import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class QueueWriteDocumentContextTest {
+public class QueueWriteDocumentContextTest extends QueueTestCommon {
 
     private boolean useSparseFiles;
 

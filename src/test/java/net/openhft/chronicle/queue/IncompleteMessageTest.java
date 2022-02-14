@@ -13,12 +13,15 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class IncompleteMessageTest {
+public class IncompleteMessageTest extends QueueTestCommon {
     @Rule
     public TemporaryFolder tmpDir = new TemporaryFolder();
 
     @Test
     public void incompleteMessageShouldBeSkipped() throws Exception {
+        expectException("Couldn't acquire write lock after ");
+        expectException("Forced unlock for the lock ");
+        ignoreException("Unable to release the lock");
         try (SingleChronicleQueue queue = createQueue()) {
             try (ExcerptAppender appender = queue.acquireAppender()) {
                 appender.writeDocument("hello", ValueOut::text);

@@ -5,10 +5,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
@@ -17,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class OnReleaseTest {
+public class OnReleaseTest extends QueueTestCommon {
     @Test
     public void onRelease() {
         FlakyTestRunner.run(this::onRelease0);

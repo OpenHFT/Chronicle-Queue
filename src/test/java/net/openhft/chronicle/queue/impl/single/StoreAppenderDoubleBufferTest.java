@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,7 +23,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
-public class StoreAppenderDoubleBufferTest {
+public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreAppenderDoubleBufferTest.class);
 

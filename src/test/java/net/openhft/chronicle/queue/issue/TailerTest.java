@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;
@@ -16,7 +17,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class TailerTest {
+public class TailerTest extends QueueTestCommon {
 
     public static final Path QUEUE_PATH = Paths.get("host-1/queue/broker_out");
     public static final int OFFSET = 3;

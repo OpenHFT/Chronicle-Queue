@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import java.io.File;
@@ -9,7 +10,7 @@ import java.nio.file.Files;
 
 import static org.junit.Assert.assertEquals;
 
-public class InternalAppenderTest {
+public class InternalAppenderTest extends QueueTestCommon {
 
     @Test
     public void replicationTest() throws Exception {
