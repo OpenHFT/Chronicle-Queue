@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
@@ -16,14 +17,14 @@ import java.util.function.LongConsumer;
 
 import static org.junit.Assert.assertFalse;
 
-public final class EntryCountNotBehindReadTest {
+public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     private static final int TOTAL_EVENTS = 100_000;
 
     @Test
     public void testExcerptsPerCycleNotBehind() throws IOException {
         final File file = Files.createTempDirectory("exact-excerpts-per-cycle").toFile();
         try (final SingleChronicleQueue queue =
-                SingleChronicleQueueBuilder.binary(file).build()) {
+                     SingleChronicleQueueBuilder.binary(file).build()) {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();

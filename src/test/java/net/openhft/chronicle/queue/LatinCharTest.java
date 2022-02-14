@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class LatinCharTest {
+public class LatinCharTest extends QueueTestCommon {
 
     private static class Message extends SelfDescribingMarshallable {
         String s;

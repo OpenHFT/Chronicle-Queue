@@ -10,7 +10,7 @@ import java.io.File;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class MultipleNamedTailersTest {
+public class MultipleNamedTailersTest extends QueueTestCommon {
     @Test
     public void multipleTailers() {
         File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());

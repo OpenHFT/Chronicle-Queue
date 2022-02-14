@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-public class IndexForIDTest {
+public class IndexForIDTest extends QueueTestCommon {
     private int count;
     private String staged;
 

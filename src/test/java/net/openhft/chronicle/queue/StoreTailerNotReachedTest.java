@@ -8,7 +8,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-public class StoreTailerNotReachedTest {
+public class StoreTailerNotReachedTest extends QueueTestCommon {
     @Test
     public void afterNotReached() {
         String path = OS.getTarget() + "/afterNotReached-" + Time.uniqueId();

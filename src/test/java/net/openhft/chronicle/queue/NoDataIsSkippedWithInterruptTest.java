@@ -7,7 +7,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class NoDataIsSkippedWithInterruptTest {
+public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
 
     private static final String EXPECTED = "Hello World";
 

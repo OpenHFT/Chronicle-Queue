@@ -15,7 +15,7 @@ import java.io.InputStreamReader;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
-public class CheckHalfWrittenMsgNotSeenByTailerTest {
+public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
     static {
         // load the lass
         HalfWriteAMessage.class.getName();

@@ -4,12 +4,11 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MethodFilterOnFirstArg;
-import org.junit.Assert;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
-public class IgnoreMethodBasedOnFirstArgTest {
+public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
 
     private static final String EXPECTED_ENVELOPE = "for:rob";
     private static final String MSG = "hello world";

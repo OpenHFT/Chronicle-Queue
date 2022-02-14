@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -14,7 +15,7 @@ import java.util.concurrent.Semaphore;
 
 import static org.junit.Assert.assertEquals;
 
-public class StoreAppenderTest {
+public class StoreAppenderTest extends QueueTestCommon {
 
     public static final String TEST_TEXT = "Some text some text some text";
 

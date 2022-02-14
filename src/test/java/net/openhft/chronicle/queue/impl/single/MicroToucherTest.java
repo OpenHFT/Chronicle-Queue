@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
@@ -14,7 +15,7 @@ import java.util.function.Consumer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
-public class MicroToucherTest {
+public class MicroToucherTest extends QueueTestCommon {
 
     @Test
     public void touchPageSparse() {
