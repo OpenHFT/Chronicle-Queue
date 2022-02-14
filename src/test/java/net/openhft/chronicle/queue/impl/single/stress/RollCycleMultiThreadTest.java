@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.bytes.StopCharTesters;
-import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
@@ -13,9 +12,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -114,16 +111,6 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
             scheduledExecutorService.shutdown();
             scheduledExecutorService.awaitTermination(1, TimeUnit.SECONDS);
         }
-    }
-
-    @Before
-    public void enableCloseableTracing() {
-        AbstractCloseable.enableCloseableTracing();
-    }
-
-    @After
-    public void assertCloseablesClosed() {
-        AbstractCloseable.assertCloseablesClosed();
     }
 
     private class TestTimeProvider implements TimeProvider {
