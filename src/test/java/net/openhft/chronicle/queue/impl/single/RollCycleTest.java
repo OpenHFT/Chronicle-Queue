@@ -1,13 +1,11 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -92,16 +90,6 @@ public class RollCycleTest extends ChronicleQueueTestBase {
 
         assertEquals(1 + cyclesToWrite, observer.documentsRead);
         observer.queue.close();
-    }
-
-    @Before
-    public void enableCloseableTracing() {
-        AbstractCloseable.enableCloseableTracing();
-    }
-
-    @After
-    public void assertCloseablesClosed() {
-        AbstractCloseable.assertCloseablesClosed();
     }
 
     @After
