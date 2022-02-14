@@ -40,7 +40,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     final int ROLL_EVERY_MS;
     final int DELAY_READER_RANDOM_MS;
     final int DELAY_WRITER_RANDOM_MS;
-    final int WRITE_ONE_THEN_WAIT_MS;
     final int CORES;
     final Random random;
     final int NUMBER_OF_INTS;
@@ -63,7 +62,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         ROLL_EVERY_MS = Integer.getInteger("rollEvery", 300);
         DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
         DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
-        WRITE_ONE_THEN_WAIT_MS = Integer.getInteger("writeOneThenWait", 0);
         CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
@@ -123,32 +121,27 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         // System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = CORES;
         final int numWriters = numThreads / 4 + 1;
+        // leave one core for other threads
+        final int numReaders = (numThreads - numWriters) - 1;
         final ExecutorService executorServicePretouch = Executors.newSingleThreadExecutor(
                 new NamedThreadFactory("pretouch"));
         final ExecutorService executorServiceWrite = Executors.newFixedThreadPool(numWriters,
                 new NamedThreadFactory("writer"));
-        final ExecutorService executorServiceRead = Executors.newFixedThreadPool(numThreads - numWriters,
+        final ExecutorService executorServiceRead = Executors.newFixedThreadPool(numReaders,
                 new NamedThreadFactory("reader"));
 
         final AtomicInteger wrote = new AtomicInteger();
         final double expectedPerSecond = Jvm.isAzulZing() ? 3e8 : 1e9;
         final int expectedNumberOfMessages = (int) (TEST_TIME * expectedPerSecond / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
-        Jvm.debug().on(getClass(), "Expecting " + expectedNumberOfMessages + " messages");
-
-        // System.out.printf("Running test with %d writers and %d readers, sleep %dns%n",
-        // numWriters, numThreads - numWriters, SLEEP_PER_WRITE_NANOS);
-        // System.out.printf("Writing %d messages with %dns interval%n", expectedNumberOfMessages,
-        // SLEEP_PER_WRITE_NANOS);
-        // System.out.printf("Should take ~%dms%n",
-        // TimeUnit.NANOSECONDS.toMillis(expectedNumberOfMessages * SLEEP_PER_WRITE_NANOS) / (numWriters / 2));
+        Jvm.perf().on(getClass(), String.format("Running test with %d writers and %d readers (%d cores), sleep %dns expecting %d messages%n",
+             numWriters, numReaders, CORES, SLEEP_PER_WRITE_NANOS, expectedNumberOfMessages));
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
 
         if (READERS_READ_ONLY)
-            try (ChronicleQueue roq = createQueue(file)) {
-
+            try (ChronicleQueue ignored = createQueue(file)) {
             }
 
         if (SHARED_WRITE_QUEUE)
@@ -159,20 +152,10 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             executorServicePretouch.submit(pretoucherThread);
         }
 
-        if (WRITE_ONE_THEN_WAIT_MS > 0) {
-            final Writer tempWriter = new Writer(file, wrote, expectedNumberOfMessages);
-            try (ChronicleQueue queue = writerQueue(file)) {
-                tempWriter.write(queue.acquireAppender());
-            }
-        }
-        for (int i = 0; i < numThreads - numWriters; i++) {
+        for (int i = 0; i < numReaders; i++) {
             final Reader reader = new Reader(file, expectedNumberOfMessages, getReaderCheckingStrategy());
             readers.add(reader);
             results.add(executorServiceRead.submit(reader));
-        }
-        if (WRITE_ONE_THEN_WAIT_MS > 0) {
-            Jvm.warn().on(getClass(), "Wrote one now waiting for " + WRITE_ONE_THEN_WAIT_MS + "ms");
-            Jvm.pause(WRITE_ONE_THEN_WAIT_MS);
         }
         for (int i = 0; i < numWriters; i++) {
             final Writer writer = new Writer(file, wrote, expectedNumberOfMessages);
@@ -184,7 +167,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         long startTime = System.currentTimeMillis();
         final long giveUpWritingAt = startTime + maxWritingTime;
         long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
-        int i = 0;
         long now;
         while ((now = System.currentTimeMillis()) < giveUpWritingAt) {
             if (wrote.get() >= expectedNumberOfMessages)
@@ -195,25 +177,24 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             }
             if (now > nextCheckTime) {
                 String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
-                // System.out.printf("Writer has written %d of %d messages after %dms. Readers at %s. Waiting...%n",
-                // wrote.get() + 1, expectedNumberOfMessages,
-                // i * 10, readersLastRead);
+                final int w = wrote.get();
+                Jvm.perf().on(getClass(), String.format("Writers have written %d of %d messages (%d%%) after %dms (%d%%) . Readers at %s. Waiting...",
+                        w + 1, expectedNumberOfMessages, (int)(100d * (w + 1) / expectedNumberOfMessages),
+                        now - startTime, (int)(100d * (now - startTime) / maxWritingTime), readersLastRead));
                 readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
                     if (reader.exception != null) {
                         throw new AssertionError("Reader encountered exception, so stopped reading messages",
                                 reader.exception);
                     }
                     throw new AssertionError("Reader is stuck");
-
                 });
                 if (pretoucherThread != null && pretoucherThread.exception != null)
                     throw new AssertionError("Preloader encountered exception", pretoucherThread.exception);
-                nextCheckTime = System.currentTimeMillis() + 10_000L;
+                nextCheckTime = System.currentTimeMillis() + 5_000L;
             }
-            i++;
             Jvm.pause(5);
         }
-        double timeToWriteSecs = (System.currentTimeMillis() - startTime) / 1000d;
+        long timeToWriteMillis = System.currentTimeMillis() - startTime;
 
         final StringBuilder writerExceptions = new StringBuilder();
         writers.stream().filter(w -> w.exception != null).forEach(w -> {
@@ -228,11 +209,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                     reader.exception);
         });
 
-/*
-       // System.out.println(String.format("All messages written in %,.0fsecs at rate of %,.0f/sec %,.0f/sec per writer (actual writeLatency %,.0fns)",
-                timeToWriteSecs, expectedNumberOfMessages / timeToWriteSecs, (expectedNumberOfMessages / timeToWriteSecs) / numWriters,
-                1_000_000_000 / ((expectedNumberOfMessages / timeToWriteSecs) / numWriters)));
-*/
+        Jvm.perf().on(getClass(), String.format("Took %dms to write %d messages (max time allowed %dms)",
+                timeToWriteMillis, expectedNumberOfMessages, maxWritingTime));
 
         final long giveUpReadingAt = System.currentTimeMillis() + 20_000L;
         final long dumpThreadsAt = giveUpReadingAt - 5_000L;
