@@ -266,7 +266,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             });
         }
 
-        IOTools.deleteDirWithFiles("stress");
+        // you have to use the file rather than a String, on the map it gets written to the tmp directory
+        IOTools.deleteDirWithFiles(file);
+
         // System.out.println("Test complete");
         finishedNormally = true;
     }
