@@ -522,7 +522,7 @@
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
         </developerConnection>
-        <tag>develop</tag>
+        <tag>release/2.22</tag>
     </scm>
 
 </project>
