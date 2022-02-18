@@ -272,25 +272,25 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "# # EndOfFile\n" +
                     "# position: 992, header: 18\n" +
                     "--- !!data #binary\n" +
-                    "-753555055760.82\n" +
+                    "# # EndOfFile\n" +
                     "# position: 1004, header: 19\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_2\n" +
-                    "-48698841.79\n" +
+                    "# # EndOfFile\n" +
                     "# position: 1016, header: 20\n" +
                     "--- !!data #binary\n" +
-                    "-8422085917.3268\n" +
+                    "# # EndOfFile\n" +
                     "# position: 1028, header: 21\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_4\n" +
-                    "-541098.2421\n" +
+                    "# # EndOfFile\n" +
                     "# position: 1040, header: 22\n" +
                     "--- !!data #binary\n" +
-                    "-93086212.770454\n" +
+                    "# # EndOfFile\n" +
                     "# position: 1052, header: 23\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_6\n" +
-                    "-5952.080663\n" +
+                    "# # EndOfFile\n" +
                     "# position: 1064, header: 24\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0x97\n" +
@@ -371,7 +371,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "!short -23388\n" +
                     "!byte -92\n" +
                     "!byte -92\n" +
-                    "!byte 0\n" +
+                    "# # EndOfFile\n" +
                     "# position: 1232, header: 38\n" +
                     "--- !!data #binary\n" +
                     "!int -1515870811\n" +
@@ -473,11 +473,10 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "000005b0                          b9 b8 b8 b8 b8 b8 b8 b8          ········\n" +
                     "# position: 1472, header: 58\n" +
                     "--- !!data #binary\n" +
-                    "\"-252662577519802\": \n" +
+                    "000005c0             ba b9 b9 b9  b9 b9 b9 b9                 ···· ····    \n" +
                     "# position: 1484, header: 59\n" +
                     "--- !!data #binary\n" +
-                    "!!null \"\"\n" +
-                    "\"-2008556674363\": \n" +
+                    "000005d0 bb ba ba ba ba ba ba ba                          ········         \n" +
                     "# position: 1496, header: 60\n" +
                     "--- !!data #binary\n" +
                     "000005d0                                      bc bb bb bb              ····\n" +
