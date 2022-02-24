@@ -39,12 +39,14 @@ public class ChronicleQueuePeekDocumentTest extends QueueTestCommon {
                     }
                 }
 
-                assertEquals("field1: !int 123534\n" +
+                assertEquals("" +
+                                "field1: 123534\n" +
                                 "field2: 123.423\n" +
                                 "time: 12053432432\n",
                         read(tailer));
 
-                assertEquals("field1: !int 323242\n" +
+                assertEquals("" +
+                                "field1: 323242\n" +
                                 "field2: 543.1233\n" +
                                 "time: 12053432900\n",
                         read(tailer));

@@ -802,8 +802,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 execute();
 
         capturedOutput.poll();
-        assertEquals("\"say\":\"hello\"\n" +
-                "...\n", capturedOutput.poll());
+        assertEquals("\"say\":\"hello\"\n",
+                capturedOutput.poll());
     }
 
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {

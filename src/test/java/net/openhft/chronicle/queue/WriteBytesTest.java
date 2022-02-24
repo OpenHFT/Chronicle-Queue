@@ -92,11 +92,12 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                         b.writeLong(finalI * 0x0101010101010101L));
             }
 
-            assertEquals("--- !!meta-data #binary\n" +
+            assertEquals("" +
+                    "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
-                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T4', epoch: 0 },\n" +
+                    "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T4', epoch: 0 },\n" +
                     "    deltaCheckpointInterval: 64,\n" +
                     "    sourceId: 0\n" +
                     "  }\n" +
@@ -347,20 +348,20 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "# # Unknown_0x9F\n" +
                     "# position: 1172, header: 33\n" +
                     "--- !!data #binary\n" +
-                    "!int 160\n" +
+                    "160\n" +
                     "# # UUID\n" +
                     "# # UUID\n" +
                     "# # UUID\n" +
                     "# position: 1184, header: 34\n" +
                     "--- !!data #binary\n" +
-                    "!int 41377\n" +
-                    "!int 161\n" +
-                    "!int 161\n" +
-                    "!int -1\n" +
+                    "41377\n" +
+                    "161\n" +
+                    "161\n" +
+                    "-1\n" +
                     "# position: 1196, header: 35\n" +
                     "--- !!data #binary\n" +
                     "2728567458\n" +
-                    "!int 41634\n" +
+                    "41634\n" +
                     "# position: 1208, header: 36\n" +
                     "--- !!data #binary\n" +
                     "!byte -93\n" +
@@ -374,30 +375,30 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "# # EndOfFile\n" +
                     "# position: 1232, header: 38\n" +
                     "--- !!data #binary\n" +
-                    "!int -1515870811\n" +
+                    "-1515870811\n" +
                     "!short -23131\n" +
                     "# position: 1244, header: 39\n" +
                     "--- !!data #binary\n" +
                     "# # INT32\n" +
-                    "!int -1499027802\n" +
+                    "-1499027802\n" +
                     "# # EndOfFile\n" +
                     "# position: 1256, header: 40\n" +
                     "--- !!data #binary\n" +
-                    "!int 167\n" +
+                    "167\n" +
                     "# # INT64\n" +
                     "# # INT64\n" +
                     "# # INT64\n" +
                     "# position: 1268, header: 41\n" +
                     "--- !!data #binary\n" +
-                    "!int 43176\n" +
-                    "!int 168\n" +
-                    "!int 168\n" +
-                    "!int -1\n" +
+                    "43176\n" +
+                    "168\n" +
+                    "168\n" +
+                    "-1\n" +
                     "# position: 1280, header: 42\n" +
                     "--- !!data #binary\n" +
                     "# # SET_LOW_INT16\n" +
-                    "!int 43433\n" +
-                    "!int 43433\n" +
+                    "43433\n" +
+                    "43433\n" +
                     "# position: 1292, header: 43\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0xAA\n" +

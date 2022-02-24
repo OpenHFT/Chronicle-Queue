@@ -72,7 +72,8 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
 
     @NotNull
     private String getExpected() {
-        return "--- !!meta-data #binary\n" +
+        return "" +
+                "--- !!meta-data #binary\n" +
                 "header: !STStore {\n" +
                 "  wireType: !WireType BINARY_LIGHT,\n" +
                 "  metadata: !SCQMeta {\n" +
@@ -99,8 +100,8 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
-                "    1112,\n" +
-                "    4776003633166\n" +
+                "    1000,\n" +
+                "    4294967296014\n" +
                 "  ],\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: 32,\n" +
@@ -120,93 +121,93 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "index: [\n" +
                 "  # length: 32, used: 4\n" +
                 "  776,\n" +
-                "  872,\n" +
+                "  840,\n" +
+                "  904,\n" +
                 "  968,\n" +
-                "  1064,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 1,\n" +
-                "  !int 0\n" +
+                "  1,\n" +
+                "  0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 1,\n" +
-                "  !int 1\n" +
+                "  1,\n" +
+                "  1\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 1,\n" +
-                "  !int 2\n" +
+                "  1,\n" +
+                "  2\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 1,\n" +
-                "  !int 3\n" +
+                "  1,\n" +
+                "  3\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 1,\n" +
-                "  !int 4\n" +
+                "  1,\n" +
+                "  4\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 1,\n" +
-                "  !int 5\n" +
+                "  1,\n" +
+                "  5\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 1,\n" +
-                "  !int 6\n" +
+                "  1,\n" +
+                "  6\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 0\n" +
+                "  2,\n" +
+                "  0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 1\n" +
+                "  2,\n" +
+                "  1\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 2\n" +
+                "  2,\n" +
+                "  2\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 3\n" +
+                "  2,\n" +
+                "  3\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 4\n" +
+                "  2,\n" +
+                "  4\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 5\n" +
+                "  2,\n" +
+                "  5\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 6\n" +
+                "  2,\n" +
+                "  6\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 2,\n" +
-                "  !int 7\n" +
+                "  2,\n" +
+                "  7\n" +
                 "]\n" +
                 "--- !!not-ready-meta-data #binary\n" +
                 "...\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
-                "    968,\n" +
-                "    4157528342536\n" +
+                "    904,\n" +
+                "    3882650435592\n" +
                 "  ],\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: 32,\n" +
@@ -226,62 +227,62 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "index: [\n" +
                 "  # length: 32, used: 3\n" +
                 "  776,\n" +
-                "  872,\n" +
-                "  968,\n" +
+                "  840,\n" +
+                "  904,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 0\n" +
+                "  3,\n" +
+                "  0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 1\n" +
+                "  3,\n" +
+                "  1\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 2\n" +
+                "  3,\n" +
+                "  2\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 3\n" +
+                "  3,\n" +
+                "  3\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 4\n" +
+                "  3,\n" +
+                "  4\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 5\n" +
+                "  3,\n" +
+                "  5\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 6\n" +
+                "  3,\n" +
+                "  6\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 7\n" +
+                "  3,\n" +
+                "  7\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 3,\n" +
-                "  !int 8\n" +
+                "  3,\n" +
+                "  8\n" +
                 "]\n" +
                 "--- !!not-ready-meta-data #binary\n" +
                 "...\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
-                "    992,\n" +
-                "    4260607557641\n" +
+                "    920,\n" +
+                "    3951369912329\n" +
                 "  ],\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: 32,\n" +
@@ -301,59 +302,59 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "index: [\n" +
                 "  # length: 32, used: 3\n" +
                 "  776,\n" +
-                "  872,\n" +
-                "  968,\n" +
+                "  840,\n" +
+                "  904,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 0\n" +
+                "  4,\n" +
+                "  0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 1\n" +
+                "  4,\n" +
+                "  1\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 2\n" +
+                "  4,\n" +
+                "  2\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 3\n" +
+                "  4,\n" +
+                "  3\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 4\n" +
+                "  4,\n" +
+                "  4\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 5\n" +
+                "  4,\n" +
+                "  5\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 6\n" +
+                "  4,\n" +
+                "  6\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 7\n" +
+                "  4,\n" +
+                "  7\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 8\n" +
+                "  4,\n" +
+                "  8\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
                 "hi: [\n" +
-                "  !int 4,\n" +
-                "  !int 9\n" +
+                "  4,\n" +
+                "  9\n" +
                 "]\n" +
                 "...\n";
     }
