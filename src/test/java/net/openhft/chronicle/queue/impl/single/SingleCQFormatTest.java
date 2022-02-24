@@ -188,7 +188,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 0,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
+                    "    length: 86400000,\n" +
                     "    format: yyyyMMdd'T4',\n" +
                     "    epoch: 0\n" +
                     "  },\n" +

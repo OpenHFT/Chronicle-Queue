@@ -46,7 +46,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
-                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                    "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
                     "    deltaCheckpointInterval: 64,\n" +
                     "    sourceId: 0\n" +
                     "  }\n" +
@@ -124,7 +124,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                             "header: !STStore {\n" +
                             "  wireType: !WireType BINARY_LIGHT,\n" +
                             "  metadata: !SCQMeta {\n" +
-                            "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                            "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
                             "    deltaCheckpointInterval: 64,\n" +
                             "    sourceId: 0\n" +
                             "  }\n" +
