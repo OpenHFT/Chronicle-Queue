@@ -100,13 +100,13 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
-                "    1000,\n" +
-                "    4294967296014\n" +
+                "    1064,\n" +
+                "    4569845202958\n" +
                 "  ],\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: 32,\n" +
                 "    indexSpacing: 4,\n" +
-                "    index2Index: 196,\n" +
+                "    index2Index: 200,\n" +
                 "    lastIndex: 16\n" +
                 "  },\n" +
                 "  dataFormat: 1\n" +
@@ -114,16 +114,16 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "index2index: [\n" +
                 "  # length: 32, used: 1\n" +
-                "  488,\n" +
+                "  496,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!meta-data #binary\n" +
                 "index: [\n" +
                 "  # length: 32, used: 4\n" +
-                "  776,\n" +
-                "  840,\n" +
-                "  904,\n" +
-                "  968,\n" +
+                "  784,\n" +
+                "  864,\n" +
+                "  944,\n" +
+                "  1024,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
@@ -206,13 +206,13 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
-                "    904,\n" +
-                "    3882650435592\n" +
+                "    944,\n" +
+                "    4054449127432\n" +
                 "  ],\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: 32,\n" +
                 "    indexSpacing: 4,\n" +
-                "    index2Index: 196,\n" +
+                "    index2Index: 200,\n" +
                 "    lastIndex: 12\n" +
                 "  },\n" +
                 "  dataFormat: 1\n" +
@@ -220,15 +220,15 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "index2index: [\n" +
                 "  # length: 32, used: 1\n" +
-                "  488,\n" +
+                "  496,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!meta-data #binary\n" +
                 "index: [\n" +
                 "  # length: 32, used: 3\n" +
-                "  776,\n" +
-                "  840,\n" +
-                "  904,\n" +
+                "  784,\n" +
+                "  864,\n" +
+                "  944,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +
@@ -281,13 +281,13 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
-                "    920,\n" +
-                "    3951369912329\n" +
+                "    964,\n" +
+                "    4140348473353\n" +
                 "  ],\n" +
                 "  indexing: !SCQSIndexing {\n" +
                 "    indexCount: 32,\n" +
                 "    indexSpacing: 4,\n" +
-                "    index2Index: 196,\n" +
+                "    index2Index: 200,\n" +
                 "    lastIndex: 12\n" +
                 "  },\n" +
                 "  dataFormat: 1\n" +
@@ -295,15 +295,15 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
                 "--- !!meta-data #binary\n" +
                 "index2index: [\n" +
                 "  # length: 32, used: 1\n" +
-                "  488,\n" +
+                "  496,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!meta-data #binary\n" +
                 "index: [\n" +
                 "  # length: 32, used: 3\n" +
-                "  776,\n" +
-                "  840,\n" +
-                "  904,\n" +
+                "  784,\n" +
+                "  864,\n" +
+                "  944,\n" +
                 "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                 "]\n" +
                 "--- !!data #binary\n" +

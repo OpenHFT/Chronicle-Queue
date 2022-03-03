@@ -34,7 +34,8 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     assertEquals("world", dc.wire().getValueIn().text());
                 }
             }
-            assertEquals("--- !!meta-data #binary\n" +
+            assertEquals("" +
+                    "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -63,13 +64,13 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    392,\n" +
-                    "    1683627180032\n" +
+                    "    400,\n" +
+                    "    1717986918400\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 196,\n" +
+                    "    index2Index: 200,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
@@ -77,13 +78,13 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  296,\n" +
+                    "  304,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  392,\n" +
+                    "  400,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!data #binary\n" +

@@ -74,7 +74,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             assertTrue(dump, dump.contains("--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  392,\n" +
+                    "  400,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]"));
         }
@@ -96,16 +96,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
 
                 long start = RollCycles.DEFAULT.toIndex(queue.cycle(), 0);
                 appendMessage(queue, start, "Hello World");
-                @NotNull String expectedEager = "--- !!meta-data #binary\n" +
+                @NotNull String expectedEager = "" +
+                        "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    392,\n" +
-                        "    1683627180032\n" +
+                        "    400,\n" +
+                        "    1717986918400\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 1,\n" +
-                        "    index2Index: 196,\n" +
+                        "    index2Index: 200,\n" +
                         "    lastIndex: 1\n" +
                         "  },\n" +
                         "  dataFormat: 1\n" +
@@ -113,13 +114,13 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  296,\n" +
+                        "  304,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  392,\n" +
+                        "  400,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
@@ -128,16 +129,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 checkFileContents(getFirstQueueFile(dir), expectedEager);
 
                 appendMessage(queue, start + 1, "Another Hello World");
-                @NotNull String expectedEager2 = "--- !!meta-data #binary\n" +
+                @NotNull String expectedEager2 = "" +
+                        "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    412,\n" +
-                        "    1769526525953\n" +
+                        "    420,\n" +
+                        "    1803886264321\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 1,\n" +
-                        "    index2Index: 196,\n" +
+                        "    index2Index: 200,\n" +
                         "    lastIndex: 2\n" +
                         "  },\n" +
                         "  dataFormat: 1\n" +
@@ -145,14 +147,14 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  296,\n" +
+                        "  304,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 2\n" +
-                        "  392,\n" +
-                        "  412,\n" +
+                        "  400,\n" +
+                        "  420,\n" +
                         "  0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
@@ -164,16 +166,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
 
                 appendMessage(queue, start + 2, "Bye for now");
 
-                @NotNull String expectedEager3 = "--- !!meta-data #binary\n" +
+                @NotNull String expectedEager3 = "" +
+                        "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    440,\n" +
-                        "    1889785610242\n" +
+                        "    448,\n" +
+                        "    1924145348610\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 1,\n" +
-                        "    index2Index: 196,\n" +
+                        "    index2Index: 200,\n" +
                         "    lastIndex: 3\n" +
                         "  },\n" +
                         "  dataFormat: 1\n" +
@@ -181,15 +184,15 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  296,\n" +
+                        "  304,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 3\n" +
-                        "  392,\n" +
-                        "  412,\n" +
-                        "  440,\n" +
+                        "  400,\n" +
+                        "  420,\n" +
+                        "  448,\n" +
                         "  0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
@@ -235,16 +238,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 assertFalse(tailer.moveToIndex(start));
 
                 appendMessage(queue, start, "Hello World");
-                @NotNull String expectedEager = "--- !!meta-data #binary\n" +
+                @NotNull String expectedEager = "" +
+                        "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    392,\n" +
-                        "    1683627180032\n" +
+                        "    400,\n" +
+                        "    1717986918400\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 1,\n" +
-                        "    index2Index: 196,\n" +
+                        "    index2Index: 200,\n" +
                         "    lastIndex: 1\n" +
                         "  },\n" +
                         "  dataFormat: 1\n" +
@@ -252,13 +256,13 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  296,\n" +
+                        "  304,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  392,\n" +
+                        "  400,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
@@ -280,16 +284,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 assertTrue(tailer.moveToIndex(start + 19));
                 assertFalse(tailer.moveToIndex(start + 20));
 
-                @NotNull String expected1 = "--- !!meta-data #binary\n" +
+                @NotNull String expected1 = "" +
+                        "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    1176,\n" +
-                        "    5050881540115\n" +
+                        "    1184,\n" +
+                        "    5085241278483\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 1,\n" +
-                        "    index2Index: 196,\n" +
+                        "    index2Index: 200,\n" +
                         "    lastIndex: 20\n" +
                         "  },\n" +
                         "  dataFormat: 1\n" +
@@ -297,22 +302,22 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 3\n" +
-                        "  296,\n" +
-                        "  668,\n" +
-                        "  1016,\n" +
+                        "  304,\n" +
+                        "  676,\n" +
+                        "  1024,\n" +
                         "  0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 8\n" +
-                        "  392,\n" +
-                        "  412,\n" +
-                        "  444,\n" +
-                        "  476,\n" +
-                        "  508,\n" +
-                        "  540,\n" +
-                        "  572,\n" +
-                        "  604\n" +
+                        "  400,\n" +
+                        "  420,\n" +
+                        "  452,\n" +
+                        "  484,\n" +
+                        "  516,\n" +
+                        "  548,\n" +
+                        "  580,\n" +
+                        "  612\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
                         "msg: Hello World\n" +
@@ -335,14 +340,14 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 8\n" +
-                        "  636,\n" +
-                        "  760,\n" +
-                        "  792,\n" +
-                        "  824,\n" +
-                        "  856,\n" +
-                        "  888,\n" +
-                        "  920,\n" +
-                        "  952\n" +
+                        "  644,\n" +
+                        "  768,\n" +
+                        "  800,\n" +
+                        "  832,\n" +
+                        "  864,\n" +
+                        "  896,\n" +
+                        "  928,\n" +
+                        "  960\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
                         "msg: Another Hello World 10\n" +
@@ -363,10 +368,10 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 4\n" +
-                        "  984,\n" +
-                        "  1112,\n" +
-                        "  1144,\n" +
-                        "  1176,\n" +
+                        "  992,\n" +
+                        "  1120,\n" +
+                        "  1152,\n" +
+                        "  1184,\n" +
                         "  0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
@@ -376,16 +381,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "msg: Bye for now\n" +
                         "...\n";
-                @NotNull String expected2 = "--- !!meta-data #binary\n" +
+                @NotNull String expected2 = "" +
+                        "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    1080,\n" +
-                        "    4638564679699\n" +
+                        "    1088,\n" +
+                        "    4672924418067\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 2,\n" +
-                        "    index2Index: 196,\n" +
+                        "    index2Index: 200,\n" +
                         "    lastIndex: 20\n" +
                         "  },\n" +
                         "  dataFormat: 1\n" +
@@ -393,21 +399,21 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 2\n" +
-                        "  296,\n" +
-                        "  924,\n" +
+                        "  304,\n" +
+                        "  932,\n" +
                         "  0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 8\n" +
-                        "  392,\n" +
-                        "  444,\n" +
-                        "  508,\n" +
-                        "  572,\n" +
-                        "  636,\n" +
-                        "  700,\n" +
-                        "  764,\n" +
-                        "  828\n" +
+                        "  400,\n" +
+                        "  452,\n" +
+                        "  516,\n" +
+                        "  580,\n" +
+                        "  644,\n" +
+                        "  708,\n" +
+                        "  772,\n" +
+                        "  836\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
                         "msg: Hello World\n" +
@@ -446,8 +452,8 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 2\n" +
-                        "  892,\n" +
-                        "  1048,\n" +
+                        "  900,\n" +
+                        "  1056,\n" +
                         "  0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
@@ -457,16 +463,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!data #binary\n" +
                         "msg: Bye for now\n" +
                         "...\n";
-                @NotNull String expected3 = "--- !!meta-data #binary\n" +
+                @NotNull String expected3 = "" +
+                        "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
-                        "    988,\n" +
-                        "    4243427688467\n" +
+                        "    996,\n" +
+                        "    4277787426835\n" +
                         "  ],\n" +
                         "  indexing: !SCQSIndexing {\n" +
                         "    indexCount: 8,\n" +
                         "    indexSpacing: 4,\n" +
-                        "    index2Index: 196,\n" +
+                        "    index2Index: 200,\n" +
                         "    lastIndex: 20\n" +
                         "  },\n" +
                         "  dataFormat: 1\n" +
@@ -474,17 +481,17 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                         "--- !!meta-data #binary\n" +
                         "index2index: [\n" +
                         "  # length: 8, used: 1\n" +
-                        "  296,\n" +
+                        "  304,\n" +
                         "  0, 0, 0, 0, 0, 0, 0\n" +
                         "]\n" +
                         "--- !!meta-data #binary\n" +
                         "index: [\n" +
                         "  # length: 8, used: 5\n" +
-                        "  392,\n" +
-                        "  508,\n" +
-                        "  636,\n" +
-                        "  764,\n" +
-                        "  892,\n" +
+                        "  400,\n" +
+                        "  516,\n" +
+                        "  644,\n" +
+                        "  772,\n" +
+                        "  900,\n" +
                         "  0, 0, 0\n" +
                         "]\n" +
                         "--- !!data #binary\n" +
@@ -589,7 +596,8 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             map.put("abc", "aye-bee-see");
             appender.writeMap(map);
 
-            String expectedEager = "--- !!meta-data #binary\n" +
+            String expectedEager = "" +
+                    "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -616,13 +624,13 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    452,\n" +
-                    "    1941325217793\n" +
+                    "    460,\n" +
+                    "    1975684956161\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 196,\n" +
+                    "    index2Index: 200,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
@@ -630,14 +638,14 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  296,\n" +
+                    "  304,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  392,\n" +
-                    "  452,\n" +
+                    "  400,\n" +
+                    "  460,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!data #binary\n" +
@@ -674,7 +682,8 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             @NotNull ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
             appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
-            String expectedEager = "--- !!meta-data #binary\n" +
+            String expectedEager = "" +
+                    "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -701,13 +710,13 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    448,\n" +
-                    "    1924145348609\n" +
+                    "    456,\n" +
+                    "    1958505086977\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 196,\n" +
+                    "    index2Index: 200,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
@@ -715,14 +724,14 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  296,\n" +
+                    "  304,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  392,\n" +
-                    "  448,\n" +
+                    "  400,\n" +
+                    "  456,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!data #binary\n" +
@@ -753,7 +762,8 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 .build()) {
             @NotNull final ExcerptAppender appender = queue.acquireAppender();
             appender.writeText("msg-1");
-            String expectedEager = "--- !!meta-data #binary\n" +
+            String expectedEager = "" +
+                    "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -780,13 +790,13 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    392,\n" +
-                    "    1683627180032\n" +
+                    "    400,\n" +
+                    "    1717986918400\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 196,\n" +
+                    "    index2Index: 200,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
@@ -794,13 +804,13 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  296,\n" +
+                    "  304,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  392,\n" +
+                    "  400,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!data #binary\n" +
