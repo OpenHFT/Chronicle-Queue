@@ -24,15 +24,15 @@ NOTE: Some features are only available in Chronicle Queue Enterprise. Please ava
 |===
 | Type | Field name | Description | Default | Available in Chronicle Queue OSS
 
-| `RollCycle` | link:roll-cycle.adoc[`rollCycle`] | The rolling interval, meaning how often messages are appended to a new queue | `DAILY` | Yes
-| `Long` | link:roll-cycle.adoc#epoch[`epoch`] | The offset from the roll cycle in microseconds | 0 | Yes
-| `WireType` | link:wire-type.adoc[`wireType`] |  | `BINARY_LIGHT` | OSS excludes `DELTA_BINARY`
-| `Integer` | link:index-count.adoc[`indexCount`] | The size of each index array  | The default index count associated with the selected roll cycle | Yes
-| `Integer`| link:index-spacing.adoc[`indexSpacing`] | The space between excerpts that are explicitly indexed | The default index spacing associated with the selected roll cycle | Yes
-| `Long` | link:block-size.adoc[`blockSize`] | The size of a memory mapping chunk. Do not change this unless necessary |  | Yes
-| `BufferMode` | link:buffer-modes.adoc[`writeBufferMode`] | | `None` | Only the default value `None`
-| `BufferMode` | link:buffer-modes.adoc[`readBufferMode`] | | `BufferMode` | Only the default value `None`
-| `boolean` | link:double-buffer.adoc[`doubleBuffer`] | Enables double-buffered writes on contention | `false` | Yes
+| `RollCycle` | xref:roll-cycle.adoc[`rollCycle`] | The rolling interval, meaning how often messages are appended to a new queue | `DAILY` | Yes
+| `Long` | xref:roll-cycle.adoc#epoch[`epoch`] | The offset from the roll cycle in microseconds | 0 | Yes
+| `WireType` | xref:wire-type.adoc[`wireType`] |  | `BINARY_LIGHT` | OSS excludes `DELTA_BINARY`
+| `Integer` | xref:index-count.adoc[`indexCount`] | The size of each index array  | The default index count associated with the selected roll cycle | Yes
+| `Integer`| xref:index-spacing.adoc[`indexSpacing`] | The space between excerpts that are explicitly indexed | The default index spacing associated with the selected roll cycle | Yes
+| `Long` | xref:block-size.adoc[`blockSize`] | The size of a memory mapping chunk. Do not change this unless necessary |  | Yes
+| `BufferMode` | xref:buffer-modes.adoc[`writeBufferMode`] | | `None` | Only the default value `None`
+| `BufferMode` | xref:buffer-modes.adoc[`readBufferMode`] | | `BufferMode` | Only the default value `None`
+| `boolean` | xref:double-buffer.adoc[`doubleBuffer`] | Enables double-buffered writes on contention | `false` | Yes
 | `TimeProvider` | [`timeProvicer`] | The time provider used to evaluate the rolling timings | `SystemTimeProvider.INSTANCE` | Yes
 | `int` | [`maxTailers`] | The number of tailers to preallocate when using Ring Buffer. Only set this when using `readBufferMode=Asynchronous` | 1 | Enterprise only
 | `long` | link:[`bufferCapacity`] | Sets the Ring Buffer capacity in bytes | `false` | Enterprise only
