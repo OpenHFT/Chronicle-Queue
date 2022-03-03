@@ -55,7 +55,7 @@ NOTE: The `SCQStore` "bootstraps" the queue itself. A custom implementation coul
 
 [#_queue_documents]
 == Queue documents
-A queue message comprise two parts, a 4-byte header followed by an link:../../getting-started/pages/glossary.adoc#e[excerpt]. The excerpt , also referred to as the message, contains the actual data, which could be of any type, including text, numbers, or serialised blobs. Regardless of the type, all information is stored as a series of bytes in the excerpt.
+A queue message comprise two parts, a 4-byte header followed by an xref:getting-started:glossary.adoc#e[excerpt]. The excerpt , also referred to as the message, contains the actual data, which could be of any type, including text, numbers, or serialised blobs. Regardless of the type, all information is stored as a series of bytes in the excerpt.
 
 .A Chronicle Queue stores an ordered collection of messages
 image::queue-document.svg[Chronicle Queue Messages,width=600px]
