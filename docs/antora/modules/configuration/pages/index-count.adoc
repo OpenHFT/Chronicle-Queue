@@ -16,7 +16,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
 
 NOTE: (Index count)^2^ is the maximum number of indexed queue entries.
 
-The default index count varies depending on the link:roll-cycle.adoc[roll cycle], per the table below.
+The default index count varies depending on the xref:configuration:roll-cycle.adoc[roll cycle], per the table below.
 |===
 | Roll-cycle | Default index count
 | `HALF_HOURLY`, `TWENTY_MINUTELY`, `TEN_MINUTELY`, `FIVE_MINUTELY`, `MINUTELY`, `LARGE_HOURLY_XSPARSE` | 2048

@@ -4,10 +4,10 @@ site:
   url: /build-local
 content:
   sources:
-    - url: ./../
+    - url: ./../../
       branches: [HEAD]
-      start_path: docs
-      tags: [2.22*]
+      start_path: docs/antora
+      tags: []
 ui:
   bundle:
     url: ui-bundle.zip # As of now, the UI bundle (page styling) is built locally on Julia's laptop. Contact her to make changes.

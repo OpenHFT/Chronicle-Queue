@@ -5,15 +5,15 @@ author: Julia Gustafsson
 :navtitle: Queue operations
 :source-highlighter: highlight.js
 
-Strictly speaking, Chronicle Queue is used to _read_ and _write_ xref:../../advanced/pages/advanced.adoc#_queue_documents[documents]. This chapter presents a number of ways in which these queue operations can be performed.
+Strictly speaking, Chronicle Queue is used to _read_ and _write_ xref:advanced:advanced.adoc#_queue_documents[documents]. This chapter presents a number of ways in which these queue operations can be performed.
 
-Before moving forward, it should be noted that Chronicle refers to the act of writing as _appending_, and reading as _tailing_. Following from this terminology, writing to a queue is done using an link:../../getting-started/pages/glossary.adoc#a[appender] and reading from a queue is done using a link:../../getting-started/pages/glossary.adoc#t[tailer].
+Before moving forward, it should be noted that Chronicle refers to the act of writing as _appending_, and reading as _tailing_. Following from this terminology, writing to a queue is done using an xref:getting-started:glossary.adoc#a[appender] and reading from a queue is done using a xref:getting-started:glossary.adoc#t[tailer].
 
 The details of these concepts are covered in the respective chapters:
 
-* link:appending.adoc[Appending]
-* link:tailing.adoc[Tailing]
+* xref:appending.adoc[Appending]
+* xref:tailing.adoc[Tailing]
 
 There is also a separate chapter that describes how documents can be managed using a read/write proxy.
 
-* link:read-write-proxies.adoc[Read/write proxies]
+* xref:read-write-proxies.adoc[Read/write proxies]
