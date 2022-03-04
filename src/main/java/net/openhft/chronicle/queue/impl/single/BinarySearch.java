@@ -119,7 +119,7 @@ public enum BinarySearch {
         try {
             long lowSeqNum = 0;
 
-            long highSeqNum = q.exceptsPerCycle(cycle) - 1;
+            long highSeqNum = q.approximateExcerptsInCycle(cycle) - 1;
 
             // nothing to search
             if (highSeqNum < lowSeqNum)

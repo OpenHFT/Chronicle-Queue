@@ -1,8 +1,6 @@
 package net.openhft.chronicle.queue.reader;
 
-import net.openhft.chronicle.queue.internal.reader.InternalDummyMethodReaderQueueEntryHandler;
 import net.openhft.chronicle.queue.internal.reader.InternalMessageToTextQueueEntryHandler;
-import net.openhft.chronicle.queue.internal.reader.InternalMethodReaderQueueEntryHandler;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -15,20 +13,9 @@ public interface QueueEntryHandler extends BiConsumer<WireIn, Consumer<String>>,
     @Override
     void close();
 
-    @Deprecated(/* For removal in x.23 */)
-    @NotNull
-    static QueueEntryHandler dummy(@NotNull final WireType wireType) {
-        return new InternalDummyMethodReaderQueueEntryHandler(wireType);
-    }
-
     @NotNull
     static QueueEntryHandler messageToText(@NotNull final WireType wireType) {
         return new InternalMessageToTextQueueEntryHandler(wireType);
     }
 
-    @Deprecated(/* For removal in x.23 */)
-    @NotNull
-    static QueueEntryHandler methodReader(@NotNull final String methodReaderInterface) {
-        return new InternalMethodReaderQueueEntryHandler(methodReaderInterface);
-    }
 }

@@ -254,29 +254,6 @@ class StoreTailer extends AbstractCloseable
         return INSTANCE;
     }
 
-    @SuppressWarnings("restriction")
-    @Override
-    public boolean peekDocument() {
-        throwExceptionIfClosed();
-
-        if (address == NO_PAGE || state != FOUND_IN_CYCLE || direction != FORWARD)
-            return peekDocument0();
-
-        final int header = MEMORY.readVolatileInt(address);
-
-        if (header == END_OF_DATA)
-            return peekDocument0();
-
-        return header > 0x0;
-    }
-
-    private boolean peekDocument0() {
-        try (DocumentContext dc = readingDocument()) {
-            dc.rollbackOnClose();
-            return dc.isPresent();
-        }
-    }
-
     // throws UnrecoverableTimeoutException
     private boolean next0(final boolean includeMetaData) throws StreamCorruptedException {
         for (int i = 0; i < 1000; i++) {
@@ -1073,7 +1050,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean tryWindBack(final int cycle) {
-        final long count = queue.exceptsPerCycle(cycle);
+        final long count = queue.exactExcerptsInCycle(cycle);
         if (count <= 0)
             return false;
         final RollCycle rollCycle = queue.rollCycle();

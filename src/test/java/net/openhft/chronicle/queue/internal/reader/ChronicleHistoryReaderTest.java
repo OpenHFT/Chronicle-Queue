@@ -69,7 +69,6 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out.acquireAppender()
                         .methodWriterBuilder(dummyClass)
-                        .useMethodIds(true)
                         .get();
                 // this will write the 1st timestamps
                 writer.say("hello");

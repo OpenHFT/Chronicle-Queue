@@ -18,11 +18,11 @@
 package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -104,8 +104,8 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     @Ignore("TODO FIX")
-    public void testWithQueueHistory() {
-        FlakyTestRunner.run(this::testWithQueueHistory0);
+    public void testWithQueueHistory() throws Throwable {
+        FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
 
     public void testWithQueueHistory0() {

@@ -25,7 +25,6 @@ public class PretoucherSoakTest extends QueueTestCommon {
         }).get();
 
         long periodicUpdateUS = (long) 10 * 1000;
-        Monitor.loop.addHandler(new PeriodicUpdateEventHandler(() -> currentTimeMillis -> outQueueAppender.pretouch(), 0, periodicUpdateUS));
 
         long lastHB = 0;
         while (true) {

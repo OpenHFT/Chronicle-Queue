@@ -131,8 +131,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private StoreFileListener storeFileListener;
 
     private Boolean readOnly;
-    @Deprecated(/* to be removed in x.23 */)
-    private Boolean strongAppenders;
     private boolean checkInterrupts;
 
     private transient TableStore<SCQMeta> metaStore;
@@ -271,7 +269,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return wireStore;
     }
 
-    private static boolean isQueueReplicationAvailable() {
+    static boolean isQueueReplicationAvailable() {
         return ENTERPRISE_QUEUE_CONSTRUCTOR != null;
     }
 
@@ -523,15 +521,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             path.mkdirs();
         }
         return storeFilePath;
-    }
-
-    /**
-     * @deprecated To be removed in .22
-     */
-    @Deprecated
-    @NotNull
-    QueueLock queueLock() {
-        return isQueueReplicationAvailable() && !readOnly() ? new TSQueueLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2) : new NoopQueueLock();
     }
 
     @NotNull
@@ -1106,26 +1095,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         }
         if ((epoch == null || epoch == 0) && (rollTime != null && rollTimeZone != null))
             rollTime(rollTime, rollTimeZone);
-    }
-
-    /**
-     * @param strongAppenders strongAppenders
-     * @return this
-     * @deprecated appenders are now always strongly referenced
-     */
-    @Deprecated(/* to be removed in x.23 */)
-    public SingleChronicleQueueBuilder strongAppenders(boolean strongAppenders) {
-        this.strongAppenders = strongAppenders;
-        return this;
-    }
-
-    /**
-     * @return strongAppenders
-     * @deprecated appenders are now always strongly referenced
-     */
-    @Deprecated(/* to be removed in x.23 */)
-    public boolean strongAppenders() {
-        return Boolean.TRUE.equals(strongAppenders);
     }
 
     // *************************************************************************

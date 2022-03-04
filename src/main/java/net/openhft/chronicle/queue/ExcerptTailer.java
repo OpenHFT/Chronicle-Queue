@@ -63,24 +63,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
-     * Returns {@code true} if {@link #readingDocument()} would return a document which is present, in other words would return a DocumentContext where {@link net.openhft.chronicle.wire.DocumentContext#isPresent()} == {@code true}
-     *
-     * For the best performance you should only use this method once a message has been found by toStart() or readingDocument(). Otherwise {@link #readingDocument()} is called and then rolled back, which is not optimal.
-     * For the same reason, this method should also be avoided when reading documents backwards.
-     *
-     * WARNING : THIS METHOD CAN NOT BE RELIED UPON, IT WILL SOMETIME WILL RETURN FALSE WHEN THERE ARE MESSAGES,
-     * YOU SHOULD ONLY CALL IT PERIODICALLY AND NOT RELY TO MUCH UPON ITS RESULTS INSTEAD CALL READING DOCUMENT ! ( FOR THIS REASON - WE HAVE DECIDED TO DEPRECATE IT ! )
-     *
-     * @return if {@link #readingDocument()} would return a DocumentContext
-     *         that provides excerpts to read.
-     */
-    @Deprecated(/* remove in x.23 - this is no longer a performance optimisation */)
-    @Override
-    default boolean peekDocument() {
-        return true;
-    }
-
-    /**
      * Returns the current index of this Tailer.
      * <p>
      * If this method is invoked within a {@code try (tailer.readingDocument(){ }} block, returns the index of
