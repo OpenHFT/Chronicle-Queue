@@ -142,12 +142,12 @@ public class InternalBenchmarkMain {
 
     private static void runInner(Histogram transportTime, Histogram readTime, ExcerptTailer tailer) {
         Jvm.safepoint();
-        if (tailer.peekDocument()) {
+        /*if (tailer.peekDocument()) {
             if (counter++ < 1000) {
                 Jvm.safepoint();
                 return;
             }
-        }
+        }*/
         if (counter > 0)
             Jvm.safepoint();
         else

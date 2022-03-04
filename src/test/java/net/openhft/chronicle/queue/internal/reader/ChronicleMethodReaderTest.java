@@ -35,24 +35,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-@RunWith(Parameterized.class)
 public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
-    private final boolean useMethodIds;
     private Path dataDir;
-
-    public ChronicleMethodReaderTest(final boolean useMethodIds) {
-        this.useMethodIds = useMethodIds;
-    }
-
-    @Parameterized.Parameters(name = "write with method ids: {0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {true},
-                {false}
-        });
-    }
 
     @Before
     public void before() {
@@ -63,7 +49,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                 .build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<All> methodWriterBuilder = excerptAppender.methodWriterBuilder(All.class);
-            final All events = methodWriterBuilder.useMethodIds(useMethodIds).build();
+            final All events = methodWriterBuilder.build();
 
             for (int i = 0; i < 24; ) {
                 Method1Type m1 = new Method1Type();

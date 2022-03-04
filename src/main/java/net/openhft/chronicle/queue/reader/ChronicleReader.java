@@ -29,6 +29,7 @@ import net.openhft.chronicle.queue.impl.single.BinarySearch;
 import net.openhft.chronicle.queue.impl.single.NotComparableException;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.internal.reader.InternalDummyMethodReaderQueueEntryHandler;
 import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
@@ -265,7 +266,7 @@ public class ChronicleReader implements Reader {
 
     public ChronicleReader asMethodReader(@Nullable String methodReaderInterface) {
         if (methodReaderInterface == null)
-            entryHandlerFactory = () -> QueueEntryHandler.dummy(wireType);
+            entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType);
         else try {
             this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {
