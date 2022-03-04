@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
@@ -33,10 +32,6 @@ public class TestTailAfterRoll extends ChronicleQueueTestBase {
      */
     @Test
     public void test() {
-        FlakyTestRunner.run(OS.isWindows(), this::doTest);
-    }
-    
-    public void doTest() {
         File tmpDir = getTmpDir();
         File[] files;
         try (ChronicleQueue writeQ = ChronicleQueue.singleBuilder(tmpDir).build()) {

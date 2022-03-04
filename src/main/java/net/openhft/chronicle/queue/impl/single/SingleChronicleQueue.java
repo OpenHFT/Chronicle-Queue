@@ -61,6 +61,7 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.isQueueReplicationAvailable;
 import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
@@ -183,7 +184,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
 
             this.directoryListing.refresh(true);
-            this.queueLock = builder.queueLock();
+            this.queueLock = isQueueReplicationAvailable() && !builder.readOnly()
+                    ? new TSQueueLock(metaStore, builder.pauserSupplier(), builder.timeoutMS() * 3 / 2)
+                    : new NoopQueueLock();
             this.writeLock = builder.writeLock();
 
             // release the write lock if the process is dead
@@ -575,14 +578,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Instead, {@link #approximateExcerptsInCycle(int)} or {@link #exactExcerptsInCycle(int)} should be called.
-     */
-    @Deprecated(/* For removal in x.23 */)
-    public long exceptsPerCycle(int cycle) {
-        return approximateExcerptsInCycle(cycle);
-    }
-
-    /**
      * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
      * which is updated last during append operation so may be possible that a single entry is available for reading
      * but not acknowledged by this method yet.
@@ -667,7 +662,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         long lowerSeqNum = rollCycle.toSequenceNumber(fromIndex);
 
         if (lowerCycle + 1 == upperCycle) {
-            long l = exceptsPerCycle(lowerCycle);
+            long l = exactExcerptsInCycle(lowerCycle);
             result += (l - lowerSeqNum) + upperSeqNum;
             return result;
         }
@@ -682,7 +677,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         if (cycles.first() == lowerCycle) {
             // because we are inclusive, for example  if we were at the end, then this
             // is 1 except rather than zero
-            long l = exceptsPerCycle(lowerCycle);
+            long l = exactExcerptsInCycle(lowerCycle);
             result += (l - lowerSeqNum);
         } else
             throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
@@ -697,7 +692,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         final long[] array = cycles.stream().mapToLong(i -> i).toArray();
         for (int i = 1; i < array.length - 1; i++) {
-            long x = exceptsPerCycle(Math.toIntExact(array[i]));
+            long x = exactExcerptsInCycle(Math.toIntExact(array[i]));
             result += x;
         }
 
@@ -842,11 +837,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public int lastCycle() {
         setFirstAndLastCycle();
         return directoryListing.getMaxCreatedCycle();
-    }
-
-    @Deprecated(/* to be removed in x.23 */)
-    protected int fileToCycle(final File queueFile) {
-        return fileNameToCycleFunction().applyAsInt(queueFile.getName());
     }
 
     @NotNull

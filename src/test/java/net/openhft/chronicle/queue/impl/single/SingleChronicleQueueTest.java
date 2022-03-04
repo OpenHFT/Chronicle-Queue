@@ -18,7 +18,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -29,6 +28,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.*;
@@ -174,8 +174,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testCleanupDir() {
-        FlakyTestRunner.run(OS.isWindows(), this::testCleanupDir0);
+    public void testCleanupDir() throws Throwable {
+        FlakyTestRunner.builder(this::testCleanupDir0).withFlakyOnThisArchitecture(OS.isWindows()).build().run();
     }
 
     private void testCleanupDir0() {

@@ -1,12 +1,12 @@
 package net.openhft.chronicle.queue.cleanup;
 
-import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.testframework.FlakyTestRunner;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,8 +16,8 @@ import static org.junit.Assert.assertNotNull;
 
 public class OnReleaseTest extends QueueTestCommon {
     @Test
-    public void onRelease() {
-        FlakyTestRunner.run(this::onRelease0);
+    public void onRelease() throws Throwable {
+        FlakyTestRunner.builder(this::onRelease0).build().run();
     }
 
     public void onRelease0() {

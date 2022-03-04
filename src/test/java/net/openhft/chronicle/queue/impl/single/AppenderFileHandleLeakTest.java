@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
@@ -9,6 +8,7 @@ import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -115,7 +115,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
     @Test
     public void tailerResourcesCanBeReleasedManually() throws Exception {
-        FlakyTestRunner.run(this::tailerResourcesCanBeReleasedManually0);
+        FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
     }
 
     public void tailerResourcesCanBeReleasedManually0() throws IOException, InterruptedException, TimeoutException, ExecutionException {
