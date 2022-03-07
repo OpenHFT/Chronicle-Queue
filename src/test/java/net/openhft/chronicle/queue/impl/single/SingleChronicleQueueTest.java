@@ -175,7 +175,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testCleanupDir() throws Throwable {
-        FlakyTestRunner.builder(this::testCleanupDir0).withFlakyOnThisArchitecture(OS.isWindows()).build().run();
+        if (OS.isWindows())
+            FlakyTestRunner.builder(this::testCleanupDir0).build().run();
+        else
+            testCleanupDir0();
     }
 
     private void testCleanupDir0() {
