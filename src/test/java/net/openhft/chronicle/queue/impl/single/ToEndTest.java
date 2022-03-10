@@ -324,29 +324,29 @@ public class ToEndTest extends ChronicleQueueTestBase {
                     "    sourceId: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 184, header: 0\n" +
+                    "# position: 180, header: 0\n" +
                     "--- !!data #binary\n" +
                     "listing.highestCycle: 5\n" +
-                    "# position: 224, header: 1\n" +
+                    "# position: 216, header: 1\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 5\n" +
-                    "# position: 264, header: 2\n" +
+                    "# position: 256, header: 2\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
-                    "# position: 296, header: 3\n" +
+                    "# position: 288, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 336, header: 4\n" +
+                    "# position: 328, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 376, header: 5\n" +
+                    "# position: 368, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 424, header: 6\n" +
+                    "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "...\n" +
-                    "# 130588 bytes remaining\n" +
+                    "# 130596 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -356,29 +356,29 @@ public class ToEndTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 32,\n" +
                     "    indexSpacing: 4,\n" +
-                    "    index2Index: 200,\n" +
+                    "    index2Index: 196,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
                     "}\n" +
-                    "# position: 200, header: -1\n" +
+                    "# position: 196, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 32, used: 1\n" +
-                    "  496,\n" +
+                    "  488,\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 496, header: -1\n" +
+                    "# position: 488, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 32, used: 0\n" +
                     "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 784, header: -1\n" +
+                    "# position: 776, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "\"\": hello!\n" +
                     "...\n" +
-                    "# 130272 bytes remaining\n", queue.dump());
+                    "# 130280 bytes remaining\n", queue.dump());
             assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
             // toEnd().index() should be where it expects the next excerpt in an existing cycle to be written.
             final String actual = tailerToEndIndex(queue);
