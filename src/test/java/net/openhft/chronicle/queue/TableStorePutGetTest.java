@@ -39,7 +39,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
-                    "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                    "    roll: !SCQSRoll { length: !int 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
                     "    deltaCheckpointInterval: 64,\n" +
                     "    sourceId: 0\n" +
                     "  }\n" +
@@ -64,13 +64,13 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
-                    "    400,\n" +
-                    "    1717986918400\n" +
+                    "    392,\n" +
+                    "    1683627180032\n" +
                     "  ],\n" +
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 200,\n" +
+                    "    index2Index: 196,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
@@ -78,13 +78,13 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  304,\n" +
+                    "  296,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  400,\n" +
+                    "  392,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "--- !!data #binary\n" +
