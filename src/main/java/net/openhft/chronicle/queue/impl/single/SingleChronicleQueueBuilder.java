@@ -273,11 +273,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private static RollCycle loadDefaultRollCycle() {
-        if (null == System.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY)) {
+        String rollCycleProperty = Jvm.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
+        if (null == rollCycleProperty) {
             return RollCycles.DEFAULT;
         }
 
-        String rollCycleProperty = System.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
         if (rollCyclePropertyParts.length > 0) {
             try {
@@ -784,7 +784,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * GMT
      */
     public long epoch() {
-        return epoch == null ? Long.getLong(QueueSystemProperties.DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
+        return epoch == null ? Jvm.getLong(QueueSystemProperties.DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
     }
 
     /**
