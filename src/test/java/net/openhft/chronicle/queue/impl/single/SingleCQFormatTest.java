@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.HexDumpBytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -167,39 +169,11 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         final File file = new File(dir, "19700101T4" + SingleChronicleQueue.SUFFIX);
 
-        Wire wire;
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize() * 2L);
-             SCQIndexing marshallable = new SCQIndexing(WireType.BINARY, 32, 4)) {
-            wire = new BinaryWire(bytes);
-            wire.usePadding(true);
-            try (DocumentContext dc = wire.writingDocument(true)) {
-                dc.wire().writeEventName("header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
-                    w.write("wireType").object(WireType.BINARY);
-                    w.write("writePosition").int64forBinding(0);
-                    w.write("roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0, null, null));
-                    w.write("indexing").typedMarshallable(marshallable);
-                    w.write("lastAcknowledgedIndexReplicated").int64forBinding(0);
-                });
-            }
+        testWritingTo(new HexDumpBytes());
 
-            assertEquals("--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 0,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
-                    "    format: yyyyMMdd'T4',\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 32,\n" +
-                    "    indexSpacing: 4,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0\n" +
-                    "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize() * 2L)) {
+            testWritingTo(bytes);
         }
 
         try (ChronicleQueue queue = binary(dir)
@@ -214,6 +188,93 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void testWritingTo(Bytes<?> bytes) {
+        try (SCQIndexing marshallable = new SCQIndexing(WireType.BINARY, 32, 4)) {
+            Wire wire = new BinaryWire(bytes);
+            wire.usePadding(true);
+            try (DocumentContext dc = wire.writingDocument(true)) {
+                dc.wire().writeEventName("header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
+                    w.write("wireType").object(WireType.BINARY);
+                    w.write("writePosition").int64forBinding(0);
+                    w.write("roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0, null, null));
+                    w.write("indexing").typedMarshallable(marshallable);
+                    w.write("lastAcknowledgedIndexReplicated").int64forBinding(0);
+                });
+            }
+        }
+
+        assertEquals("--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY,\n" +
+                "  writePosition: 0,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd'T4',\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 32,\n" +
+                "    indexSpacing: 4,\n" +
+                "    index2Index: 0,\n" +
+                "    lastIndex: 0\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: 0\n" +
+                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+        final String expected = "" +
+                "00000000 1c 01 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 ···@··he ader··SC\n" +
+                "00000010 51 53 74 6f 72 65 82 05  01 00 00 c8 77 69 72 65 QStore·· ····wire\n" +
+                "00000020 54 79 70 65 b6 08 57 69  72 65 54 79 70 65 e6 42 Type··Wi reType·B\n" +
+                "00000030 49 4e 41 52 59 cd 77 72  69 74 65 50 6f 73 69 74 INARY·wr itePosit\n" +
+                "00000040 69 6f 6e 8f 8f 8f 8f a7  00 00 00 00 00 00 00 00 ion····· ········\n" +
+                "00000050 c4 72 6f 6c 6c b6 08 53  43 51 53 52 6f 6c 6c 82 ·roll··S CQSRoll·\n" +
+                "00000060 27 00 00 00 c6 6c 65 6e  67 74 68 a6 00 5c 26 05 '····len gth··\\&·\n" +
+                "00000070 c6 66 6f 72 6d 61 74 ec  79 79 79 79 4d 4d 64 64 ·format· yyyyMMdd\n" +
+                "00000080 27 54 34 27 c5 65 70 6f  63 68 00 c8 69 6e 64 65 'T4'·epo ch··inde\n" +
+                "00000090 78 69 6e 67 b6 0c 53 43  51 53 49 6e 64 65 78 69 xing··SC QSIndexi\n" +
+                "000000a0 6e 67 82 49 00 00 00 ca  69 6e 64 65 78 43 6f 75 ng·I···· indexCou\n" +
+                "000000b0 6e 74 20 cc 69 6e 64 65  78 53 70 61 63 69 6e 67 nt ·inde xSpacing\n" +
+                "000000c0 04 cb 69 6e 64 65 78 32  49 6e 64 65 78 8f 8f a7 ··index2 Index···\n" +
+                "000000d0 00 00 00 00 00 00 00 00  c9 6c 61 73 74 49 6e 64 ········ ·lastInd\n" +
+                "000000e0 65 78 8e 00 00 00 00 a7  00 00 00 00 00 00 00 00 ex······ ········\n" +
+                "000000f0 df 6c 61 73 74 41 63 6b  6e 6f 77 6c 65 64 67 65 ·lastAck nowledge\n" +
+                "00000100 64 49 6e 64 65 78 52 65  70 6c 69 63 61 74 65 64 dIndexRe plicated\n" +
+                "00000110 8e 02 00 00 00 00 00 a7  00 00 00 00 00 00 00 00 ········ ········\n";
+        final String expectedHexDump = "" +
+                "1c 01 00 40                                     # msg-length\n" +
+                "b9 06 68 65 61 64 65 72                         # header\n" +
+                "b6 08 53 43 51 53 74 6f 72 65                   # SCQStore\n" +
+                "82 05 01 00 00                                  # SingleCQFormatTest$$Lambda$153/1943325854\n" +
+                "c8 77 69 72 65 54 79 70 65                      # wireType\n" +
+                "b6 08 57 69 72 65 54 79 70 65                   # WireType\n" +
+                "e6 42 49 4e 41 52 59                            # BINARY\n" +
+                "cd 77 72 69 74 65 50 6f 73 69 74 69 6f 6e 8f 8f # writePosition\n" +
+                "8f 8f a7 00 00 00 00 00 00 00 00                # 0\n" +
+                "c4 72 6f 6c 6c                                  # roll\n" +
+                "b6 08 53 43 51 53 52 6f 6c 6c                   # SCQSRoll\n" +
+                "82 27 00 00 00                                  # SCQRoll\n" +
+                "c6 6c 65 6e 67 74 68                            # length\n" +
+                "a6 00 5c 26 05                                  # 86400000\n" +
+                "c6 66 6f 72 6d 61 74                            # format\n" +
+                "ec 79 79 79 79 4d 4d 64 64 27 54 34 27          # yyyyMMdd'T4'\n" +
+                "c5 65 70 6f 63 68 00                            # epoch\n" +
+                "c8 69 6e 64 65 78 69 6e 67                      # indexing\n" +
+                "b6 0c 53 43 51 53 49 6e 64 65 78 69 6e 67       # SCQSIndexing\n" +
+                "82 49 00 00 00                                  # SCQIndexing\n" +
+                "ca 69 6e 64 65 78 43 6f 75 6e 74 20             # indexCount\n" +
+                "cc 69 6e 64 65 78 53 70 61 63 69 6e 67 04       # indexSpacing\n" +
+                "cb 69 6e 64 65 78 32 49 6e 64 65 78 8f 8f       # index2Index\n" +
+                "a7 00 00 00 00 00 00 00 00                      # 0\n" +
+                "c9 6c 61 73 74 49 6e 64 65 78 8e 00 00 00 00    # lastIndex\n" +
+                "a7 00 00 00 00 00 00 00 00                      # 0\n" +
+                "df 6c 61 73 74 41 63 6b 6e 6f 77 6c 65 64 67 65 # lastAcknowledgedIndexReplicated\n" +
+                "64 49 6e 64 65 78 52 65 70 6c 69 63 61 74 65 64\n" +
+                "8e 02 00 00 00 00 00 a7 00 00 00 00 00 00 00 00 # 0\n";
+        assertEquals(bytes instanceof HexDumpBytes
+                        ? expectedHexDump
+                        : expected,
+                bytes.toHexString());
     }
 
     @Test
@@ -271,7 +332,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName("header")
                         .typePrefix(SingleChronicleQueueStore.class).marshallable(
-                        w -> w.write("wireType").object(WireType.BINARY));
+                                w -> w.write("wireType").object(WireType.BINARY));
             }
         }
 
