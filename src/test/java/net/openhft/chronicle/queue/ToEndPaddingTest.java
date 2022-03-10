@@ -58,9 +58,9 @@ public class ToEndPaddingTest extends ChronicleQueueTestBase {
 //            System.out.println(queue.dump());
 
             // toEnd just before adding one more entry
-            assertEquals(2336, dc.wire().bytes().readPosition());
+            assertEquals(2328, dc.wire().bytes().readPosition());
             tailer.toEnd();
-            assertEquals(2368, dc.wire().bytes().readPosition());
+            assertEquals(2360, dc.wire().bytes().readPosition());
 
             try (final DocumentContext documentContext = appender.acquireWritingDocument(false)) {
                 documentContext.wire().write("key").text("value");
