@@ -63,11 +63,11 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             @NotNull ExcerptAppender appender = queue.acquireAppender();
             try (DocumentContext dc = appender.writingDocument()) {
                 @NotNull MyData name = new MyData("name", 12345, 1.2, 111);
-               // System.out.println(name);
+                // System.out.println(name);
                 name.writeMarshallable(dc.wire());
 
                 @NotNull MyData name2 = new MyData("name2", 12346, 1.3, 112);
-               // System.out.println(name2);
+                // System.out.println(name2);
                 name2.writeMarshallable(dc.wire());
             }
             String dump = queue.dump();
@@ -806,6 +806,37 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                     "--- !!data #binary\n" +
                     "msg-1\n" +
                     "...\n";
+            try (DocumentContext dc = appender.writingDocument()) {
+                final Bytes<?> bytes = dc.wire().bytes();
+                final String s = bytes.toHexString(0, bytes.writePosition());
+                assertEquals("" +
+                                "00000000 c0 00 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 ···@··he ader··SC\n" +
+                                "00000010 51 53 74 6f 72 65 82 a9  00 00 00 cd 77 72 69 74 QStore·· ····writ\n" +
+                                "00000020 65 50 6f 73 69 74 69 6f  6e 8e 01 00 00 00 00 8d ePositio n·······\n" +
+                                "00000030 02 00 00 00 00 00 00 00  02 00 00 00 00 00 00 00 ········ ········\n" +
+                                "00000040 88 01 00 00 00 00 00 00  00 00 00 00 88 01 00 00 ········ ········\n" +
+                                "00000050 c8 69 6e 64 65 78 69 6e  67 b6 0c 53 43 51 53 49 ·indexin g··SCQSI\n" +
+                                "00000060 6e 64 65 78 69 6e 67 82  4c 00 00 00 ca 69 6e 64 ndexing· L····ind\n" +
+                                "00000070 65 78 43 6f 75 6e 74 08  cc 69 6e 64 65 78 53 70 exCount· ·indexSp\n" +
+                                "00000080 61 63 69 6e 67 01 cb 69  6e 64 65 78 32 49 6e 64 acing··i ndex2Ind\n" +
+                                "00000090 65 78 8e 00 00 00 00 a7  c4 00 00 00 00 00 00 00 ex······ ········\n" +
+                                "000000a0 c9 6c 61 73 74 49 6e 64  65 78 8e 00 00 00 00 a7 ·lastInd ex······\n" +
+                                "000000b0 01 00 00 00 00 00 00 00  ca 64 61 74 61 46 6f 72 ········ ·dataFor\n" +
+                                "000000c0 6d 61 74 01 60 00 00 40  b9 0b 69 6e 64 65 78 32 mat·`··@ ··index2\n" +
+                                "000000d0 69 6e 64 65 78 8f 8f 8d  08 00 00 00 00 00 00 00 index··· ········\n" +
+                                "000000e0 01 00 00 00 00 00 00 00  28 01 00 00 00 00 00 00 ········ (·······\n" +
+                                "000000f0 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
+                                "........\n" +
+                                "00000120 00 00 00 00 00 00 00 00  5c 00 00 40 b9 05 69 6e ········ \\··@··in\n" +
+                                "00000130 64 65 78 8f 8f 8f 8f 8d  08 00 00 00 00 00 00 00 dex····· ········\n" +
+                                "00000140 01 00 00 00 00 00 00 00  88 01 00 00 00 00 00 00 ········ ········\n" +
+                                "00000150 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
+                                "........\n" +
+                                "00000180 00 00 00 00 00 00 00 00  06 00 00 00 e5 6d 73 67 ········ ·····msg\n" +
+                                "00000190 2d 31 00 00 00 00 00 00                          -1······         \n",
+                        s);
+                dc.rollbackOnClose();
+            }
             assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
     }
