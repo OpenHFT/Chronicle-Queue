@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +35,7 @@ import java.util.function.Function;
 
 public class RollingResourcesCache {
     public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
-    private static final int CACHE_SIZE = Integer.getInteger("chronicle.queue.rollingResourceCache.size", 128);
+    private static final int CACHE_SIZE = Jvm.getInteger("chronicle.queue.rollingResourceCache.size", 128);
     private static final int ONE_DAY_IN_MILLIS = 86400000;
     private static final int MAX_TIMESTAMP_CACHE_SIZE = 32;
 

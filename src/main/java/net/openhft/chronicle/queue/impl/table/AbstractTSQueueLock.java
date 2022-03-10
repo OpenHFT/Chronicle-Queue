@@ -66,7 +66,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                     "Use queue.force.unlock.mode=NEVER instead");
         } else {
             // TODO: x.24 change default to UnlockMode.LOCKING_PROCESS_DEAD
-            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(System.getProperty("queue.force.unlock.mode", UnlockMode.ALWAYS.name()));
+            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.ALWAYS.name()));
         }
 
         disableThreadSafetyCheck(true);
