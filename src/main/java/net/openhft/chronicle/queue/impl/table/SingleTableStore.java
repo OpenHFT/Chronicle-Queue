@@ -57,7 +57,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     private static final long EXCLUSIVE_LOCK_START = Long.MAX_VALUE - EXCLUSIVE_LOCK_SIZE;
 
-    private static final long timeoutMS = Long.getLong("chronicle.table.store.timeoutMS", 10_000);
+    private static final long timeoutMS = Jvm.getLong("chronicle.table.store.timeoutMS", 10_000L);
     @NotNull
     private final WireType wireType;
     @NotNull

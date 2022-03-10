@@ -71,7 +71,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
-    static final int WARN_SLOW_APPENDER_MS = Integer.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
+    static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
 
     @NotNull
     protected final EventLoop eventLoop;
