@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.testframework.process.ProcessRunner;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -105,9 +106,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
         Assume.assumeTrue(!OS.isMacOSX());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
-        final String command = String.format("mvn compile exec:java -Dexec.classpathScope=test " +
-                "-Dexec.mainClass=%s -Dexec.args=\"%s\"", HalfWriteAMessage.class.getName(), queueDirectory.getAbsoluteFile());
-        runCommand(command);
+        runCommand(ProcessRunner.runClass(HalfWriteAMessage.class, queueDirectory.getAbsolutePath()));
 
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
@@ -137,23 +136,19 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
         }
     }
 
-    private static void runCommand(String command) throws IOException, InterruptedException {
-        Process p = Runtime.getRuntime().exec(command);
+    private static void runCommand(Process p) throws IOException, InterruptedException {
         BufferedReader stdInput = new BufferedReader(new
                 InputStreamReader(p.getInputStream()));
 
         BufferedReader stdError = new BufferedReader(new
                 InputStreamReader(p.getErrorStream()));
 
-        boolean buildFailure = false;
         String s;
         // read the output from the command
         //      System.out.println("Here is the standard output of the command:\n");
         while ((s = stdInput.readLine()) != null) {
 
             System.out.println(s);
-            if (s.contains("BUILD FAILURE"))
-                buildFailure = true;
 
             // wait for Replication Started
             if ("== FINISHED WRITING DATA ==".equals(s))
@@ -167,7 +162,5 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
             System.out.println(s);
         }
         p.waitFor();
-        // test can't be run this way.
-        assumeFalse(buildFailure);
     }
 }
