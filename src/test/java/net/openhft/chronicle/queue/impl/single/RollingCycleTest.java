@@ -65,7 +65,7 @@ public class RollingCycleTest extends QueueTestCommon {
     @Test
     public void testRollCycle() {
         SetTimeProvider stp = new SetTimeProvider();
-        long start = System.currentTimeMillis() - 3 * 86_400_000;
+        long start = 19059 * 86_400_000L;
         stp.currentTimeMillis(start);
 
         String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
@@ -77,12 +77,10 @@ public class RollingCycleTest extends QueueTestCommon {
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
-            int numWritten = 0;
             for (int h = 0; h < 3; h++) {
                 stp.currentTimeMillis(start + TimeUnit.DAYS.toMillis(h));
                 for (int i = 0; i < 3; i++) {
                     appender.writeBytes(new TestBytesMarshallable(i));
-                    numWritten++;
                 }
             }
             String expected = "" +
