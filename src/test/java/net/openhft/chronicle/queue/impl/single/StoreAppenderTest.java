@@ -1,28 +1,46 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
-import java.nio.file.Path;
+import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
     public static final String TEST_TEXT = "Some text some text some text";
 
+    @Rule
+    public final TemporaryFolder queueDirectory = new TemporaryFolder();
+
     @Test
-    public void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException {
-        final Path queueDirectory = IOTools.createTempDirectory("StoreAppenderTest.writingDocumentAcquisitionWorksAfterInterruptedAttempt");
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.toFile()).build()) {
+    public void clearUsedByThreadThrowsUnsupportedOperationException() throws IOException {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
+            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).clearUsedByThread());
+        }
+    }
+
+    @Test
+    public void resetUsedByThreadThrowsUnsupportedOperationException() throws IOException {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
+            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).resetUsedByThread());
+        }
+    }
+
+    @Test
+    public void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException, IOException {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
             final BlockingWriter blockingWriter = new BlockingWriter(queue);
             final BlockedWriter blockedWriter = new BlockedWriter(queue);
 
