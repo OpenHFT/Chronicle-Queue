@@ -104,4 +104,21 @@ public class TableStorePutGetTest extends QueueTestCommon {
             }
         }
     }
+
+    /**
+     * While the assumption is the TableStore doesn't grow, we should test what happens if it does
+     * <p>
+     * (see https://github.com/OpenHFT/Chronicle-Queue/issues/1025)
+     */
+    @Test
+    public void testCanGrowBeyondInitialSize() {
+        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("canGrow"))
+                .rollCycle(RollCycles.TEST_DAILY)
+                .testBlockSize()
+                .build()) {
+            for (int j = 0; j < 4_000; j++) {
+                cq.tableStorePut("=this_is_a_long_key_to_try_and_consume_space_quicker_" + j, j);
+            }
+        }
+    }
 }
