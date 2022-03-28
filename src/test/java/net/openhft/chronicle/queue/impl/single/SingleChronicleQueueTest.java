@@ -211,7 +211,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("hello").text("world2");
-
             }
 
             ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
@@ -223,7 +222,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertEquals("world", dc.wire().read("hello").text());
-
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
@@ -1792,10 +1790,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         .text("text"));
             }
 
-            ExcerptTailer tailer = chronicle.createTailer(named ? "named" : null);
-            ExcerptTailer tailer2 = chronicle.createTailer(named ? "named" : null);
-            ExcerptTailer tailer3 = chronicle.createTailer(named ? "named" : null);
-            ExcerptTailer tailer4 = chronicle.createTailer(named ? "named" : null);
+            ExcerptTailer tailer = chronicle.createTailer(named ? "named1" : null);
+            ExcerptTailer tailer2 = chronicle.createTailer(named ? "named2" : null);
+            ExcerptTailer tailer3 = chronicle.createTailer(named ? "named3" : null);
+            ExcerptTailer tailer4 = chronicle.createTailer(named ? "named4" : null);
             for (int i = 0; i < runs; i++) {
                 if (i % 10000 == 0)
                     System.gc();
@@ -3494,8 +3492,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return clock;
     }
 
-    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws
-            IOException, InterruptedException {
+    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException, InterruptedException {
         String time = Instant.ofEpochMilli(clock.get()).toString();
 
         final Random random = new Random(0xDEADBEEF);
@@ -3547,38 +3544,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    private static class MapWrapper extends SelfDescribingMarshallable {
-        final Map<CharSequence, Double> map = new HashMap<>();
-    }
-
-    static class MyMarshable extends SelfDescribingMarshallable implements Demarshallable {
-        @UsedViaReflection
-        String name;
-
-        @UsedViaReflection
-        public MyMarshable(@NotNull WireIn wire) {
-            readMarshallable(wire);
-        }
-
-        public MyMarshable() {
-        }
-    }
-
-    private static class BytesWithIndex implements Closeable {
-        private BytesStore bytes;
-        private long index;
-
-        public BytesWithIndex(Bytes<?> bytes, long index) {
-            this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
-            this.index = index;
-        }
-
-        @Override
-        public void close() {
-            bytes.releaseLast();
-        }
-    }
-
     /**
      * relates to https://github.com/OpenHFT/Chronicle-Queue/issues/699
      */
@@ -3602,7 +3567,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .readOnly(true)
                 .build()) {
             StringBuilder sb = new StringBuilder();
-            try (DocumentContext dc = out.createTailer(named ? "named" : null).readingDocument()) {
+            try (DocumentContext dc = out.createTailer().readingDocument()) {
                 dc.wire().getValueIn().text(sb);
             }
 
@@ -3685,6 +3650,38 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             while (!gotAppender.get()) {
                 pauser.pause(1, TimeUnit.SECONDS);
             }
+        }
+    }
+
+    private static class MapWrapper extends SelfDescribingMarshallable {
+        final Map<CharSequence, Double> map = new HashMap<>();
+    }
+
+    static class MyMarshable extends SelfDescribingMarshallable implements Demarshallable {
+        @UsedViaReflection
+        String name;
+
+        @UsedViaReflection
+        public MyMarshable(@NotNull WireIn wire) {
+            readMarshallable(wire);
+        }
+
+        public MyMarshable() {
+        }
+    }
+
+    private static class BytesWithIndex implements Closeable {
+        private BytesStore bytes;
+        private long index;
+
+        public BytesWithIndex(Bytes<?> bytes, long index) {
+            this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
+            this.index = index;
+        }
+
+        @Override
+        public void close() {
+            bytes.releaseLast();
         }
     }
 }
