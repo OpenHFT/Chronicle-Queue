@@ -23,13 +23,28 @@ import java.io.File;
 public interface StoreFileListener {
     StoreFileListener NO_OP = StoreFileListeners.NO_OP;
 
+    /**
+     * @return true if this should be scheduled as a background callback, of false if ignored
+     */
     default boolean isActive() {
         return true;
     }
 
+    /**
+     * Notified asynchronously when a file is acquired
+     *
+     * @param cycle of file
+     * @param file  name
+     */
     default void onAcquired(int cycle, File file) {
 
     }
 
+    /**
+     * Notified asynchronously when a file is released
+     *
+     * @param cycle of file
+     * @param file  name
+     */
     void onReleased(int cycle, File file);
 }

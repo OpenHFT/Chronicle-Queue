@@ -53,7 +53,8 @@ public class WireStorePool extends SimpleCloseable {
         SingleChronicleQueueStore store = this.supplier.acquire(cycle, createIfAbsent);
         if (store != null) {
             if (store != oldStore) {
-                BackgroundResourceReleaser.run(() -> storeFileListener.onAcquired(cycle, store.file()));
+                if (storeFileListener.isActive())
+                    BackgroundResourceReleaser.run(() -> storeFileListener.onAcquired(cycle, store.file()));
                 store.cycle(cycle);
             }
         }
