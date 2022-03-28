@@ -4,7 +4,7 @@ import net.openhft.chronicle.core.Jvm;
 
 import java.io.File;
 
-public enum StoreFIleListeners implements StoreFileListener {
+public enum StoreFileListeners implements StoreFileListener {
     NO_OP {
         @Override
         public void onReleased(int cycle, File file) {

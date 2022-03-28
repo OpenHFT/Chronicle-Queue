@@ -1001,7 +1001,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public StoreFileListener storeFileListener() {
-        return storeFileListener == null ? StoreFIleListeners.DEBUG : storeFileListener;
+        return storeFileListener == null ? StoreFileListeners.DEBUG : storeFileListener;
     }
 
     public SingleChronicleQueueBuilder sourceId(int sourceId) {
