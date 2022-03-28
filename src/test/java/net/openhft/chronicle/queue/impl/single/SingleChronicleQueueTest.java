@@ -3330,11 +3330,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return SingleChronicleQueueBuilder.builder(file, wireType)
                 .rollCycle(RollCycles.TEST4_DAILY)
                 .timeProvider(new SetTimeProvider("2021/11/17T12:34:56").advanceMillis(1000))
-/*                .appenderListener((w, idx) -> {
+                .appenderListener((w, idx) -> {
                     appenderListenerDump.append("idx: ").append(Long.toHexString(idx)).append("\n");
                     w.bytes().readSkip(-4);
                     appenderListenerDump.append(Wires.fromSizePrefixedBlobs(w)).append("\n");
-                })*/
+                })
                 .testBlockSize();
     }
 

@@ -34,8 +34,8 @@ public class AppenderListenerTest {
         }
         IOTools.deleteDirWithFiles(path);
         assertEquals("" +
-                "hello G'Day, addr:4a10000001010c, index: 4a1000000000\n" +
-                "hello Bye-now, addr:4a100000010120, index: 4a1000000001\n", results.toString());
+                "hello G'Day, addr:4a100000010114, index: 4a1000000000\n" +
+                "hello Bye-now, addr:4a100000010128, index: 4a1000000001\n", results.toString());
     }
 
     public interface HelloWorld {
