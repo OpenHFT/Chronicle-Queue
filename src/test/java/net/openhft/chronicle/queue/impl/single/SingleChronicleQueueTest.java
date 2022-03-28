@@ -3588,8 +3588,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return clock;
     }
 
-    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws
-            IOException, InterruptedException {
+    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException, InterruptedException {
         String time = Instant.ofEpochMilli(clock.get()).toString();
 
         final Random random = new Random(0xDEADBEEF);
@@ -3664,7 +3663,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .readOnly(true)
                 .build()) {
             StringBuilder sb = new StringBuilder();
-            try (DocumentContext dc = out.createTailer(named ? "named" : null).readingDocument()) {
+            try (DocumentContext dc = out.createTailer().readingDocument()) {
                 dc.wire().getValueIn().text(sb);
             }
 
