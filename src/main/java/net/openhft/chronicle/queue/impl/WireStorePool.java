@@ -68,7 +68,8 @@ public class WireStorePool extends SimpleCloseable {
 
     public void closeStore(@NotNull SingleChronicleQueueStore store) {
         BackgroundResourceReleaser.release(store);
-        BackgroundResourceReleaser.run(() -> storeFileListener.onReleased(store.cycle(), store.file()));
+        if (storeFileListener.isActive())
+            BackgroundResourceReleaser.run(() -> storeFileListener.onReleased(store.cycle(), store.file()));
     }
 
     /**

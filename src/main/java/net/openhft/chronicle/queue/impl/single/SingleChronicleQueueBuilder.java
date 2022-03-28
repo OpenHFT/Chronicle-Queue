@@ -36,10 +36,7 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.StoreFileListener;
-import net.openhft.chronicle.queue.impl.TableStore;
-import net.openhft.chronicle.queue.impl.WireStoreFactory;
+import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
@@ -1004,12 +1001,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public StoreFileListener storeFileListener() {
-        return storeFileListener == null ?
-                (cycle, file) -> {
-                    if (Jvm.isDebugEnabled(getClass()))
-                        Jvm.debug().on(getClass(), "File released " + file);
-                } : storeFileListener;
-
+        return storeFileListener == null ? StoreFileListeners.DEBUG : storeFileListener;
     }
 
     public SingleChronicleQueueBuilder sourceId(int sourceId) {
