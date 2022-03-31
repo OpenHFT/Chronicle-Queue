@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue.reader;
 
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,10 +28,6 @@ import java.util.function.Consumer;
 public interface Reader {
 
     void execute();
-
-    boolean readOne(@NotNull QueueEntryHandler messageConverter,
-                    @NotNull ExcerptTailer tailer,
-                    @NotNull Consumer<String> messageConsumer);
 
     void stop();
 
