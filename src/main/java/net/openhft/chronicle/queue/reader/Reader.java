@@ -43,7 +43,11 @@ public interface Reader {
 
     Reader withStartIndex(final long index);
 
+    ChronicleReader withContentBasedLimiter(ContentBasedLimiter contentBasedLimiter);
+
     Reader withArg(@NotNull String arg);
+
+    Reader withLimiterArg(@NotNull String limiterArg);
 
     Reader tail();
 
@@ -66,6 +70,8 @@ public interface Reader {
     Reader showMessageHistory(boolean showMessageHistory);
 
     String arg();
+
+    String limiterArg();
 
     Class<?> methodReaderInterface();
 
