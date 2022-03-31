@@ -78,6 +78,8 @@ public class ChronicleReader implements Reader {
     private volatile boolean running = true;
     private TailerDirection tailerDirection = TailerDirection.FORWARD;
     private long matchLimit = 0;
+    private ContentBasedLimiter contentBasedLimiter;
+    private String limiterArg;
 
     static {
         ToolsUtil.warnIfResourceTracing();
@@ -90,6 +92,7 @@ public class ChronicleReader implements Reader {
     private ThreadLocal<ExcerptTailer> tlTailer;
 
     public void execute() {
+        configureContentBasedLimiter();
         long lastObservedTailIndex;
         long highestReachedIndex = 0L;
         boolean isFirstIteration = true;
@@ -114,6 +117,10 @@ public class ChronicleReader implements Reader {
                         lastObservedTailIndex = tailer.index();
 
                         while (!Thread.currentThread().isInterrupted()) {
+                            if (shouldHaltReadingDueToContentBasedLimit(tailer)) {
+                                running = false;
+                                break;
+                            }
 
                             if (!queueEntryReader.read()) {
                                 if (tailInputSource) {
@@ -148,6 +155,36 @@ public class ChronicleReader implements Reader {
             }
         } while (retryLastOperation);
 
+    }
+
+    /**
+     * Configure the content-based limiter if it was specified
+     */
+    private void configureContentBasedLimiter() {
+        if (contentBasedLimiter != null) {
+            contentBasedLimiter.configure(this);
+        }
+    }
+
+    /**
+     * Check if the content-based limit has been reached
+     *
+     * @param tailer The Tailer we're using to read the queue
+     * @return true if we should halt reading, false otherwise
+     */
+    private boolean shouldHaltReadingDueToContentBasedLimit(ExcerptTailer tailer) {
+        if (contentBasedLimiter == null) {
+            return false;
+        }
+        long originalIndex = tailer.index();
+        try (final DocumentContext documentContext = tailer.readingDocument()) {
+            if (documentContext.isPresent()) {
+                return contentBasedLimiter.shouldHaltReading(documentContext);
+            }
+            return false;
+        } finally {
+            tailer.moveToIndex(originalIndex);
+        }
     }
 
     private QueueEntryReader createQueueEntryReader(ExcerptTailer tailer, MessageConsumer messageConsumer) {
@@ -270,8 +307,20 @@ public class ChronicleReader implements Reader {
     }
 
     @Override
+    public ChronicleReader withContentBasedLimiter(ContentBasedLimiter contentBasedLimiter) {
+        this.contentBasedLimiter = contentBasedLimiter;
+        return this;
+    }
+
+    @Override
     public ChronicleReader withArg(String arg) {
         this.arg = arg;
+        return this;
+    }
+
+    @Override
+    public ChronicleReader withLimiterArg(@NotNull String limiterArg) {
+        this.limiterArg = limiterArg;
         return this;
     }
 
@@ -293,6 +342,11 @@ public class ChronicleReader implements Reader {
     @Override
     public String arg() {
         return arg;
+    }
+
+    @Override
+    public String limiterArg() {
+        return limiterArg;
     }
 
     @Override

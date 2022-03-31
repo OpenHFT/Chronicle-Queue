@@ -177,6 +177,8 @@ public class ChronicleReaderMain {
         addOption(options, "k", "reverse", false, "Read the queue in reverse", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
         addOption(options, "x", "max-results", true, "Limit the number of results to output", false);
+        addOption(options, "cbl", "content-based-limiter", true, "Specify a content-based limiter", false);
+        addOption(options, "cblArg", "content-based-limiter-argument", true, "Specify an argument for use by the content-based limiter", false);
         return options;
     }
 }

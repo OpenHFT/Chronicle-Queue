@@ -308,7 +308,8 @@
                         <configuration>
                             <referenceVersion>5.23ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
-                            <binaryCompatibilityPercentageRequired>100.0</binaryCompatibilityPercentageRequired>
+                            <!-- Reduce the API surface of ChronicleReader -->
+                            <binaryCompatibilityPercentageRequired>86.1</binaryCompatibilityPercentageRequired>
                         </configuration>
                     </execution>
                 </executions>
