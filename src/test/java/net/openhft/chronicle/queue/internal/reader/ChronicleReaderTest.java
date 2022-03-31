@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.internal.reader;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
@@ -9,6 +10,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
+import net.openhft.chronicle.queue.reader.ContentBasedLimiter;
+import net.openhft.chronicle.queue.reader.Reader;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.junit.After;
@@ -27,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -452,6 +456,39 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 .collect(Collectors.toList());
         assertEquals(3, matchedMessages.size());
         assertTrue(matchedMessages.stream().allMatch(s -> s.contains("goodbye")));
+    }
+
+    @Test
+    public void shouldStopReadingWhenContentBasedLimitHasBeenReached() {
+        AtomicInteger helloCount = new AtomicInteger();
+        AtomicInteger goodbyeCount = new AtomicInteger();
+        final Say say = msg -> {
+            if ("hello".equals(msg)) {
+                helloCount.incrementAndGet();
+            }
+            if ("goodbye".equals(msg)) {
+                goodbyeCount.incrementAndGet();
+            }
+        };
+        final ContentBasedLimiter cbl = new ContentBasedLimiter() {
+
+            private int limit = -1;
+
+            @Override
+            public boolean shouldHaltReading(DocumentContext dc) {
+                dc.wire().bytes().readSkip(-4); // skip back to the start of the document context (this feels a tad horrid)
+                final MethodReader methodReader = dc.wire().methodReader(say);
+                methodReader.readOne();
+                return helloCount.get() > limit;
+            }
+
+            @Override
+            public void configure(Reader reader) {
+                limit = Integer.parseInt(reader.limiterArg());
+            }
+        };
+        basicReader().withContentBasedLimiter(cbl).withLimiterArg("4").execute();
+        assertEquals(4, capturedOutput.stream().filter(msg -> msg.contains("hello")).count());
     }
 
     private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) {
