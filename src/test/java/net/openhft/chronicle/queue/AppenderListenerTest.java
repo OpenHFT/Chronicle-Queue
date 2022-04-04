@@ -130,7 +130,7 @@ public class AppenderListenerTest {
         String path = OS.getTarget() + "/appenderListenerAggregateCollectionTest";
 
         final AppenderListener.Accumulation<List<String>> appenderListener =
-                AppenderListener.Accumulation.builder(ArrayList::new, String.class)
+                AppenderListener.Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
                         .withAccumulator(
                                 (wire, index) -> {
                                     // Skip this

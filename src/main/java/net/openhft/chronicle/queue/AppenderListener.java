@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.NonNegative;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.internal.appenderlistener.VanillaAppenderListenerAccumulationBuilder;
 import net.openhft.chronicle.wire.TriConsumer;
@@ -49,7 +50,7 @@ public interface AppenderListener {
      * @param wire  representing access to the excerpt that was stored (non-null).
      * @param index in the queue where the except was placed (non-negative)
      */
-    void onExcerpt(@NotNull Wire wire, long index);
+    void onExcerpt(@NotNull Wire wire, @NonNegative long index);
 
     interface Accumulation<T> extends AppenderListener {
 
@@ -147,7 +148,7 @@ public interface AppenderListener {
                  * @param wire         to accumulate (fold)
                  * @param index        to accumulate (fold)
                  */
-                void accumulate(@NotNull A accumulation, @NotNull Wire wire, long index);
+                void accumulate(@NotNull A accumulation, @NotNull Wire wire, @NonNegative long index);
             }
 
             interface Extractor<T> {
@@ -155,11 +156,11 @@ public interface AppenderListener {
                 /**
                  * Extracts a valye of type T from the provided {@code wire} and {@code index}.
                  *
-                 * @param wire         to accumulate (fold)
-                 * @param index        to accumulate (fold)
+                 * @param wire  to accumulate (fold)
+                 * @param index to accumulate (fold)
                  * @return extracted value
                  */
-                T extract(@NotNull Wire wire, long index);
+                T extract(@NotNull Wire wire, @NonNegative long index);
             }
 
         }
@@ -167,7 +168,7 @@ public interface AppenderListener {
         /**
          * Creates and returns a new Builder for Accumulation objects.
          *
-         * @param supplier used to create the underlying accumulation (e.g. a ConcurrentMap).
+         * @param supplier used to create the underlying accumulation (e.g. {@code AtomicReference::new}).
          * @param <T>      type of the underlying accumulation.
          * @return a new builder.
          */
@@ -180,7 +181,9 @@ public interface AppenderListener {
         /**
          * Creates and returns a new Builder for Accumulation objects of type Collection.
          *
-         * @param supplier used to create the underlying accumulation (e.g. a ConcurrentMap).
+         * @param supplier used to create the underlying accumulation (e.g.
+         *                 {@code Collections.synchronizedList(new ArrayList<>()}).
+         * @param <E>      element type
          * @param <T>      type of the underlying accumulation.
          * @return a new builder.
          */
@@ -194,8 +197,10 @@ public interface AppenderListener {
         /**
          * Creates and returns a new Builder for Accumulation objects of type Map.
          *
-         * @param supplier used to create the underlying accumulation (e.g. a ConcurrentMap).
+         * @param supplier used to create the underlying accumulation (e.g. {@code ConcurrentMap::new}).
          * @param <T>      type of the underlying accumulation.
+         * @param <K>      key type
+         * @param <V>      value type
          * @return a new builder.
          */
         @NotNull
