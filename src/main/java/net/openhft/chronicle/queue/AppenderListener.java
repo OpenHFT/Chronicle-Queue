@@ -1,8 +1,17 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.internal.appenderlistener.VanillaAppenderListenerAccumulationBuilder;
+import net.openhft.chronicle.wire.TriConsumer;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 /**
  * A listener interface for receiving events when excerpt
@@ -37,8 +46,166 @@ public interface AppenderListener {
      * <p>
      * No promise is given as to the order in which invocations are made of this method.
      *
-     * @param wire representing access to the excerpt that was stored (non-null).
+     * @param wire  representing access to the excerpt that was stored (non-null).
      * @param index in the queue where the except was placed (non-negative)
      */
     void onExcerpt(@NotNull Wire wire, long index);
+
+    interface Accumulation<T> extends AppenderListener {
+
+        /**
+         * Returns a view of an underlying accumulation.
+         *
+         * @return accumulation view.
+         */
+        @NotNull
+        T accumulation();
+
+        interface Builder<T, A> extends net.openhft.chronicle.core.util.Builder<Accumulation<T>> {
+
+            /**
+             * Sets the Accumulator for this Builder replacing any previous Accumulator.
+             *
+             * @param accumulator to apply on {@link AppenderListener#onExcerpt(Wire, long)} events.
+             * @return this Builder
+             * @throws NullPointerException if the provided {@code accumulator } is {@code null}
+             */
+            @NotNull
+            Builder<T, A> withAccumulator(@NotNull Accumulator<? super A> accumulator);
+
+            /**
+             * Sets the Accumulator for this Builder replacing any previous Accumulator.
+             * <p>
+             * The Accumulator consists of two steps:
+             * 1) The provided {@code extractor is applied} yielding an element of type E.
+             * 2) The element is accepted by the provided {@code accumulator}.
+             *
+             * @param accumulator to apply on {@link AppenderListener#onExcerpt(Wire, long)} events.
+             * @param <E>         element type
+             * @return this Builder
+             * @throws NullPointerException if any of the provided parameters are {@code null}
+             */
+            @NotNull <E> Builder<T, A> withAccumulator(@NotNull Extractor<? extends E> extractor,
+                                                       @NotNull BiConsumer<? super A, ? super E> accumulator);
+
+            /**
+             * Sets the Accumulator for this Builder replacing any previous Accumulator.
+             * <p>
+             * The Accumulator consists of three steps:
+             * 1) The provided {@code keyExtractor is applied} yielding a key of type K.
+             * 2) The provided {@code valueExtractor is applied} yielding a value of type V.
+             * 3) The kay and value are accepted by the provided {@code accumulator}.
+             *
+             * @param accumulator to apply on {@link AppenderListener#onExcerpt(Wire, long)} events.
+             * @param <K>         key type
+             * @param <V>         value type
+             * @return this Builder
+             * @throws NullPointerException if any of the provided parameters are {@code null}
+             */
+            @NotNull <K, V> Builder<T, A> withAccumulator(@NotNull Extractor<? extends K> keyExtractor,
+                                                          @NotNull Extractor<? extends V> valueExtractor,
+                                                          @NotNull TriConsumer<? super A, ? super K, ? super V> accumulator);
+
+            /**
+             * Adds a viewer to this Builder potentially provided a protected view of the underlying accumulation.
+             * <p>
+             * The provided viewer is only called once upon creation of the accumulation so the viewer must be a
+             * true view of an underlying object and <em>not a copy</em>.
+             * <p>
+             * Example of valid viewers are:
+             * <ul>
+             *     <li>{@link Collections#unmodifiableMap(Map)}</li>
+             *     <li>{@link Collections#unmodifiableList(List)} </li>
+             *     <li>{@link Collections#unmodifiableSet(Set)} </li>
+             * </ul>
+             * <p>
+             * Amy number of views can be added to the builder.
+             *
+             * @param viewer to add
+             * @param <T2>   new view type
+             * @return this Builder
+             * @throws NullPointerException if the provided viewer is {@code null}.
+             */
+            @NotNull <T2> Builder<T2, A> addViewer(@NotNull Function<? super T, ? extends T2> viewer);
+
+            /**
+             * {@inheritDoc}
+             *
+             * @return a new Accumulation
+             * @throws IllegalStateException if no Accumulator has been defined.
+             */
+            @Override
+            @NotNull Accumulation<T> build();
+
+            interface Accumulator<A> {
+
+                /**
+                 * Accumulates (folds) the provided {@code wire} and {@code index} into
+                 * the provided {@code accumulation}.
+                 *
+                 * @param accumulation to fold values into
+                 * @param wire         to accumulate (fold)
+                 * @param index        to accumulate (fold)
+                 */
+                void accumulate(@NotNull A accumulation, @NotNull Wire wire, long index);
+            }
+
+            interface Extractor<T> {
+
+                /**
+                 * Extracts a valye of type T from the provided {@code wire} and {@code index}.
+                 *
+                 * @param wire         to accumulate (fold)
+                 * @param index        to accumulate (fold)
+                 * @return extracted value
+                 */
+                T extract(@NotNull Wire wire, long index);
+            }
+
+        }
+
+        /**
+         * Creates and returns a new Builder for Accumulation objects.
+         *
+         * @param supplier used to create the underlying accumulation (e.g. a ConcurrentMap).
+         * @param <T>      type of the underlying accumulation.
+         * @return a new builder.
+         */
+        @NotNull
+        static <T> Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier) {
+            requireNonNull(supplier);
+            return new VanillaAppenderListenerAccumulationBuilder<>(supplier);
+        }
+
+        /**
+         * Creates and returns a new Builder for Accumulation objects of type Collection.
+         *
+         * @param supplier used to create the underlying accumulation (e.g. a ConcurrentMap).
+         * @param <T>      type of the underlying accumulation.
+         * @return a new builder.
+         */
+        @NotNull
+        static <T extends Collection<E>, E> Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier,
+                                                                  @NotNull final Class<? super E> elementType) {
+            requireNonNull(elementType);
+            return builder(supplier);
+        }
+
+        /**
+         * Creates and returns a new Builder for Accumulation objects of type Map.
+         *
+         * @param supplier used to create the underlying accumulation (e.g. a ConcurrentMap).
+         * @param <T>      type of the underlying accumulation.
+         * @return a new builder.
+         */
+        @NotNull
+        static <T extends Map<K, V>, K, V> Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier,
+                                                                 @NotNull final Class<? super K> keyType,
+                                                                 @NotNull final Class<? super V> valueType) {
+            requireNonNull(keyType);
+            requireNonNull(valueType);
+            return builder(supplier);
+        }
+    }
+
 }
