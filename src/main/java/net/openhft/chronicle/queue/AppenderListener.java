@@ -213,8 +213,8 @@ public interface AppenderListener {
                  * @throws NullPointerException if any of the provided parmeters are {@code null}
                  */
                 @NotNull
-                static <E, A> Accumulator<A> of(@NotNull final Class<E> type,
-                                                @NotNull final BiConsumer<? super A, ? super E> downstream) {
+                static <E, A> Accumulator<A> ofType(@NotNull final Class<E> type,
+                                                    @NotNull final BiConsumer<? super A, ? super E> downstream) {
                     requireNonNull(type);
                     requireNonNull(downstream);
                     return (accumulation, wire, index) -> {
@@ -235,10 +235,10 @@ public interface AppenderListener {
                  * @throws NullPointerException if any of the provided parmeters are {@code null}
                  */
                 @NotNull
-                static <E, A, K, V> Accumulator<A> of(@NotNull final Class<E> type,
-                                                      @NotNull final Function<? super E, ? extends K> keyExtractor,
-                                                      @NotNull final Function<? super E, ? extends V> valueExtractor,
-                                                      @NotNull final TriConsumer<? super A, ? super K, ? super V> downstream) {
+                static <E, A, K, V> Accumulator<A> ofType(@NotNull final Class<E> type,
+                                                          @NotNull final Function<? super E, ? extends K> keyExtractor,
+                                                          @NotNull final Function<? super E, ? extends V> valueExtractor,
+                                                          @NotNull final TriConsumer<? super A, ? super K, ? super V> downstream) {
                     requireNonNull(type);
                     requireNonNull(keyExtractor);
                     requireNonNull(valueExtractor);
