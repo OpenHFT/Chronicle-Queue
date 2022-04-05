@@ -9,6 +9,7 @@ import org.junit.Test;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -203,6 +204,48 @@ public class AppenderListenerTest {
         IOTools.deleteDirWithFiles(path);
 
         assertEquals(0x4A1000000001L + 10, appenderListener.accumulation().valuePlusTen());
+    }
+
+
+    @Test
+    public void aggregateMapping() {
+        String path = OS.getTarget() + "/appenderListenerMappingTest";
+
+        final AppenderListener.Accumulation<AppenderListener.Accumulation.Viewer<Long>> appenderListener =
+                AppenderListener.Accumulation.builder(AtomicLong::new)
+                        .withAccumulator(((a, wire, index) -> a.set(index)))
+                        // Only exposes the value of the underlying accumulation
+                        .addMapper(AtomicLong::get)
+                        .build();
+
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
+                .testBlockSize()
+                .appenderListener(appenderListener)
+                .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
+                .build();
+             ExcerptAppender appender = q.acquireAppender()) {
+            final HelloWorld writer = appender.methodWriter(HelloWorld.class);
+            writer.hello("G'Day");
+            writer.hello("Bye-now");
+        }
+        IOTools.deleteDirWithFiles(path);
+
+        assertEquals(0x4A1000000001L, (long) appenderListener.accumulation().view());
+    }
+
+    private static final class Viewer<T, R> {
+
+        T delegate;
+        Function<? super T, ? extends R> mapper;
+
+        public Viewer(T delegate) {
+            this.delegate = delegate;
+        }
+
+        public R map() {
+            return mapper.apply(delegate);
+        }
+
     }
 
 

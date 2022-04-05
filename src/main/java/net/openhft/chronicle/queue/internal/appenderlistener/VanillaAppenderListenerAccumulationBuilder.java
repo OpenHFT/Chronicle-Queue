@@ -64,14 +64,22 @@ public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements A
 
     @NotNull
     @Override
-    public <T2> AppenderListener.Accumulation.Builder<T2, A>
-    addViewer(@NotNull Function<? super T, ? extends T2> viewer) {
+    public <R> AppenderListener.Accumulation.Builder<R, A>
+    addViewer(@NotNull Function<? super T, ? extends R> viewer) {
         requireNonNull(viewer);
-        @SuppressWarnings("unchecked") final VanillaAppenderListenerAccumulationBuilder<T2, A> newType =
-                (VanillaAppenderListenerAccumulationBuilder<T2, A>) this;
+        @SuppressWarnings("unchecked") final VanillaAppenderListenerAccumulationBuilder<R, A> newType =
+                (VanillaAppenderListenerAccumulationBuilder<R, A>) this;
         // There can be several layers of viewers applied
         newType.viewer = this.viewer.andThen(viewer);
         return newType;
+    }
+
+    @NotNull
+    @Override
+    public <R> AppenderListener.Accumulation.Builder<AppenderListener.Accumulation.Viewer<R>, A>
+    addMapper(@NotNull Function<? super T, ? extends R> mapper) {
+        requireNonNull(mapper);
+        return addViewer(t -> new VanillaMapper<>(t, mapper));
     }
 
     @NotNull

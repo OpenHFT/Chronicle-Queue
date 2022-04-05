@@ -8,6 +8,7 @@ import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -108,7 +109,8 @@ public interface AppenderListener {
                                                           @NotNull TriConsumer<? super A, ? super K, ? super V> accumulator);
 
             /**
-             * Adds a viewer to this Builder potentially provided a protected view of the underlying accumulation.
+             * Adds a viewer to this Builder potentially provided a protected view of the underlying accumulation
+             * where the view is <em>applied once</em>.
              * <p>
              * The provided viewer is only called once upon creation of the accumulation so the viewer must be a
              * true view of an underlying object and <em>not a copy</em>.
@@ -123,11 +125,33 @@ public interface AppenderListener {
              * Amy number of views can be added to the builder.
              *
              * @param viewer to add
-             * @param <T2>   new view type
+             * @param <R>    new view type
              * @return this Builder
              * @throws NullPointerException if the provided viewer is {@code null}.
              */
-            @NotNull <T2> Builder<T2, A> addViewer(@NotNull Function<? super T, ? extends T2> viewer);
+            @NotNull <R> Builder<R, A> addViewer(@NotNull Function<? super T, ? extends R> viewer);
+
+            /**
+             * Adds a mapper to this Builder potentially provided a protected view of the underlying accumulation
+             * where the view is <em>applied on every {@link Accumulation#accumulation()} access</em>.
+             * <p>
+             * The provided mapper is called on each access of the aggregation effectively allowing a restricted view
+             * of an underlying object.
+             * <p>
+             * Example of valid viewers are:
+             * <ul>
+             *     <li>{@link AtomicLong#get()}</li>
+             *     <li>{@link Map#get(Object)} </li>
+             * </ul>
+             * <p>
+             * Amy number of mappers can be added to the builder.
+             *
+             * @param mapper to add
+             * @param <R>    new Viewer type
+             * @return this Builder
+             * @throws NullPointerException if the provided mapper is {@code null}.
+             */
+            @NotNull <R> Builder<Viewer<R>, A> addMapper(@NotNull Function<? super T, ? extends R> mapper);
 
             /**
              * {@inheritDoc}
@@ -163,6 +187,10 @@ public interface AppenderListener {
                 T extract(@NotNull Wire wire, @NonNegative long index);
             }
 
+        }
+
+        interface Viewer<T> {
+            T view();
         }
 
         /**
