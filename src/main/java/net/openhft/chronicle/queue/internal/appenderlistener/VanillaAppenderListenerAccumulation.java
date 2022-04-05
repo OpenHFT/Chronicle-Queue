@@ -1,6 +1,8 @@
 package net.openhft.chronicle.queue.internal.appenderlistener;
 
 import net.openhft.chronicle.queue.AppenderListener;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
@@ -37,4 +39,22 @@ final class VanillaAppenderListenerAccumulation<A, T> implements AppenderListene
         return view;
     }
 
+    @Override
+    public long fold(@NotNull ExcerptTailer tailer) {
+        requireNonNull(tailer);
+        long lastIndex = -1;
+        boolean end = false;
+        while (!end) {
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                final Wire wire = dc.wire();
+                if (dc.isPresent() && wire != null) {
+                    lastIndex = dc.index();
+                    onExcerpt(wire, lastIndex);
+                } else {
+                    end = true;
+                }
+            }
+        }
+        return lastIndex;
+    }
 }
