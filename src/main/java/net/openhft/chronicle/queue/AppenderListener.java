@@ -78,7 +78,7 @@ public interface AppenderListener {
          */
         long fold(@NotNull ExcerptTailer tailer);
 
-        interface Builder<T, A> extends net.openhft.chronicle.core.util.Builder<Accumulation<? super T>> {
+        interface Builder<T, A> extends net.openhft.chronicle.core.util.Builder<Accumulation<T>> {
 
             /**
              * Sets the Accumulator for this Builder replacing any previous Accumulator.
