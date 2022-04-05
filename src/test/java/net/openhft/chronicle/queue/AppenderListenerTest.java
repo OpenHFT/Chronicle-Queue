@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
@@ -94,11 +95,11 @@ public class AppenderListenerTest {
         final AppenderListener.Accumulation<Map<String, String>> appenderListener =
                 // Here we use a special static method providing Map key and value types directly
                 AppenderListener.Accumulation.builder(ConcurrentHashMap::new, String.class, String.class)
-                        .withAccumulator(
+                        .withAccumulator(Accumulator.of(
                                 (wire, index) -> wire.readEvent(String.class),
                                 (wire, index) -> wire.getValueIn().text(),
                                 Map::put
-                        )
+                        ))
                         .addViewer(Collections::unmodifiableMap)
                         .build();
 
@@ -134,14 +135,10 @@ public class AppenderListenerTest {
 
         final AppenderListener.Accumulation<List<String>> appenderListener =
                 AppenderListener.Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
-                        .withAccumulator(
-                                (wire, index) -> {
-                                    // Skip this
-                                    wire.readEvent(String.class);
-                                    return wire.getValueIn().text();
-                                },
-                                List::add
-                        )
+                        .withAccumulator(Accumulator.of((wire, index) -> {
+                            wire.readEvent(String.class);
+                            return wire.getValueIn().text();
+                        }, List::add))
                         .addViewer(Collections::unmodifiableList)
                         .build();
 

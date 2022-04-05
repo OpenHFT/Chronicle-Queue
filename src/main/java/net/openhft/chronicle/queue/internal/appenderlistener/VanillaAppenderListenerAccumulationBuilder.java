@@ -1,10 +1,8 @@
 package net.openhft.chronicle.queue.internal.appenderlistener;
 
 import net.openhft.chronicle.queue.AppenderListener;
-import net.openhft.chronicle.wire.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -30,36 +28,6 @@ public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements A
     withAccumulator(@NotNull final Accumulator<? super A> accumulator) {
         this.accumulator = requireNonNull(accumulator);
         return this;
-    }
-
-    @Override
-    public <E> AppenderListener.Accumulation.@NotNull Builder<T, A>
-    withAccumulator(@NotNull final Extractor<? extends E> extractor,
-                    @NotNull final BiConsumer<? super A, ? super E> accumulator) {
-        requireNonNull(extractor);
-        requireNonNull(accumulator);
-
-        return withAccumulator((a, wire, index) -> {
-            final E value = extractor.extract(wire, index);
-            accumulator.accept(a, value);
-        });
-    }
-
-    @NotNull
-    @Override
-    public <K, V> AppenderListener.Accumulation.Builder<T, A>
-    withAccumulator(@NotNull final Extractor<? extends K> keyExtractor,
-                    @NotNull final Extractor<? extends V> valueExtractor,
-                    @NotNull final TriConsumer<? super A, ? super K, ? super V> accumulator) {
-        requireNonNull(keyExtractor);
-        requireNonNull(valueExtractor);
-        requireNonNull(accumulator);
-
-        return withAccumulator(((a, wire, index) -> {
-            final K key = keyExtractor.extract(wire, index);
-            final V value = valueExtractor.extract(wire, index);
-            accumulator.accept(a, key, value);
-        }));
     }
 
     @NotNull

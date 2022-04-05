@@ -78,7 +78,7 @@ public interface AppenderListener {
          */
         long fold(@NotNull ExcerptTailer tailer);
 
-        interface Builder<T, A> extends net.openhft.chronicle.core.util.Builder<Accumulation<T>> {
+        interface Builder<T, A> extends net.openhft.chronicle.core.util.Builder<Accumulation<? super T>> {
 
             /**
              * Sets the Accumulator for this Builder replacing any previous Accumulator.
@@ -89,39 +89,6 @@ public interface AppenderListener {
              */
             @NotNull
             Builder<T, A> withAccumulator(@NotNull Accumulator<? super A> accumulator);
-
-            /**
-             * Sets the Accumulator for this Builder replacing any previous Accumulator.
-             * <p>
-             * The Accumulator consists of two steps:
-             * 1) The provided {@code extractor is applied} yielding an element of type E.
-             * 2) The element is accepted by the provided {@code accumulator}.
-             *
-             * @param accumulator to apply on {@link AppenderListener#onExcerpt(Wire, long)} events.
-             * @param <E>         element type
-             * @return this Builder
-             * @throws NullPointerException if any of the provided parameters are {@code null}
-             */
-            @NotNull <E> Builder<T, A> withAccumulator(@NotNull Extractor<? extends E> extractor,
-                                                       @NotNull BiConsumer<? super A, ? super E> accumulator);
-
-            /**
-             * Sets the Accumulator for this Builder replacing any previous Accumulator.
-             * <p>
-             * The Accumulator consists of three steps:
-             * 1) The provided {@code keyExtractor is applied} yielding a key of type K.
-             * 2) The provided {@code valueExtractor is applied} yielding a value of type V.
-             * 3) The kay and value are accepted by the provided {@code accumulator}.
-             *
-             * @param accumulator to apply on {@link AppenderListener#onExcerpt(Wire, long)} events.
-             * @param <K>         key type
-             * @param <V>         value type
-             * @return this Builder
-             * @throws NullPointerException if any of the provided parameters are {@code null}
-             */
-            @NotNull <K, V> Builder<T, A> withAccumulator(@NotNull Extractor<? extends K> keyExtractor,
-                                                          @NotNull Extractor<? extends V> valueExtractor,
-                                                          @NotNull TriConsumer<? super A, ? super K, ? super V> accumulator);
 
             /**
              * Adds a viewer to this Builder potentially provided a protected view of the underlying accumulation
@@ -177,6 +144,7 @@ public interface AppenderListener {
             @Override
             @NotNull Accumulation<T> build();
 
+            @FunctionalInterface
             interface Accumulator<A> {
 
                 /**
@@ -188,12 +156,108 @@ public interface AppenderListener {
                  * @param index        to accumulate (fold)
                  */
                 void accumulate(@NotNull A accumulation, @NotNull Wire wire, @NonNegative long index);
+
+                /**
+                 * Creates and returns a new Accumulator that will first extract messages of the
+                 * provided {@code type} before the provided {@code downstream} accumulator is applied.
+                 * <p>
+                 *
+                 * @param downstream to apply on {@link AppenderListener#onExcerpt(Wire, long)} events.
+                 * @param <E>        element type
+                 * @return this Builder
+                 * @throws NullPointerException if any of the provided parameters are {@code null}
+                 */
+                @NotNull
+                static <E, A> Accumulator<A> of(@NotNull Extractor<? extends E> extractor,
+                                                @NotNull BiConsumer<? super A, ? super E> downstream) {
+                    requireNonNull(extractor);
+                    requireNonNull(downstream);
+                    return (accumulation, wire, index) -> {
+                        final E value = extractor.extract(wire, index);
+                        downstream.accept(accumulation, value);
+                    };
+                }
+
+                /**
+                 * Creates and returns a new Accumulator that will first extract messages of the
+                 * provided {@code type} before the provided {@code downstream} accumulator is applied.
+                 *
+                 * @param downstream to apply after a value of the provided {@code type} has been extracted
+                 * @param <A>        Underlying accumulator type
+                 * @return a new Accumulator
+                 * @throws NullPointerException if any of the provided parmeters are {@code null}
+                 */
+                @NotNull
+                static <A, K, V> Accumulator<A> of(@NotNull Extractor<? extends K> keyExtractor,
+                                                   @NotNull Extractor<? extends V> valueExtractor,
+                                                   @NotNull TriConsumer<? super A, ? super K, ? super V> downstream) {
+                    requireNonNull(keyExtractor);
+                    requireNonNull(valueExtractor);
+                    requireNonNull(downstream);
+                    return (accumulation, wire, index) -> {
+                        final K key = keyExtractor.extract(wire, index);
+                        final V value = valueExtractor.extract(wire, index);
+                        downstream.accept(accumulation, key, value);
+                    };
+                }
+
+                /**
+                 * Creates and returns a new Accumulator that will first extract messages of the
+                 * provided {@code type} whereafter andbefore the provided {@code downstream} accumulator is applied.
+                 *
+                 * @param type       to extract
+                 * @param downstream to apply after a value of the provided {@code type} has been extracted
+                 * @param <E>        type to extract
+                 * @param <A>        Underlying accumulator type
+                 * @return a new Accumulator
+                 * @throws NullPointerException if any of the provided parmeters are {@code null}
+                 */
+                @NotNull
+                static <E, A> Accumulator<A> of(@NotNull final Class<E> type,
+                                                @NotNull final BiConsumer<? super A, ? super E> downstream) {
+                    requireNonNull(type);
+                    requireNonNull(downstream);
+                    return (accumulation, wire, index) -> {
+                        final E element = wire.getValueIn().object(type);
+                        downstream.accept(accumulation, element);
+                    };
+                }
+
+                /**
+                 * Creates and returns a new Accumulator that will first extract messages of the
+                 * provided {@code type} after which the provided {@code downstream} accumulator is applied.
+                 *
+                 * @param type       to extract
+                 * @param downstream to apply after a value of the provided {@code type} has been extracted
+                 * @param <E>        type to extract
+                 * @param <A>        Underlying accumulator type
+                 * @return a new Accumulator
+                 * @throws NullPointerException if any of the provided parmeters are {@code null}
+                 */
+                @NotNull
+                static <E, A, K, V> Accumulator<A> of(@NotNull final Class<E> type,
+                                                      @NotNull final Function<? super E, ? extends K> keyExtractor,
+                                                      @NotNull final Function<? super E, ? extends V> valueExtractor,
+                                                      @NotNull final TriConsumer<? super A, ? super K, ? super V> downstream) {
+                    requireNonNull(type);
+                    requireNonNull(keyExtractor);
+                    requireNonNull(valueExtractor);
+                    requireNonNull(downstream);
+                    return (accumulation, wire, index) -> {
+                        final E element = wire.getValueIn().object(type);
+                        final K key = keyExtractor.apply(element);
+                        final V value = valueExtractor.apply(element);
+                        downstream.accept(accumulation, key, value);
+                    };
+                }
+
             }
 
+            @FunctionalInterface
             interface Extractor<T> {
 
                 /**
-                 * Extracts a valye of type T from the provided {@code wire} and {@code index}.
+                 * Extracts a value of type T from the provided {@code wire} and {@code index}.
                  *
                  * @param wire  to accumulate (fold)
                  * @param index to accumulate (fold)
@@ -204,8 +268,15 @@ public interface AppenderListener {
 
         }
 
+        @FunctionalInterface
         interface Viewer<T> {
+            /**
+             * Returns the view of this Viewer.
+             *
+             * @return the view
+             */
             T view();
+
         }
 
         /**
@@ -255,5 +326,4 @@ public interface AppenderListener {
             return builder(supplier);
         }
     }
-
 }
