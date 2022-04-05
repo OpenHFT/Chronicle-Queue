@@ -118,8 +118,10 @@ public class AppenderListenerTest {
         expected.put("hello", "Bye-now");
 
         assertEquals(expected, appenderListener.accumulation());
+
+        final Map<String, String> accumulation = appenderListener.accumulation();
         try {
-            appenderListener.accumulation().clear();
+            accumulation.clear();
             fail("Was not unmodifiable");
         } catch (UnsupportedOperationException u) {
             // ignore
@@ -156,8 +158,10 @@ public class AppenderListenerTest {
         IOTools.deleteDirWithFiles(path);
 
         assertEquals(Arrays.asList("G'Day", "Bye-now"), appenderListener.accumulation());
+
+        final List<String> accumulation = appenderListener.accumulation();
         try {
-            appenderListener.accumulation().clear();
+            accumulation.clear();
             fail("Was not unmodifiable");
         } catch (UnsupportedOperationException u) {
             // ignore
