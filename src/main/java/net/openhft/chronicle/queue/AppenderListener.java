@@ -53,6 +53,27 @@ public interface AppenderListener {
      */
     void onExcerpt(@NotNull Wire wire, @NonNegative long index);
 
+    /**
+     * Returns a composed AppenderListener that first accepts excerpts to this AppenderListener,
+     * and then accepts excerpts to the {@code after} AppenderListener.
+     * If execution of either listener throws an exception, it is relayed to
+     * the caller of the composed AppenderListener.
+     * <p>
+     * Care should be taken to only create composed listeners that are performant.
+     *
+     * @param after the AppenderListener to accept excerpts after this AppenderListener
+     * @return a composed AppenderListener
+     * @throws NullPointerException if {@code after} is {@code null }
+     */
+    @NotNull
+    default AppenderListener andThen(@NotNull final AppenderListener after) {
+        requireNonNull(after);
+        return ((wire, index) -> {
+            this.onExcerpt(wire, index);
+            after.onExcerpt(wire, index);
+        });
+    }
+
     interface Accumulation<T> extends AppenderListener {
 
         /**
