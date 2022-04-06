@@ -74,11 +74,17 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalArgumentException.class)
     public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
-        SingleChronicleQueueBuilder b1 = Wires.tupleFor(SingleChronicleQueueBuilder.class, "ChronicleQueueBuilder");
-        SingleChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
+        OneExtendedBuilder b1 = new OneExtendedBuilder();
+        OtherExtendedBuilder b2 = new OtherExtendedBuilder();
         b2.bufferCapacity(98765);
         b1.blockSize(1234567);
         b2.setAllNullFields(b1);
+    }
+
+    static class OneExtendedBuilder extends SingleChronicleQueueBuilder {
+    }
+
+    static class OtherExtendedBuilder extends SingleChronicleQueueBuilder {
     }
 
     @Test
