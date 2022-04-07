@@ -40,7 +40,7 @@ final class VanillaAppenderListenerAccumulation<A, T> implements AppenderListene
     }
 
     @Override
-    public long fold(@NotNull ExcerptTailer tailer) {
+    public long accept(@NotNull ExcerptTailer tailer) {
         requireNonNull(tailer);
         long lastIndex = -1;
         boolean end = false;

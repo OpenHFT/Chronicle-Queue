@@ -85,8 +85,8 @@ public interface AppenderListener {
         T accumulation();
 
         /**
-         * Folds the contents of the provided {@code tailer} and accumulates every consumable
-         * value into this Accumulation returning the last seen index or -1 if no index was seen.
+         * Accepts the input of the provided {@code tailer } and accumulates (folds) the contents of it
+         * into this Accumulation returning the last seen index or -1 if no index was seen.
          * <p>
          * This method can be used to initialise the Accumulation before appending new values.
          * <p>
@@ -97,7 +97,7 @@ public interface AppenderListener {
          * @return the last index seen or -1 if no index was seen
          * @throws NullPointerException if the provided {@code tailer} is {@code null}
          */
-        long fold(@NotNull ExcerptTailer tailer);
+        long accept(@NotNull ExcerptTailer tailer);
 
         interface Builder<T, A> extends net.openhft.chronicle.core.util.Builder<Accumulation<T>> {
 
