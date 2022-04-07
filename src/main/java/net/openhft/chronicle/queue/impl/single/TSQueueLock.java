@@ -101,7 +101,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         long value = lock.getVolatileValue();
         Pauser tlPauser = pauser.get();
         try {
-            while (value!=UNLOCKED) {
+            while (value != UNLOCKED) {
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedRuntimeException("Interrupted");
                 tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
@@ -151,7 +151,7 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
         throwExceptionIfClosed();
         final long tid = Thread.currentThread().getId();
         if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
-            warn().on(getClass(), "Queue lock was locked by another thread, currentID=" + tid + ", lock-tid=" + lock.getVolatileValue()+" so this lock was not removed.");
+            warn().on(getClass(), "Queue lock was locked by another thread, currentID=" + tid + ", lock-tid=" + lock.getVolatileValue() + " so this lock was not removed.");
         }
     }
 
@@ -161,13 +161,13 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     public void quietUnlock() {
         throwExceptionIfClosed();
 
-        if (lockedBy()!=UNLOCKED) {
+        if (lockedBy() != UNLOCKED) {
             final long tid = Thread.currentThread().getId();
             if (!lock.compareAndSwapValue(getLockValueFromTid(tid), UNLOCKED)) {
                 final long value = lock.getVolatileValue();
                 if (value == UNLOCKED)
                     return;
-                warn().on(getClass(), "Queue lock was locked by another thread, current-thread-tid=" + tid + ", lock value=" + value+", this lock was not removed.");
+                warn().on(getClass(), "Queue lock was locked by another thread, current-thread-tid=" + tid + ", lock value=" + value + ", this lock was not removed.");
             }
         }
     }
@@ -175,6 +175,16 @@ public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
     @Override
     public boolean isLocked() {
         return lockedBy() != UNLOCKED;
+    }
+
+    /**
+     * Force unlock if the lock is held by the specified thread ID
+     */
+    public void forceUnlockOnBehalfOfThread(long threadId) {
+        throwExceptionIfClosed();
+        if (isLocked() && !lock.compareAndSwapValue(getLockValueFromTid(threadId), UNLOCKED)) {
+            warn().on(getClass(), "Queue lock was locked by another thread, provided-tid=" + threadId + ", lock-tid=" + lock.getVolatileValue() + " so this lock was not removed.");
+        }
     }
 
     private boolean isLockHeldByCurrentThread(long tid) {

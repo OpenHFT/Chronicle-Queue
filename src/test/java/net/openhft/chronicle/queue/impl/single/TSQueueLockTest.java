@@ -203,6 +203,37 @@ public class TSQueueLockTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void forceUnlockOnBehalfOfThreadDoesNothingWhenNotLocked() {
+        try (TSQueueLock lock = createTestLock()) {
+            lock.forceUnlockOnBehalfOfThread(12345L);
+            assertFalse(lock.isLocked());
+        }
+    }
+
+    @Test
+    public void forceUnlockOnBehalfOfThreadWillSucceedWithMatchingThreadID() throws TimeoutException, InterruptedException {
+        try (TSQueueLock lock = createTestLock()) {
+            Thread t = new Thread(lock::acquireLock);
+            t.start();
+            waitForLockToBecomeLocked(lock);
+            lock.forceUnlockOnBehalfOfThread(t.getId());
+            assertFalse(lock.isLocked());
+            t.join();
+        }
+    }
+
+    @Test
+    public void forceUnlockOnBehalfOfThreadWillFailWhenThreadIDDoesNotMatch() throws TimeoutException {
+        expectException("Queue lock was locked by another thread, provided-tid");
+        try (TSQueueLock lock = createTestLock()) {
+            lock.acquireLock();
+            waitForLockToBecomeLocked(lock);
+            lock.forceUnlockOnBehalfOfThread(Thread.currentThread().getId() + 1);
+            assertTrue(lock.isLocked());
+        }
+    }
+
     private void waitForLockToBecomeLocked(TSQueueLock lock) throws TimeoutException {
         Pauser p = Pauser.balanced();
         while (!lock.isLocked()) {
