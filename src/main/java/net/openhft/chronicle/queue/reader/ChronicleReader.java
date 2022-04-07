@@ -26,7 +26,6 @@ import net.openhft.chronicle.queue.impl.single.BinarySearch;
 import net.openhft.chronicle.queue.impl.single.NotComparableException;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.internal.reader.InternalDummyMethodReaderQueueEntryHandler;
 import net.openhft.chronicle.queue.internal.reader.MessageCountingMessageConsumer;
 import net.openhft.chronicle.queue.internal.reader.PatternFilterMessageConsumer;
 import net.openhft.chronicle.queue.internal.reader.queueentryreaders.CustomPluginQueueEntryReader;
