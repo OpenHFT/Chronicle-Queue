@@ -77,7 +77,9 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
 
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         final long pid = this.lock.getVolatileValue();
-        if (pid==Jvm.getProcessId())
+        // mask off thread (if used)
+        int realPid = (int) pid;
+        if (realPid == PID)
             return true;
         notCurrentProcessConsumer.accept(pid);
         return false;
@@ -97,10 +99,12 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             if (pid == UNLOCKED)
                 return true;
 
-            if (!Jvm.isProcessAlive(pid)) {
+            // mask off thread (if used)
+            int realPid = (int) pid;
+            if (!Jvm.isProcessAlive(realPid)) {
                 if (Jvm.isDebugEnabled(this.getClass()))
                     Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
-                            lockKey, this.path, pid), new StackTrace("Forced unlock"));
+                            lockKey, this.path, realPid), new StackTrace("Forced unlock"));
                 if (lock.compareAndSwapValue(pid, UNLOCKED))
                     return true;
             } else

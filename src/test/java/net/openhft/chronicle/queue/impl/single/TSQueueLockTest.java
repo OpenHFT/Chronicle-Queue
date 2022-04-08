@@ -6,13 +6,12 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.common.ProcessRunner;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
-import net.openhft.chronicle.testframework.process.ProcessRunner;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.Threads;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -92,36 +91,6 @@ public class TSQueueLockTest extends QueueTestCommon {
                     .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TSQueueLock.class && ek.message.startsWith("Forced unlock")));
             expectException("Unlocking forcibly");
             expectException("Forced unlock");
-        }
-    }
-
-    @Test(timeout = 5_000, expected = UnrecoverableTimeoutException.class)
-    public void lockWillThrowExceptionAfterTimeoutWhenDontRecoverLockTimeoutIsTrue() throws InterruptedException {
-        expectException("queue.dont.recover.lock.timeout property is deprecated and will be removed");
-        System.setProperty("queue.dont.recover.lock.timeout", "true");
-        try (final TSQueueLock testLock = createTestLock(tableStore, 50)) {
-            Thread t = new Thread(testLock::acquireLock);
-            t.start();
-            t.join();
-            testLock.acquireLock();
-            fail("Should have thrown trying to lock()");
-        } finally {
-            System.clearProperty("queue.dont.recover.lock.timeout");
-        }
-    }
-
-    @Test(timeout = 5_000, expected = UnrecoverableTimeoutException.class)
-    public void lockWillThrowExceptionAfterTimeoutWhenOnlyUnlockIfProcessDeadIsTrue() throws InterruptedException {
-        System.setProperty("queue.force.unlock.mode", "LOCKING_PROCESS_DEAD");
-        expectException("Couldn't acquire lock after");
-        try (final TSQueueLock testLock = createTestLock(tableStore, 50)) {
-            Thread t = new Thread(testLock::acquireLock);
-            t.start();
-            t.join();
-            testLock.acquireLock();
-            fail("Should have thrown trying to lock()");
-        } finally {
-            System.clearProperty("queue.force.unlock.mode");
         }
     }
 
