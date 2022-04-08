@@ -205,7 +205,7 @@ public interface AppenderListener {
                     };
                 }
 
-                /**
+/*                *//**
                  * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
                  * are the result of applying the provided extractors to the input messages.
                  * <p>
@@ -222,7 +222,7 @@ public interface AppenderListener {
                  * @param <V>            value type
                  * @return a new Accumulator
                  * @throws NullPointerException if any of the provided parmeters are {@code null}
-                 */
+                 *//*
                 @NotNull
                 @Deprecated
                 static <A extends Map<K, V>, K, V>
@@ -240,7 +240,7 @@ public interface AppenderListener {
                                 valueExtractor.extract(wire, index),
                                 mergeFunction);
                     };
-                }
+                }*/
 
                 /**
                  * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
