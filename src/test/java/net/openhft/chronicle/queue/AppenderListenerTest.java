@@ -4,14 +4,13 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Extractor;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
@@ -137,7 +136,7 @@ public class AppenderListenerTest {
 
         final AppenderListener.Accumulation<List<String>> appenderListener =
                 AppenderListener.Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
-                        .withAccumulator(Accumulator.reducing(Extractor.ofMethod(HelloWorld.class, String.class, HelloWorld::hello), List::add))
+                        .withAccumulator(Accumulator.reducing(ExcerptExtractor.ofMethod(HelloWorld.class, String.class, HelloWorld::hello), List::add))
                         .addViewer(Collections::unmodifiableList)
                         .build();
 

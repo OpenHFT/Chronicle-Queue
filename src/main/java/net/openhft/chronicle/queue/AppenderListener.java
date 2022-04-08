@@ -69,7 +69,10 @@ public interface AppenderListener {
     default AppenderListener andThen(@NotNull final AppenderListener after) {
         requireNonNull(after);
         return ((wire, index) -> {
+            final long readPosition = wire.bytes().readPosition();
             this.onExcerpt(wire, index);
+            // Rewind the wire to allow replaying of messages
+            wire.bytes().readPosition(readPosition);
             after.onExcerpt(wire, index);
         });
     }
@@ -190,7 +193,7 @@ public interface AppenderListener {
                  */
                 @NotNull
                 static <A, E>
-                Accumulator<A> reducing(@NotNull Extractor<? extends E> extractor,
+                Accumulator<A> reducing(@NotNull ExcerptExtractor<? extends E> extractor,
                                         @NotNull BiConsumer<? super A, ? super E> downstream) {
                     requireNonNull(extractor);
                     requireNonNull(downstream);
@@ -223,12 +226,15 @@ public interface AppenderListener {
                 @NotNull
                 @Deprecated
                 static <A extends Map<K, V>, K, V>
-                Accumulator<A> mapping(@NotNull final Extractor<? extends K> keyExtractor,
-                                       @NotNull final Extractor<? extends V> valueExtractor,
+                Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends K> keyExtractor,
+                                       @NotNull final ExcerptExtractor<? extends V> valueExtractor,
                                        @NotNull final BinaryOperator<V> mergeFunction) {
                     requireNonNull(keyExtractor);
                     requireNonNull(valueExtractor);
                     requireNonNull(mergeFunction);
+
+                    // Todo: Create a wrapper method around null handling of keyExtractor or otherwise handle it
+
                     return (accumulation, wire, index) -> {
                         accumulation.merge(keyExtractor.extract(wire, index),
                                 valueExtractor.extract(wire, index),
@@ -256,10 +262,11 @@ public interface AppenderListener {
                  */
                 @NotNull
                 static <A extends Map<K, V>, E, K, V>
-                Accumulator<A> mapping(@NotNull Extractor<? extends E> extractor,
+                Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends E> extractor,
                                        @NotNull final Function<? super E, ? extends K> keyExtractor,
                                        @NotNull final Function<? super E, ? extends V> valueExtractor,
                                        @NotNull final BinaryOperator<V> mergeFunction) {
+                    requireNonNull(extractor);
                     requireNonNull(keyExtractor);
                     requireNonNull(valueExtractor);
                     requireNonNull(mergeFunction);
@@ -273,130 +280,37 @@ public interface AppenderListener {
                     };
                 }
 
+                /**
+                 * Returns a merger that will replace an existing value with the latest value.
+                 *
+                 * @param <V> value type
+                 * @return a merger that will replace values
+                 */
                 static <V> BinaryOperator<V> replacingMerger() {
                     return (u, v) -> v;
                 }
 
+                /**
+                 * Returns a merger that will retain an existing value and discard the latest value.
+                 *
+                 * @param <V> value type
+                 * @return a merger that will retain values
+                 */
                 static <V> BinaryOperator<V> retainingMerger() {
                     return (u, v) -> u;
                 }
 
-                static <T> BinaryOperator<T> throwingMerger() {
+                /**
+                 * Returns a merger that will throw an Exception if duplicate keys are detected.
+                 *
+                 * @param <V> value type
+                 * @return a merger that will throw an Exception if duplicate keys are detected
+                 */
+                static <V> BinaryOperator<V> throwingMerger() {
                     return (u, v) -> {
                         throw new IllegalStateException(String.format("Duplicate key for value %s", u));
                     };
                 }
-
-                /*
-                 */
-// /**
-// * Creates and returns a new Accumulator that will first extract messages of the
-// * provided {@code type} where after the provided {@code downstream} accumulator is applied.
-// *
-// * @param type       to extract
-// * @param downstream to apply after a value of the provided {@code type} has been extracted
-// * @param <E>        type to extract
-// * @param <A>        Underlying accumulator type
-// * @return a new Accumulator
-                // * @throws NullPointerException if any of the provided parmeters are {@code null}
-// *
-// *
-/*
-
-                @NotNull
-                static <E, A>
-                Accumulator<A> reducingType(@NotNull final Class<E> type,
-                                            @NotNull final BiConsumer<? super A, ? super E> downstream) {
-                    requireNonNull(type);
-                    requireNonNull(downstream);
-                    return (accumulation, wire, index) -> {
-                        final E element = wire.getValueIn().object(type);
-                        if (element != null) {
-                            downstream.accept(accumulation, element);
-                        }
-                    };
-                }
-*/
-
-
-                /*
-
-                 */
-
-// /**
-//                 * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
-//                 * are the result of first extracting elements of the provided {@code tyoe } and then applying
-//                 * the provided extractors to the input elements.
-//                 * <p>
-//                 * If the mapped keys contains duplicates (according to Object.equals(Object)), the
-//                 * value mapping function is applied to each equal element, and the results are merged using
-//                 * the provided {@code mergeFunction}.
-//                 *
-//                 * @param type           of elements in the queue
-                //                * @param keyExtractor   a mapping function to produce keys.
-//                 * @param valueExtractor a mapping function to produce values.
-                //                * @param mergeFunction  a merge function, used to resolve collisions between values associated with the same key,
-                //               *                       as supplied to Map.merge(Object, Object, BiFunction)
-                //               * @param <E>            element type
-                //               * @param <A>            Underlying accumulator type
-                //              * @param <K>            key type
-                //              * @param <V>            value type
-                //             * @return a new Accumulator
-                //            * @throws NullPointerException if any of the provided parmeters are {@code null}
-                //           */
-
-                /*
-
-                @NotNull
-                static <E, A extends Map<K, V>, K, V>
-                Accumulator<A> mappingType(@NotNull final Class<E> type,
-                                           @NotNull final Function<? super E, ? extends K> keyExtractor,
-                                           @NotNull final Function<? super E, ? extends V> valueExtractor,
-                                           @NotNull final BinaryOperator<V> mergeFunction) {
-                    requireNonNull(type);
-                    requireNonNull(keyExtractor);
-                    requireNonNull(valueExtractor);
-                    requireNonNull(mergeFunction);
-                    return (accumulation, wire, index) -> {
-                        final E element = wire.getValueIn().object(type);
-                        if (element != null) {
-                            accumulation.merge(keyExtractor.apply(element),
-                                    valueExtractor.apply(element),
-                                    mergeFunction);
-                        }
-                    };
-                }
-*/
-
-
-                // If not method ref then unspecified behaviour
-
-/*                @NotNull
-                static <I, A, M>
-                Accumulator<A> reducingMethod(@NotNull final Class<I> type,
-                                              @NotNull final BiConsumer<? super I, ? super M> methodReference,
-                                              @NotNull final BiConsumer<? super A, ? super M> downstream) {
-                    requireNonNull(type);
-                    requireNonNull(methodReference);
-                    requireNonNull(downstream);
-
-                    return AccumulatorUtil.reducingMethod(type, methodReference, downstream);
-                }
-
-                @NotNull
-                static <I, A extends Map<K, V>, E, K, V>
-                Accumulator<A> mappingMethod(@NotNull final Class<I> type,
-                                             @NotNull final BiConsumer<? super I, ? super E> methodReference,
-                                             @NotNull final Function<? super E, ? extends K> keyExtractor,
-                                             @NotNull final Function<? super E, ? extends V> valueExtractor,
-                                             @NotNull final BinaryOperator<V> mergeFunction) {
-                    requireNonNull(type);
-                    requireNonNull(methodReference);
-                    requireNonNull(keyExtractor);
-                    requireNonNull(valueExtractor);
-                    requireNonNull(mergeFunction);
-                    return AccumulatorUtil.mappingMethod(type, methodReference, keyExtractor, valueExtractor, mergeFunction);
-                }*/
 
                 /**
                  * Creates and returns a new long viewer that is guaranteed to operate with no auto-boxing.
@@ -413,7 +327,7 @@ public interface AppenderListener {
             }
 
             @FunctionalInterface
-            interface Extractor<T> {
+            interface ExcerptExtractor<T> {
 
                 /**
                  * Extracts a value of type T from the provided {@code wire} and {@code index} or else {@code null}
@@ -429,30 +343,95 @@ public interface AppenderListener {
                 @Nullable
                 T extract(@NotNull Wire wire, @NonNegative long index);
 
-                static <E> Extractor<E> ofType(@NotNull final Class<E> type) {
+                /**
+                 * Returns an ExcerptExtractor that will extract elements of the provided
+                 * {@code type}.
+                 *
+                 * @param type of elements to extract
+                 * @param <E>  element type
+                 * @return an ExcerptExtractor of the provided {@code type}
+                 * @throws NullPointerException if the provided {@code type} is {@code null}
+                 */
+                static <E> ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
                     requireNonNull(type);
                     return (wire, index) -> wire
                             .getValueIn()
                             .object(type);
                 }
 
-                // If not method ref then unspecified behaviour
-
-                static <I, E> Extractor<E> ofMethod(@NotNull final Class<I> interfaceType,
-                                                    @NotNull final Class<E> messageType, // This type is needed for type inference
-                                                    @NotNull final BiConsumer<? super I, ? super E> methodReference) {
+                /**
+                 * Returns an ExcerptExtractor that will extract elements of the provided
+                 * {@code messageType} that was previously written using a method writer via invocations
+                 * of the provided {@code methodReference}.
+                 * <p>
+                 * The provided {@code methodReference} must be a true method reference (e.g. {@code Greeting:message})
+                 * or a corresponding lambda expression
+                 * (e.g. {@code (Greeting greeting, String msg) -> greeting.message(m))} ) or else the
+                 * result is undefined.
+                 *
+                 * @param interfaceType   interface that has at least one method that takes a single
+                 *                        argument parameter of type E
+                 * @param messageType     message type to pass to the method reference
+                 * @param methodReference connecting the interface type to a method that takes a single
+                 *                        argument parameter of type E
+                 * @param <I>             interface type
+                 * @param <E>             message type
+                 * @return an ExcerptExtractor that will extract elements of the provided {@code messageType}
+                 */
+                static <I, E> ExcerptExtractor<E> ofMethod(@NotNull final Class<I> interfaceType,
+                                                           @NotNull final Class<E> messageType, // This type is needed for type inference
+                                                           @NotNull final BiConsumer<? super I, ? super E> methodReference) {
                     requireNonNull(interfaceType);
                     requireNonNull(messageType);
                     requireNonNull(methodReference);
                     return AccumulatorUtil.ofMethod(interfaceType, methodReference);
                 }
 
-                default <R> Extractor<R> map(@NotNull final Function<? super T, ? extends R> mapper) {
+                /**
+                 * Creates and returns a new ExcerptExtractor consisting of the results (of type R) of applying the provided
+                 * {@code mapper } to the elements of this ExcerptExtractor.
+                 * <p>
+                 * Values mapped to {@code null} are removed.
+                 *
+                 * @param mapper to apply
+                 * @param <R>    type to map to
+                 * @return a new mapped ExcerptExtractor
+                 * @throws NullPointerException if the provided {@code mapper} is {@code null}
+                 */
+                default <R> ExcerptExtractor<R> map(@NotNull final Function<? super T, ? extends R> mapper) {
                     requireNonNull(mapper);
                     return (wire, index) -> mapper.apply(
                             extract(wire, index)
                     );
                 }
+
+                /**
+                 * Returns a ExcerptExtractor consisting of the elements of this ExcerptExtractor that match
+                 * the provided {@code predicate}.
+                 *
+                 * @param predicate to apply to each element to determine if it
+                 *                  should be included
+                 * @return a ExcerptExtractor consisting of the elements of this ExcerptExtractor that match
+                 * @throws NullPointerException if the provided {@code predicate} is {@code null}
+                 */
+                default ExcerptExtractor<T> filter(@NotNull final Predicate<? super T> predicate) {
+                    requireNonNull(predicate);
+                    return (wire, index) -> {
+                        final T value = extract(wire, index);
+                        if (value == null) {
+                            // The value is already filtered so just propagate the lack of a value
+                            return null;
+                        }
+                        return predicate.test(value)
+                                ? value
+                                : null;
+
+                    };
+                }
+
+                // skip
+
+                // peek
 
             }
 
@@ -475,6 +454,7 @@ public interface AppenderListener {
          * @param supplier used to create the underlying accumulation (e.g. {@code AtomicReference::new}).
          * @param <T>      type of the underlying accumulation.
          * @return a new builder.
+         * @throws NullPointerException if the provided {@code supplier} is {@code null}
          */
         @NotNull
         static <T> Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier) {
@@ -490,10 +470,12 @@ public interface AppenderListener {
          * @param <E>      element type
          * @param <T>      type of the underlying accumulation.
          * @return a new builder.
+         * @throws NullPointerException if any of the provided parameters are {@code null}
          */
         @NotNull
         static <T extends Collection<E>, E> Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier,
                                                                   @NotNull final Class<? super E> elementType) {
+            requireNonNull(supplier);
             requireNonNull(elementType);
             return builder(supplier);
         }
@@ -506,11 +488,13 @@ public interface AppenderListener {
          * @param <K>      key type
          * @param <V>      value type
          * @return a new builder.
+         * @throws NullPointerException if any of the provided parameters are {@code null}
          */
         @NotNull
         static <T extends Map<K, V>, K, V> Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier,
                                                                  @NotNull final Class<? super K> keyType,
                                                                  @NotNull final Class<? super V> valueType) {
+            requireNonNull(supplier);
             requireNonNull(keyType);
             requireNonNull(valueType);
             return builder(supplier);

@@ -21,9 +21,9 @@ import static net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.
 import static net.openhft.chronicle.queue.AppenderListener.Accumulation.builder;
 import static org.junit.Assert.assertEquals;
 
-public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
+public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
 
-    private static final String Q_NAME = LastMarketDataPerSymbolTest.class.getSimpleName();
+    private static final String Q_NAME = MinMaxLastMarketDataPerSymbolTest.class.getSimpleName();
 
     private static final List<MarketData> MARKET_DATA_SET = Arrays.asList(
             new MarketData("MSFT", 10, 11, 9),
@@ -45,17 +45,38 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     @Test
     public void lastMarketDataPerSymbolCustom() {
 
-        Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
-                .withAccumulator(Accumulator.mapping(ExcerptExtractor.ofType(MarketData.class), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
-                //.withAccumulator(Accumulator.mappingType(MarketData.class, MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
+        // This first Accumulation will keep track of the min and max value for all symbols
+        Accumulation<MinMax> globalListener = builder(MinMax::new)
+                .withAccumulator(
+                        Accumulator.reducing(
+                                ExcerptExtractor.ofType(MarketData.class),
+                                MinMax::merge)
+                )
+                .build();
+
+
+        // This second Accumulation will track min and max value for each symbol individually
+        Accumulation<Map<String, MinMax>> listener = builder(ConcurrentHashMap::new, String.class, MinMax.class)
+                .withAccumulator(
+                        Accumulator.mapping(ExcerptExtractor.ofType(MarketData.class),
+                                MarketData::symbol,
+                                MinMax::new,
+                                MinMax::merge
+                        )
+                )
                 .addViewer(Collections::unmodifiableMap)
                 .build();
 
-        writeToQueue(listener);
 
-        final Map<String, MarketData> expected = MARKET_DATA_SET.stream()
-                .collect(Collectors.toMap(MarketData::symbol, Function.identity(), (a, b) -> b));
+        writeToQueue(globalListener.andThen(listener));
 
+        final MinMax expectedGlobal = MARKET_DATA_SET.stream()
+                .reduce(new MinMax(), MinMax::merge, MinMax::merge);
+
+        final Map<String, MinMax> expected = MARKET_DATA_SET.stream()
+                .collect(Collectors.toMap(MarketData::symbol, MinMax::new, MinMax::merge));
+
+        assertEquals(expectedGlobal, globalListener.accumulation());
         assertEquals(expected, listener.accumulation());
     }
 

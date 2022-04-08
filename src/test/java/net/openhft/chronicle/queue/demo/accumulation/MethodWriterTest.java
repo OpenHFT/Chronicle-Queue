@@ -5,7 +5,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.AppenderListener;
 import net.openhft.chronicle.queue.AppenderListener.Accumulation;
 import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Extractor;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -47,7 +47,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     public void lastSeen() {
         Accumulation<AtomicReference<MarketData>> listener = Accumulation.builder(AtomicReference<MarketData>::new)
                 .withAccumulator(
-                        Accumulator.reducing(Extractor.ofMethod(ServiceOut.class, MarketData.class, ServiceOut::marketData),
+                        Accumulator.reducing(ExcerptExtractor.ofMethod(ServiceOut.class, MarketData.class, ServiceOut::marketData),
                                 AtomicReference::set
                         )
                 )
@@ -66,7 +66,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
 
         Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
                 .withAccumulator(
-                        Accumulator.mapping(Extractor.ofMethod(ServiceOut.class, MarketData.class, ServiceOut::marketData),
+                        Accumulator.mapping(ExcerptExtractor.ofMethod(ServiceOut.class, MarketData.class, ServiceOut::marketData),
                                 MarketData::symbol,
                                 Function.identity(),
                                 Accumulator.replacingMerger())

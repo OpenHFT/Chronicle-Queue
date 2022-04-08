@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.annotation.NonNegative;
 import net.openhft.chronicle.queue.AppenderListener.Accumulation;
 import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Extractor;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
@@ -51,7 +50,7 @@ public final class Accumulations {
                 .build();
     }
 
-    public static <E> Accumulation<Set<E>> toSet(@NotNull Extractor<? extends E> extractor) {
+    public static <E> Accumulation<Set<E>> toSet(@NotNull AppenderListener.Accumulation.Builder.ExcerptExtractor<? extends E> extractor) {
         return Accumulation.<Set<E>>builder(() -> Collections.newSetFromMap(new ConcurrentHashMap<>()))
                 .withAccumulator((accumulation, wire, index) -> {
                     final E value = extractor.extract(wire, index);
@@ -63,7 +62,7 @@ public final class Accumulations {
                 .build();
     }
 
-    public static <E> Accumulation<List<E>> toList(@NotNull Extractor<? extends E> extractor) {
+    public static <E> Accumulation<List<E>> toList(@NotNull AppenderListener.Accumulation.Builder.ExcerptExtractor<? extends E> extractor) {
         return Accumulation.<List<E>>builder(() -> Collections.synchronizedList(new ArrayList<>()))
                 .withAccumulator((accumulation, wire, index) -> {
                     final E value = extractor.extract(wire, index);

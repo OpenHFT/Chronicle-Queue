@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue.internal.appenderlistener;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Extractor;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Proxy;
@@ -96,8 +96,8 @@ public final class AccumulatorUtil {
 */
 
 
-    public static <I, E> Extractor<E> ofMethod(@NotNull final Class<I> type,
-                                        @NotNull final BiConsumer<? super I, ? super E> methodReference) {
+    public static <I, E> ExcerptExtractor<E> ofMethod(@NotNull final Class<I> type,
+                                                      @NotNull final BiConsumer<? super I, ? super E> methodReference) {
         final MethodNameAndMessageType<E> info = methodOf(type, methodReference);
         final String expectedEventName = info.name();
         final Class<E> elementType = info.messageType();
