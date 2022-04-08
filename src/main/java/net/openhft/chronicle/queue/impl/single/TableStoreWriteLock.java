@@ -33,7 +33,7 @@ import java.util.function.Supplier;
 import static net.openhft.chronicle.core.Jvm.warn;
 
 /**
- * Implements {@link WriteLock) using memory access primitives - see {@link AbstractTSQueueLock}.
+ * Implements {@link WriteLock} using memory access primitives - see {@link AbstractTSQueueLock}.
  * <p>
  * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
  * for a timed-out lock to be overridden.
