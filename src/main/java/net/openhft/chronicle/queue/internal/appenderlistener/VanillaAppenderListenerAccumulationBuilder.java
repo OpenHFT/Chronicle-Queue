@@ -44,8 +44,8 @@ public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements A
 
     @NotNull
     @Override
-    public <R> AppenderListener.Accumulation.Builder<AppenderListener.Accumulation.Viewer<R>, A>
-    addMapper(@NotNull Function<? super T, ? extends R> mapper) {
+    public <R> AppenderListener.Accumulation.Builder<AppenderListener.Accumulation.MapperTo<R>, A>
+    withMapper(@NotNull Function<? super T, ? extends R> mapper) {
         requireNonNull(mapper);
         return addViewer(t -> new VanillaMapper<>(t, mapper));
     }

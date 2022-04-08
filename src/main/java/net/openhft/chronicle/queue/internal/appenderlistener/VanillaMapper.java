@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
 
-final class VanillaMapper<T, R> implements AppenderListener.Accumulation.Viewer<R> {
+final class VanillaMapper<T, R> implements AppenderListener.Accumulation.MapperTo<R> {
 
     private final T delegate;
     private final Function<? super T, ? extends R> mapper;
@@ -17,7 +17,7 @@ final class VanillaMapper<T, R> implements AppenderListener.Accumulation.Viewer<
     }
 
     @Override
-    public R view() {
+    public R map() {
         return mapper.apply(delegate);
     }
 

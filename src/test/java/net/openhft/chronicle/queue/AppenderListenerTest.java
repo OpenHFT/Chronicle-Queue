@@ -4,12 +4,14 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Extractor;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
@@ -95,10 +97,10 @@ public class AppenderListenerTest {
         final AppenderListener.Accumulation<Map<String, String>> appenderListener =
                 // Here we use a special static method providing Map key and value types directly
                 AppenderListener.Accumulation.builder(ConcurrentHashMap::new, String.class, String.class)
-                        .withAccumulator(Accumulator.of(
+                        .withAccumulator(Accumulator.mapping(
                                 (wire, index) -> wire.readEvent(String.class),
                                 (wire, index) -> wire.getValueIn().text(),
-                                Map::put
+                                Accumulator.replacingMerger()
                         ))
                         .addViewer(Collections::unmodifiableMap)
                         .build();
@@ -130,15 +132,12 @@ public class AppenderListenerTest {
     }
 
     @Test
-    public void aggregateCollection() {
+    public void aggregateListCustom() {
         String path = OS.getTarget() + "/appenderListenerAggregateCollectionTest";
 
         final AppenderListener.Accumulation<List<String>> appenderListener =
                 AppenderListener.Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
-                        .withAccumulator(Accumulator.of((wire, index) -> {
-                            wire.readEvent(String.class);
-                            return wire.getValueIn().text();
-                        }, List::add))
+                        .withAccumulator(Accumulator.reducing(Extractor.ofMethod(HelloWorld.class, String.class, HelloWorld::hello), List::add))
                         .addViewer(Collections::unmodifiableList)
                         .build();
 
@@ -212,11 +211,11 @@ public class AppenderListenerTest {
     public void aggregateMapping() {
         String path = OS.getTarget() + "/appenderListenerMappingTest";
 
-        final AppenderListener.Accumulation<AppenderListener.Accumulation.Viewer<Long>> appenderListener =
+        final AppenderListener.Accumulation<AppenderListener.Accumulation.MapperTo<Long>> appenderListener =
                 AppenderListener.Accumulation.builder(AtomicLong::new)
                         .withAccumulator(((a, wire, index) -> a.set(index)))
                         // Only exposes the value of the underlying accumulation
-                        .addMapper(AtomicLong::get)
+                        .withMapper(AtomicLong::get)
                         .build();
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
@@ -231,7 +230,7 @@ public class AppenderListenerTest {
         }
         IOTools.deleteDirWithFiles(path);
 
-        assertEquals(0x4A1000000001L, (long) appenderListener.accumulation().view());
+        assertEquals(0x4A1000000001L, (long) appenderListener.accumulation().map());
     }
 
     private static final class Viewer<T, R> {
