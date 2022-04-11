@@ -38,9 +38,9 @@ public final class Accumulations {
 
         return Accumulation.builder(() -> new LongAccumulator(accumulator, identity))
                 .withAccumulator((accumulation, wire, index) -> {
-                    final long value = longExtractor.apply(wire, index);
+                    final long value = longExtractor.extractAsLong(wire, index);
                     if (value != Long.MIN_VALUE) {
-                        accumulation.accumulate(longExtractor.apply(wire, index));
+                        accumulation.accumulate(longExtractor.extractAsLong(wire, index));
                     }
                 })
                 .addViewer(longViewer(LongAccumulator::get))
@@ -99,7 +99,7 @@ public final class Accumulations {
          * @param index to use
          * @return extracted value or {@code null}
          */
-        long apply(@NotNull Wire wire, @NonNegative long index);
+        long extractAsLong(@NotNull Wire wire, @NonNegative long index);
     }
 
     public static final class LongViewer<T> implements LongSupplier {
