@@ -304,12 +304,12 @@ public interface AppenderListener {
                  * Extracts a value of type T from the provided {@code wire} and {@code index} or else {@code null}
                  * if no value can be extracted.
                  * <p>
-                 * Null may be returned if the queue was written with a method writer and there are messages in the
+                 * {@code null} may be returned if the queue was written with a method writer and there are messages in the
                  * queue but of another type.
                  *
-                 * @param wire  to accumulate (fold)
-                 * @param index to accumulate (fold)
-                 * @return extracted value
+                 * @param wire  to use
+                 * @param index to use
+                 * @return extracted value or {@code null}
                  */
                 @Nullable
                 T extract(@NotNull Wire wire, @NonNegative long index);
