@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.demo.accumulation;
+package net.openhft.chronicle.queue.demo.streaming;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
 import static org.junit.Assert.assertEquals;
 

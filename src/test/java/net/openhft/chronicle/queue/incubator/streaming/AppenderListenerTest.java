@@ -7,7 +7,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
 import org.junit.Test;
 
 import java.util.*;

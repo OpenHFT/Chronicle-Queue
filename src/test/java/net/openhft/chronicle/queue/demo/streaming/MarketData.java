@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.demo.accumulation;
+package net.openhft.chronicle.queue.demo.streaming;
 
 import net.openhft.chronicle.wire.Base85LongConverter;
 import net.openhft.chronicle.wire.LongConversion;

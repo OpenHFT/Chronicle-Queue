@@ -1,8 +1,8 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
@@ -20,12 +20,12 @@ public final class StreamUtil {
     public static final class ExcerptTailerIterator<T> implements Iterator<T> {
 
         private final ExcerptTailer tailer;
-        private final Accumulation.Builder.ExcerptExtractor<T> extractor;
+        private final ExcerptExtractor<T> extractor;
 
         private T next;
 
         public ExcerptTailerIterator(@NotNull final ExcerptTailer tailer,
-                                     @NotNull final Accumulation.Builder.ExcerptExtractor<T> extractor) {
+                                     @NotNull final ExcerptExtractor<T> extractor) {
             this.tailer = tailer;
             this.extractor = extractor;
         }
@@ -70,12 +70,12 @@ public final class StreamUtil {
     public static final class ExcerptTailerIteratorOfLong implements PrimitiveIterator.OfLong {
 
         private final ExcerptTailer tailer;
-        private final Accumulations.ToLongExcerptExtractor extractor;
+        private final ToLongExcerptExtractor extractor;
 
         private long next = Long.MIN_VALUE;
 
         public ExcerptTailerIteratorOfLong(@NotNull final ExcerptTailer tailer,
-                                           @NotNull final Accumulations.ToLongExcerptExtractor extractor) {
+                                           @NotNull final ToLongExcerptExtractor extractor) {
             this.tailer = tailer;
             this.extractor = extractor;
         }

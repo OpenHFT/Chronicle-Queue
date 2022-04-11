@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.demo.accumulation;
+package net.openhft.chronicle.queue.demo.streaming;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -9,7 +9,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

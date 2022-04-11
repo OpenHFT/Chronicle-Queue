@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.demo.accumulation;
+package net.openhft.chronicle.queue.demo.streaming;
 
 import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
@@ -13,8 +13,8 @@ import java.util.function.LongSupplier;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulations.extractingIndex;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.mapping;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.replacingMerger;
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor.ofMethod;
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor.ofType;
+import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofMethod;
+import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofType;
 
 public class DemoTest {
 

@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
 import net.openhft.chronicle.queue.internal.streaming.StreamUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -14,7 +13,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulations.ToLongExcerptExtractor;
 
 /**
  * Factories to create standard {@link java.util.stream.Stream} and related objects from Chronicle Queues.

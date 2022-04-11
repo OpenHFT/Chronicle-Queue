@@ -3,11 +3,9 @@ package net.openhft.chronicle.queue.incubator.streaming;
 import net.openhft.chronicle.core.annotation.NonNegative;
 import net.openhft.chronicle.queue.AppenderListener;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.internal.streaming.AccumulatorUtil;
 import net.openhft.chronicle.queue.internal.streaming.VanillaAppenderListenerAccumulationBuilder;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -149,7 +147,7 @@ public interface Accumulation<T> extends AppenderListener {
              */
             @NotNull
             static <A, E>
-            Builder.Accumulator<A> reducing(@NotNull Builder.ExcerptExtractor<? extends E> extractor,
+            Builder.Accumulator<A> reducing(@NotNull ExcerptExtractor<? extends E> extractor,
                                             @NotNull BiConsumer<? super A, ? super E> downstream) {
                 requireNonNull(extractor);
                 requireNonNull(downstream);
@@ -183,7 +181,7 @@ public interface Accumulation<T> extends AppenderListener {
              */
             @NotNull
             static <A extends Map<K, V>, E, K, V>
-            Builder.Accumulator<A> mapping(@NotNull final Builder.ExcerptExtractor<? extends E> extractor,
+            Builder.Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends E> extractor,
                                            @NotNull final Function<? super E, ? extends K> keyExtractor,
                                            @NotNull final Function<? super E, ? extends V> valueExtractor,
                                            @NotNull final BinaryOperator<V> mergeFunction) {
@@ -244,115 +242,6 @@ public interface Accumulation<T> extends AppenderListener {
                 requireNonNull(extractor);
                 return a -> new Accumulations.LongViewer<>(a, extractor);
             }
-
-        }
-
-        @FunctionalInterface
-        interface ExcerptExtractor<T> {
-
-            /**
-             * Extracts a value of type T from the provided {@code wire} and {@code index} or else {@code null}
-             * if no value can be extracted.
-             * <p>
-             * {@code null} may be returned if the queue was written with a method writer and there are messages in the
-             * queue but of another type.
-             *
-             * @param wire  to use
-             * @param index to use
-             * @return extracted value or {@code null}
-             */
-            @Nullable
-            T extract(@NotNull Wire wire, @NonNegative long index);
-
-            /**
-             * Returns an ExcerptExtractor that will extract elements of the provided
-             * {@code type}.
-             *
-             * @param type of elements to extract
-             * @param <E>  element type
-             * @return an ExcerptExtractor of the provided {@code type}
-             * @throws NullPointerException if the provided {@code type} is {@code null}
-             */
-            static <E> Builder.ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
-                requireNonNull(type);
-                return (wire, index) -> wire
-                        .getValueIn()
-                        .object(type);
-            }
-
-            /**
-             * Returns an ExcerptExtractor that will extract elements of the provided
-             * {@code messageType} that was previously written using a method writer via invocations
-             * of the provided {@code methodReference}.
-             * <p>
-             * The provided {@code methodReference} must be a true method reference (e.g. {@code Greeting:message})
-             * or a corresponding lambda expression
-             * (e.g. {@code (Greeting greeting, String msg) -> greeting.message(m))} ) or else the
-             * result is undefined.
-             *
-             * @param interfaceType   interface that has at least one method that takes a single
-             *                        argument parameter of type E
-             * @param messageType     message type to pass to the method reference
-             * @param methodReference connecting the interface type to a method that takes a single
-             *                        argument parameter of type E
-             * @param <I>             interface type
-             * @param <E>             message type
-             * @return an ExcerptExtractor that will extract elements of the provided {@code messageType}
-             */
-            static <I, E> Builder.ExcerptExtractor<E> ofMethod(@NotNull final Class<I> interfaceType,
-                                                               @NotNull final Class<E> messageType, // This type is needed for type inference
-                                                               @NotNull final BiConsumer<? super I, ? super E> methodReference) {
-                requireNonNull(interfaceType);
-                requireNonNull(messageType);
-                requireNonNull(methodReference);
-                return AccumulatorUtil.ofMethod(interfaceType, methodReference);
-            }
-
-            /**
-             * Creates and returns a new ExcerptExtractor consisting of the results (of type R) of applying the provided
-             * {@code mapper } to the elements of this ExcerptExtractor.
-             * <p>
-             * Values mapped to {@code null} are removed.
-             *
-             * @param mapper to apply
-             * @param <R>    type to map to
-             * @return a new mapped ExcerptExtractor
-             * @throws NullPointerException if the provided {@code mapper} is {@code null}
-             */
-            default <R> Builder.ExcerptExtractor<R> map(@NotNull final Function<? super T, ? extends R> mapper) {
-                requireNonNull(mapper);
-                return (wire, index) -> mapper.apply(
-                        extract(wire, index)
-                );
-            }
-
-            /**
-             * Returns a ExcerptExtractor consisting of the elements of this ExcerptExtractor that match
-             * the provided {@code predicate}.
-             *
-             * @param predicate to apply to each element to determine if it
-             *                  should be included
-             * @return a ExcerptExtractor consisting of the elements of this ExcerptExtractor that match
-             * @throws NullPointerException if the provided {@code predicate} is {@code null}
-             */
-            default Builder.ExcerptExtractor<T> filter(@NotNull final Predicate<? super T> predicate) {
-                requireNonNull(predicate);
-                return (wire, index) -> {
-                    final T value = extract(wire, index);
-                    if (value == null) {
-                        // The value is already filtered so just propagate the lack of a value
-                        return null;
-                    }
-                    return predicate.test(value)
-                            ? value
-                            : null;
-
-                };
-            }
-
-            // skip
-
-            // peek
 
         }
 
