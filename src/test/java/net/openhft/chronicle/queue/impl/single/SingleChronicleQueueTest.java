@@ -152,58 +152,63 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             assertEquals(10L, countEntries(queue, named));
         }
-        assertEquals("" +
-                        "idx: 4a0400000000\n" +
-                        "# position: 784, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 0\n" +
-                        "\n" +
-                        "idx: 4a0400000001\n" +
-                        "# position: 796, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 1\n" +
-                        "\n" +
-                        "idx: 4a0400000002\n" +
-                        "# position: 808, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 2\n" +
-                        "\n" +
-                        "idx: 4a0400000003\n" +
-                        "# position: 820, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 3\n" +
-                        "\n" +
-                        "idx: 4a0400000004\n" +
-                        "# position: 832, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 4\n" +
-                        "\n" +
-                        "idx: 4a0400000005\n" +
-                        "# position: 844, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 5\n" +
-                        "\n" +
-                        "idx: 4a0400000006\n" +
-                        "# position: 856, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 6\n" +
-                        "\n" +
-                        "idx: 4a0400000007\n" +
-                        "# position: 868, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 7\n" +
-                        "\n" +
-                        "idx: 4a0400000008\n" +
-                        "# position: 880, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 8\n" +
-                        "\n" +
-                        "idx: 4a0400000009\n" +
-                        "# position: 892, header: 0\n" +
-                        "--- !!data #binary\n" +
-                        "test: 9\n" +
-                        "\n",
+        assertEquals(expectedForTestAppend(),
                 appenderListenerDump.toString());
+    }
+
+    @NotNull
+    protected String expectedForTestAppend() {
+        return "" +
+                "idx: 4a0400000000\n" +
+                "# position: 784, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 0\n" +
+                "\n" +
+                "idx: 4a0400000001\n" +
+                "# position: 796, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 1\n" +
+                "\n" +
+                "idx: 4a0400000002\n" +
+                "# position: 808, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 2\n" +
+                "\n" +
+                "idx: 4a0400000003\n" +
+                "# position: 820, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 3\n" +
+                "\n" +
+                "idx: 4a0400000004\n" +
+                "# position: 832, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 4\n" +
+                "\n" +
+                "idx: 4a0400000005\n" +
+                "# position: 844, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 5\n" +
+                "\n" +
+                "idx: 4a0400000006\n" +
+                "# position: 856, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 6\n" +
+                "\n" +
+                "idx: 4a0400000007\n" +
+                "# position: 868, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 7\n" +
+                "\n" +
+                "idx: 4a0400000008\n" +
+                "# position: 880, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 8\n" +
+                "\n" +
+                "idx: 4a0400000009\n" +
+                "# position: 892, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 9\n" +
+                "\n";
     }
 
     @Test
@@ -215,12 +220,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             queue.acquireAppender().writeText("hello world");
             assertEquals("hello world", queue.createTailer(named ? "named" : null).readText());
         }
-        assertEquals("" +
+        assertEquals(expectedForTestTextReadWrite(), appenderListenerDump.toString());
+    }
+
+    @NotNull
+    protected String expectedForTestTextReadWrite() {
+        return "" +
                 "idx: 4a0400000000\n" +
                 "# position: 784, header: 0\n" +
                 "--- !!data #binary\n" +
                 "hello world\n" +
-                "\n", appenderListenerDump.toString());
+                "\n";
     }
 
     @Test
@@ -402,12 +412,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ((SingleChronicleQueue) queue).writeLock().lock();
             storeAppender.writeBytesInternal(0, test);
         }
-        assertEquals("" +
+        assertEquals(expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet(), appenderListenerDump.toString());
+    }
+
+    @NotNull
+    protected String expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet() {
+        return "" +
                 "idx: 0\n" +
                 "# position: 784, header: 0\n" +
                 "--- !!data\n" +
                 "hello world\n" +
-                "\n", appenderListenerDump.toString());
+                "\n";
     }
 
     @Test
@@ -1714,6 +1729,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
+                    queueLockForTestReentrant() +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "--- !!data #binary\n" +
@@ -1754,6 +1770,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "some2: other\n" +
                     "...\n", queue.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
+    }
+
+    protected String queueLockForTestReentrant() {
+        return "";
     }
 
     @Test
@@ -2580,6 +2600,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
+                    queueLockForTestReentrant() +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "--- !!data #binary\n" +

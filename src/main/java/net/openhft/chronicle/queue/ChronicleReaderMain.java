@@ -19,12 +19,14 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.reader.ChronicleReader;
+import net.openhft.chronicle.queue.reader.ContentBasedLimiter;
 import net.openhft.chronicle.wire.AbstractTimestampLongConverter;
 import net.openhft.chronicle.wire.WireType;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.function.Consumer;
@@ -154,6 +156,23 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption('x')) {
             chronicleReader.withMatchLimit(Long.parseLong(commandLine.getOptionValue('x')));
         }
+        if (commandLine.hasOption("cbl")) {
+            final String cbl = commandLine.getOptionValue("cbl");
+            try {
+                chronicleReader.withContentBasedLimiter((ContentBasedLimiter) Class.forName(cbl).getConstructor().newInstance());
+            } catch (ClassNotFoundException e) {
+                throw new IllegalArgumentException("Error creating content-based limiter, could not find class: " + cbl, e);
+            } catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException("Error creating content-based limiter, it must have a no-argument constructor", e);
+            } catch (ClassCastException e) {
+                throw new IllegalArgumentException("Error creating content-based limiter, it must implement " + ContentBasedLimiter.class.getName(), e);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                throw new IllegalArgumentException("Error creating content-based-limiter class: " + cbl, e);
+            }
+        }
+        if (commandLine.hasOption("cblArg")) {
+            chronicleReader.withLimiterArg(commandLine.getOptionValue("cblArg"));
+        }
     }
 
     @NotNull
@@ -177,6 +196,8 @@ public class ChronicleReaderMain {
         addOption(options, "k", "reverse", false, "Read the queue in reverse", false);
         addOption(options, "h", "help-message", false, "Print this help and exit", false);
         addOption(options, "x", "max-results", true, "Limit the number of results to output", false);
+        addOption(options, "cbl", "content-based-limiter", true, "Specify a content-based limiter", false);
+        addOption(options, "cblArg", "content-based-limiter-argument", true, "Specify an argument for use by the content-based limiter", false);
         return options;
     }
 }

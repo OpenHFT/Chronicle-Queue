@@ -18,9 +18,6 @@
 
 package net.openhft.chronicle.queue.reader;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.bytes.MethodWriterBuilder;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -30,6 +27,11 @@ import net.openhft.chronicle.queue.impl.single.NotComparableException;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.internal.reader.InternalDummyMethodReaderQueueEntryHandler;
+import net.openhft.chronicle.queue.internal.reader.MessageCountingMessageConsumer;
+import net.openhft.chronicle.queue.internal.reader.PatternFilterMessageConsumer;
+import net.openhft.chronicle.queue.internal.reader.queueentryreaders.CustomPluginQueueEntryReader;
+import net.openhft.chronicle.queue.internal.reader.queueentryreaders.MethodReaderQueueEntryReader;
+import net.openhft.chronicle.queue.internal.reader.queueentryreaders.VanillaQueueEntryReader;
 import net.openhft.chronicle.queue.reader.comparator.BinarySearchComparator;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.threads.Pauser;
@@ -37,15 +39,12 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -79,19 +78,11 @@ public class ChronicleReader implements Reader {
     private volatile boolean running = true;
     private TailerDirection tailerDirection = TailerDirection.FORWARD;
     private long matchLimit = 0;
+    private ContentBasedLimiter contentBasedLimiter;
+    private String limiterArg;
 
     static {
         ToolsUtil.warnIfResourceTracing();
-    }
-
-    private static boolean checkForMatches(final List<Pattern> patterns, final String text,
-                                           final boolean shouldBePresent) {
-        for (Pattern pattern : patterns) {
-            if (!shouldBePresent == pattern.matcher(text).find()) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private static boolean isSet(final long configValue) {
@@ -101,80 +92,55 @@ public class ChronicleReader implements Reader {
     private ThreadLocal<ExcerptTailer> tlTailer;
 
     public void execute() {
+        configureContentBasedLimiter();
         long lastObservedTailIndex;
         long highestReachedIndex = 0L;
         boolean isFirstIteration = true;
         boolean retryLastOperation;
         boolean queueHasBeenModified;
-        final AtomicLong matchCounter = new AtomicLong(0L);
         do {
             try (final ChronicleQueue queue = createQueue();
-                 final QueueEntryHandler messageConverter = entryHandlerFactory.get()) {
-                final ExcerptTailer tailer = queue.createTailer();
+                 final ExcerptTailer tailer = queue.createTailer()) {
                 MessageHistory.set(new VanillaMessageHistory());
 
                 tlTailer = ThreadLocal.withInitial(queue::createTailer);
+
+                MessageCountingMessageConsumer messageConsumer = new MessageCountingMessageConsumer(matchLimit, createMessageConsumers());
+                QueueEntryReader queueEntryReader = createQueueEntryReader(tailer, messageConsumer);
 
                 do {
                     if (highestReachedIndex != 0L) {
                         tailer.moveToIndex(highestReachedIndex);
                     }
-                    final Bytes textConversionTarget = Bytes.elasticByteBuffer();
                     try {
                         moveToSpecifiedPosition(queue, tailer, isFirstIteration);
                         lastObservedTailIndex = tailer.index();
-                        Consumer<String> messageConsumer = text -> applyFiltersAndLog(text, tailer.index(), matchCounter);
-                        BooleanSupplier readOne;
-                        if (methodReaderInterface == null) {
-                            readOne = () -> readOne(messageConverter, tailer, messageConsumer);
-                        } else {
-                            // TODO: consider unifying this with messageConverter
-                            Bytes<ByteBuffer> bytes = Bytes.elasticHeapByteBuffer(256);
-                            Wire wire = wireType.apply(bytes);
-                            if (wire instanceof TextWire)
-                                ((TextWire)wire).useTextDocuments();
-                            MethodWriterBuilder<?> mwb = wire.methodWriterBuilder(methodReaderInterface);
-                            if (showMessageHistory)
-                                mwb.updateInterceptor((methodName, t) -> {
-                                    MessageHistory messageHistory = MessageHistory.get();
-                                    // this is an attempt to recognise that no MH was read and instead the method reader called reset(...) on it
-                                    if (messageHistory.sources() != 1 || messageHistory.timings() != 1)
-                                        bytes.append(messageHistory + System.lineSeparator());
-                                    return true;
-                                });
-                            MethodReader methodReader = tailer.methodReader(mwb.build());
-                            readOne = () -> {
-                                boolean found = methodReader.readOne();
-                                if (found)
-                                    messageConsumer.accept(bytes.toString());
-                                bytes.clear();
-                                return found;
-                            };
-                        }
 
                         while (!Thread.currentThread().isInterrupted()) {
-                            boolean found = readOne.getAsBoolean();
+                            if (shouldHaltReadingDueToContentBasedLimit(tailer)) {
+                                running = false;
+                                break;
+                            }
 
-                            if (!found) {
+                            if (!queueEntryReader.read()) {
                                 if (tailInputSource) {
                                     pauser.pause();
                                 }
                                 break;
                             } else {
-                                if (matchLimitReached(matchCounter.get())) {
+                                if (messageConsumer.matchLimitReached()) {
                                     break;
                                 }
                             }
                             pauser.reset();
                         }
                     } finally {
-                        textConversionTarget.releaseLast();
                         highestReachedIndex = tailer.index();
                         isFirstIteration = false;
                     }
                     queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex);
                     retryLastOperation = false;
-                    if (!running || matchLimitReached(matchCounter.get()))
+                    if (!running || messageConsumer.matchLimitReached())
                         return;
                 } while (tailerDirection != BACKWARD && (tailInputSource || queueHasBeenModified));
             } catch (final RuntimeException e) {
@@ -191,22 +157,68 @@ public class ChronicleReader implements Reader {
 
     }
 
-    private boolean matchLimitReached(long matches) {
-        return matchLimit > 0 && matches >= matchLimit;
+    /**
+     * Configure the content-based limiter if it was specified
+     */
+    private void configureContentBasedLimiter() {
+        if (contentBasedLimiter != null) {
+            contentBasedLimiter.configure(this);
+        }
     }
 
-    public boolean readOne(@NotNull QueueEntryHandler messageConverter, @NotNull ExcerptTailer tailer, @NotNull Consumer<String> messageConsumer) {
-        try (DocumentContext dc = pollMethod.apply(tailer)) {
-            if (!dc.isPresent()) {
-                return false;
-            }
-
-            if (customPlugin == null) {
-                messageConverter.accept(dc.wire(), messageConsumer);
-            } else {
-                customPlugin.onReadDocument(dc, messageConsumer);
-            }
+    /**
+     * Check if the content-based limit has been reached
+     *
+     * @param tailer The Tailer we're using to read the queue
+     * @return true if we should halt reading, false otherwise
+     */
+    private boolean shouldHaltReadingDueToContentBasedLimit(ExcerptTailer tailer) {
+        if (contentBasedLimiter == null) {
+            return false;
         }
+        long originalIndex = tailer.index();
+        try (final DocumentContext documentContext = tailer.readingDocument()) {
+            if (documentContext.isPresent()) {
+                return contentBasedLimiter.shouldHaltReading(documentContext);
+            }
+            return false;
+        } finally {
+            tailer.moveToIndex(originalIndex);
+        }
+    }
+
+    private QueueEntryReader createQueueEntryReader(ExcerptTailer tailer, MessageConsumer messageConsumer) {
+        if (methodReaderInterface == null) {
+            if (customPlugin == null) {
+                return new VanillaQueueEntryReader(tailer, pollMethod, entryHandlerFactory.get(), messageConsumer);
+            } else {
+                return new CustomPluginQueueEntryReader(tailer, pollMethod, customPlugin, messageConsumer);
+            }
+        } else {
+            return new MethodReaderQueueEntryReader(tailer, messageConsumer, wireType, methodReaderInterface, showMessageHistory);
+        }
+    }
+
+    /**
+     * Create the chain of message consumers according to config
+     *
+     * @return The head of the chain of message consumers
+     */
+    private MessageConsumer createMessageConsumers() {
+        MessageConsumer tail = this::writeToSink;
+        if (!exclusionRegex.isEmpty()) {
+            tail = new PatternFilterMessageConsumer(exclusionRegex, false, tail);
+        }
+        if (!inclusionRegex.isEmpty()) {
+            tail = new PatternFilterMessageConsumer(inclusionRegex, true, tail);
+        }
+        return tail;
+    }
+
+    private boolean writeToSink(long index, String text) {
+        if (displayIndex)
+            messageSink.accept("0x" + Long.toHexString(index) + ": ");
+        messageSink.accept(text);
         return true;
     }
 
@@ -295,8 +307,20 @@ public class ChronicleReader implements Reader {
     }
 
     @Override
+    public ChronicleReader withContentBasedLimiter(ContentBasedLimiter contentBasedLimiter) {
+        this.contentBasedLimiter = contentBasedLimiter;
+        return this;
+    }
+
+    @Override
     public ChronicleReader withArg(String arg) {
         this.arg = arg;
+        return this;
+    }
+
+    @Override
+    public ChronicleReader withLimiterArg(@NotNull String limiterArg) {
+        this.limiterArg = limiterArg;
         return this;
     }
 
@@ -318,6 +342,11 @@ public class ChronicleReader implements Reader {
     @Override
     public String arg() {
         return arg;
+    }
+
+    @Override
+    public String limiterArg() {
+        return limiterArg;
     }
 
     @Override
@@ -490,17 +519,6 @@ public class ChronicleReader implements Reader {
                 .readOnly(readOnly)
                 .storeFileListener(NO_OP)
                 .build();
-    }
-
-    protected void applyFiltersAndLog(final String text, final long index, AtomicLong matches) {
-        if (inclusionRegex.isEmpty() || checkForMatches(inclusionRegex, text, true)) {
-            if (exclusionRegex.isEmpty() || checkForMatches(exclusionRegex, text, false)) {
-                matches.incrementAndGet();
-                if (displayIndex)
-                    messageSink.accept("0x" + Long.toHexString(index) + ": ");
-                messageSink.accept(text);
-            }
-        }
     }
 
     public void stop() {
