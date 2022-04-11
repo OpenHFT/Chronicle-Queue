@@ -1,8 +1,8 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.core.annotation.NonNegative;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,7 +15,7 @@ import java.util.function.LongSupplier;
 import java.util.function.ToLongFunction;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator.longViewer;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.longViewer;
 
 public final class Accumulations {
 
@@ -30,14 +30,19 @@ public final class Accumulations {
                 .build();
     }
 
-    public static Accumulation<LongSupplier> reducingLong(@NotNull final ExcerptToLong longExtractor,
+    public static Accumulation<LongSupplier> reducingLong(@NotNull final ToLongExcerptExtractor longExtractor,
                                                           final long identity,
                                                           @NotNull final LongBinaryOperator accumulator) {
         requireNonNull(longExtractor);
         requireNonNull(accumulator);
 
         return Accumulation.builder(() -> new LongAccumulator(accumulator, identity))
-                .withAccumulator((accumulation, wire, index) -> accumulation.accumulate(longExtractor.apply(wire, index)))
+                .withAccumulator((accumulation, wire, index) -> {
+                    final long value = longExtractor.apply(wire, index);
+                    if (value != Long.MIN_VALUE) {
+                        accumulation.accumulate(longExtractor.apply(wire, index));
+                    }
+                })
                 .addViewer(longViewer(LongAccumulator::get))
                 .build();
     }
@@ -50,7 +55,7 @@ public final class Accumulations {
                 .build();
     }
 
-    public static <E> Accumulation<Set<E>> toSet(@NotNull AppenderListener.Accumulation.Builder.ExcerptExtractor<? extends E> extractor) {
+    public static <E> Accumulation<Set<E>> toSet(@NotNull Builder.ExcerptExtractor<? extends E> extractor) {
         return Accumulation.<Set<E>>builder(() -> Collections.newSetFromMap(new ConcurrentHashMap<>()))
                 .withAccumulator((accumulation, wire, index) -> {
                     final E value = extractor.extract(wire, index);
@@ -62,7 +67,7 @@ public final class Accumulations {
                 .build();
     }
 
-    public static <E> Accumulation<List<E>> toList(@NotNull AppenderListener.Accumulation.Builder.ExcerptExtractor<? extends E> extractor) {
+    public static <E> Accumulation<List<E>> toList(@NotNull Builder.ExcerptExtractor<? extends E> extractor) {
         return Accumulation.<List<E>>builder(() -> Collections.synchronizedList(new ArrayList<>()))
                 .withAccumulator((accumulation, wire, index) -> {
                     final E value = extractor.extract(wire, index);
@@ -74,13 +79,26 @@ public final class Accumulations {
                 .build();
     }
 
-    public static ExcerptToLong extractingIndex() {
+    public static ToLongExcerptExtractor extractingIndex() {
         return (wire, index) -> index;
     }
 
-    @FunctionalInterface
-    public interface ExcerptToLong {
+    public interface ToLongExcerptExtractor {
 
+        /**
+         * Extracts a value of type T from the provided {@code wire} and {@code index} or else {@link Long#MIN_VALUE}
+         * if no value can be extracted.
+         * <p>
+         * {@link Long#MIN_VALUE} may be returned if the queue was written with a method writer and there are messages in the
+         * queue but of another type.
+         * <p>
+         * Extractors that must include {@link Long#MIN_VALUE} as a valid value must use other means of
+         * aggregating values (e.g. use an {@link Builder.ExcerptExtractor ExcerptExtractor<Long> }.
+         *
+         * @param wire  to use
+         * @param index to use
+         * @return extracted value or {@code null}
+         */
         long apply(@NotNull Wire wire, @NonNegative long index);
     }
 

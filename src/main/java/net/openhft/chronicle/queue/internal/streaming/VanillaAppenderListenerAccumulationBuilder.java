@@ -1,6 +1,6 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
-import net.openhft.chronicle.queue.AppenderListener;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements AppenderListener.Accumulation.Builder<T, A> {
+public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements Accumulation.Builder<T, A> {
 
     private final Supplier<? extends A> supplier;
     private Accumulator<? super A> accumulator;
@@ -24,7 +24,7 @@ public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements A
 
     @NotNull
     @Override
-    public AppenderListener.Accumulation.Builder<T, A>
+    public Accumulation.Builder<T, A>
     withAccumulator(@NotNull final Accumulator<? super A> accumulator) {
         this.accumulator = requireNonNull(accumulator);
         return this;
@@ -32,7 +32,7 @@ public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements A
 
     @NotNull
     @Override
-    public <R> AppenderListener.Accumulation.Builder<R, A>
+    public <R> Accumulation.Builder<R, A>
     addViewer(@NotNull final Function<? super T, ? extends R> viewer) {
         requireNonNull(viewer);
         @SuppressWarnings("unchecked") final VanillaAppenderListenerAccumulationBuilder<R, A> newType =
@@ -44,7 +44,7 @@ public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements A
 
     @NotNull
     @Override
-    public <R> AppenderListener.Accumulation.Builder<AppenderListener.Accumulation.MapperTo<R>, A>
+    public <R> Accumulation.Builder<Accumulation.MapperTo<R>, A>
     withMapper(@NotNull final Function<? super T, ? extends R> mapper) {
         requireNonNull(mapper);
         return addViewer(t -> new VanillaMapper<>(t, mapper));
@@ -52,7 +52,7 @@ public final class VanillaAppenderListenerAccumulationBuilder<T, A> implements A
 
     @NotNull
     @Override
-    public AppenderListener.Accumulation<T> build() {
+    public Accumulation<T> build() {
         if (built) {
             throw new IllegalStateException("This builder has already been built!");
         }

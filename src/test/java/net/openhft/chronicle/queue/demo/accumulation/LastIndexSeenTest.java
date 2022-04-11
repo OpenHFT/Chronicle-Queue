@@ -3,8 +3,8 @@ package net.openhft.chronicle.queue.demo.accumulation;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.MapperTo;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.MapperTo;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.After;
 import org.junit.Before;
@@ -14,8 +14,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 
-import static net.openhft.chronicle.queue.Accumulations.*;
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.builder;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulations.*;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
 import static org.junit.Assert.assertEquals;
 
 public class LastIndexSeenTest extends ChronicleQueueTestBase {

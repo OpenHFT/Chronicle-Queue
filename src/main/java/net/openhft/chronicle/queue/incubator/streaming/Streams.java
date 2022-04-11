@@ -1,7 +1,7 @@
-package net.openhft.chronicle.queue.streaming;
+package net.openhft.chronicle.queue.incubator.streaming;
 
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
 import net.openhft.chronicle.queue.internal.streaming.StreamUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -76,9 +76,9 @@ public final class Streams {
     /**
      * Creates and returns a new {@link Iterator } whose elements are obtained
      * by successively applying the provided {@code extractor} on excerpts from the
-     * provided {@code tailer}, with no initial size estimate.
+     * provided {@code tailer}.
      * <p>
-     * The Spliterator does not contain any {@code null} elements.
+     * The Iterator does not contain any {@code null} elements.
      *
      * @param <T>       the type of stream elements
      * @param tailer    from which excerpts are obtained

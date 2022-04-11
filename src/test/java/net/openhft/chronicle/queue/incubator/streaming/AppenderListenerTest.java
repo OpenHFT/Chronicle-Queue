@@ -1,11 +1,13 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
 import org.junit.Test;
 
 import java.util.*;
@@ -67,15 +69,15 @@ public class AppenderListenerTest {
         String path = OS.getTarget() + "/appenderListenerAggregateTest";
 
         // This accumulator shows the last used index
-        final AppenderListener.Accumulation<MyAtomicLongView> appenderListener =
-                AppenderListener.Accumulation.builder(AtomicLong::new)
+        final Accumulation<MyAtomicLongView> appenderListener =
+                Accumulation.builder(AtomicLong::new)
                         .withAccumulator(((a, wire, index) -> a.set(index)))
                         .addViewer(MyAtomicLongView::new)
                         .build();
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .appenderListener(appenderListener)
+                .appenderListener(appenderListener::onExcerpt)
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build();
              ExcerptAppender appender = q.acquireAppender()) {
@@ -92,9 +94,9 @@ public class AppenderListenerTest {
     public void aggregateMap() {
         String path = OS.getTarget() + "/appenderListenerAggregateMapTest";
 
-        final AppenderListener.Accumulation<Map<String, String>> appenderListener =
+        final Accumulation<Map<String, String>> appenderListener =
                 // Here we use a special static method providing Map key and value types directly
-                AppenderListener.Accumulation.builder(ConcurrentHashMap::new, String.class, String.class)
+                Accumulation.builder(ConcurrentHashMap::new, String.class, String.class)
                         .withAccumulator((accumulation, wire, index) -> {
                                     accumulation.merge(wire.readEvent(String.class),
                                             wire.getValueIn().text(),
@@ -106,7 +108,7 @@ public class AppenderListenerTest {
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .appenderListener(appenderListener)
+                .appenderListener(appenderListener::onExcerpt)
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build();
              ExcerptAppender appender = q.acquireAppender()) {
@@ -134,15 +136,15 @@ public class AppenderListenerTest {
     public void aggregateListCustom() {
         String path = OS.getTarget() + "/appenderListenerAggregateCollectionTest";
 
-        final AppenderListener.Accumulation<List<String>> appenderListener =
-                AppenderListener.Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
+        final Accumulation<List<String>> appenderListener =
+                Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
                         .withAccumulator(Accumulator.reducing(ExcerptExtractor.ofMethod(HelloWorld.class, String.class, HelloWorld::hello), List::add))
                         .addViewer(Collections::unmodifiableList)
                         .build();
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .appenderListener(appenderListener)
+                .appenderListener(appenderListener::onExcerpt)
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build();
              ExcerptAppender appender = q.acquireAppender()) {
@@ -182,8 +184,8 @@ public class AppenderListenerTest {
         String path = OS.getTarget() + "/appenderListenerAggregateTest";
 
 
-        final AppenderListener.Accumulation<MyAtomicLongView2> appenderListener =
-                AppenderListener.Accumulation.builder(AtomicLong::new)
+        final Accumulation<MyAtomicLongView2> appenderListener =
+                Accumulation.builder(AtomicLong::new)
                         .withAccumulator(((a, wire, index) -> a.set(index)))
                         // Apply a series of views
                         .addViewer(MyAtomicLongView::new)
@@ -192,7 +194,7 @@ public class AppenderListenerTest {
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .appenderListener(appenderListener)
+                .appenderListener(appenderListener::onExcerpt)
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build();
              ExcerptAppender appender = q.acquireAppender()) {
@@ -210,8 +212,8 @@ public class AppenderListenerTest {
     public void aggregateMapping() {
         String path = OS.getTarget() + "/appenderListenerMappingTest";
 
-        final AppenderListener.Accumulation<AppenderListener.Accumulation.MapperTo<Long>> appenderListener =
-                AppenderListener.Accumulation.builder(AtomicLong::new)
+        final Accumulation<Accumulation.MapperTo<Long>> appenderListener =
+                Accumulation.builder(AtomicLong::new)
                         .withAccumulator(((a, wire, index) -> a.set(index)))
                         // Only exposes the value of the underlying accumulation
                         .withMapper(AtomicLong::get)
@@ -219,7 +221,7 @@ public class AppenderListenerTest {
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .appenderListener(appenderListener)
+                .appenderListener(appenderListener::onExcerpt)
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build();
              ExcerptAppender appender = q.acquireAppender()) {

@@ -2,8 +2,8 @@ package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Proxy;

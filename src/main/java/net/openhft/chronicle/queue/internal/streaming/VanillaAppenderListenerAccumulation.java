@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
-import net.openhft.chronicle.queue.AppenderListener.Accumulation;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;

@@ -3,9 +3,10 @@ package net.openhft.chronicle.queue.demo.accumulation;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;
@@ -17,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.builder;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
 import static org.junit.Assert.assertEquals;
 
 public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {

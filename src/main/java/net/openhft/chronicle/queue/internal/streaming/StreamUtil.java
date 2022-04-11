@@ -1,6 +1,6 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
-import net.openhft.chronicle.queue.AppenderListener;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -18,12 +18,12 @@ public final class StreamUtil {
     public static final class ExcerptTailerIterator<T> implements Iterator<T> {
 
         private final ExcerptTailer tailer;
-        private final AppenderListener.Accumulation.Builder.ExcerptExtractor<T> extractor;
+        private final Accumulation.Builder.ExcerptExtractor<T> extractor;
 
         private T next;
 
         public ExcerptTailerIterator(@NotNull final ExcerptTailer tailer,
-                                     @NotNull final AppenderListener.Accumulation.Builder.ExcerptExtractor<T> extractor) {
+                                     @NotNull final Accumulation.Builder.ExcerptExtractor<T> extractor) {
             this.tailer = tailer;
             this.extractor = extractor;
         }

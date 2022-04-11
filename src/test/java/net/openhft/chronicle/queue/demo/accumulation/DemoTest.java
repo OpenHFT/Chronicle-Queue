@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.demo.accumulation;
 
-import net.openhft.chronicle.queue.Accumulations;
-import net.openhft.chronicle.queue.AppenderListener.Accumulation;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
@@ -10,11 +10,11 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
-import static net.openhft.chronicle.queue.Accumulations.extractingIndex;
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator.mapping;
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator.replacingMerger;
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor.ofMethod;
-import static net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor.ofType;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulations.extractingIndex;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.mapping;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.replacingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor.ofMethod;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.ExcerptExtractor.ofType;
 
 public class DemoTest {
 
