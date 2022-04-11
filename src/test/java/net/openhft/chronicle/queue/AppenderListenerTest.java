@@ -11,7 +11,6 @@ import org.junit.Test;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -96,11 +95,12 @@ public class AppenderListenerTest {
         final AppenderListener.Accumulation<Map<String, String>> appenderListener =
                 // Here we use a special static method providing Map key and value types directly
                 AppenderListener.Accumulation.builder(ConcurrentHashMap::new, String.class, String.class)
-                        .withAccumulator(Accumulator.mapping(
-                                (wire, index) -> wire.readEvent(String.class),
-                                (wire, index) -> wire.getValueIn().text(),
-                                Accumulator.replacingMerger()
-                        ))
+                        .withAccumulator((accumulation, wire, index) -> {
+                                    accumulation.merge(wire.readEvent(String.class),
+                                            wire.getValueIn().text(),
+                                            Accumulator.replacingMerger());
+                                }
+                        )
                         .addViewer(Collections::unmodifiableMap)
                         .build();
 
@@ -231,21 +231,5 @@ public class AppenderListenerTest {
 
         assertEquals(0x4A1000000001L, (long) appenderListener.accumulation().map());
     }
-
-    private static final class Viewer<T, R> {
-
-        T delegate;
-        Function<? super T, ? extends R> mapper;
-
-        public Viewer(T delegate) {
-            this.delegate = delegate;
-        }
-
-        public R map() {
-            return mapper.apply(delegate);
-        }
-
-    }
-
 
 }

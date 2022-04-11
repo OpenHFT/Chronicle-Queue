@@ -2,12 +2,15 @@ package net.openhft.chronicle.queue.internal.appenderlistener;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder;
 import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.ExcerptExtractor;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Proxy;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
@@ -17,8 +20,44 @@ public final class AccumulatorUtil {
     private AccumulatorUtil() {
     }
 
-    public static <I, E> ExcerptExtractor<E> ofMethod(@NotNull final Class<I> type,
-                                                      @NotNull final BiConsumer<? super I, ? super E> methodReference) {
+    /**
+     * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
+     * are the result of applying the provided extractors to the input messages.
+     * <p>
+     * If the mapped keys contains duplicates (according to Object.equals(Object)), the
+     * value mapping function is applied to each equal element, and the results are merged using
+     * the provided {@code mergeFunction}.
+     *
+     * @param keyExtractor   a mapping function to produce keys.
+     * @param valueExtractor a mapping function to produce values.
+     * @param mergeFunction  a merge function, used to resolve collisions between values associated with the same key,
+     *                       as supplied to Map.merge(Object, Object, BiFunction)
+     * @param <A>            Underlying accumulator type
+     * @param <K>            key type
+     * @param <V>            value type
+     * @return a new Accumulator
+     * @throws NullPointerException if any of the provided parmeters are {@code null}
+     */
+    @NotNull
+    @Deprecated
+    static <A extends Map<K, V>, K, V>
+    Builder.Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends K> keyExtractor,
+                                   @NotNull final ExcerptExtractor<? extends V> valueExtractor,
+                                   @NotNull final BinaryOperator<V> mergeFunction) {
+        requireNonNull(keyExtractor);
+        requireNonNull(valueExtractor);
+        requireNonNull(mergeFunction);
+        // Todo: Create a wrapper method around null handling of keyExtractor or otherwise handle it
+        return (accumulation, wire, index) -> {
+            accumulation.merge(keyExtractor.extract(wire, index),
+                    valueExtractor.extract(wire, index),
+                    mergeFunction);
+        };
+    }
+
+    public static <I, E>
+    ExcerptExtractor<E> ofMethod(@NotNull final Class<I> type,
+                                 @NotNull final BiConsumer<? super I, ? super E> methodReference) {
         final MethodNameAndMessageType<E> info = methodOf(type, methodReference);
         final String expectedEventName = info.name();
         final Class<E> elementType = info.messageType();
@@ -26,11 +65,11 @@ public final class AccumulatorUtil {
         return (wire, index) -> {
             wire.startEvent();
             try {
-                Bytes<?> bytes = wire.bytes();
+                final Bytes<?> bytes = wire.bytes();
                 while (bytes.readRemaining() > 0) {
                     if (wire.isEndEvent())
                         break;
-                    long start = bytes.readPosition();
+                    final long start = bytes.readPosition();
 
                     wire.readEventName(eventName);
                     if (StringUtils.isEqual(expectedEventName, eventName)) {
@@ -73,10 +112,11 @@ public final class AccumulatorUtil {
     }
 
     public static final class MethodNameAndMessageType<M> {
-        final String name;
-        final Class<M> messageType;
+        private final String name;
+        private final Class<M> messageType;
 
-        public MethodNameAndMessageType(String name, Class<M> messageType) {
+        public MethodNameAndMessageType(@NotNull final String name,
+                                        @NotNull final Class<M> messageType) {
             this.name = name;
             this.messageType = messageType;
         }

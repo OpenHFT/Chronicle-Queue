@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.internal.appenderlistener;
 
-import net.openhft.chronicle.queue.AppenderListener;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation;
+import net.openhft.chronicle.queue.AppenderListener.Accumulation.Builder.Accumulator;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -11,20 +12,20 @@ import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
-final class VanillaAppenderListenerAccumulation<A, T> implements AppenderListener.Accumulation<T> {
+final class VanillaAppenderListenerAccumulation<A, T> implements Accumulation<T> {
 
     private final A accumulation;
     private final T view;
-    private final Builder.Accumulator<? super A> accumulator;
+    private final Accumulator<? super A> accumulator;
 
     VanillaAppenderListenerAccumulation(@NotNull final Supplier<? extends A> supplier,
                                         @NotNull final Function<? super A, ? extends T> viewer,
-                                        @NotNull final AppenderListener.Accumulation.Builder.Accumulator<? super A> accumulator) {
+                                        @NotNull final Accumulator<? super A> accumulator) {
         requireNonNull(supplier);
         requireNonNull(viewer);
         requireNonNull(accumulator);
-        this.accumulation = requireNonNull(supplier.get());
-        this.view = viewer.apply(accumulation);
+        this.accumulation = requireNonNull(supplier.get(), "The supplier must not return null.");
+        this.view = requireNonNull(viewer.apply(accumulation), "The viewer must not return null.");
         this.accumulator = accumulator;
     }
 

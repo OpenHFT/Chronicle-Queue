@@ -118,8 +118,10 @@ public interface AppenderListener {
              * Adds a viewer to this Builder potentially provided a protected view of the underlying accumulation
              * where the view is <em>applied once</em>.
              * <p>
-             * The provided viewer is only called once upon creation of the accumulation so the viewer must be a
+             * The provided {@code viewer} is only called once upon creation of the accumulation so the viewer must be a
              * true view of an underlying object and <em>not a copy</em>.
+             * <p>
+             * The provided viewer must not return {@code null}.
              * <p>
              * Example of valid viewers are:
              * <ul>
@@ -130,7 +132,7 @@ public interface AppenderListener {
              * <p>
              * Amy number of views can be added to the builder.
              *
-             * @param viewer to add
+             * @param viewer to add (non-null)
              * @param <R>    new view type
              * @return this Builder
              * @throws NullPointerException if the provided viewer is {@code null}.
@@ -141,8 +143,10 @@ public interface AppenderListener {
              * Adds a mapper to this Builder potentially provided a protected view of the underlying accumulation
              * where the view is <em>applied on every {@link Accumulation#accumulation()} access</em>.
              * <p>
-             * The provided mapper is called on each access of the aggregation effectively allowing a restricted view
-             * of an underlying object.
+             * The provided {@code mapper} is called on each access of the aggregation effectively allowing a
+             * restricted view the underlying accumulation.
+             * <p>
+             * The provided {@code mapper} must not return {@code null}.
              * <p>
              * Example of valid viewers are:
              * <ul>
