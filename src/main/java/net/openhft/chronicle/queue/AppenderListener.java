@@ -290,7 +290,7 @@ public interface AppenderListener {
                  * @param <A>       Accumulation type
                  * @return a new long viewer
                  */
-                static <A> Function<? super A, LongSupplier> longViewer(@NotNull final ToLongFunction<A> extractor) {
+                static <A> Function<A, LongSupplier> longViewer(@NotNull final ToLongFunction<A> extractor) {
                     requireNonNull(extractor);
                     return a -> new Accumulations.LongViewer<>(a, extractor);
                 }

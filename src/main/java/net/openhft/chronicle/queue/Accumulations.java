@@ -74,14 +74,6 @@ public final class Accumulations {
                 .build();
     }
 
-/*
-    private static <K, V> Builder<Map<K, V>, Map<K, V>> mapBuilder(@NotNull final Accumulator<? super Map<K, V>> accumulator) {
-        return Accumulation.<Map<K, V>>builder(ConcurrentHashMap::new)
-                .withAccumulator(accumulator)
-                .addViewer(Collections::unmodifiableMap);
-    }*/
-
-
     public static ExcerptToLong extractingIndex() {
         return (wire, index) -> index;
     }

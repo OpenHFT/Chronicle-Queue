@@ -38,8 +38,9 @@ public final class AccumulatorUtil {
      * @return a new Accumulator
      * @throws NullPointerException if any of the provided parmeters are {@code null}
      */
+    // This method is "parked" here. We should probably remove it after documenting how a "raw" mapper
+    // can be constructed.
     @NotNull
-    @Deprecated
     static <A extends Map<K, V>, K, V>
     Builder.Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends K> keyExtractor,
                                    @NotNull final ExcerptExtractor<? extends V> valueExtractor,
@@ -48,11 +49,10 @@ public final class AccumulatorUtil {
         requireNonNull(valueExtractor);
         requireNonNull(mergeFunction);
         // Todo: Create a wrapper method around null handling of keyExtractor or otherwise handle it
-        return (accumulation, wire, index) -> {
-            accumulation.merge(keyExtractor.extract(wire, index),
-                    valueExtractor.extract(wire, index),
-                    mergeFunction);
-        };
+        return (accumulation, wire, index) ->
+                accumulation.merge(keyExtractor.extract(wire, index),
+                        valueExtractor.extract(wire, index),
+                        mergeFunction);
     }
 
     public static <I, E>
