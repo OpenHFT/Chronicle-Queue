@@ -2,8 +2,8 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.NonNegative;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.internal.appenderlistener.AccumulatorUtil;
-import net.openhft.chronicle.queue.internal.appenderlistener.VanillaAppenderListenerAccumulationBuilder;
+import net.openhft.chronicle.queue.internal.streaming.AccumulatorUtil;
+import net.openhft.chronicle.queue.internal.streaming.VanillaAppenderListenerAccumulationBuilder;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

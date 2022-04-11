@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.internal.appenderlistener;
+package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.queue.AppenderListener;
 import org.jetbrains.annotations.NotNull;

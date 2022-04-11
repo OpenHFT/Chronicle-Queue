@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.internal.appenderlistener;
+package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.util.StringUtils;
