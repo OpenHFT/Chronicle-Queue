@@ -80,7 +80,7 @@ class StreamsTest {
             // Make sure another call does not change the state
             assertTrue(iterator.hasNext());
             assertEquals("Hello", iterator.next());
-            assertFalse(iterator.hasNext());
+            assertThrows(IllegalStateException.class, iterator::hasNext);
         }
     }
 
