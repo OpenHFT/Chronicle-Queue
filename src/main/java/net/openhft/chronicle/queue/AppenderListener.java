@@ -182,10 +182,12 @@ public interface AppenderListener {
                 void accumulate(@NotNull A accumulation, @NotNull Wire wire, @NonNegative long index);
 
                 /**
-                 * Creates and returns a new Accumulator that will first extract messages of the
-                 * provided {@code type} before the provided {@code downstream} accumulator is applied.
+                 * Creates and returns a new Accumulator that will first extract messages using the
+                 * provided {@code extractor} before the provided {@code downstream} accumulator is applied.
                  * <p>
+                 * If the provided {@code extractor} returns null, the element will be ignored.
                  *
+                 * @param extractor  extractor used to extract messages.
                  * @param downstream operation to apply on the Accumulator for each element of type E.
                  * @param <E>        element type
                  * @return this Builder
@@ -205,46 +207,11 @@ public interface AppenderListener {
                     };
                 }
 
-/*                *//**
-                 * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
-                 * are the result of applying the provided extractors to the input messages.
-                 * <p>
-                 * If the mapped keys contains duplicates (according to Object.equals(Object)), the
-                 * value mapping function is applied to each equal element, and the results are merged using
-                 * the provided {@code mergeFunction}.
-                 *
-                 * @param keyExtractor   a mapping function to produce keys.
-                 * @param valueExtractor a mapping function to produce values.
-                 * @param mergeFunction  a merge function, used to resolve collisions between values associated with the same key,
-                 *                       as supplied to Map.merge(Object, Object, BiFunction)
-                 * @param <A>            Underlying accumulator type
-                 * @param <K>            key type
-                 * @param <V>            value type
-                 * @return a new Accumulator
-                 * @throws NullPointerException if any of the provided parmeters are {@code null}
-                 *//*
-                @NotNull
-                @Deprecated
-                static <A extends Map<K, V>, K, V>
-                Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends K> keyExtractor,
-                                       @NotNull final ExcerptExtractor<? extends V> valueExtractor,
-                                       @NotNull final BinaryOperator<V> mergeFunction) {
-                    requireNonNull(keyExtractor);
-                    requireNonNull(valueExtractor);
-                    requireNonNull(mergeFunction);
-
-                    // Todo: Create a wrapper method around null handling of keyExtractor or otherwise handle it
-
-                    return (accumulation, wire, index) -> {
-                        accumulation.merge(keyExtractor.extract(wire, index),
-                                valueExtractor.extract(wire, index),
-                                mergeFunction);
-                    };
-                }*/
-
                 /**
                  * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
                  * are the result of applying the provided extractors to the input messages.
+                 * <p>
+                 * If the provided {@code extractor} returns null, the element will be ignored.
                  * <p>
                  * If the mapped keys contains duplicates (according to Object.equals(Object)), the
                  * value mapping function is applied to each equal element, and the results are merged using
