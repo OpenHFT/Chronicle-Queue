@@ -52,3 +52,5 @@ local.properties
 #*.cq4
 
 benchmarks/dependency-reduced-pom.xml
+
+dependency-reduced-pom.xml
