@@ -74,7 +74,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @NotNull
     protected final WireType wireType;
     protected final boolean named;
-    protected final Bytes appenderListenerDump = Bytes.allocateElasticOnHeap(256);
+    protected final Bytes<?> appenderListenerDump = Bytes.allocateElasticOnHeap(256);
 
     public SingleChronicleQueueTest(@NotNull WireType wireType, boolean named) {
         this.wireType = wireType;
@@ -310,12 +310,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     }
                 });
 
-                BlockingQueue<Bytes> result = new ArrayBlockingQueue<>(10);
+                BlockingQueue<Bytes<?>> result = new ArrayBlockingQueue<>(10);
 
                 service2 = Executors.newSingleThreadScheduledExecutor(
                         new NamedThreadFactory("service2"));
                 service2.scheduleAtFixedRate(() -> {
-                    Bytes b = Bytes.allocateElasticOnHeap(128);
+                    Bytes<?> b = Bytes.allocateElasticOnHeap(128);
                     final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
                     tailer.readBytes(b);
                     if (b.readRemaining() == 0)
@@ -325,7 +325,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     throw new RejectedExecutionException();
                 }, 1, 1, TimeUnit.MICROSECONDS);
 
-                final Bytes bytes = result.poll(5, TimeUnit.SECONDS);
+                final Bytes<?> bytes = result.poll(5, TimeUnit.SECONDS);
                 if (bytes == null) {
                     // troubleshoot failed test http://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
                     f.get(1, TimeUnit.SECONDS);
@@ -617,7 +617,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             // Sequential read
             for (int i = 0; i < 10; i++) {
 
-                Bytes b = Bytes.allocateDirect(8);
+                Bytes<?> b = Bytes.allocateDirect(8);
 
                 tailer.readBytes(b);
 
@@ -1100,13 +1100,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
-            Bytes steve = Bytes.allocateDirect("Steve".getBytes());
+            Bytes<?> steve = Bytes.allocateDirect("Steve".getBytes());
             appender.writeBytes(steve);
-            Bytes jobs = Bytes.allocateDirect("Jobs".getBytes());
+            Bytes<?> jobs = Bytes.allocateDirect("Jobs".getBytes());
             appender.writeBytes(jobs);
 
             final ExcerptTailer tailer = chronicle.createTailer(named ? "named" : null);
-            Bytes bytes = Bytes.elasticByteBuffer();
+            Bytes<?> bytes = Bytes.elasticByteBuffer();
             try {
                 tailer.readBytes(bytes);
                 assertEquals("Steve", bytes.toString());

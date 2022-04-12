@@ -42,7 +42,7 @@ public class MappingReferenceCountTest {
         try {
             int BLOCK_SIZE = 4096;
             final MappedFile mappedFile = MappedFile.mappedFile(tempFile.getName(), BLOCK_SIZE, 8);
-            final Bytes bytes = mappedFile.bytes();
+            final Bytes<?> bytes = mappedFile.bytes();
 
             // write into block 1
             bytes.writeLong(4096 + 8, Long.MAX_VALUE);

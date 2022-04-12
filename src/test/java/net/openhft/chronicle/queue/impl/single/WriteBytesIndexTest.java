@@ -23,8 +23,8 @@ public class WriteBytesIndexTest extends QueueTestCommon {
 
              ChronicleQueue q2 = createQueue(path)) {
 
-            Bytes bytes = Bytes.allocateElasticOnHeap();
-            Bytes bytes2 = Bytes.allocateElasticOnHeap();
+            Bytes<?> bytes = Bytes.allocateElasticOnHeap();
+            Bytes<?> bytes2 = Bytes.allocateElasticOnHeap();
             for (int cycle = 1; cycle < 10; cycle++) {
                 for (int seq = 0; seq < cycle; seq++) {
                     bytes.clear().append("Msg ").append(String.valueOf(cycle)).append(" ").append(String.valueOf(seq));

@@ -15,7 +15,7 @@ import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQ
 
 public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient implements ExcerptTailer {
 
-    private final Bytes source = Bytes.elasticByteBuffer();
+    private final Bytes<?> source = Bytes.elasticByteBuffer();
     private final Wire wire;
     long index = -1;
     private ChronicleQueue queue;
@@ -24,7 +24,7 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
 
     public ClientWiredExcerptTailerStateless(ClientWiredChronicleQueueStateless queue,
                                              ClientWiredStatelessTcpConnectionHub hub,
-                                             Function<Bytes, Wire> wireWrapper) {
+                                             Function<Bytes<?>, Wire> wireWrapper) {
         super(queue.name(), hub, "QUEUE", 0);
         this.queue = queue;
         this.csp = "//" + queue.name() + "?view=QUEUE";

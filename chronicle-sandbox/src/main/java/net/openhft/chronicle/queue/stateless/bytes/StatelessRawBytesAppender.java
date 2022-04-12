@@ -34,13 +34,13 @@ public interface StatelessRawBytesAppender {
      * @param bytes append bytes to the tail
      * @return returns the index of the newly created except
      */
-    long appendExcept(@NotNull Bytes bytes);
+    long appendExcept(@NotNull Bytes<?> bytes);
 
     /**
      * @param bytes  append bytes to offset
      * @param offset where the data should be written
      */
-    void append(long offset, @NotNull Bytes bytes);
+    void append(long offset, @NotNull Bytes<?> bytes);
 
-    void append(@NotNull UnaryOperator<Bytes> unaryOperator);
+    void append(@NotNull UnaryOperator<Bytes<?>> unaryOperator);
 }

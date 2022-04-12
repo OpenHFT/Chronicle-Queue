@@ -36,7 +36,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
             for (int i = 0; i < COUNT; ++i) {
                 try (DocumentContext dc = tailer.readingDocument()) {
 
-                    Bytes bytes = dc.wire().bytes();
+                    Bytes<?> bytes = dc.wire().bytes();
 
                     bytes.readSkip(-QUEUE_HEADER_SIZE);
                     int header = bytes.readInt();
@@ -78,7 +78,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
             for (int i = 0; i < COUNT; ++i) {
                 try (DocumentContext dc = appender.writingDocument()) {
 
-                    Bytes bytes = dc.wire().bytes();
+                    Bytes<?> bytes = dc.wire().bytes();
 
                     // will contain the size of the blob
                     long start = bytes.writePosition();

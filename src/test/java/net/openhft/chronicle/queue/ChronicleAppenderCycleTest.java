@@ -27,7 +27,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
     @Test
     public void testAppenderCycle() throws IOException {
         String id = "testAppenderCycle";
-        Bytes msg = Bytes.allocateDirect(64);
+        Bytes<?> msg = Bytes.allocateDirect(64);
         try {
             int n = 20;
             for (int i = 0; i < n; ++i)
@@ -38,7 +38,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
 
     }
 
-    private void runTest(String id, Bytes msg) throws IOException {
+    private void runTest(String id, Bytes<?> msg) throws IOException {
         Path path = IOTools.createTempDirectory(id);
         try {
             CountDownLatch steady = new CountDownLatch(2);

@@ -561,7 +561,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
                 break;
 
             case 2:
-                Bytes bytes = Bytes.elasticByteBuffer();
+                Bytes<?> bytes = Bytes.elasticByteBuffer();
                 new BinaryWire(bytes).write("msg").text(msg);
                 appender.writeBytes(bytes);
                 bytes.releaseLast();

@@ -70,7 +70,7 @@ public class ThroughputPerfMain {
         long mid = System.nanoTime();
         long time1 = mid - start;
 
-        Bytes bytes = Bytes.allocateElasticDirect(64);
+        Bytes<?> bytes = Bytes.allocateElasticDirect(64);
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSize)

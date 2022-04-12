@@ -46,7 +46,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @param bytes to write to excerpt.
      * @throws UnrecoverableTimeoutException if the operation times out.
      */
-    default void writeBytes(@NotNull Bytes bytes) {
+    default void writeBytes(@NotNull Bytes<?> bytes) {
         writeBytes((BytesStore) bytes);
     }
 

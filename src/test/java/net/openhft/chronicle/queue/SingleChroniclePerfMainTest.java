@@ -40,7 +40,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         }
     }
 
-    static void doPerfTest(TestWriter<Bytes> writer, TestReader<Bytes> reader, int count, boolean print) throws IOException {
+    static void doPerfTest(TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws IOException {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);
         String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
@@ -81,7 +81,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         IOTools.deleteDirWithFiles(file, 3);
     }
 
-    static void writeMany(Bytes bytes, int size) {
+    static void writeMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
             bytes.writeInt(i);// 4 bytes
             bytes.writeFloat(i);// 4 bytes
@@ -91,7 +91,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         }
     }
 
-    static void readMany(Bytes bytes, int size) {
+    static void readMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
             s32 = bytes.readInt();// 4 bytes
             f32 = bytes.readFloat();// 4 bytes

@@ -45,7 +45,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     private JLBH jlbh;
     private IFacade datum = Values.newNativeReference(IFacade.class);
     private BytesStore datumBytes;
-    private Bytes datumWrite;
+    private Bytes<?> datumWrite;
 
     public static void main(String[] args) {
         // disable as otherwise single GC event skews results heavily

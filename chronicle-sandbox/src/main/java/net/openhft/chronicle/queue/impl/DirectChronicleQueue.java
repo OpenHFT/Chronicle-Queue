@@ -30,11 +30,11 @@ public interface DirectChronicleQueue extends ChronicleQueue {
      * @param buffer the bytes of the document
      * @return the index of the document appended
      */
-    long appendDocument(Bytes buffer);
+    long appendDocument(Bytes<?> buffer);
 
-    boolean readDocument(AtomicLong offset, Bytes buffer);
+    boolean readDocument(AtomicLong offset, Bytes<?> buffer);
 
-    Bytes bytes();
+    Bytes<?> bytes();
 
     /**
      * @return the last index in the chronicle
@@ -42,7 +42,7 @@ public interface DirectChronicleQueue extends ChronicleQueue {
      */
     long lastIndex();
 
-    boolean index(long index, VanillaBytes<?> bytes);
+    boolean index(long index, VanillaBytes bytes);
 
     long firstBytes();
 }

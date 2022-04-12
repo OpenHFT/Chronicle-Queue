@@ -291,14 +291,14 @@ public class MethodReaderBenchmark implements JLBHTask {
 
     static class ExecutionReportDTO extends SelfDescribingMarshallable {
         private String orderID;
-        private Bytes clOrdID;
+        private Bytes<?> clOrdID;
         private String execID;
         private char execTransType;
         private char execType;
         private char ordStatus;
-        private Bytes account;
+        private Bytes<?> account;
         private char settlmntTyp;
-        private Bytes securityID;
+        private Bytes<?> securityID;
         private String idSource;
         private char side;
         private double orderQty;

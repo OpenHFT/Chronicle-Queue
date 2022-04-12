@@ -38,7 +38,7 @@ public enum RunLargeQueueMain {
             ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
             BytesStore bytes = BytesStore.nativeStore(MSG_SIZE);
-            Bytes bytes2 = Bytes.allocateDirect(MSG_SIZE);
+            Bytes<?> bytes2 = Bytes.allocateDirect(MSG_SIZE);
             for (int t = 1; t <= FILE_SIZE; t++) {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < 1 << 30; i += MSG_SIZE) {

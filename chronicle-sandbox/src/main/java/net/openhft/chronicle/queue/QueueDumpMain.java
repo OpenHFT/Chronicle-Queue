@@ -32,7 +32,7 @@ public class QueueDumpMain {
 
     public static void dump(File filename, PrintWriter pw) throws FileNotFoundException {
         MappedFile mappedFile = MappedFile.mappedFile(filename, 64 << 20, 16 << 20);
-        Bytes bytes = mappedFile.bytes();
+        Bytes<?> bytes = mappedFile.bytes();
         pw.print("# Magic: ");
         for (int i = 0; i < 8; i++)
             pw.print((char) bytes.readUnsignedByte());

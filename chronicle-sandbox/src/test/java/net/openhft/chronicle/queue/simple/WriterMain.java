@@ -50,7 +50,7 @@ public class WriterMain {
         long writeOffset;
         private int index = -1;
         private MappedMemory mm;
-        private Bytes bytes;
+        private Bytes<?> bytes;
 
         FileWriter(MappedFile file) throws IOException {
             this.file = file;

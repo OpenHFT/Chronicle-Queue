@@ -367,7 +367,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         return;
                     }
                 }
-                Bytes bytes = acquireBytes();
+                Bytes<?> bytes = acquireBytes();
                 TextWire text = new TextWire(bytes);
                 while (true) {
                     try (DocumentContext dc = tailer.readingDocument()) {

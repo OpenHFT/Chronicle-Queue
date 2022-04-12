@@ -91,7 +91,7 @@ public class ThroughputMain {
         long mid = System.nanoTime();
         IntStream.range(0, threads).parallel().forEach(i -> {
 
-            Bytes bytes = Bytes.allocateElasticDirect(64);
+            Bytes<?> bytes = Bytes.allocateElasticDirect(64);
             try (ChronicleQueue q = ChronicleQueue.singleBuilder(base + i)
                     .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
                     .blockSize(blockSize)

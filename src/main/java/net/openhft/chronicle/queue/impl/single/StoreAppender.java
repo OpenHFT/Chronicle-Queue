@@ -375,7 +375,7 @@ class StoreAppender extends AbstractCloseable
             writeContext.rollbackOnClose = false;
             writeContext.buffered = true;
             if (bufferWire == null) {
-                Bytes bufferBytes = Bytes.allocateElasticOnHeap();
+                Bytes<?> bufferBytes = Bytes.allocateElasticOnHeap();
                 bufferWire = queue().wireType().apply(bufferBytes);
             }
             writeContext.wire = bufferWire;

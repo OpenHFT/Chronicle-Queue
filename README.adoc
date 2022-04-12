@@ -279,13 +279,13 @@ boolean present = tailer.readBytes(b -> process(b.readInt(), b.readDouble()));
 [source,Java]
 ----
 try (DocumentContext dc = appender.writingDocument()) {
-    Bytes bytes = dc.wire().bytes();
+    Bytes<?> bytes = dc.wire().bytes();
     // write to bytes
 }
 
 try (DocumentContext dc = tailer.readingDocument()) {
     if (dc.isPresent()) {
-        Bytes bytes = dc.wire().bytes();
+        Bytes<?> bytes = dc.wire().bytes();
         // read from bytes
     }
 }

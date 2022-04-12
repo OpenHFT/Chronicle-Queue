@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public final class InternalDummyMethodReaderQueueEntryHandler implements QueueEntryHandler {
-    private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
+    private final Bytes<?> textConversionTarget = Bytes.elasticByteBuffer();
     private final WireType wireType;
 
     public InternalDummyMethodReaderQueueEntryHandler(@NotNull WireType wireType) {

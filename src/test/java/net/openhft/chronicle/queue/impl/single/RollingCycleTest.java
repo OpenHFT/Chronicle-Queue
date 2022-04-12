@@ -321,7 +321,7 @@ public class RollingCycleTest extends QueueTestCommon {
         }
 
         @Override
-        public void writeMarshallable(@NotNull BytesOut bytes) {
+        public void writeMarshallable(@NotNull BytesOut<?> bytes) {
             bytes.writeUtf8(_name);
             bytes.writeLong(_value1);
             bytes.writeLong(_value2);
@@ -329,7 +329,7 @@ public class RollingCycleTest extends QueueTestCommon {
         }
 
         @Override
-        public void readMarshallable(@NotNull BytesIn bytes) throws IORuntimeException {
+        public void readMarshallable(@NotNull BytesIn<?> bytes) throws IORuntimeException {
             _name = bytes.readUtf8();
             _value1 = bytes.readLong();
             _value2 = bytes.readLong();
