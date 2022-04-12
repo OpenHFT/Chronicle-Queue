@@ -175,13 +175,13 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         }
 
         @Override
-        public void readMarshallable(BytesIn bytes) throws IORuntimeException {
+        public void readMarshallable(BytesIn<?> bytes) throws IORuntimeException {
             ts = bytes.readLong();
             bytes.read(filler);
         }
 
         @Override
-        public void writeMarshallable(BytesOut bytes) {
+        public void writeMarshallable(BytesOut<?> bytes) {
             bytes.writeLong(ts);
             bytes.writeSkip(filler.length);
         }

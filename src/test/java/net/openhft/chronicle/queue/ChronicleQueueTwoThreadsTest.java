@@ -51,7 +51,7 @@ public class ChronicleQueueTwoThreadsTest extends ChronicleQueueTestBase {
         AtomicLong counter = new AtomicLong();
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
-            Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
+            Bytes<?> bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
             try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                     .fieldlessBinary(name)
                     .testBlockSize()
@@ -87,7 +87,7 @@ public class ChronicleQueueTwoThreadsTest extends ChronicleQueueTestBase {
 
                 ExcerptAppender appender = wqueue.acquireAppender();
 
-                Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
+                Bytes<?> bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
                 for (int i = 0; i < runs; i++) {

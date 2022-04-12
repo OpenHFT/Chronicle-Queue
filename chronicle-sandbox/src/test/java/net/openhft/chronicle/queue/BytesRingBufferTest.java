@@ -78,7 +78,7 @@ public class BytesRingBufferTest {
 
             for (int i = 0; i < 100; i++) {
                 bytesRingBuffer.offer(data());
-                Bytes bytes = bytesRingBuffer.take(maxSize -> {
+                Bytes<?> bytes = bytesRingBuffer.take(maxSize -> {
                     Bytes<ByteBuffer> clear = input.clear();
                     return clear;
                 });
@@ -100,7 +100,7 @@ public class BytesRingBufferTest {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
             bytesRingBuffer.offer(data());
-            Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
+            Bytes<?> actual = bytesRingBuffer.take(maxSize -> input.clear());
             assertEquals(EXPECTED, actual.readUTFΔ());
         }
     }
@@ -112,7 +112,7 @@ public class BytesRingBufferTest {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
-            Bytes actual = bytesRingBuffer.poll(maxSize -> input.clear());
+            Bytes<?> actual = bytesRingBuffer.poll(maxSize -> input.clear());
             assertEquals(null, actual);
         }
     }
@@ -124,7 +124,7 @@ public class BytesRingBufferTest {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
             data();
             bytesRingBuffer.offer(data());
-            Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
+            Bytes<?> actual = bytesRingBuffer.take(maxSize -> input.clear());
             assertEquals(EXPECTED, actual.readUTFΔ());
         }
     }
@@ -164,7 +164,7 @@ public class BytesRingBufferTest {
                        // bytesRingBuffer.offer(data());
                   // assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ());
 
-                Bytes bytes = bytesRingBuffer.take(maxSize -> {
+                Bytes<?> bytes = bytesRingBuffer.take(maxSize -> {
                     Bytes<ByteBuffer> clear = input.clear();
                     return clear;
                 });
@@ -198,7 +198,7 @@ public class BytesRingBufferTest {
                     final int j = i;
                     executorService.submit(() -> {
                         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(iterations)) {
-                            final Bytes out = nativeStore.bytes();
+                            final Bytes<?> out = nativeStore.bytes();
                             String expected = EXPECTED_VALUE + j;
                             out.clear();
                             out.writeUTFΔ(expected);
@@ -226,8 +226,8 @@ public class BytesRingBufferTest {
                     executorService.submit(() -> {
 
                         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(25)) {
-                            Bytes bytes = nativeStore.bytes();
-                            Bytes result = null;
+                            Bytes<?> bytes = nativeStore.bytes();
+                            Bytes<?> result = null;
                             do {
                                 try {
                                     result = bytesRingBuffer.poll(maxSize -> bytes);
@@ -273,7 +273,7 @@ public class BytesRingBufferTest {
                     executorService.submit(() -> {
 
                         try (NativeBytesStore allocate2 = NativeBytesStore.nativeStoreWithFixedCapacity(iterations)) {
-                            final Bytes out = allocate2.bytes();
+                            final Bytes<?> out = allocate2.bytes();
 
                             out.clear();
                             out.writeInt(j);
@@ -301,8 +301,8 @@ public class BytesRingBufferTest {
 
                         try {
                             try (NativeBytesStore allocate3 = NativeBytesStore.nativeStoreWithFixedCapacity(25)) {
-                                final Bytes bytes = allocate3.bytes();
-                                Bytes result = null;
+                                final Bytes<?> bytes = allocate3.bytes();
+                                Bytes<?> result = null;
                                 do {
                                     try {
                                         result = bytesRingBuffer.poll(maxsize -> bytes);

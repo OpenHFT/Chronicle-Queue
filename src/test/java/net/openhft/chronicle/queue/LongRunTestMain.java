@@ -121,7 +121,7 @@ public class LongRunTestMain {
         }
 
         @Override
-        public void writeMarshallable(@NotNull final BytesOut bytes) {
+        public void writeMarshallable(@NotNull final BytesOut<?> bytes) {
             bytes.writeLong(this.logEntry.getSessionId());
             bytes.writeInt(this.logEntry.getLogLevel());
             bytes.writeInt(this.logEntry.getSecurityLevel());

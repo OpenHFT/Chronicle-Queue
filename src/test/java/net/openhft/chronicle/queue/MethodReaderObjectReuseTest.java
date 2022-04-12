@@ -60,7 +60,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
 
     static class PingDTO extends SelfDescribingMarshallable {
         static int constructionCounter, constructionExpected;
-        final Bytes bytes = Bytes.allocateElasticOnHeap();
+        final Bytes<?> bytes = Bytes.allocateElasticOnHeap();
 
         PingDTO() {
             if (++constructionCounter > constructionExpected)

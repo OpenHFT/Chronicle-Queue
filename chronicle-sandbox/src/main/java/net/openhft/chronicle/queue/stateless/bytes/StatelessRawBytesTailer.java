@@ -35,7 +35,7 @@ public interface StatelessRawBytesTailer {
      * @return null will be returned if their is not an Except at this index
      */
     @NotNull
-    Bytes readExcept(long index);
+    Bytes<?> readExcept(long index);
 
     /**
      * reads bytes for a given index into the buffer
@@ -44,7 +44,7 @@ public interface StatelessRawBytesTailer {
      * @param using the buffer to use if its large enough, otherwise a new buffer will be created
      * @return null will be returned if their is not an Except at this index
      */
-    boolean readExcept(long index, Bytes using);
+    boolean readExcept(long index, Bytes<?> using);
 
     /**
      * @return the last index

@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public final class InternalMessageToTextQueueEntryHandler implements QueueEntryHandler {
-    private final Bytes textConversionTarget = Bytes.elasticByteBuffer();
+    private final Bytes<?> textConversionTarget = Bytes.elasticByteBuffer();
     private final WireType wireType;
 
     public InternalMessageToTextQueueEntryHandler(WireType wireType) {

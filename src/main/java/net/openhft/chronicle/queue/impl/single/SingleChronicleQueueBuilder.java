@@ -134,10 +134,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     // enterprise stuff
     private int deltaCheckpointInterval = -1;
-    private Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier;
-    private Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier;
-    private Updater<Bytes> messageInitializer;
-    private Consumer<Bytes> messageHeaderReader;
+    private Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier;
+    private Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier;
+    private Updater<Bytes<?>> messageInitializer;
+    private Consumer<Bytes<?>> messageHeaderReader;
     private SecretKeySpec key;
 
     private int maxTailers;
@@ -398,17 +398,17 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    public Updater<Bytes> messageInitializer() {
+    public Updater<Bytes<?>> messageInitializer() {
         return messageInitializer == null ? Bytes::clear : messageInitializer;
     }
 
-    public Consumer<Bytes> messageHeaderReader() {
+    public Consumer<Bytes<?>> messageHeaderReader() {
         return messageHeaderReader == null ? b -> {
         } : messageHeaderReader;
     }
 
-    public SingleChronicleQueueBuilder messageHeader(Updater<Bytes> messageInitializer,
-                                                     Consumer<Bytes> messageHeaderReader) {
+    public SingleChronicleQueueBuilder messageHeader(Updater<Bytes<?>> messageInitializer,
+                                                     Consumer<Bytes<?>> messageHeaderReader) {
         this.messageInitializer = messageInitializer;
         this.messageHeaderReader = messageHeaderReader;
         return this;
@@ -1056,17 +1056,17 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    public Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier() {
+    public Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier() {
         return encodingSupplier;
     }
 
-    public Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier() {
+    public Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier() {
         return decodingSupplier;
     }
 
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable
-                                                               Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
-                                                       @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
+                                                               Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
+                                                       @Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
         this.encodingSupplier = encodingSupplier;

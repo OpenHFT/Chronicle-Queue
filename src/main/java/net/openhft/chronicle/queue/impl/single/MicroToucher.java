@@ -24,7 +24,7 @@ public class MicroToucher {
         final long lastPosition = appender.lastPosition;
         final long lastPage = lastPosition & ~0xFFF;
         final long nextPage = (lastPosition + 0xFFF) & ~0xFFF;
-        Bytes bytes = bufferWire.bytes();
+        Bytes<?> bytes = bufferWire.bytes();
         if (nextPage != lastPageTouched) {
             lastPageTouched = nextPage;
             try {

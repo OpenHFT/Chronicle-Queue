@@ -36,11 +36,11 @@ public class StatelessTailer implements ExcerptTailer {
 
     private final StatelessRawBytesTailer statelessRawBytesTailer;
     private final ChronicleQueue chronicleQueue;
-    private final Function<Bytes, Wire> wireFunction;
+    private final Function<Bytes<?>, Wire> wireFunction;
     private long index = -1;
 
     public StatelessTailer(ChronicleQueue chronicleQueue,
-                           Function<Bytes, Wire> wireFunction,
+                           Function<Bytes<?>, Wire> wireFunction,
                            StatelessRawBytesTailer statelessRawBytesTailer) {
         this.wireFunction = wireFunction;
         this.statelessRawBytesTailer = statelessRawBytesTailer;
@@ -58,7 +58,7 @@ public class StatelessTailer implements ExcerptTailer {
             index = statelessRawBytesTailer.lastWrittenIndex();
         }
 
-        final Bytes bytes = statelessRawBytesTailer.readExcept(index);
+        final Bytes<?> bytes = statelessRawBytesTailer.readExcept(index);
         index++;
         return wireFunction.apply(bytes);
     }

@@ -21,8 +21,8 @@ public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
             return this;
         }
         SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-        Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier = () -> new VanillaCipher(Cipher.ENCRYPT_MODE, key);
-        Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier = () -> new VanillaCipher(Cipher.DECRYPT_MODE, key);
+        Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier = () -> new VanillaCipher(Cipher.ENCRYPT_MODE, key);
+        Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier = () -> new VanillaCipher(Cipher.DECRYPT_MODE, key);
         codingSuppliers(encodingSupplier, decodingSupplier);
         messageHeader(MessageHeader.SALT_64, MessageHeader.SALT_64);
         return this;
@@ -42,8 +42,8 @@ For example:
 
 [source, java]
 ....
-public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes>> encodingSupplier,
-                                                           @Nullable Supplier<BiConsumer<BytesStore, Bytes>> decodingSupplier) {
+public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
+                                                           @Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
         this.encodingSupplier = encodingSupplier;

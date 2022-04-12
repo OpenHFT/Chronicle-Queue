@@ -34,12 +34,12 @@ import java.util.function.Function;
  */
 public class StatelessExcerpt implements Excerpt {
 
-    private final Function<Bytes, Wire> wireFunction;
+    private final Function<Bytes<?>, Wire> wireFunction;
     private final StatelessRawBytesTailer statelessRawBytesTailer;
     private final ChronicleQueue chronicleQueue;
     private long index;
 
-    public StatelessExcerpt(ChronicleQueue chronicleQueue, Function<Bytes, Wire> wireFunction,
+    public StatelessExcerpt(ChronicleQueue chronicleQueue, Function<Bytes<?>, Wire> wireFunction,
                             StatelessRawBytesTailer statelessRawBytesTailer) {
         this.wireFunction = wireFunction;
         this.statelessRawBytesTailer = statelessRawBytesTailer;
@@ -54,7 +54,7 @@ public class StatelessExcerpt implements Excerpt {
      */
     @Override
     public Wire wire() {
-        final Bytes bytes = statelessRawBytesTailer.readExcept(index);
+        final Bytes<?> bytes = statelessRawBytesTailer.readExcept(index);
         return wireFunction.apply(bytes);
     }
 

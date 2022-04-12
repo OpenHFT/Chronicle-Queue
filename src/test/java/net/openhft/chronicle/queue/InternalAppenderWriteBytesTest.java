@@ -35,7 +35,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     public void writeJustAfterLastIndex() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
-        Bytes result = Bytes.elasticHeapByteBuffer();
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
             ExcerptAppender appender = q.acquireAppender();
             // write at index 0
@@ -58,7 +58,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     @Test
     public void dontOverwriteExisting() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
-        Bytes result = Bytes.elasticHeapByteBuffer();
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
             ExcerptAppender appender = q.acquireAppender();
             appender.writeBytes(test);
@@ -80,7 +80,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
         expectException("Trying to overwrite index 1 which is before the end of the queue");
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
-        Bytes result = Bytes.elasticHeapByteBuffer();
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         long index;
         final File tmpDir = getTmpDir();
         final String expected = "" +
@@ -197,7 +197,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     @Test
     public void test3() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
-        Bytes result = Bytes.elasticHeapByteBuffer();
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
             ExcerptAppender appender = q.acquireAppender();
             appender.writeBytes(test);
@@ -254,7 +254,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
-        Bytes result = Bytes.elasticHeapByteBuffer();
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build()) {
             ExcerptAppender appender = q.acquireAppender();

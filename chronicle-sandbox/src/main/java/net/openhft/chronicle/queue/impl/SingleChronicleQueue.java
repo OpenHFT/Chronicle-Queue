@@ -66,11 +66,11 @@ public class SingleChronicleQueue extends AbstractChronicle {
 
     @NotNull
     private final MappedFile mappedFile;
-    private final Bytes headerMemory;
+    private final Bytes<?> headerMemory;
 
     @NotNull
-    private final Bytes bytes;
-    //private final Function<Bytes, Wire> bytesToWireFunction;
+    private final Bytes<?> bytes;
+    //private final Function<Bytes<?>, Wire> bytesToWireFunction;
 
     // used in the indexer
     private final ThreadLocal<ByteableLongArrayValues> longArray;
@@ -103,7 +103,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
         }
     }
 
-    Wire createWire(@NotNull final Bytes bytes) {
+    Wire createWire(@NotNull final Bytes<?> bytes) {
         return WireUtil.createWire(this.builder.wireType(), bytes);
     }
 
@@ -139,7 +139,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
         firstBytes = bytes.position();
     }
 
-    private void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
+    private void waitForTheHeaderToBeBuilt(@NotNull Bytes<?> bytes) throws IOException {
         for (int i = 0; i < 1000; i++) {
             long magic = bytes.readVolatileLong(MAGIC_OFFSET);
             if (magic == BUILDING) {
@@ -250,7 +250,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
         final ByteableLongArrayValues array = longArray.get();
 
         final long size = array.sizeInBytes(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
-        final Bytes buffer = NativeBytes.nativeBytes(size);
+        final Bytes<?> buffer = NativeBytes.nativeBytes(size);
         buffer.zeroOut(0, size);
 
         final Wire wire = WireUtil.createWire(this.builder.wireType(), buffer);
@@ -266,7 +266,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
      * @param buffer
      * @return the addressForRead of the appended data
      */
-    private long appendMetaDataReturnAddress(@NotNull Bytes buffer) {
+    private long appendMetaDataReturnAddress(@NotNull Bytes<?> buffer) {
         long length = checkRemainingForAppend(buffer);
 
         LongValue writeByte = header.writeByte();
@@ -296,7 +296,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
     }
 
     @Override
-    public long appendDocument(@NotNull Bytes buffer) {
+    public long appendDocument(@NotNull Bytes<?> buffer) {
         long length = checkRemainingForAppend(buffer);
 
         LongValue writeByte = header.writeByte();
@@ -323,7 +323,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
     }
 
     @Override
-    public boolean readDocument(@NotNull AtomicLong offset, @NotNull Bytes buffer) {
+    public boolean readDocument(@NotNull AtomicLong offset, @NotNull Bytes<?> buffer) {
         buffer.clear();
         long lastByte = offset.get();
         for (; ; ) {
@@ -345,7 +345,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
 
     @NotNull
     @Override
-    public Bytes bytes() {
+    public Bytes<?> bytes() {
         return bytes;
     }
 
@@ -377,7 +377,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
         return i & LENGTH_MASK;
     }
 
-    protected long checkRemainingForAppend(@NotNull Bytes buffer) {
+    protected long checkRemainingForAppend(@NotNull Bytes<?> buffer) {
         long remaining = buffer.remaining();
         if (remaining > MAX_LENGTH) {
             throw new IllegalStateException("Length too large: " + remaining);

@@ -30,7 +30,7 @@ public class SingleAppender implements ExcerptAppender {
 
     @NotNull
     private final SingleChronicleQueue chronicle;
-    private final Bytes buffer;
+    private final Bytes<?> buffer;
     private final Wire wire;
 
     private long lastWrittenIndex = -1;

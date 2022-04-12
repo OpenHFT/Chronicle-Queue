@@ -51,7 +51,7 @@ public class ZipBytesRingBufferTest {
             NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1024);
             NativeBytesStore msgBytes = NativeBytesStore.nativeStoreWithFixedCapacity(150);
 
-            net.openhft.chronicle.bytes.Bytes message = msgBytes.bytes();
+            net.openhft.chronicle.bytes.Bytes<?> message = msgBytes.bytes();
             message.writeUTFΔ("Hello World");
             message.flip();
 
@@ -78,7 +78,7 @@ public class ZipBytesRingBufferTest {
             }
 
             // read the data from chronicle into actual
-            Bytes actual = NativeBytesStore.nativeStoreWithFixedCapacity(100).bytes();
+            Bytes<?> actual = NativeBytesStore.nativeStoreWithFixedCapacity(100).bytes();
             chronicle.readDocument(offset, actual);
 
             // "Hello World" zipped should be 12 chars

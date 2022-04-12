@@ -51,13 +51,13 @@ To use Bytes of an appender you can use either of these two patterns
 ----
 // Writing Java 7 style without a lambda
 try (DocumentContext dc = appender.writingDocument()) {
-    Bytes bytes = dc.wire().bytes();
+    Bytes<?> bytes = dc.wire().bytes();
     // write to the bytes
 }
 
 // Reading Java 7 style without a lambda
 try (DocumentContext dc = appender.readingDocument()) {
-    Bytes bytes = dc.wire().bytes();
+    Bytes<?> bytes = dc.wire().bytes();
     // read from the bytes
 }
 ----

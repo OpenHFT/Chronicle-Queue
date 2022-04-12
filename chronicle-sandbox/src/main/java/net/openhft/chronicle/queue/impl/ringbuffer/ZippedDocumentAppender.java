@@ -68,7 +68,7 @@ public class ZippedDocumentAppender implements Closeable {
      * @param bytes the bytes to append
      * @throws InterruptedException
      */
-    public void append(@NotNull Bytes bytes) throws InterruptedException {
+    public void append(@NotNull Bytes<?> bytes) throws InterruptedException {
 
         //noinspection StatementWithEmptyBody
         while (!q.offer(bytes)) {
@@ -116,7 +116,7 @@ public class ZippedDocumentAppender implements Closeable {
                     if (Thread.currentThread().isInterrupted())
                         return;
 
-                    Bytes value;
+                    Bytes<?> value;
 
                     do {
                         value = q.poll(this);
@@ -140,7 +140,7 @@ public class ZippedDocumentAppender implements Closeable {
 
         @NotNull
         @Override
-        public Bytes provide(final long maxSize) {
+        public Bytes<?> provide(final long maxSize) {
             if (maxSize < inputBuffer.capacity())
                 return inputBuffer.clear();
 

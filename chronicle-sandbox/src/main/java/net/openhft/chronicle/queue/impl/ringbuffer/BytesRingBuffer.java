@@ -43,13 +43,13 @@ public class BytesRingBuffer {
     /**
      * @param buffer the bytes that you wish to use for the ring buffer
      */
-    public BytesRingBuffer(@NotNull final Bytes buffer) {
+    public BytesRingBuffer(@NotNull final Bytes<?> buffer) {
         this.header = new Header(buffer);
         this.bytes = new RingBuffer(buffer);
         header.setWriteUpTo(bytes.capacity());
     }
 
-    private static void checkSize(@NotNull Bytes using, long elementSize) {
+    private static void checkSize(@NotNull Bytes<?> using, long elementSize) {
         if (using.remaining() < elementSize)
             throw new IllegalStateException("requires size=" + elementSize +
                     " bytes, but only " + using.remaining() + " remaining.");
@@ -62,7 +62,7 @@ public class BytesRingBuffer {
      * @param bytes the {@code bytes} that you wish to add to the ring buffer
      * @return returning {@code true} upon success and {@code false} if this queue is full.
      */
-    public boolean offer(@NotNull Bytes bytes) throws InterruptedException {
+    public boolean offer(@NotNull Bytes<?> bytes) throws InterruptedException {
 
         try {
 
@@ -129,10 +129,10 @@ public class BytesRingBuffer {
     }
 
     @NotNull
-    public Bytes take(@NotNull BytesProvider bytesProvider) throws
+    public Bytes<?> take(@NotNull BytesProvider bytesProvider) throws
             InterruptedException,
             IllegalStateException {
-        Bytes poll;
+        Bytes<?> poll;
         do {
             poll = poll(bytesProvider);
         } while (poll == null);
@@ -147,7 +147,7 @@ public class BytesRingBuffer {
      * @throws IllegalStateException is the {@code using} buffer is not large enough
      */
     @Nullable
-    public Bytes poll(@NotNull BytesProvider bytesProvider) throws
+    public Bytes<?> poll(@NotNull BytesProvider bytesProvider) throws
             InterruptedException,
             IllegalStateException {
 
@@ -178,7 +178,7 @@ public class BytesRingBuffer {
 
         final long next = offset + elementSize;
 
-        final Bytes using = bytesProvider.provide(elementSize);
+        final Bytes<?> using = bytesProvider.provide(elementSize);
 
         // checks that the 'using' bytes is large enough
         checkSize(using, elementSize);
@@ -207,7 +207,7 @@ public class BytesRingBuffer {
          * @return a buffer of at least {@code maxSize} bytes remaining
          */
         @NotNull
-        Bytes provide(long maxSize);
+        Bytes<?> provide(long maxSize);
     }
 
     /**
@@ -218,12 +218,12 @@ public class BytesRingBuffer {
         private final long writeLocationOffset;
         private final long writeUpToOffset;
         private final long readLocationOffset;
-        private final Bytes buffer;
+        private final Bytes<?> buffer;
 
         /**
          * @param buffer the bytes for the header
          */
-        private Header(@NotNull Bytes buffer) {
+        private Header(@NotNull Bytes<?> buffer) {
             if (buffer.remaining() < 24) {
                 final String message = "buffer too small, buffer size=" + buffer.remaining();
                 throw new IllegalStateException(message);
@@ -295,15 +295,15 @@ public class BytesRingBuffer {
     private class RingBuffer {
 
         @NotNull
-        final Bytes buffer;
+        final Bytes<?> buffer;
         final boolean isBytesBigEndian;
 
-        public RingBuffer(@NotNull Bytes buffer) {
+        public RingBuffer(@NotNull Bytes<?> buffer) {
             this.buffer = buffer.bytes();
             isBytesBigEndian = buffer.byteOrder() == ByteOrder.BIG_ENDIAN;
         }
 
-        private long write(long offset, @NotNull Bytes bytes) {
+        private long write(long offset, @NotNull Bytes<?> bytes) {
             long result = offset + bytes.remaining();
             offset %= capacity();
 
@@ -358,7 +358,7 @@ public class BytesRingBuffer {
             return l + 1;
         }
 
-        private long read(@NotNull Bytes bytes, long offset) {
+        private long read(@NotNull Bytes<?> bytes, long offset) {
             offset %= capacity();
             long endOffSet = nextOffset(offset, bytes.remaining());
 

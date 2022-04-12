@@ -56,7 +56,7 @@ public class MappedMemoryTest {
             try {
 
                 MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
-                Bytes bytes1 = mappedFile.acquire(1).bytes();
+                Bytes<?> bytes1 = mappedFile.acquire(1).bytes();
 
                 long startTime = System.nanoTime();
                 for (long i = 0; i < BLOCK_SIZE; i += 8L) {
@@ -98,7 +98,7 @@ public class MappedMemoryTest {
             try {
 
                 MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
-                Bytes bytes1 = mappedFile.acquire(1).bytes();
+                Bytes<?> bytes1 = mappedFile.acquire(1).bytes();
 
                 long startTime = System.nanoTime();
                 for (long i = 0; i < BLOCK_SIZE; i++) {

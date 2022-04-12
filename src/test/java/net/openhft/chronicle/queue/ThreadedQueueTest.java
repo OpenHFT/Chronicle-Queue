@@ -50,7 +50,7 @@ public class ThreadedQueueTest extends ChronicleQueueTestBase {
                     .build()) {
 
                 final ExcerptTailer tailer = rqueue.createTailer();
-                final Bytes bytes = Bytes.elasticByteBuffer();
+                final Bytes<?> bytes = Bytes.elasticByteBuffer();
 
                 while (counter.get() < REQUIRED_COUNT && !Thread.interrupted()) {
                     bytes.clear();
@@ -73,7 +73,7 @@ public class ThreadedQueueTest extends ChronicleQueueTestBase {
 
                 final ExcerptAppender appender = wqueue.acquireAppender();
 
-                final Bytes message = Bytes.elasticByteBuffer();
+                final Bytes<?> message = Bytes.elasticByteBuffer();
                 for (int i = 0; i < REQUIRED_COUNT; i++) {
                     message.clear();
                     message.append(i);
@@ -111,7 +111,7 @@ public class ThreadedQueueTest extends ChronicleQueueTestBase {
                     .rollCycle(TEST_DAILY)
                     .build()) {
 
-                Bytes bytes = Bytes.elasticByteBuffer();
+                Bytes<?> bytes = Bytes.elasticByteBuffer();
                 assertFalse(tailer.readBytes(bytes));
 
                 final ExcerptAppender appender = wqueue.acquireAppender();

@@ -38,11 +38,11 @@ import java.util.function.Function;
  */
 public class StatelessChronicleQueue implements ChronicleQueue {
 
-    private final Function<Bytes, Wire> wireFunction;
+    private final Function<Bytes<?>, Wire> wireFunction;
     private final StatelessRawBytesTailer statelessRawBytesTailer;
     private final StatelessRawBytesAppender statelessRawBytesAppender;
 
-    public StatelessChronicleQueue(Function<Bytes, Wire> wireFunction,
+    public StatelessChronicleQueue(Function<Bytes<?>, Wire> wireFunction,
                                    StatelessRawBytesTailer statelessRawBytesTailer,
                                    StatelessRawBytesAppender statelessRawBytesAppender) {
         this.wireFunction = wireFunction;
