@@ -130,14 +130,18 @@ This chapter contains a more detailed description of the Stream Bridge functiona
 
 === Examples
 
-==== Finding the Highest Index
+This chapter contains a number of Stream Bridge examples.
+
+==== LongStream: Finding the Highest Index
 
 This example is using a `LongStream` eliminating object creation:
 
 [source,java]
 ----
-long last = Streams.ofLong(q.createTailer(),
-                 ToLongExcerptExtractor.extractingIndex()) <1>
+long last = Streams.ofLong(
+                q.createTailer(),
+                ToLongExcerptExtractor.extractingIndex() <1>
+         )
         .max()
         .orElse(-1); <2>
 
@@ -145,20 +149,22 @@ long last = Streams.ofLong(q.createTailer(),
 <1> Convenience method equivalent to `(wire, index) -> index`.
 <2> If no index is present, return `-1`.
 
-==== Computing Long Statistics
+==== LongStream: Computing Statistics
 
 This other example is also using a `LongStream` but with a custom extractor that will read
-a long directly from the queue.
+a `long` directly from the queue.
 
 [source,java]
 ----
-LongSummaryStatistics stat = Streams.ofLong(q.createTailer(),
-               (wire, index) -> wire.getValueIn().readLong()) <1>
+LongSummaryStatistics stat = Streams.ofLong(
+               q.createTailer(),
+               (wire, index) -> wire.getValueIn().readLong() <1>
+        )
         .summaryStatistics();
 ----
 <1> Custom `ToLongExcerptExtractor` lambda.
 
-==== Extracting Objects of a Certain Type
+==== Stream: Objects of a Certain Type
 
 This example shows an example of creating a `Stream<MarketData>`.
 [source,java]
@@ -177,7 +183,7 @@ static <E> ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
 }
 ----
 
-==== Extracting Objects from a Queue written via MethodWriters
+==== Stream: Objects from a Queue written via MethodWriters
 If a queue was written using a method writer, the queue will likely contain messages of different types. Assuming we have used a method writer implementing:
 
 [source,java]
@@ -193,7 +199,7 @@ public interface Messages {
 }
 ----
 
-Then we can extract messages of a certain type like so:
+we can extract messages of a certain type like so:
 
 [source,java]
 ----
@@ -208,7 +214,8 @@ List<News> newsList = Streams.of(
 
 <2> Standard `Stream` feature that will sort messages in `symbol` order.
 
-Note:: Some type parameters are not strictly needed but will aid Java's type inference.
+
+Note:: Some type parameters are not strictly needed but are there to aid Java's type inference.
 
 ==== Iterators and Spliterators
 
@@ -216,15 +223,22 @@ Streams, Spliterators and Iterators are related. The Stream Bridge feature also 
 
 [source,java]
 ----
-Iterator<MarketData> iterator = Streams.iterator(queue.createTailer(), ofType(MarketData.class));
+Iterator<MarketData> iterator = Streams.iterator(
+                queue.createTailer(),
+                ofType(MarketData.class) <1>
+);
 ----
-As can be seen, the procedure is similar to creating a Stream.
+<1> Extract messages of this type while iterating.
+
+As can be seen, the procedure here is similar to creating a `Stream`.
 
 === Constrains and Best Practices
 
-==== Reuse
+This chapter contains tips for using the Stream Bridge feature.
 
-It is possible to create an `ExcerprExtractor` that is reusing objects. Care must be taken if such an extractor is used so that, for example, reused objects are not exposed or stored in the Streams pipeline. If in doubt, make a copy or extract an immutable value from the object at hand.
+==== Object Reuse
+
+It is possible to create an `ExcerprExtractor` that is reusing objects. Care must be taken if such an extractor is used so that, for example, reused objects are not exposed or stored internally in the Streams pipeline. If in doubt, make a copy or extract an immutable value from the object at hand.
 
 ==== Closing an ExcerptTailer
 
