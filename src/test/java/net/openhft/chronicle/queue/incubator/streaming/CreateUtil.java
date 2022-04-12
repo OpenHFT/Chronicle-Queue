@@ -11,15 +11,15 @@ import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-final class CreateUtil {
+public final class CreateUtil {
 
     private CreateUtil() {
     }
 
     @SafeVarargs
     @NotNull
-    static SingleChronicleQueue createThenValueOuts(@NotNull final String name,
-                                                    @NotNull final Consumer<ValueOut>... mutators) {
+    public static SingleChronicleQueue createThenValueOuts(@NotNull final String name,
+                                                           @NotNull final Consumer<ValueOut>... mutators) {
         final Consumer<SingleChronicleQueue> queueMutator = q -> {
             ExcerptAppender excerptAppender = q.acquireAppender();
             for (Consumer<ValueOut> mutator : mutators) {
@@ -33,8 +33,8 @@ final class CreateUtil {
 
     @SafeVarargs
     @NotNull
-    static SingleChronicleQueue createThenWritingDocuments(@NotNull final String name,
-                                                           @NotNull final Consumer<DocumentContext>... mutators) {
+    public static SingleChronicleQueue createThenWritingDocuments(@NotNull final String name,
+                                                                  @NotNull final Consumer<DocumentContext>... mutators) {
         final Consumer<SingleChronicleQueue> queueMutator = q -> {
             ExcerptAppender excerptAppender = q.acquireAppender();
             for (Consumer<DocumentContext> mutator : mutators) {
@@ -48,8 +48,8 @@ final class CreateUtil {
 
 
     @NotNull
-    static SingleChronicleQueue createThenAppending(@NotNull final String name,
-                                                    @NotNull final Consumer<ExcerptAppender> mutator) {
+    public static SingleChronicleQueue createThenAppending(@NotNull final String name,
+                                                           @NotNull final Consumer<ExcerptAppender> mutator) {
         final Consumer<SingleChronicleQueue> queueMutator = q -> {
             ExcerptAppender excerptAppender = q.acquireAppender();
             mutator.accept(excerptAppender);
@@ -58,15 +58,15 @@ final class CreateUtil {
     }
 
     @NotNull
-    static SingleChronicleQueue createThen(@NotNull final String name,
-                                           @NotNull final Consumer<SingleChronicleQueue> queueMutator) {
-        final SingleChronicleQueue q = createQueue(name);
+    public static SingleChronicleQueue createThen(@NotNull final String name,
+                                                  @NotNull final Consumer<SingleChronicleQueue> queueMutator) {
+        final SingleChronicleQueue q = create(name);
         queueMutator.accept(q);
         return q;
     }
 
     @NotNull
-    static SingleChronicleQueue createQueue(@NotNull final String name) {
+    public static SingleChronicleQueue create(@NotNull final String name) {
         final SetTimeProvider tp = new SetTimeProvider(TimeUnit.HOURS.toNanos(365 * 24)).autoIncrement(1, TimeUnit.SECONDS);
         return SingleChronicleQueueBuilder
                 .single(name)

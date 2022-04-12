@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.internal.streaming.StreamUtil;
+import net.openhft.chronicle.queue.internal.streaming.StreamsUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Iterator;
@@ -90,8 +90,7 @@ public final class Streams {
                                                  @NotNull final ExcerptExtractor<T> extractor) {
         requireNonNull(tailer);
         requireNonNull(extractor);
-        return Spliterators.spliteratorUnknownSize(iterator(tailer, extractor),
-                Spliterator.ORDERED | Spliterator.NONNULL);
+        return new StreamsUtil.VanillaSpliterator<>(iterator(tailer, extractor));
     }
 
     /**
@@ -113,8 +112,7 @@ public final class Streams {
                                                        @NotNull final ToLongExcerptExtractor extractor) {
         requireNonNull(tailer);
         requireNonNull(extractor);
-        return Spliterators.spliteratorUnknownSize(iteratorOfLong(tailer, extractor),
-                Spliterator.ORDERED | Spliterator.NONNULL);
+        return Spliterators.spliteratorUnknownSize(iteratorOfLong(tailer, extractor), Spliterator.ORDERED);
     }
 
     /**
@@ -135,7 +133,7 @@ public final class Streams {
                                            @NotNull final ExcerptExtractor<T> extractor) {
         requireNonNull(tailer);
         requireNonNull(extractor);
-        return new StreamUtil.ExcerptTailerIterator<>(tailer, extractor);
+        return new StreamsUtil.ExcerptTailerIterator<>(tailer, extractor);
     }
 
     /**
@@ -155,7 +153,7 @@ public final class Streams {
                                                           @NotNull final ToLongExcerptExtractor extractor) {
         requireNonNull(tailer);
         requireNonNull(extractor);
-        return new StreamUtil.ExcerptTailerIteratorOfLong(tailer, extractor);
+        return new StreamsUtil.ExcerptTailerIteratorOfLong(tailer, extractor);
     }
 
 }

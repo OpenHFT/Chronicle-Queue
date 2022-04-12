@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.demo.streaming;
+package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
 
 import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
