@@ -9,17 +9,17 @@ toc::[]
 
 == About Chronicle Queue Streaming
 
-Chronicle Queue Streaming adds two different benefits to Chronicle Queue:
+Chronicle Queue Streaming adds two additional features to Chronicle Queue:
 
-* Acting as a Stream Bridge between a Chronicle Queue and standard Java Streams.
-* Maintaining Accumulation viws which are concurrent materialized views of Chronicle Queues.
+* Acting as a Stream Bridge between a Chronicle Queue and standard `java.util.stream.Stream` objects.
+* Maintaining Accumulation views which are concurrent materialized views of underlying Chronicle Queues.
 
 Chronicle Queue Streaming is *an incubating feature* meaning it could be changed and even dropped in future releases.
 Hence, running Chronicle Queue Streaming in production code is discouraged.
 
 == Stream Bridge Overview
 
-The Stream Bridge allows standard `java.util.stream.Stream` objects to be created directly from Chronicle Queues.
+The Stream Bridge allows standard `` objects to be created directly from Chronicle Queues.
 Here is an example how a Chronicle Queue that contains `MarketData` objects can be converted and used as a Stream:
 
 [source,java]
@@ -37,11 +37,11 @@ String s = Streams.of(
 <1> The `ExceprtTailer` to use when reading excerpts from the Queue.
 The tailer can be set to a certain position before being submitted to the method above.
 
-<2> The `ExcerptExtractor` used to convert an excerpt to an object.
-In the example above an extractor of type `MarketData` is used obtained via the convenience function `ExcerptExtractor.ofType()`.
+<2> The `ExcerptExtractor` used to convert an excerpt to a Java object.
+In the example above, an extractor of type `MarketData` is used which is obtained via a convenience function `ExcerptExtractor.ofType()`.
 
-The `Stream` above exemplifies a pagination service where the third page of events is shown from the Queue (each page has 50 entries).
-Once create, it behaves like any Stream and can take advantage of the whole Stream ecosystem.
+The `Stream` above exemplifies a pagination service where the third page of events from the Queue is shown (each page has 50 rows).
+Once the `Stream` is created, it behaves like any `Stream` and can take advantage of the whole `Stream` ecosystem.
 
 The snippet above might produce the following output (shortened):
 [source,text]
@@ -70,8 +70,7 @@ The snippet above might produce the following output (shortened):
 
 == Accumulation Overview
 
-An `Accumulation` allows access to continuously updated and concurrent view of an underlying Queue's content.
-The `Accumulation` is maintained automatically.
+An `Accumulation` allows access to a continuously updated and concurrent view of an underlying Queue's content. The `Accumulation` can be maintained automatically.
 
 Here is an example how an `Accumulation` that can be attached to a Chronicle Queue containing `MarketData` objects:
 
@@ -93,22 +92,22 @@ ChronicleQueue q = SingleChronicleQueueBuilder.builder()
 ----
 
 <1> `ExcertpExtractor` that will extract objects of type `MarketData`.
-<2> Classifier that will extract keys from `MarketData1 objects.
-<3> Value extractor (in this case it will only pass through objects)
-<4> Merger that will be applied on the old and new value if the key is already used.
+<2> Classifier that will extract keys from `MarketData` objects.
+<3> Value extractor (in this case, it will only pass through objects)
+<4> Merger that will be applied on the old and new value if a key is already associated with an old value.
 <5> Register the accumulation with the queue so that it is automatically maintained when excerpts are added.
 
 The `Accumulation` above exemplifies a latest-seen service where the latest `MarketData` per symbol (key) is maintained.
 
-The `Accumulations.toMap()` takes an `Accumulator` that operates on Maps and that mapps objects of type `MarketData` using `MarketData::symbol` to extract keys and `Function.identity()` to extract values.
-In case there is already a value associated with a particular key, the provided merger `Accumulator.replacingMerger()` is applied (which will replace the old existing value for a key with the new value).
+The `Accumulations.toMap()` takes an `Accumulator` that operates on Maps and, as described above, will map objects of type `MarketData` using `MarketData::symbol` to extract keys and `Function.identity()` to extract values.
+In case there is already an old value associated with a particular key, the provided merger `Accumulator.replacingMerger()` is applied (which will replace the old existing value for a key with the new value).
 
 Once an `Accumulation` is created, it can accept an `ExcerptTailer` to boostrap from an existing queue.
-As shown above, it can also be registered with a Queue as an `AppenderListener` so that any updated made to the Queue also automatically will update the `Accumulation` effectively creating a "fire-and-forget" data structure.
+As shown above, it can also be registered with a Queue as an `AppenderListener` so that any updates made to the Queue also automatically will update the `Accumulation`, effectively creating a "fire-and-forget" data accumulation structure.
 
 The snippet above might produce the following output (shortened):
-[source,text]
 
+[source,text]
 ----
 accumulation.accumulation() = {MSFT=!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
   symbol: MSFT,
@@ -127,4 +126,148 @@ accumulation.accumulation() = {MSFT=!net.openhft.chronicle.queue.incubator.strea
 
 == Stream Bridge
 
+This chapter contains a more detailed description of the Stream Bridge functionality. First, a number of examples are shown so that the overall use cases can be more easily understood. After that, a more formal description is presented.
+
+=== Examples
+
+==== Finding the Highest Index
+
+This example is using a `LongStream` eliminating object creation:
+
+[source,java]
+----
+long last = Streams.ofLong(q.createTailer(),
+                 ToLongExcerptExtractor.extractingIndex()) <1>
+        .max()
+        .orElse(-1); <2>
+
+----
+<1> Convenience method equivalent to `(wire, index) -> index`.
+<2> If no index is present, return `-1`.
+
+==== Computing Long Statistics
+
+This other example is also using a `LongStream` but with a custom extractor that will read
+a long directly from the queue.
+
+[source,java]
+----
+LongSummaryStatistics stat = Streams.ofLong(q.createTailer(),
+               (wire, index) -> wire.getValueIn().readLong()) <1>
+        .summaryStatistics();
+----
+<1> Custom `ToLongExcerptExtractor` lambda.
+
+==== Extracting Objects of a Certain Type
+
+This example shows an example of creating a `Stream<MarketData>`.
+[source,java]
+----
+Stream<MarketData> stream = Streams.of(queue.createTailer(), ofType(MarketData.class));
+----
+The `ExcerptExtractor.ofType(Class<E> type)` method looks like this:
+
+[source,java]
+----
+static <E> ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
+    requireNonNull(type);
+    return (wire, index) -> wire
+           .getValueIn()
+           .object(type);
+}
+----
+
+==== Extracting Objects from a Queue written via MethodWriters
+If a queue was written using a method writer, the queue will likely contain messages of different types. Assuming we have used a method writer implementing:
+
+[source,java]
+----
+public interface Messages {
+
+    void shares(Shares shares);
+
+    void news(News news);
+
+    void greeting(String greeting);
+
+}
+----
+
+Then we can extract messages of a certain type like so:
+
+[source,java]
+----
+List<News> newsList = Streams.of(
+                    q.createTailer(),
+                    ofMethod(Messages.class, News.class, Messages::news) <1>
+            )
+            .sorted(Comparator.comparing(News::symbol)) <2>
+            .collect(toList());
+----
+<1> Creates an `ExcerptExtractor` that will extract `News` messages that was previously put on the Queue using the `Messages::news` method.
+
+<2> Standard `Stream` feature that will sort messages in `symbol` order.
+
+Note:: Some type parameters are not strictly needed but will aid Java's type inference.
+
+==== Iterators and Spliterators
+
+Streams, Spliterators and Iterators are related. The Stream Bridge feature also supports creating various Spliterators and Iterators. Here is an example:
+
+[source,java]
+----
+Iterator<MarketData> iterator = Streams.iterator(queue.createTailer(), ofType(MarketData.class));
+----
+As can be seen, the procedure is similar to creating a Stream.
+
+=== Constrains and Best Practices
+
+==== Reuse
+
+It is possible to create an `ExcerprExtractor` that is reusing objects. Care must be taken if such an extractor is used so that, for example, reused objects are not exposed or stored in the Streams pipeline. If in doubt, make a copy or extract an immutable value from the object at hand.
+
+==== Closing an ExcerptTailer
+
+In the examples above, an `ExcerptTailer` was created on demand and was not properly closed. In memory sensitive applications, it is recommended that this is taken care of as tailers may have allocated internal resources. Here is an example:
+
+[source,java]
+----
+Map<String, List<MarketData>> groups;
+try (ExcerptTailer tailer = queue.createTailer()) {
+    groups = Streams.of(tailer, ofType(MarketData.class))
+            .collect(groupingBy(MarketData::symbol));
+} <1>
+
+groups...
+----
+<1> The tailer is auto-closed here
+
+==== GC and Object creation
+
+Streams are likely to create objects during construction and use. Therefore, the Stream Bridge features are not recommended in the same JVM as deterministic low-latency applications. Once these objects are reclaimed by the Garbage Collector, jitter may be incurred on executing Threads.
+
+=== Detailed Description
+
+To Be Written...
+
+
+
 == Accumulation
+
+
+=== Examples
+
+
+=== Detailed Description
+
+
+
+
+
+== To be Documented
+
+* Configuration Accumulators
+* Parallel streams
+* ExcerptExtractor.ofType() error handling
+* Extractors' use of `null` and `Long.MIN_VALUE`
+* Rename mapping() to groupingBy() ??

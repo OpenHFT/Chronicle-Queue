@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
 
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
@@ -10,11 +10,11 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulations.extractingIndex;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.mapping;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.replacingMerger;
 import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofMethod;
 import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofType;
+import static net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor.extractingIndex;
 
 public class DemoTest {
 
@@ -45,8 +45,6 @@ public class DemoTest {
                         Function.identity(),
                         replacingMerger()
                 ));
-
-
 
 
         // Todo: This is not thread-safe:

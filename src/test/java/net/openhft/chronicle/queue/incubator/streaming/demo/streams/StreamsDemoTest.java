@@ -2,8 +2,10 @@ package net.openhft.chronicle.queue.incubator.streaming.demo.streams;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.incubator.streaming.Streams;
+import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.DoubleAdder;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -30,22 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StreamsDemoTest {
 
     static final String Q_NAME = StreamsDemoTest.class.getSimpleName();
-
-    @Test
-    void streamRaw() {
-        try (SingleChronicleQueue q = createThenValueOuts(Q_NAME,
-                vo -> vo.writeLong(1),
-                vo -> vo.writeLong(2),
-                vo -> vo.writeLong(3)
-        )) {
-            LongSummaryStatistics stat = Streams.ofLong(q.createTailer(),
-                            (wire, index) -> wire.getValueIn().readLong())
-                    .summaryStatistics();
-
-            LongSummaryStatistics expected = LongStream.of(1, 2, 3).summaryStatistics();
-            assertLongSummaryStatisticsEqual(expected, stat);
-        }
-    }
 
     @Test
     void streamTypeMarketDataSimple() {
@@ -65,6 +52,41 @@ class StreamsDemoTest {
 
         }
     }
+
+
+    @Test
+    void latestIndex() {
+        try (SingleChronicleQueue q = createThenValueOuts(Q_NAME,
+                vo -> vo.writeLong(1),
+                vo -> vo.writeLong(2),
+                vo -> vo.writeLong(3)
+        )) {
+            long last = Streams.ofLong(q.createTailer(), ToLongExcerptExtractor.extractingIndex())
+                    .max()
+                    .orElse(-1);
+
+            assertEquals("16d00000002", Long.toHexString(last));
+
+        }
+    }
+
+
+    @Test
+    void streamRaw() {
+        try (SingleChronicleQueue q = createThenValueOuts(Q_NAME,
+                vo -> vo.writeLong(1),
+                vo -> vo.writeLong(2),
+                vo -> vo.writeLong(3)
+        )) {
+            LongSummaryStatistics stat = Streams.ofLong(q.createTailer(),
+                            (wire, index) -> wire.getValueIn().readLong())
+                    .summaryStatistics();
+
+            LongSummaryStatistics expected = LongStream.of(1, 2, 3).summaryStatistics();
+            assertLongSummaryStatisticsEqual(expected, stat);
+        }
+    }
+
 
     @Test
     void streamTypeMarketData() {
@@ -86,6 +108,13 @@ class StreamsDemoTest {
                     .collect(groupingBy(MarketData::symbol));
 
             assertEquals(expected, groups);
+
+            DoubleAdder adder = new DoubleAdder();
+            Iterator<MarketData> iterator = Streams.iterator(queue.createTailer(), ofType(MarketData.class));
+            iterator.forEachRemaining(md -> adder.add(md.last()));
+
+            assertEquals(401.0, adder.doubleValue(), 1e-10);
+
         }
     }
 
@@ -120,7 +149,10 @@ class StreamsDemoTest {
             messages.shares(new Shares("AGDG", 200_000_000));
         })) {
 
-            List<News> newsList = Streams.of(q.createTailer(), ofMethod(Messages.class, News.class, Messages::news))
+            List<News> newsList = Streams.of(
+                            q.createTailer(),
+                            ofMethod(Messages.class, News.class, Messages::news)
+                    )
                     .sorted(Comparator.comparing(News::symbol))
                     .collect(toList());
 
@@ -207,6 +239,26 @@ class StreamsDemoTest {
             System.out.println("threads = " + threads);
 
         }
+    }
+
+    @Test
+    void streamCloseTailer() {
+        try (SingleChronicleQueue queue = createThenValueOuts(Q_NAME,
+                vo -> vo.object(new MarketData("MSFT", 100, 110, 90)),
+                vo -> vo.object(new MarketData("APPL", 200, 220, 180)),
+                vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
+        )) {
+
+            Map<String, List<MarketData>> groups;
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                groups = Streams.of(tailer, ofType(MarketData.class))
+                        .collect(groupingBy(MarketData::symbol));
+            }
+            // A bit sloppy...
+            assertEquals(2, groups.size());
+        }
+
+
     }
 
 

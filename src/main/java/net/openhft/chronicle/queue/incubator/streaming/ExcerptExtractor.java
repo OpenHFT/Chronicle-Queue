@@ -30,49 +30,6 @@ public interface ExcerptExtractor<T> {
     @Nullable
     T extract(@NotNull Wire wire, @NonNegative long index);
 
-    /**
-     * Returns an ExcerptExtractor that will extract elements of the provided
-     * {@code type}.
-     *
-     * @param type of elements to extract
-     * @param <E>  element type
-     * @return an ExcerptExtractor of the provided {@code type}
-     * @throws NullPointerException if the provided {@code type} is {@code null}
-     */
-    static <E> ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
-        requireNonNull(type);
-        return (wire, index) -> wire
-                .getValueIn()
-                .object(type);
-    }
-
-    /**
-     * Returns an ExcerptExtractor that will extract elements of the provided
-     * {@code messageType} that was previously written using a method writer via invocations
-     * of the provided {@code methodReference}.
-     * <p>
-     * The provided {@code methodReference} must be a true method reference (e.g. {@code Greeting:message})
-     * or a corresponding lambda expression
-     * (e.g. {@code (Greeting greeting, String msg) -> greeting.message(m))} ) or else the
-     * result is undefined.
-     *
-     * @param interfaceType   interface that has at least one method that takes a single
-     *                        argument parameter of type E
-     * @param messageType     message type to pass to the method reference
-     * @param methodReference connecting the interface type to a method that takes a single
-     *                        argument parameter of type E
-     * @param <I>             interface type
-     * @param <E>             message type
-     * @return an ExcerptExtractor that will extract elements of the provided {@code messageType}
-     */
-    static <I, E> ExcerptExtractor<E> ofMethod(@NotNull final Class<I> interfaceType,
-                                               @NotNull final Class<E> messageType, // This type is needed for type inference
-                                               @NotNull final BiConsumer<? super I, ? super E> methodReference) {
-        requireNonNull(interfaceType);
-        requireNonNull(messageType);
-        requireNonNull(methodReference);
-        return AccumulatorUtil.ofMethod(interfaceType, methodReference);
-    }
 
     /**
      * Creates and returns a new ExcerptExtractor consisting of the results (of type R) of applying the provided
@@ -144,5 +101,50 @@ public interface ExcerptExtractor<T> {
     // skip
 
     // peek
+
+
+    /**
+     * Returns an ExcerptExtractor that will extract elements of the provided
+     * {@code type}.
+     *
+     * @param type of elements to extract
+     * @param <E>  element type
+     * @return an ExcerptExtractor of the provided {@code type}
+     * @throws NullPointerException if the provided {@code type} is {@code null}
+     */
+    static <E> ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
+        requireNonNull(type);
+        return (wire, index) -> wire
+                .getValueIn()
+                .object(type);
+    }
+
+    /**
+     * Returns an ExcerptExtractor that will extract elements of the provided
+     * {@code messageType} that was previously written using a method writer via invocations
+     * of the provided {@code methodReference}.
+     * <p>
+     * The provided {@code methodReference} must be a true method reference (e.g. {@code Greeting:message})
+     * or a corresponding lambda expression
+     * (e.g. {@code (Greeting greeting, String msg) -> greeting.message(m))} ) or else the
+     * result is undefined.
+     *
+     * @param interfaceType   interface that has at least one method that takes a single
+     *                        argument parameter of type E
+     * @param messageType     message type to pass to the method reference
+     * @param methodReference connecting the interface type to a method that takes a single
+     *                        argument parameter of type E
+     * @param <I>             interface type
+     * @param <E>             message type
+     * @return an ExcerptExtractor that will extract elements of the provided {@code messageType}
+     */
+    static <I, E> ExcerptExtractor<E> ofMethod(@NotNull final Class<I> interfaceType,
+                                               @NotNull final Class<E> messageType, // This type is needed for type inference
+                                               @NotNull final BiConsumer<? super I, ? super E> methodReference) {
+        requireNonNull(interfaceType);
+        requireNonNull(messageType);
+        requireNonNull(methodReference);
+        return AccumulatorUtil.ofMethod(interfaceType, methodReference);
+    }
 
 }

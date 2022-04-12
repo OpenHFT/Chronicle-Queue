@@ -76,10 +76,6 @@ public final class Accumulations {
                 .build();
     }
 
-    public static ToLongExcerptExtractor extractingIndex() {
-        return (wire, index) -> index;
-    }
-
     public static final class LongViewer<T> implements LongSupplier {
 
         private final T delegate;

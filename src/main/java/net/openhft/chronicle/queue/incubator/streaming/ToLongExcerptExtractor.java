@@ -98,5 +98,8 @@ public interface ToLongExcerptExtractor {
 
     // peek
 
+    static ToLongExcerptExtractor extractingIndex() {
+        return (wire, index) -> index;
+    }
 
 }
