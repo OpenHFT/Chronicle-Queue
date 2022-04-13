@@ -95,7 +95,7 @@ public class AppenderListenerTest {
 
         final Accumulation<Map<String, String>> appenderListener =
                 // Here we use a special static method providing Map key and value types directly
-                Accumulation.builder(ConcurrentHashMap::new, String.class, String.class)
+                Accumulation.mapBuilder(ConcurrentHashMap::new, String.class, String.class)
                         .withAccumulator((accumulation, wire, index) -> {
                                     accumulation.merge(wire.readEvent(String.class),
                                             wire.getValueIn().text(),
@@ -136,7 +136,7 @@ public class AppenderListenerTest {
         String path = OS.getTarget() + "/appenderListenerAggregateCollectionTest";
 
         final Accumulation<List<String>> appenderListener =
-                Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
+                Accumulation.collectionBuilder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
                         .withAccumulator(Accumulator.reducing(ExcerptExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(), List::add))
                         .addViewer(Collections::unmodifiableList)
                         .build();

@@ -292,8 +292,8 @@ public interface Accumulation<T> extends AppenderListener {
      */
     @NotNull
     static <T extends Collection<E>, E>
-    Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier,
-                          @NotNull final Class<? super E> elementType) {
+    Builder<T, T> collectionBuilder(@NotNull final Supplier<? extends T> supplier,
+                                    @NotNull final Class<? super E> elementType) {
         requireNonNull(supplier);
         requireNonNull(elementType);
         return builder(supplier);
@@ -311,9 +311,9 @@ public interface Accumulation<T> extends AppenderListener {
      */
     @NotNull
     static <T extends Map<K, V>, K, V>
-    Builder<T, T> builder(@NotNull final Supplier<? extends T> supplier,
-                          @NotNull final Class<? super K> keyType,
-                          @NotNull final Class<? super V> valueType) {
+    Builder<T, T> mapBuilder(@NotNull final Supplier<? extends T> supplier,
+                             @NotNull final Class<? super K> keyType,
+                             @NotNull final Class<? super V> valueType) {
         requireNonNull(supplier);
         requireNonNull(keyType);
         requireNonNull(valueType);

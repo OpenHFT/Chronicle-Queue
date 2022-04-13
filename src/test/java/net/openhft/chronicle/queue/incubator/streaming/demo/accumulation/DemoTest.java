@@ -25,8 +25,8 @@ public class DemoTest {
         // Maintains a count of the number of excerpts encountered
         Accumulation<LongSupplier> count = Accumulations.counting();
 
-        // Maintains a view of the highest index encountered or -1 if now index was encountered
-        Accumulation<LongSupplier> maxIndex = Accumulations.reducingLong(extractingIndex(), -1L, Math::max);
+        // Maintains a view of the highest index encountered or 0 if now index was encountered
+        Accumulation<LongSupplier> maxIndex = Accumulations.reducingLong(extractingIndex(), 0L, Math::max);
 
         // Maintains a List of all MarketData elements encountered in a List
         Accumulation<List<MarketData>> list = Accumulations.toList(builder(MarketData.class).build());

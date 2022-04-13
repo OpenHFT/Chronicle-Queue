@@ -70,14 +70,15 @@ The snippet above might produce the following output (shortened):
 
 == Accumulation Overview
 
-An `Accumulation` allows access to a continuously updated and concurrent view of an underlying Queue's content. The `Accumulation` can be maintained automatically.
+An `Accumulation` allows access to a continuously updated and concurrent view of an underlying Queue's content.
+The `Accumulation` can be maintained automatically.
 
 Here is an example how an `Accumulation` that can be attached to a Chronicle Queue containing `MarketData` objects:
 
 [source,java]
 ----
 Accumulation<Map<String, MarketData>> accumulation = Accumulations.toMap(
-        Accumulator.mapping(
+        Accumulator.merging(
                 builder(MarketData.class).build(),  <1>
                 MarketData::symbol,                 <2>
                 Function.identity(),                <3>
@@ -126,7 +127,9 @@ accumulation.accumulation() = {MSFT=!net.openhft.chronicle.queue.incubator.strea
 
 == Stream Bridge
 
-This chapter contains a more detailed description of the Stream Bridge functionality. First, a number of examples are shown so that the overall use cases can be more easily understood. After that, a more formal description is presented.
+This chapter contains a more detailed description of the Stream Bridge functionality.
+First, a number of examples are shown so that the overall use cases can be more easily understood.
+After that, a more formal description is presented.
 
 === Examples
 
@@ -146,13 +149,13 @@ long last = Streams.ofLong(
         .orElse(-1);    <2>
 
 ----
+
 <1> Convenience method equivalent to `(wire, index) -> index`.
 <2> If no index is present, return `-1`.
 
 ==== LongStream: Computing Statistics
 
-This other example is also using a `LongStream` but with a custom extractor that will read
-a `long` directly from the queue.
+This other example is also using a `LongStream` but with a custom extractor that will read a `long` directly from the queue.
 
 [source,java]
 ----
@@ -162,15 +165,18 @@ LongSummaryStatistics stat = Streams.ofLong(
         )
         .summaryStatistics();
 ----
+
 <1> Custom `ToLongExcerptExtractor` lambda.
 
 ==== Stream: Objects of a Certain Type
 
 This example shows an example of creating a `Stream<MarketData>`.
 [source,java]
+
 ----
 Stream<MarketData> stream = Streams.of(queue.createTailer(), builder(MarketData.class).build());
 ----
+
 The `ExcerptExtractor.builder(Class<E> type).build` construct is equivalent to:
 
 [source,java]
@@ -181,7 +187,9 @@ The `ExcerptExtractor.builder(Class<E> type).build` construct is equivalent to:
 ----
 
 ==== Stream: Objects from a Queue written via MethodWriters
-If a queue was written using a method writer, the queue will likely contain messages of different types. Assuming we have used a method writer implementing:
+
+If a queue was written using a method writer, the queue will likely contain messages of different types.
+Assuming we have used a method writer implementing:
 
 [source,java]
 ----
@@ -202,21 +210,25 @@ we can extract messages of a certain type like so:
 ----
 List<News> newsList = Streams.of(
                     q.createTailer(),
-                    builder(News.class).withMethod(Messages.class, Messages::news) <1>
+                    builder(News.class)
+                        .withMethod(Messages.class, Messages::news)
+                        .build()                                           <1>
             )
-            .sorted(Comparator.comparing(News::symbol))                            <2>
+            .sorted(Comparator.comparing(News::symbol))                    <2>
             .collect(toList());
 ----
+
 <1> Creates an `ExcerptExtractor` that will extract `News` messages that was previously written to the queue using a method writer's `Messages::news` method.
 
 <2> Standard `Stream` feature that will sort messages in `symbol` order.
 
-
-Note:: Some type parameters are not strictly needed but are there to aid Java's type inference.
+The extractor will only extract messages of the specified type and method and not other messages.
 
 ==== Iterators and Spliterators
 
-Streams, Spliterators and Iterators are related. The Stream Bridge feature also supports creating various Spliterators and Iterators. Here is an example:
+Streams, Spliterators and Iterators are related.
+The Stream Bridge feature also supports creating various Spliterators and Iterators.
+Here is an example:
 
 [source,java]
 ----
@@ -225,6 +237,7 @@ Iterator<MarketData> iterator = Streams.iterator(
                 builder(MarketData.class).build()      <1>
 );
 ----
+
 <1> Extract messages of this type while iterating.
 
 As can be seen, the procedure here is similar to creating a `Stream`.
@@ -235,18 +248,21 @@ This chapter contains tips for using the Stream Bridge feature.
 
 ==== Object Reuse
 
-It is possible to create an `ExcerprExtractor` that is reusing objects. Care must be taken if such an extractor is used so that, for example, reused objects are not exposed and/or not stored internally in the Streams pipeline. If in doubt, make a copy or extract an immutable value from the object at hand.
+It is possible to create an `ExcerprExtractor` that is reusing objects.
+Care must be taken if such an extractor is used so that, for example, reused objects are not exposed and/or not stored internally in the Streams pipeline.
+If in doubt, make a copy or extract an immutable value from the object at hand.
 
 [source,java]
 ----
 OptionalDouble max = Streams.of(queue.createTailer(),
                builder(MarketData.class)
-                        .withReusing(new MarketData())   <1>
+                        .withReusing(MarketData::new)    <1>
                         .build())
         .mapToDouble(MarketData::last)                   <2>
         .max();
 ----
-<1> This object is reused when successively extracting a plurality of elements.
+
+<1> This supplier is used to provide objects that are reused when successively extracting a plurality of elements.
 <2> A primitive double value is extracted directly making reuse safe.
 
 Here is an example of object reuse that is *not allowed*:
@@ -255,19 +271,19 @@ Here is an example of object reuse that is *not allowed*:
 ----
 List<MarketData> list = Streams.of(queue.createTailer(),
                 builder(MarketData.class)
-                        .withReusing(new MarketData()) <1>
+                        .withReusing(MarketData::new)  <1>
                         .build())
         .collect(toList());                            <2>
 
 System.out.println("list = " + list);
 ----
-<1> This object is reused when successively extracting a plurality of elements.
-<2> As objects are reused, the list will be populated with identical objects that will reflect the
-    latest value of the reused object.
+
+<1> This supplier is used to provide objects that are reused when successively extracting a plurality of elements.
+<2> As objects are reused, the list will be populated with identical objects that will reflect the latest value of the reused object.
 
 This might print something like this:
 
-[source, text]
+[source,text]
 ----
 list = [!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
   symbol: MSFT,
@@ -292,7 +308,9 @@ list = [!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.Marke
 
 ==== Closing an ExcerptTailer
 
-In the examples above, an `ExcerptTailer` was created on demand and was not properly closed. In memory sensitive applications, it is recommended that this is taken care of as tailers may have allocated internal resources. Here is an example:
+In the examples above, an `ExcerptTailer` was created on demand and was not properly closed.
+In memory sensitive applications, it is recommended that this is taken care of as tailers may have allocated internal resources.
+Here is an example:
 
 [source,java]
 ----
@@ -304,63 +322,200 @@ try (ExcerptTailer tailer = queue.createTailer()) {
 
 groups...
 ----
+
 <1> The tailer is auto-closed here
 
 ==== GC and Object creation
 
-Streams are likely to create objects during construction and use. Therefore, the Stream Bridge features are not recommended in the same JVM as deterministic low-latency applications. Once these objects are reclaimed by the Garbage Collector, jitter may be incurred on executing Threads.
+Streams are likely to create objects during construction and use.
+Therefore, the Stream Bridge features are not recommended in the same JVM as deterministic low-latency applications.
+Once these objects are reclaimed by the Garbage Collector, jitter may be incurred on executing Threads.
 
 === Detailed Description
 
 To Be Written...
 
-
-
 == Accumulation
-
 
 === Examples
 
 This chapter contains a number of examples of how to use `Accumulation` objects.
 
-==== Last Index Seen
+==== Counting Excerpts
 
 [source,java]
 ----
-Accumulation<LongSupplier> listener = Accumulations.reducingLong(extractingIndex(), 0, (a, b) -> b);
+Accumulation<LongSupplier> listener = Accumulations.counting();
+----
+
+==== Last Index Seen
+
+This Accumulation will hold the latest index seen or 0 if no index was seen.
+
+[source,java]
+----
+Accumulation<LongSupplier> listener =
+        Accumulations.reducingLong(extractingIndex(), 0, (a, b) -> b);
 ----
 
 ==== Highest Index Seen
 
+This Accumulation will hold the highest index seen or 0 if no index was seen.
+
 [source,java]
 ----
-Accumulation<LongSupplier> maxListener = reducingLong(extractingIndex(), Long.MIN_VALUE, Math::max);
+Accumulation<LongSupplier> maxListener =
+        reducingLong(extractingIndex(), 0, Math::max);
 ----
 
 ==== Lowest Index Seen
 
+This Accumulation will hold the lowest index seen or `Long.MAX_VALUE` if no index was seen.
+
 [source,java]
 ----
-Accumulation<LongSupplier> minListener = reducingLong(extractingIndex(), Long.MAX_VALUE, Math::min);
+Accumulation<LongSupplier> minListener =
+        reducingLong(extractingIndex(), Long.MAX_VALUE, Math::min);
 ----
 
+==== List of Elements
+
+Maintains a List of all MarketData elements encountered in a List.
+
+[source,java]
+----
+Accumulation<List<MarketData>> list =
+        Accumulations.toList(builder(MarketData.class).build());
+----
+
+==== Set of Elements with Mapping
+
+Maintains a Set of all symbols in MarketData objects.
+
+[source,java]
+----
+Accumulation<Set<String>> symbolsStartingWithS =
+        Accumulations.toSet(builder(MarketData.class).build()  <1>
+            .map(MarketData::symbol));                         <2>
+
+----
+
+<1> Extract MarketData objects
+<2> Map ExcerptExtractor<MarketData> to ExcerptExtractor<String> extracting symbols.
+
+==== Set of Elements with Mapping and Filtering
+
+Maintains a Set of all MarketData symbols starting with "S"
+
+[source,java]
+----
+Accumulation<Set<String>> symbolsStartingWithS =
+        Accumulations.toSet(builder(MarketData.class).build()  <1>
+            .map(MarketData::symbol)                           <2>
+            .filter(s -> s.startsWith("S")));                  <3>
+----
+
+<1> Extract MarketData objects.
+<2> Map ExcerptExtractor<MarketData> to ExcerptExtractor<String> extracting symbols.
+<3> Filter out only those symbols starting with "S".
+
+==== Set of Elements with Object Reuse
+
+Maintains a Set of all symbols in MarketData objects reusing intermediate MarketData objects.
+
+[source,java]
+----
+Accumulation<Set<String>> symbolsStartingWithS =
+        Accumulations.toSet(
+                builder(MarketData.class)              <1>
+                    .withReusing(MarketData::new)      <2>
+                    .build()
+            .map(MarketData::symbol));                 <3>
+----
+
+<1> Extract MarketData objects.
+<2> Provide a constructor used to create object(s) to reuse.
+<3> Map ExcerptExtractor<MarketData> to ExcerptExtractor<String> extracting symbols.
+
+NOTE: The reuse of object is safe in this case as immutable values are derived directly from the reused object.
+
+==== Merging entries in a Map
+
+Maintains a Map of the latest MarketData message per symbol where the messages were previously written by a MethodWriter of type MarketDataProvider
+
+[source,java]
+----
+Accumulation<Map<String, MarketData>> latest = Accumulations.toMap(
+        merging(builder(MarketData.class)
+                    .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                    .build(),
+                MarketData::symbol,
+                Function.identity(),
+                replacingMerger()
+        ));
+----
+
+==== Using a Custom Map Aggregation
+
+An Aggregation has an underlying aggregation and a view (potentially protecting the underlying aggregation from inadvertent modification) from which the underlying aggregation can be viewed.
+By default, the underlying aggregation and the view is the same but a view can be added using a builder.
+
+In the example above, we used convenience methods to produce a merging map.
+Here is how it could be built in a more manual fashion:
+
+[source,java]
+----
+Accumulation<Map<String, MarketData>> listener =
+                mapBuilder(ConcurrentHashMap::new,        <1>
+                        String.class,                     <2>
+                        MarketData.class                  <3>
+        )
+                .withAccumulator(Accumulator.merging(
+                        builder(MarketData.class)
+                                .build(),
+                        MarketData::symbol,
+                        Function.identity(),
+                        Accumulator.replacingMerger()))
+                .addViewer(Collections::unmodifiableMap)  <4>
+                .build();
+
+----
+
+<1> Supplier of the underlying aggregation which needs to be concurrent in the general case.
+<2> Key type
+<3> Value type
+<4> Adds a view to the Accumulation so that the view is unmodifiable.
 
 ==== Register with a Queue
 
+An Aggregation can be added to a Chronicle Queue using the `SingleChronicleQueueBuilder::appenderListener` method.
+This means the Aggregation will be automatically updated upon excerpts being persisted to the queue.
+
+[source,java]
+----
+ChronicleQueue q = SingleChronicleQueueBuilder.builder()
+        .path("my-queue")
+        .appenderListener(aggregation)
+        .build();
+----
 
 ==== Bootstrapping from a Tailer
 
+Existing exerpts in a queue can be replayed onto an Aggregation by means of the `Aggregation::accept` method.
+This provides an easy way to bootstrap the Aggregation upon restart.
+
+[source,java]
+----
+accumulation.accept(queue.createTailer());
+----
 
 === Detailed Description
 
-
-
-
+To Be Written
 
 == To be Documented
 
 * Configuration Accumulators (concrete classes)
 * Parallel streams
-* ExcerptExtractor.ofType() error handling
+* ExcerptExtractor.ofType() error handling (what if there is another message on the queue?)
 * Extractors' use of `null` and `Long.MIN_VALUE`
-* Rename mapping() to groupingBy() or merging() ??

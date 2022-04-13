@@ -46,7 +46,7 @@ public class CountAccumulationTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void builtInCustom() {
+    public void builtIn() {
         Accumulation<LongSupplier> listener = Accumulations.counting();
         count(listener);
         assertEquals(3, listener.accumulation().getAsLong());

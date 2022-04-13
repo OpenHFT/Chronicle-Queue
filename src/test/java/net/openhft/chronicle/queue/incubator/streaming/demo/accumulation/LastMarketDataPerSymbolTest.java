@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
 import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
 import static org.junit.Assert.assertEquals;
 
@@ -49,10 +48,19 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     @Test
     public void lastMarketDataPerSymbolCustom() {
 
-        Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
-                .withAccumulator(Accumulator.merging(builder(MarketData.class).build(), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
-                .addViewer(Collections::unmodifiableMap)
-                .build();
+        Accumulation<Map<String, MarketData>> listener =
+                Accumulation.mapBuilder(ConcurrentHashMap::new,
+                        String.class,
+                        MarketData.class
+                )
+                        .withAccumulator(Accumulator.merging(
+                                builder(MarketData.class)
+                                        .build(),
+                                MarketData::symbol,
+                                Function.identity(),
+                                Accumulator.replacingMerger()))
+                        .addViewer(Collections::unmodifiableMap)
+                        .build();
 
         writeToQueue(listener);
 

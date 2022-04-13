@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
 import static org.junit.Assert.assertEquals;
 
 public class MethodWriterTest extends ChronicleQueueTestBase {
@@ -64,7 +63,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     @Test
     public void map() {
 
-        Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
+        Accumulation<Map<String, MarketData>> listener = Accumulation.mapBuilder(ConcurrentHashMap::new, String.class, MarketData.class)
                 .withAccumulator(
                         Accumulator.merging(ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                                 MarketData::symbol,
