@@ -1,15 +1,12 @@
 package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.core.annotation.NonNegative;
-import net.openhft.chronicle.queue.internal.streaming.AccumulatorUtil;
+import net.openhft.chronicle.queue.internal.streaming.ExcerptExtractorBuilder;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.ToLongFunction;
+import java.util.function.*;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
@@ -29,7 +26,6 @@ public interface ExcerptExtractor<T> {
      */
     @Nullable
     T extract(@NotNull Wire wire, @NonNegative long index);
-
 
     /**
      * Creates and returns a new ExcerptExtractor consisting of the results (of type R) of applying the provided
@@ -102,49 +98,71 @@ public interface ExcerptExtractor<T> {
 
     // peek
 
-
     /**
-     * Returns an ExcerptExtractor that will extract elements of the provided
-     * {@code type}.
+     * Generic builder that can be used to build ExcerptExtractor objects of common types.
      *
-     * @param type of elements to extract
-     * @param <E>  element type
-     * @return an ExcerptExtractor of the provided {@code type}
-     * @throws NullPointerException if the provided {@code type} is {@code null}
+     * @param <E> element type to extract
      */
-    static <E> ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
-        requireNonNull(type);
-        return (wire, index) -> wire
-                .getValueIn()
-                .object(type);
+    interface Builder<E> extends net.openhft.chronicle.core.util.Builder<ExcerptExtractor<E>> {
+
+        /**
+         * Specifies a {@code supplier} of element that shall be reused when extracting elements from excerpts.
+         * <p>
+         * By default, thread local reuse objects are created on demand but this can be changed by means of the
+         * {@link #withThreadConfinedReuse()} method.
+         * <p>
+         * The provided supplier must provide distinct objects on each invocation. This can be accomplished
+         * , for example, by referencing {@code Foo:new}.
+         *
+         * @param supplier to call when reuse object are needed (non-null)
+         * @return this Builder
+         */
+        @NotNull
+        Builder<E> withReusing(@NotNull Supplier<? extends E> supplier);
+
+        /**
+         * Specifies that only one reuse object, confined to the first using thread, shall be reused.
+         * <p>
+         * The ExcerptExtractor is guaranteed to prevent accidental concurrent thread access by throwing
+         * an {@link IllegalStateException} if accessed by a foreign thread.
+         *
+         * @return this Builder
+         */
+        @NotNull
+        Builder<E> withThreadConfinedReuse();
+
+        /**
+         * Specifies an {@code interfaceType } that was previously used to write messages of type E using
+         * a method writer via invocations of the provided {@code methodReference}.
+         * <p>
+         * The provided {@code methodReference} must be a true method reference (e.g. {@code Greeting:message})
+         * or a corresponding lambda expression
+         * (e.g. {@code (Greeting greeting, String msg) -> greeting.message(m))} ) or else the
+         * result is undefined.
+         *
+         * @param interfaceType   interface that has at least one method that takes a single
+         *                        argument parameter of type E
+         * @param methodReference connecting the interface type to a method that takes a single
+         *                        argument parameter of type E
+         * @param <I>             interface type
+         * @return this Builder
+         */
+        @NotNull <I> Builder<E> withMethod(@NotNull final Class<I> interfaceType,
+                                           @NotNull final BiConsumer<? super I, ? super E> methodReference);
+
     }
 
     /**
-     * Returns an ExcerptExtractor that will extract elements of the provided
-     * {@code messageType} that was previously written using a method writer via invocations
-     * of the provided {@code methodReference}.
-     * <p>
-     * The provided {@code methodReference} must be a true method reference (e.g. {@code Greeting:message})
-     * or a corresponding lambda expression
-     * (e.g. {@code (Greeting greeting, String msg) -> greeting.message(m))} ) or else the
-     * result is undefined.
+     * Creates and returns a new Builder that can be used to create ExcerptExtractor objects
+     * of the provided {@code elementType}.
      *
-     * @param interfaceType   interface that has at least one method that takes a single
-     *                        argument parameter of type E
-     * @param messageType     message type to pass to the method reference
-     * @param methodReference connecting the interface type to a method that takes a single
-     *                        argument parameter of type E
-     * @param <I>             interface type
-     * @param <E>             message type
-     * @return an ExcerptExtractor that will extract elements of the provided {@code messageType}
+     * @param elementType type of element to extract
+     * @param <E>         element type
+     * @return a new Builder
      */
-    static <I, E> ExcerptExtractor<E> ofMethod(@NotNull final Class<I> interfaceType,
-                                               @NotNull final Class<E> messageType, // This type is needed for type inference
-                                               @NotNull final BiConsumer<? super I, ? super E> methodReference) {
-        requireNonNull(interfaceType);
-        requireNonNull(messageType);
-        requireNonNull(methodReference);
-        return AccumulatorUtil.ofMethod(interfaceType, methodReference);
+    static <E> Builder<E> builder(@NotNull final Class<E> elementType) {
+        requireNonNull(elementType);
+        return new ExcerptExtractorBuilder<>(elementType);
     }
 
 }

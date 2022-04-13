@@ -25,8 +25,8 @@ Here is an example how a Chronicle Queue that contains `MarketData` objects can 
 [source,java]
 ----
 String s = Streams.of(
-               queue.createTailer(), <1>
-               ofType(MarketData.class) <2>
+               queue.createTailer(),               <1>
+               builder(MarketData.class).build()   <2>
          )
         .skip(100)
         .limit(50)
@@ -38,7 +38,7 @@ String s = Streams.of(
 The tailer can be set to a certain position before being submitted to the method above.
 
 <2> The `ExcerptExtractor` used to convert an excerpt to a Java object.
-In the example above, an extractor of type `MarketData` is used which is obtained via a convenience function `ExcerptExtractor.ofType()`.
+In the example above, an extractor of type `MarketData` is used which is obtained via a builder function `ExcerptExtractor.builder()`.
 
 The `Stream` above exemplifies a pagination service where the third page of events from the Queue is shown (each page has 50 rows).
 Once the `Stream` is created, it behaves like any `Stream` and can take advantage of the whole `Stream` ecosystem.
@@ -78,16 +78,16 @@ Here is an example how an `Accumulation` that can be attached to a Chronicle Que
 ----
 Accumulation<Map<String, MarketData>> accumulation = Accumulations.toMap(
         Accumulator.mapping(
-                ofType(MarketData.class), <1>
-                MarketData::symbol, <2>
-                Function.identity(), <3>
-                Accumulator.replacingMerger() <4>
+                builder(MarketData.class).build(),  <1>
+                MarketData::symbol,                 <2>
+                Function.identity(),                <3>
+                Accumulator.replacingMerger()       <4>
         )
 );
 
 ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .path("market-data-queue")
-                .appenderListener(accumulation) <5>
+                .appenderListener(accumulation)  <5>
                 .build()
 ----
 
@@ -143,7 +143,7 @@ long last = Streams.ofLong(
                 ToLongExcerptExtractor.extractingIndex() <1>
          )
         .max()
-        .orElse(-1); <2>
+        .orElse(-1);    <2>
 
 ----
 <1> Convenience method equivalent to `(wire, index) -> index`.
@@ -169,18 +169,15 @@ LongSummaryStatistics stat = Streams.ofLong(
 This example shows an example of creating a `Stream<MarketData>`.
 [source,java]
 ----
-Stream<MarketData> stream = Streams.of(queue.createTailer(), ofType(MarketData.class));
+Stream<MarketData> stream = Streams.of(queue.createTailer(), builder(MarketData.class).build());
 ----
-The `ExcerptExtractor.ofType(Class<E> type)` method looks like this:
+The `ExcerptExtractor.builder(Class<E> type).build` construct is equivalent to:
 
 [source,java]
 ----
-static <E> ExcerptExtractor<E> ofType(@NotNull final Class<E> type) {
-    requireNonNull(type);
-    return (wire, index) -> wire
-           .getValueIn()
-           .object(type);
-}
+(wire, index) -> wire
+    .getValueIn()
+    .object(type);
 ----
 
 ==== Stream: Objects from a Queue written via MethodWriters
@@ -205,12 +202,12 @@ we can extract messages of a certain type like so:
 ----
 List<News> newsList = Streams.of(
                     q.createTailer(),
-                    ofMethod(Messages.class, News.class, Messages::news) <1>
+                    builder(News.class).withMethod(Messages.class, Messages::news) <1>
             )
-            .sorted(Comparator.comparing(News::symbol)) <2>
+            .sorted(Comparator.comparing(News::symbol))                            <2>
             .collect(toList());
 ----
-<1> Creates an `ExcerptExtractor` that will extract `News` messages that was previously put on the Queue using the `Messages::news` method.
+<1> Creates an `ExcerptExtractor` that will extract `News` messages that was previously written to the queue using a method writer's `Messages::news` method.
 
 <2> Standard `Stream` feature that will sort messages in `symbol` order.
 
@@ -225,7 +222,7 @@ Streams, Spliterators and Iterators are related. The Stream Bridge feature also 
 ----
 Iterator<MarketData> iterator = Streams.iterator(
                 queue.createTailer(),
-                ofType(MarketData.class) <1>
+                builder(MarketData.class).build()      <1>
 );
 ----
 <1> Extract messages of this type while iterating.
@@ -238,7 +235,60 @@ This chapter contains tips for using the Stream Bridge feature.
 
 ==== Object Reuse
 
-It is possible to create an `ExcerprExtractor` that is reusing objects. Care must be taken if such an extractor is used so that, for example, reused objects are not exposed or stored internally in the Streams pipeline. If in doubt, make a copy or extract an immutable value from the object at hand.
+It is possible to create an `ExcerprExtractor` that is reusing objects. Care must be taken if such an extractor is used so that, for example, reused objects are not exposed and/or not stored internally in the Streams pipeline. If in doubt, make a copy or extract an immutable value from the object at hand.
+
+[source,java]
+----
+OptionalDouble max = Streams.of(queue.createTailer(),
+               builder(MarketData.class)
+                        .withReusing(new MarketData())   <1>
+                        .build())
+        .mapToDouble(MarketData::last)                   <2>
+        .max();
+----
+<1> This object is reused when successively extracting a plurality of elements.
+<2> A primitive double value is extracted directly making reuse safe.
+
+Here is an example of object reuse that is *not allowed*:
+
+[source,java]
+----
+List<MarketData> list = Streams.of(queue.createTailer(),
+                builder(MarketData.class)
+                        .withReusing(new MarketData()) <1>
+                        .build())
+        .collect(toList());                            <2>
+
+System.out.println("list = " + list);
+----
+<1> This object is reused when successively extracting a plurality of elements.
+<2> As objects are reused, the list will be populated with identical objects that will reflect the
+    latest value of the reused object.
+
+This might print something like this:
+
+[source, text]
+----
+list = [!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+  symbol: MSFT,
+  last: 101.0,
+  high: 110.0,
+  low: 90.0
+}
+, !net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+  symbol: MSFT,
+  last: 101.0,
+  high: 110.0,
+  low: 90.0
+}
+, !net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+  symbol: MSFT,
+  last: 101.0,
+  high: 110.0,
+  low: 90.0
+}
+]
+----
 
 ==== Closing an ExcerptTailer
 
@@ -248,9 +298,9 @@ In the examples above, an `ExcerptTailer` was created on demand and was not prop
 ----
 Map<String, List<MarketData>> groups;
 try (ExcerptTailer tailer = queue.createTailer()) {
-    groups = Streams.of(tailer, ofType(MarketData.class))
+    groups = Streams.of(tailer, builder(MarketData.class).build())
             .collect(groupingBy(MarketData::symbol));
-} <1>
+}    <1>
 
 groups...
 ----
@@ -271,6 +321,35 @@ To Be Written...
 
 === Examples
 
+This chapter contains a number of examples of how to use `Accumulation` objects.
+
+==== Last Index Seen
+
+[source,java]
+----
+Accumulation<LongSupplier> listener = Accumulations.reducingLong(extractingIndex(), 0, (a, b) -> b);
+----
+
+==== Highest Index Seen
+
+[source,java]
+----
+Accumulation<LongSupplier> maxListener = reducingLong(extractingIndex(), Long.MIN_VALUE, Math::max);
+----
+
+==== Lowest Index Seen
+
+[source,java]
+----
+Accumulation<LongSupplier> minListener = reducingLong(extractingIndex(), Long.MAX_VALUE, Math::min);
+----
+
+
+==== Register with a Queue
+
+
+==== Bootstrapping from a Tailer
+
 
 === Detailed Description
 
@@ -280,8 +359,8 @@ To Be Written...
 
 == To be Documented
 
-* Configuration Accumulators
+* Configuration Accumulators (concrete classes)
 * Parallel streams
 * ExcerptExtractor.ofType() error handling
 * Extractors' use of `null` and `Long.MIN_VALUE`
-* Rename mapping() to groupingBy() ??
+* Rename mapping() to groupingBy() or merging() ??

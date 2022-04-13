@@ -22,7 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofType;
+import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
 import static org.junit.Assert.assertEquals;
 
 public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
@@ -50,8 +50,7 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     public void lastMarketDataPerSymbolCustom() {
 
         Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
-                .withAccumulator(Accumulator.mapping(ofType(MarketData.class), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
-                //.withAccumulator(Accumulator.mappingType(MarketData.class, MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
+                .withAccumulator(Accumulator.mapping(builder(MarketData.class).build(), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
                 .addViewer(Collections::unmodifiableMap)
                 .build();
 
@@ -68,7 +67,7 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
 
         Accumulation<Map<String, MarketData>> accumulation = Accumulations.toMap(
                 Accumulator.mapping(
-                        ofType(MarketData.class),
+                        builder(MarketData.class).build(),
                         MarketData::symbol,
                         Function.identity(),
                         Accumulator.replacingMerger()
@@ -89,7 +88,7 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     @Test
     public void symbolSet() {
 
-        Accumulation<Set<String>> listener = Accumulations.toSet(ofType(MarketData.class).map(MarketData::symbol));
+        Accumulation<Set<String>> listener = Accumulations.toSet(builder(MarketData.class).build().map(MarketData::symbol));
 
         writeToQueue(listener);
 

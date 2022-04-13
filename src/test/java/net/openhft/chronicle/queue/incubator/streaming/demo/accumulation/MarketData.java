@@ -35,7 +35,7 @@ public final class MarketData extends SelfDescribingMarshallable {
         return Base85LongConverter.INSTANCE.asString(symbol);
     }
 
-    public long symbolAsInt() {
+    public long symbolAsLong() {
         return symbol;
     }
 

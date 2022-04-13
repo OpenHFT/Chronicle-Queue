@@ -5,12 +5,14 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
+import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
@@ -57,7 +59,8 @@ public final class AccumulatorUtil {
 
     public static <I, E>
     ExcerptExtractor<E> ofMethod(@NotNull final Class<I> type,
-                                 @NotNull final BiConsumer<? super I, ? super E> methodReference) {
+                                 @NotNull final BiConsumer<? super I, ? super E> methodReference,
+                                 @Nullable final Supplier<? extends E> supplier) {
         final MethodNameAndMessageType<E> info = methodOf(type, methodReference);
         final String expectedEventName = info.name();
         final Class<E> elementType = info.messageType();
@@ -67,13 +70,17 @@ public final class AccumulatorUtil {
             try {
                 final Bytes<?> bytes = wire.bytes();
                 while (bytes.readRemaining() > 0) {
-                    if (wire.isEndEvent())
+                    if (wire.isEndEvent()) {
                         break;
+                    }
                     final long start = bytes.readPosition();
 
                     wire.readEventName(eventName);
                     if (StringUtils.isEqual(expectedEventName, eventName)) {
-                        return wire.getValueIn().object(elementType);
+                        final E using = supplier.get();
+                        return wire
+                                .getValueIn()
+                                .object(using, elementType);
                     }
                     wire.consumePadding();
                     if (bytes.readPosition() == start) {

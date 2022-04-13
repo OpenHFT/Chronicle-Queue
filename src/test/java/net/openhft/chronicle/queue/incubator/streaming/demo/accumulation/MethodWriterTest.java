@@ -47,7 +47,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     public void lastSeen() {
         Accumulation<AtomicReference<MarketData>> listener = Accumulation.builder(AtomicReference<MarketData>::new)
                 .withAccumulator(
-                        Accumulator.reducing(ExcerptExtractor.ofMethod(ServiceOut.class, MarketData.class, ServiceOut::marketData),
+                        Accumulator.reducing(ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                                 AtomicReference::set
                         )
                 )
@@ -66,7 +66,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
 
         Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
                 .withAccumulator(
-                        Accumulator.mapping(ExcerptExtractor.ofMethod(ServiceOut.class, MarketData.class, ServiceOut::marketData),
+                        Accumulator.mapping(ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                                 MarketData::symbol,
                                 Function.identity(),
                                 Accumulator.replacingMerger())

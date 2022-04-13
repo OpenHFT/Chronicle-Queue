@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
 
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
@@ -12,8 +13,7 @@ import java.util.function.LongSupplier;
 
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.mapping;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.replacingMerger;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofMethod;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofType;
+import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.*;
 import static net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor.extractingIndex;
 
 public class DemoTest {
@@ -29,10 +29,10 @@ public class DemoTest {
         Accumulation<LongSupplier> maxIndex = Accumulations.reducingLong(extractingIndex(), -1L, Math::max);
 
         // Maintains a List of all MarketData elements encountered in a List
-        Accumulation<List<MarketData>> list = Accumulations.toList(ofType(MarketData.class));
+        Accumulation<List<MarketData>> list = Accumulations.toList(builder(MarketData.class).build());
 
         // Maintains a Set of all MarketData symbols starting with "S"
-        Accumulation<Set<String>> symbolsStartingWithS = Accumulations.toSet(ofType(MarketData.class)
+        Accumulation<Set<String>> symbolsStartingWithS = Accumulations.toSet(builder(MarketData.class).build()
                 .map(MarketData::symbol)
                 .filter(s -> s.startsWith("S")));
 
@@ -40,7 +40,7 @@ public class DemoTest {
         // messages were previously written by a MethodWriter of type MarketDataProvider
         Accumulation<Map<String, MarketData>> latest = Accumulations.toMap(
                 mapping(
-                        ofMethod(MarketDataProvider.class, MarketData.class, MarketDataProvider::marketData),
+                        builder(MarketData.class).withMethod(MarketDataProvider.class, MarketDataProvider::marketData).build(),
                         MarketData::symbol,
                         Function.identity(),
                         replacingMerger()
@@ -53,7 +53,7 @@ public class DemoTest {
         // classes (creates objects). A similar object creation free scheme could reside in QE
         Accumulation<Map<String, DoubleSummaryStatistics>> stats = Accumulations.toMap(
                 mapping(
-                        ofMethod(MarketDataProvider.class, MarketData.class, MarketDataProvider::marketData),
+                        ExcerptExtractor.builder(MarketData.class).withMethod(MarketDataProvider.class, MarketDataProvider::marketData).build(),
                         MarketData::symbol,
                         md -> {
                             DoubleSummaryStatistics value = new DoubleSummaryStatistics();

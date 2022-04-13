@@ -4,6 +4,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Streams;
 import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData;
@@ -25,8 +26,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static net.openhft.chronicle.queue.incubator.streaming.CreateUtil.*;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofMethod;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.ofType;
+import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,7 +42,7 @@ class StreamsDemoTest {
                 vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
         )) {
 
-            String s = Streams.of(queue.createTailer(), ofType(MarketData.class))
+            String s = Streams.of(queue.createTailer(), builder(MarketData.class).build())
                     .skip(100)
                     .limit(50)
                     .map(Object::toString)
@@ -97,7 +97,7 @@ class StreamsDemoTest {
         )) {
 
 
-            Map<String, List<MarketData>> groups = Streams.of(queue.createTailer(), ofType(MarketData.class))
+            Map<String, List<MarketData>> groups = Streams.of(queue.createTailer(), builder(MarketData.class).build())
                     .collect(groupingBy(MarketData::symbol));
 
             Map<String, List<MarketData>> expected = Stream.of(
@@ -110,7 +110,7 @@ class StreamsDemoTest {
             assertEquals(expected, groups);
 
             DoubleAdder adder = new DoubleAdder();
-            Iterator<MarketData> iterator = Streams.iterator(queue.createTailer(), ofType(MarketData.class));
+            Iterator<MarketData> iterator = Streams.iterator(queue.createTailer(), builder(MarketData.class).build());
             iterator.forEachRemaining(md -> adder.add(md.last()));
 
             assertEquals(401.0, adder.doubleValue(), 1e-10);
@@ -125,7 +125,7 @@ class StreamsDemoTest {
                 vo -> vo.object(new Shares("EFGH", 200_000_000)),
                 vo -> vo.object(new Shares("ABCD", 300_000_000))
         )) {
-            Map<String, List<Shares>> groups = Streams.of(q.createTailer(), ofType(Shares.class))
+            Map<String, List<Shares>> groups = Streams.of(q.createTailer(), builder(Shares.class).build())
                     .collect(groupingBy(Shares::symbol));
 
             Map<String, List<Shares>> expected = new HashMap<>();
@@ -151,7 +151,7 @@ class StreamsDemoTest {
 
             List<News> newsList = Streams.of(
                             q.createTailer(),
-                            ofMethod(Messages.class, News.class, Messages::news)
+                            ExcerptExtractor.builder(News.class).withMethod(Messages.class, Messages::news).build()
                     )
                     .sorted(Comparator.comparing(News::symbol))
                     .collect(toList());
@@ -163,16 +163,20 @@ class StreamsDemoTest {
 
             final LongSummaryStatistics stat = Streams.of(
                             q.createTailer(),
-                            ofMethod(Messages.class, Shares.class, Messages::shares)
+                            ExcerptExtractor.builder(Shares.class).withMethod(Messages.class, Messages::shares).build()
                     )
-                    .mapToLong(Shares::shares)
+                    .mapToLong(Shares::noShares)
                     .summaryStatistics();
 
             LongSummaryStatistics expectedStat = LongStream.of(100_000_000, 200_000_000).summaryStatistics();
             assertLongSummaryStatisticsEqual(expectedStat, stat);
 
             final LongSummaryStatistics stat2 = Streams.ofLong(q.createTailer(),
-                            ofMethod(Messages.class, Shares.class, Messages::shares).mapToLong(Shares::shares)
+                            ExcerptExtractor.builder(Shares.class).
+                                    withMethod(Messages.class, Messages::shares)
+                                    .withReusing(Shares::new)
+                                    .build()
+                                    .mapToLong(Shares::noShares)
                     )
                     .summaryStatistics();
 
@@ -227,10 +231,10 @@ class StreamsDemoTest {
             Set<Thread> threads = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
             long sum = Streams.of(q.createTailer(),
-                            ofType(Shares.class))
+                            builder(Shares.class).build())
                     .parallel()
                     .peek(v -> threads.add(Thread.currentThread()))
-                    .mapToLong(Shares::shares)
+                    .mapToLong(Shares::noShares)
                     .sum();
 
             long expected = (long) (no - 1) * no / 2L;
@@ -251,14 +255,53 @@ class StreamsDemoTest {
 
             Map<String, List<MarketData>> groups;
             try (ExcerptTailer tailer = queue.createTailer()) {
-                groups = Streams.of(tailer, ofType(MarketData.class))
+                groups = Streams.of(tailer, builder(MarketData.class).build())
                         .collect(groupingBy(MarketData::symbol));
             }
             // A bit sloppy...
             assertEquals(2, groups.size());
         }
+    }
 
+    @Test
+    void streamObjectReuse() {
+        try (SingleChronicleQueue queue = createThenValueOuts(Q_NAME,
+                vo -> vo.object(new MarketData("MSFT", 100, 110, 90)),
+                vo -> vo.object(new MarketData("APPL", 200, 220, 180)),
+                vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
+        )) {
 
+            OptionalDouble max = Streams.of(queue.createTailer(),
+                            builder(MarketData.class)
+                                    .withReusing(MarketData::new)
+                                    .build())
+                    .mapToDouble(MarketData::last)
+                    .max();
+
+            OptionalDouble expected = OptionalDouble.of(200);
+
+            assertEquals(expected, max);
+
+        }
+    }
+
+    @Test
+    void streamIllegalObjectReuse() {
+        try (SingleChronicleQueue queue = createThenValueOuts(Q_NAME,
+                vo -> vo.object(new MarketData("MSFT", 100, 110, 90)),
+                vo -> vo.object(new MarketData("APPL", 200, 220, 180)),
+                vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
+        )) {
+
+            List<MarketData> list = Streams.of(queue.createTailer(),
+                            builder(MarketData.class)
+                                    .withReusing(MarketData::new)
+                                    .build())
+                    .collect(toList());
+
+            System.out.println("list = " + list);
+
+        }
     }
 
 
@@ -275,14 +318,14 @@ class StreamsDemoTest {
     public static final class Shares extends SelfDescribingMarshallable {
 
         private String symbol;
-        private long shares;
+        private long noShares;
 
         public Shares() {
         }
 
-        public Shares(@NotNull String symbol, long shares) {
+        public Shares(@NotNull String symbol, long noShares) {
             this.symbol = symbol;
-            this.shares = shares;
+            this.noShares = noShares;
         }
 
         public String symbol() {
@@ -293,12 +336,12 @@ class StreamsDemoTest {
             this.symbol = symbol;
         }
 
-        public long shares() {
-            return shares;
+        public long noShares() {
+            return noShares;
         }
 
-        public void shares(long shares) {
-            this.shares = shares;
+        public void noShares(long shares) {
+            this.noShares = shares;
         }
     }
 

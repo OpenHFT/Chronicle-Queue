@@ -137,13 +137,13 @@ public class AppenderListenerTest {
 
         final Accumulation<List<String>> appenderListener =
                 Accumulation.builder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
-                        .withAccumulator(Accumulator.reducing(ExcerptExtractor.ofMethod(HelloWorld.class, String.class, HelloWorld::hello), List::add))
+                        .withAccumulator(Accumulator.reducing(ExcerptExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(), List::add))
                         .addViewer(Collections::unmodifiableList)
                         .build();
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .appenderListener(appenderListener::onExcerpt)
+                .appenderListener(appenderListener)
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build();
              ExcerptAppender appender = q.acquireAppender()) {

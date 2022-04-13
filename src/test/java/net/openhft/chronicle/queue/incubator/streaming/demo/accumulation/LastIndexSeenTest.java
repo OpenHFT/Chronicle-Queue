@@ -6,6 +6,7 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation.MapperTo;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class LastIndexSeenTest extends ChronicleQueueTestBase {
 
     @Test
     public void lastIndexSeen() {
-        Accumulation<LongSupplier> listener = reducingLong(extractingIndex(), 0, (a, b) -> b);
+        Accumulation<LongSupplier> listener = Accumulations.reducingLong(extractingIndex(), 0, (a, b) -> b);
 
         writeToQueue(listener);
 

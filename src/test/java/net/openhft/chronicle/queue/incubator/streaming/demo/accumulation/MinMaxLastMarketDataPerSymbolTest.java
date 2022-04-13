@@ -2,11 +2,15 @@ package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.AppenderListener;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;
@@ -18,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
 import static org.junit.Assert.assertEquals;
 
@@ -50,7 +53,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
         Accumulation<MinMax> globalListener = builder(MinMax::new)
                 .withAccumulator(
                         Accumulator.reducing(
-                                ExcerptExtractor.ofType(MarketData.class),
+                                ExcerptExtractor.builder(MarketData.class).build(),
                                 MinMax::merge)
                 )
                 .build();
@@ -59,7 +62,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
         // This second Accumulation will track min and max value for each symbol individually
         Accumulation<Map<String, MinMax>> listener = builder(ConcurrentHashMap::new, String.class, MinMax.class)
                 .withAccumulator(
-                        Accumulator.mapping(ExcerptExtractor.ofType(MarketData.class),
+                        Accumulator.mapping(ExcerptExtractor.builder(MarketData.class).build(),
                                 MarketData::symbol,
                                 MinMax::new,
                                 MinMax::merge
@@ -85,7 +88,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     public void lastMarketDataPerSymbol() {
 
         Accumulation<Map<String, MarketData>> listener = Accumulations.toMap(
-                Accumulator.mapping(ExcerptExtractor.ofType(MarketData.class), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()));
+                Accumulator.mapping(ExcerptExtractor.builder(MarketData.class).build(), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()));
 
         writeToQueue(listener);
 
@@ -98,7 +101,10 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     @Test
     public void symbolSet() {
 
-        Accumulation<Set<String>> listener = Accumulations.toSet(ExcerptExtractor.ofType(MarketData.class).map(MarketData::symbol));
+        Accumulation<Set<String>> listener = Accumulations.toSet(ExcerptExtractor.builder(MarketData.class)
+                .withReusing(MarketData::new) // Reuse is safe as we only extract immutable data (String symbol).
+                .build()
+                .map(MarketData::symbol));
 
         writeToQueue(listener);
 
