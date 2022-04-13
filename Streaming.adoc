@@ -2,7 +2,7 @@
 Per Minborg
 :css-signature: demo
 :toc: macro
-:toclevels: 2
+:toclevels: 3
 :icons: font
 
 toc::[]
