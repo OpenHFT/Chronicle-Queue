@@ -50,7 +50,7 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     public void lastMarketDataPerSymbolCustom() {
 
         Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
-                .withAccumulator(Accumulator.mapping(builder(MarketData.class).build(), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
+                .withAccumulator(Accumulator.merging(builder(MarketData.class).build(), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()))
                 .addViewer(Collections::unmodifiableMap)
                 .build();
 
@@ -66,7 +66,7 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     public void lastMarketDataPerSymbol() {
 
         Accumulation<Map<String, MarketData>> accumulation = Accumulations.toMap(
-                Accumulator.mapping(
+                Accumulator.merging(
                         builder(MarketData.class).build(),
                         MarketData::symbol,
                         Function.identity(),

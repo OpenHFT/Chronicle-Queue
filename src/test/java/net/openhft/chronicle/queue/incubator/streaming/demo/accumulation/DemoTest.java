@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.mapping;
+import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.merging;
 import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.replacingMerger;
 import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.*;
 import static net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor.extractingIndex;
@@ -39,7 +39,7 @@ public class DemoTest {
         // Maintains a Map of the latest MarketData message per symbol where the
         // messages were previously written by a MethodWriter of type MarketDataProvider
         Accumulation<Map<String, MarketData>> latest = Accumulations.toMap(
-                mapping(
+                merging(
                         builder(MarketData.class).withMethod(MarketDataProvider.class, MarketDataProvider::marketData).build(),
                         MarketData::symbol,
                         Function.identity(),
@@ -52,7 +52,7 @@ public class DemoTest {
         // Maintains statistics per symbol on MarketData::last using vanilla Java
         // classes (creates objects). A similar object creation free scheme could reside in QE
         Accumulation<Map<String, DoubleSummaryStatistics>> stats = Accumulations.toMap(
-                mapping(
+                merging(
                         ExcerptExtractor.builder(MarketData.class).withMethod(MarketDataProvider.class, MarketDataProvider::marketData).build(),
                         MarketData::symbol,
                         md -> {

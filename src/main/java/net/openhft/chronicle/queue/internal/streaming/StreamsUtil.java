@@ -97,9 +97,12 @@ public final class StreamsUtil {
         public Spliterator<T> trySplit() {
             final int lo = index;
             final int mid = (lo + fence) >>> 1;
-            return (lo >= mid)
-                    ? null
-                    : new ArraySpliterator<>(array, lo, index = mid, characteristics);
+            if (lo >= mid) {
+                // Unable to split
+                return null;
+            }
+            index = mid;
+            return new ArraySpliterator<>(array, lo, index, characteristics);
         }
 
         @Override

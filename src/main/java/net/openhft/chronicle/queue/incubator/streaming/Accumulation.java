@@ -160,7 +160,7 @@ public interface Accumulation<T> extends AppenderListener {
             }
 
             /**
-             * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
+             * Creates and returns a new Accumulator that merges values into a Map whose keys and values
              * are the result of applying the provided extractors to the input messages.
              * <p>
              * If the provided {@code extractor} returns null, the element will be ignored.
@@ -169,11 +169,13 @@ public interface Accumulation<T> extends AppenderListener {
              * value mapping function is applied to each equal element, and the results are merged using
              * the provided {@code mergeFunction}.
              *
-             * @param keyExtractor   a mapping function to produce keys.
-             * @param valueExtractor a mapping function to produce values.
+             * @param extractor      used to extract elements from queue excerpts
+             * @param keyExtractor   a mapping function to produce keys from elements.
+             * @param valueExtractor a mapping function to produce values from elements.
              * @param mergeFunction  a merge function, used to resolve collisions between values associated with the same key,
              *                       as supplied to Map.merge(Object, Object, BiFunction)
              * @param <A>            Underlying accumulator type
+             * @param <E>            element type
              * @param <K>            key type
              * @param <V>            value type
              * @return a new Accumulator
@@ -181,7 +183,7 @@ public interface Accumulation<T> extends AppenderListener {
              */
             @NotNull
             static <A extends Map<K, V>, E, K, V>
-            Builder.Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends E> extractor,
+            Builder.Accumulator<A> merging(@NotNull final ExcerptExtractor<? extends E> extractor,
                                            @NotNull final Function<? super E, ? extends K> keyExtractor,
                                            @NotNull final Function<? super E, ? extends V> valueExtractor,
                                            @NotNull final BinaryOperator<V> mergeFunction) {
@@ -255,6 +257,12 @@ public interface Accumulation<T> extends AppenderListener {
          * @return the view
          */
         T map();
+
+        @NotNull
+        default <R> MapperTo<R> flatMap(@NotNull final Function<? super T, ? extends R> mapper) {
+            requireNonNull(mapper);
+            return () -> mapper.apply(map());
+        }
 
     }
 

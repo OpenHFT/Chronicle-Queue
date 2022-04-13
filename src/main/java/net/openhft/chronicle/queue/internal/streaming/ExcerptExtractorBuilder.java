@@ -71,7 +71,7 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
         }
     }
 
-    Supplier<? extends E> guardedSupplier() {
+    Supplier<E> guardedSupplier() {
         // Either of these protected Suppliers are used
         return threadConfinedReuse
                 ? new ThreadConfinedSupplier<>(supplier)
@@ -82,7 +82,7 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
 
         private final ThreadLocal<E> threadLocal;
 
-        public ThreadLocalSupplier(@NotNull final Supplier<E> supplier) {
+        public ThreadLocalSupplier(@NotNull final Supplier<? extends E> supplier) {
             this.threadLocal = ThreadLocal.withInitial(supplier);
         }
 
@@ -97,7 +97,7 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
         private final ThreadConfinementAsserter asserter = ThreadConfinementAsserter.createEnabled();
         private final E delegate;
 
-        public ThreadConfinedSupplier(@NotNull final Supplier<E> supplier) {
+        public ThreadConfinedSupplier(@NotNull final Supplier<? extends E> supplier) {
             // Eagerly create the reuse object
             this.delegate = requireNonNull(supplier.get());
         }
@@ -112,19 +112,20 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
     private static final class MethodRef<I, E> {
 
         final Class<I> interfaceType;
-        final BiConsumer<? super I, ? super E> methodReference;
+        final BiConsumer<I, E> methodReference;
 
+        @SuppressWarnings("unchecked")
         public MethodRef(@NotNull final Class<I> interfaceType,
                          @NotNull final BiConsumer<? super I, ? super E> methodReference) {
             this.interfaceType = interfaceType;
-            this.methodReference = methodReference;
+            this.methodReference = (BiConsumer<I, E>) methodReference;
         }
 
         public Class<I> interfaceType() {
             return interfaceType;
         }
 
-        public BiConsumer<? super I, ? super E> methodReference() {
+        public BiConsumer<I, E> methodReference() {
             return methodReference;
         }
     }

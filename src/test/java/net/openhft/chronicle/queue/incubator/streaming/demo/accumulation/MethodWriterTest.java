@@ -66,7 +66,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
 
         Accumulation<Map<String, MarketData>> listener = builder(ConcurrentHashMap::new, String.class, MarketData.class)
                 .withAccumulator(
-                        Accumulator.mapping(ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                        Accumulator.merging(ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                                 MarketData::symbol,
                                 Function.identity(),
                                 Accumulator.replacingMerger())

@@ -62,7 +62,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
         // This second Accumulation will track min and max value for each symbol individually
         Accumulation<Map<String, MinMax>> listener = builder(ConcurrentHashMap::new, String.class, MinMax.class)
                 .withAccumulator(
-                        Accumulator.mapping(ExcerptExtractor.builder(MarketData.class).build(),
+                        Accumulator.merging(ExcerptExtractor.builder(MarketData.class).build(),
                                 MarketData::symbol,
                                 MinMax::new,
                                 MinMax::merge
@@ -88,7 +88,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     public void lastMarketDataPerSymbol() {
 
         Accumulation<Map<String, MarketData>> listener = Accumulations.toMap(
-                Accumulator.mapping(ExcerptExtractor.builder(MarketData.class).build(), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()));
+                Accumulator.merging(ExcerptExtractor.builder(MarketData.class).build(), MarketData::symbol, Function.identity(), Accumulator.replacingMerger()));
 
         writeToQueue(listener);
 

@@ -22,41 +22,6 @@ public final class AccumulatorUtil {
     private AccumulatorUtil() {
     }
 
-    /**
-     * Creates and returns a new Accumulator that accumulates elements into a Map whose keys and values
-     * are the result of applying the provided extractors to the input messages.
-     * <p>
-     * If the mapped keys contains duplicates (according to Object.equals(Object)), the
-     * value mapping function is applied to each equal element, and the results are merged using
-     * the provided {@code mergeFunction}.
-     *
-     * @param keyExtractor   a mapping function to produce keys.
-     * @param valueExtractor a mapping function to produce values.
-     * @param mergeFunction  a merge function, used to resolve collisions between values associated with the same key,
-     *                       as supplied to Map.merge(Object, Object, BiFunction)
-     * @param <A>            Underlying accumulator type
-     * @param <K>            key type
-     * @param <V>            value type
-     * @return a new Accumulator
-     * @throws NullPointerException if any of the provided parmeters are {@code null}
-     */
-    // This method is "parked" here. We should probably remove it after documenting how a "raw" mapper
-    // can be constructed.
-    @NotNull
-    static <A extends Map<K, V>, K, V>
-    Builder.Accumulator<A> mapping(@NotNull final ExcerptExtractor<? extends K> keyExtractor,
-                                   @NotNull final ExcerptExtractor<? extends V> valueExtractor,
-                                   @NotNull final BinaryOperator<V> mergeFunction) {
-        requireNonNull(keyExtractor);
-        requireNonNull(valueExtractor);
-        requireNonNull(mergeFunction);
-        // Todo: Create a wrapper method around null handling of keyExtractor or otherwise handle it
-        return (accumulation, wire, index) ->
-                accumulation.merge(keyExtractor.extract(wire, index),
-                        valueExtractor.extract(wire, index),
-                        mergeFunction);
-    }
-
     public static <I, E>
     ExcerptExtractor<E> ofMethod(@NotNull final Class<I> type,
                                  @NotNull final BiConsumer<? super I, ? super E> methodReference,

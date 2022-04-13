@@ -26,7 +26,7 @@ import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 public final class Streams {
 
     // Suppresses default constructor, ensuring non-instantiability.
-    public Streams() {
+    private Streams() {
     }
 
     /**
