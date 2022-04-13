@@ -88,7 +88,7 @@ Accumulation<Map<String, MarketData>> accumulation = Accumulations.toMap(
 
 ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .path("market-data-queue")
-                .appenderListener(accumulation)  <5>
+                .appenderListener(accumulation)     <5>
                 .build()
 ----
 
@@ -146,7 +146,7 @@ long last = Streams.ofLong(
                 ToLongExcerptExtractor.extractingIndex() <1>
          )
         .max()
-        .orElse(-1);    <2>
+        .orElse(-1);                                     <2>
 
 ----
 
@@ -220,7 +220,7 @@ List<News> newsList = Streams.of(
 
 <1> Creates an `ExcerptExtractor` that will extract `News` messages that was previously written to the queue using a method writer's `Messages::news` method.
 
-<2> Standard `Stream` feature that will sort messages in `symbol` order.
+<2> Standard `Stream` operation that will return a `Stream` sorted in `symbol` order.
 
 The extractor will only extract messages of the specified type and method and not other messages.
 
@@ -263,7 +263,7 @@ OptionalDouble max = Streams.of(queue.createTailer(),
 ----
 
 <1> This supplier is used to provide objects that are reused when successively extracting a plurality of elements.
-<2> A primitive double value is extracted directly making reuse safe.
+<2> A primitive `double` value is extracted directly making reuse safe.
 
 Here is an example of object reuse that is *not allowed*:
 
@@ -511,7 +511,7 @@ accumulation.accept(queue.createTailer());
 
 === Detailed Description
 
-To Be Written
+To Be Written...
 
 == To be Documented
 
