@@ -1,9 +1,8 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
@@ -41,21 +40,8 @@ final class VanillaAppenderListenerAccumulation<A, T> implements Accumulation<T>
     }
 
     @Override
-    public long accept(@NotNull ExcerptTailer tailer) {
+    public long accept(@NotNull final ExcerptTailer tailer) {
         requireNonNull(tailer);
-        long lastIndex = -1;
-        boolean end = false;
-        while (!end) {
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                final Wire wire = dc.wire();
-                if (dc.isPresent() && wire != null) {
-                    lastIndex = dc.index();
-                    onExcerpt(wire, lastIndex);
-                } else {
-                    end = true;
-                }
-            }
-        }
-        return lastIndex;
+        return AccumulationUtil.accept(this, tailer);
     }
 }
