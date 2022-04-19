@@ -14,7 +14,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.*;
 import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.replacingMerger;
 import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.toConcurrentList;
 import static org.junit.Assert.assertEquals;
@@ -132,7 +134,7 @@ public class AppenderListenerTest {
 
         Accumulation<List<String>> appenderListener = Accumulations.of(
                 ExcerptExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(),
-                toConcurrentList()
+                collectingAndThen(toConcurrentList(), Collections::unmodifiableList)
         );
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
