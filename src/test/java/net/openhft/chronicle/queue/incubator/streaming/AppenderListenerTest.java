@@ -6,13 +6,17 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
+import net.openhft.chronicle.wire.Wire;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.replacingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.toConcurrentList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -64,35 +68,26 @@ public class AppenderListenerTest {
     }
 
     @Test
-    public void aggregate() {
-        String path = OS.getTarget() + "/appenderListenerAggregateTest";
-
-        // This accumulator shows the last used index
-        final Accumulation<MyAtomicLongView> appenderListener =
-                Accumulation.builder(AtomicLong::new)
-                        .withAccumulator(((a, wire, index) -> a.set(index)))
-                        .addViewer(MyAtomicLongView::new)
-                        .build();
-
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
-                .testBlockSize()
-                .appenderListener(appenderListener::onExcerpt)
-                .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
-                .build();
-             ExcerptAppender appender = q.acquireAppender()) {
-            final HelloWorld writer = appender.methodWriter(HelloWorld.class);
-            writer.hello("G'Day");
-            writer.hello("Bye-now");
-        }
-        IOTools.deleteDirWithFiles(path);
-
-        assertEquals(0x4A1000000001L, appenderListener.accumulation().value());
-    }
-
-    @Test
     public void aggregateMap() {
         String path = OS.getTarget() + "/appenderListenerAggregateMapTest";
 
+
+        final Accumulation<Map<String, String>> appenderListener = new Accumulation<Map<String, String>>() {
+
+            final ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+
+            @Override
+            public void onExcerpt(@NotNull Wire wire, long index) {
+                map.merge(wire.readEvent(String.class), wire.getValueIn().text(), replacingMerger());
+            }
+
+            @Override
+            public @NotNull Map<String, String> accumulation() {
+                return Collections.unmodifiableMap(map);
+            }
+        };
+
+/*
         final Accumulation<Map<String, String>> appenderListener =
                 // Here we use a special static method providing Map key and value types directly
                 Accumulation.mapBuilder(ConcurrentHashMap::new, String.class, String.class)
@@ -103,11 +98,11 @@ public class AppenderListenerTest {
                                 }
                         )
                         .addViewer(Collections::unmodifiableMap)
-                        .build();
+                        .build();*/
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .appenderListener(appenderListener::onExcerpt)
+                .appenderListener(appenderListener)
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build();
              ExcerptAppender appender = q.acquireAppender()) {
@@ -135,11 +130,10 @@ public class AppenderListenerTest {
     public void aggregateListCustom() {
         String path = OS.getTarget() + "/appenderListenerAggregateCollectionTest";
 
-        final Accumulation<List<String>> appenderListener =
-                Accumulation.collectionBuilder(() -> Collections.synchronizedList(new ArrayList<>()), String.class)
-                        .withAccumulator(Accumulator.reducing(ExcerptExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(), List::add))
-                        .addViewer(Collections::unmodifiableList)
-                        .build();
+        Accumulation<List<String>> appenderListener = Accumulations.of(
+                ExcerptExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(),
+                toConcurrentList()
+        );
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
@@ -164,73 +158,5 @@ public class AppenderListenerTest {
         }
     }
 
-
-    private static final class MyAtomicLongView2 {
-        MyAtomicLongView delegate;
-
-        public MyAtomicLongView2(MyAtomicLongView delegate) {
-            this.delegate = delegate;
-        }
-
-        long valuePlusTen() {
-            return delegate.value() + 10L;
-        }
-
-    }
-
-    @Test
-    public void aggregateDualView() {
-        String path = OS.getTarget() + "/appenderListenerAggregateTest";
-
-
-        final Accumulation<MyAtomicLongView2> appenderListener =
-                Accumulation.builder(AtomicLong::new)
-                        .withAccumulator(((a, wire, index) -> a.set(index)))
-                        // Apply a series of views
-                        .addViewer(MyAtomicLongView::new)
-                        .addViewer(MyAtomicLongView2::new)
-                        .build();
-
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
-                .testBlockSize()
-                .appenderListener(appenderListener::onExcerpt)
-                .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
-                .build();
-             ExcerptAppender appender = q.acquireAppender()) {
-            final HelloWorld writer = appender.methodWriter(HelloWorld.class);
-            writer.hello("G'Day");
-            writer.hello("Bye-now");
-        }
-        IOTools.deleteDirWithFiles(path);
-
-        assertEquals(0x4A1000000001L + 10, appenderListener.accumulation().valuePlusTen());
-    }
-
-
-    @Test
-    public void aggregateMapping() {
-        String path = OS.getTarget() + "/appenderListenerMappingTest";
-
-        final Accumulation<Accumulation.MapperTo<Long>> appenderListener =
-                Accumulation.builder(AtomicLong::new)
-                        .withAccumulator(((a, wire, index) -> a.set(index)))
-                        // Only exposes the value of the underlying accumulation
-                        .withMapper(AtomicLong::get)
-                        .build();
-
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
-                .testBlockSize()
-                .appenderListener(appenderListener::onExcerpt)
-                .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
-                .build();
-             ExcerptAppender appender = q.acquireAppender()) {
-            final HelloWorld writer = appender.methodWriter(HelloWorld.class);
-            writer.hello("G'Day");
-            writer.hello("Bye-now");
-        }
-        IOTools.deleteDirWithFiles(path);
-
-        assertEquals(0x4A1000000001L, (long) appenderListener.accumulation().map());
-    }
 
 }

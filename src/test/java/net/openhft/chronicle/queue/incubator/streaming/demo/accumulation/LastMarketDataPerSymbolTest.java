@@ -8,7 +8,6 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -16,11 +15,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toConcurrentMap;
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.replacingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.toConcurrentSet;
 import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
 import static org.junit.Assert.assertEquals;
 
@@ -46,63 +48,32 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void lastMarketDataPerSymbolCustom() {
+    public void lastMarketDataPerSymbol() {
 
-        Accumulation<Map<String, MarketData>> listener =
-                Accumulation.mapBuilder(ConcurrentHashMap::new,
-                        String.class,
-                        MarketData.class
-                )
-                        .withAccumulator(Accumulator.merging(
-                                builder(MarketData.class)
-                                        .build(),
-                                MarketData::symbol,
-                                Function.identity(),
-                                Accumulator.replacingMerger()))
-                        .addViewer(Collections::unmodifiableMap)
-                        .build();
+        final Accumulation<Map<String, MarketData>> listener = Accumulations.of(
+                builder(MarketData.class).build(),
+                collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap));
 
         writeToQueue(listener);
 
         final Map<String, MarketData> expected = MARKET_DATA_SET.stream()
-                .collect(Collectors.toMap(MarketData::symbol, Function.identity(), (a, b) -> b));
+                .collect(toMap(MarketData::symbol, Function.identity(), (a, b) -> b));
 
         assertEquals(expected, listener.accumulation());
     }
 
     @Test
-    public void lastMarketDataPerSymbol() {
-
-        Accumulation<Map<String, MarketData>> accumulation = Accumulations.toMap(
-                Accumulator.merging(
-                        builder(MarketData.class).build(),
-                        MarketData::symbol,
-                        Function.identity(),
-                        Accumulator.replacingMerger()
-                )
-        );
-
-        writeToQueue(accumulation);
-
-        final Map<String, MarketData> expected = MARKET_DATA_SET.stream()
-                .collect(Collectors.toMap(MarketData::symbol, Function.identity(), (a, b) -> b));
-
-        assertEquals(expected, accumulation.accumulation());
-
-        System.out.println("accumulation.accumulation() = " + accumulation.accumulation());
-
-    }
-
-    @Test
     public void symbolSet() {
 
-        Accumulation<Set<String>> listener = Accumulations.toSet(builder(MarketData.class).build().map(MarketData::symbol));
+        Accumulation<Set<String>> listener = Accumulations.of(
+                builder(MarketData.class).build().map(MarketData::symbol),
+                toConcurrentSet());
 
         writeToQueue(listener);
 
         final Set<String> expected = MARKET_DATA_SET.stream()
                 .map(MarketData::symbol)
-                .collect(Collectors.toSet());
+                .collect(toSet());
 
         assertEquals(expected, listener.accumulation());
     }

@@ -6,15 +6,15 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.MapperTo;
+import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongSupplier;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
 import static org.junit.Assert.assertEquals;
 
 public class LastIndexSeenTailerTest {
@@ -46,14 +46,7 @@ public class LastIndexSeenTailerTest {
             appender.writeText("three");
         }
 
-        Accumulation<MapperTo<Long>> listener = builder(AtomicLong::new)
-                // On each excerpt appended, this accumulator will be called and
-                // incremented by one
-                .withAccumulator(((al, wire, index) -> al.set(index)))
-                // Add a mapper that will be applied on each inspection of the
-                // underlying Accumulation as to prevent accidental modification
-                .withMapper(AtomicLong::get)
-                .build();
+        final Accumulation<LongSupplier> listener = Accumulations.reducingLong(ToLongExcerptExtractor.extractingIndex(), 0, (a, b) -> b);
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .appenderListener(listener)
@@ -69,7 +62,7 @@ public class LastIndexSeenTailerTest {
             appender.writeText("four");
         }
 
-        assertEquals("16d00000003", Long.toHexString(listener.accumulation().map()));
+        assertEquals("16d00000003", Long.toHexString(listener.accumulation().getAsLong()));
 
     }
 

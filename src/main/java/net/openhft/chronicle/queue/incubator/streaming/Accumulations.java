@@ -1,23 +1,17 @@
 package net.openhft.chronicle.queue.incubator.streaming;
 
-import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator;
 import net.openhft.chronicle.queue.internal.streaming.AccumulationUtil;
-import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAccumulator;
-import java.util.function.LongBinaryOperator;
-import java.util.function.LongSupplier;
-import java.util.function.ToLongFunction;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.*;
 import java.util.stream.Collector;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.longViewer;
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.throwingMerger;
 
 public final class Accumulations {
 
@@ -25,12 +19,71 @@ public final class Accumulations {
     private Accumulations() {
     }
 
-    public static Accumulation<LongSupplier> counting() {
-        return Accumulation.builder(AtomicLong::new)
-                .withAccumulator((accumulation, wire, index) -> accumulation.getAndIncrement())
-                .addViewer(longViewer(AtomicLong::get))
-                .build();
+    public static <E, A, R>
+    Accumulation<R> of(@NotNull final ExcerptExtractor<E> extractor,
+                       @NotNull final Collector<E, A, ? extends R> collector) {
+        requireNonNull(extractor);
+        requireNonNull(collector);
+        return new AccumulationUtil.CollectorAccumulation<>(extractor, collector);
     }
+
+    public static <A>
+    Accumulation<LongSupplier> ofLong(@NotNull final ToLongExcerptExtractor extractor,
+                                      @NotNull final Supplier<A> supplier,
+                                      @NotNull final ObjLongConsumer<A> accumulator,
+                                      @NotNull final ToLongFunction<A> finisher) {
+        requireNonNull(extractor);
+        requireNonNull(supplier);
+        requireNonNull(accumulator);
+        requireNonNull(finisher);
+        return new AccumulationUtil.LongSupplierAccumulation<>(extractor, supplier, accumulator, finisher);
+    }
+
+    // Specialized Object Accumulations
+
+    public static <E> Accumulation<E> reducing(@NotNull final ExcerptExtractor<E> extractor,
+                                               final E identity,
+                                               @NotNull final BinaryOperator<E> accumulator) {
+        requireNonNull(extractor);
+        requireNonNull(accumulator);
+
+        final Collector<E, AtomicReference<E>, E> collector = Collector.of(
+                () -> new AtomicReference<>(identity),
+                (AtomicReference<E> ar, E e) -> ar.accumulateAndGet(e, accumulator),
+                throwingMerger(),
+                AtomicReference::get,
+                Collector.Characteristics.CONCURRENT
+        );
+
+        return Accumulations.of(extractor, collector);
+    }
+
+    public static <E> Accumulation<Optional<E>> reducing(@NotNull final ExcerptExtractor<E> extractor,
+                                                         @NotNull final BinaryOperator<E> accumulator) {
+        requireNonNull(extractor);
+        requireNonNull(accumulator);
+
+        final BinaryOperator<E> internalAccumulator = (a, b) -> {
+            if (a == null) {
+                return b;
+            }
+            return accumulator.apply(a, b);
+        };
+
+        final Collector<E, AtomicReference<E>, Optional<E>> collector = Collector.of(
+                AtomicReference::new,
+                (AtomicReference<E> ar, E e) -> ar.accumulateAndGet(e, internalAccumulator),
+                throwingMerger(),
+                (AtomicReference<E> a) -> Optional.of(a.get()),
+                Collector.Characteristics.CONCURRENT
+        );
+
+        return Accumulations.of(extractor, collector);
+    }
+
+
+    // Specialized Long Accumulations
+
 
     public static Accumulation<LongSupplier> reducingLong(@NotNull final ToLongExcerptExtractor longExtractor,
                                                           final long identity,
@@ -38,16 +91,25 @@ public final class Accumulations {
         requireNonNull(longExtractor);
         requireNonNull(accumulator);
 
-        return Accumulation.builder(() -> new LongAccumulator(accumulator, identity))
-                .withAccumulator((accumulation, wire, index) -> {
-                    final long value = longExtractor.extractAsLong(wire, index);
-                    if (value != Long.MIN_VALUE) {
-                        accumulation.accumulate(longExtractor.extractAsLong(wire, index));
-                    }
-                })
-                .addViewer(longViewer(LongAccumulator::get))
-                .build();
+        return Accumulations.ofLong(
+                longExtractor,
+                () -> new LongAccumulator(accumulator, identity),
+                LongAccumulator::accumulate,
+                LongAccumulator::get);
     }
+
+    public static Accumulation<LongSupplier> counting() {
+        return Accumulations.ofLong(
+                (wire, index) -> 1L,
+                LongAdder::new,
+                LongAdder::add,
+                LongAdder::sum
+        );
+    }
+
+
+
+/*
 
     public static <K, V> Accumulation<Map<K, V>> toMap(@NotNull final Accumulator<? super Map<K, V>> accumulator) {
         requireNonNull(accumulator);
@@ -80,72 +142,7 @@ public final class Accumulations {
                 .addViewer(Collections::unmodifiableList)
                 .build();
     }
+*/
 
-    public static <E, A, R> Accumulation<R> of(@NotNull final ExcerptExtractor<E> extractor,
-                                               @NotNull final Collector<E, A, ? extends R> collector) {
-        requireNonNull(extractor);
-        requireNonNull(collector);
-        return new CollectorAccumulation<>(extractor, collector);
-    }
-
-    private static final class CollectorAccumulation<E, A, R> implements Accumulation<R> {
-        private final ExcerptExtractor<E> extractor;
-        private final Collector<E, A, ? extends R> collector;
-
-        private final A accumulation;
-
-        public CollectorAccumulation(@NotNull final ExcerptExtractor<E> extractor,
-                                     @NotNull final Collector<E, A, ? extends R> collector) {
-            this.extractor = extractor;
-            this.collector = collector;
-
-            if (!collector.characteristics().contains(Collector.Characteristics.CONCURRENT)) {
-                Jvm.warn().on(CollectorAccumulation.class, "The collector " + collector + " should generally have the characteristics CONCURRENT");
-            }
-            this.accumulation = collector.supplier().get();
-        }
-
-        @Override
-        public void onExcerpt(@NotNull Wire wire, long index) {
-            final E element = extractor.extract(wire, index);
-            if (element != null) {
-                collector.accumulator()
-                        .accept(accumulation, element);
-            }
-        }
-
-        @SuppressWarnings("unchecked")
-        @NotNull
-        @Override
-        public R accumulation() {
-            if (collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
-                return (R) accumulation;
-            }
-            return collector.finisher().apply(accumulation);
-        }
-
-        @Override
-        public long accept(@NotNull final ExcerptTailer tailer) {
-            Objects.requireNonNull(tailer);
-            return AccumulationUtil.accept(this, tailer);
-        }
-    }
-
-    public static final class LongViewer<T> implements LongSupplier {
-
-        private final T delegate;
-        private final ToLongFunction<T> extractor;
-
-        public LongViewer(@NotNull final T delegate,
-                          @NotNull final ToLongFunction<T> extractor) {
-            this.delegate = delegate;
-            this.extractor = extractor;
-        }
-
-        @Override
-        public long getAsLong() {
-            return extractor.applyAsLong(delegate);
-        }
-    }
 
 }

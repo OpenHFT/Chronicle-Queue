@@ -15,8 +15,9 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
+import java.util.stream.Collector;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.builder;
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.throwingMerger;
 import static org.junit.Assert.assertEquals;
 
 public class CountAccumulationTest extends ChronicleQueueTestBase {
@@ -35,18 +36,16 @@ public class CountAccumulationTest extends ChronicleQueueTestBase {
 
     @Test
     public void countCustom() {
-        Accumulation<AtomicLong> listener = builder(AtomicLong::new)
-                // On each excerpt appended, this accumulator will be called and
-                // incremented by one
-                .withAccumulator(((al, wire, index) -> al.getAndIncrement()))
-                .build();
+        Accumulation<AtomicLong> listener = Accumulations.of(
+                (wire, index) -> 1L,
+                Collector.of(AtomicLong::new, AtomicLong::addAndGet, throwingMerger(), Collector.Characteristics.CONCURRENT));
 
         count(listener);
         assertEquals(3, listener.accumulation().get());
     }
 
     @Test
-    public void builtIn() {
+    public void countBuiltIn() {
         Accumulation<LongSupplier> listener = Accumulations.counting();
         count(listener);
         assertEquals(3, listener.accumulation().getAsLong());

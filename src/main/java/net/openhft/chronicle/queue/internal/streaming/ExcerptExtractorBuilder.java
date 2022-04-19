@@ -51,9 +51,9 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
 
         if (methodRef != null) {
             if (supplier == null) {
-                return AccumulatorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), () -> null);
+                return ExcerptExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), () -> null);
             }
-            return AccumulatorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), guardedSupplier());
+            return ExcerptExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), guardedSupplier());
         }
 
         if (supplier == null) {

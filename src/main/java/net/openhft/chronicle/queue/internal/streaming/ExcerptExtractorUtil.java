@@ -2,24 +2,21 @@ package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Proxy;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public final class AccumulatorUtil {
+public final class ExcerptExtractorUtil {
 
     // Suppresses default constructor, ensuring non-instantiability.
-    private AccumulatorUtil() {
+    private ExcerptExtractorUtil() {
     }
 
     public static <I, E>

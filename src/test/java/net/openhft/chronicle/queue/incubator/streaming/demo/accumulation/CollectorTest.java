@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
 import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.CollectorUtil;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import org.junit.After;
 import org.junit.Before;
@@ -21,7 +22,8 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 
 import static java.util.stream.Collectors.*;
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulation.Builder.Accumulator.replacingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.reducingConcurrent;
+import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.replacingMerger;
 import static org.junit.Assert.assertEquals;
 
 public class CollectorTest extends ChronicleQueueTestBase {
@@ -45,7 +47,7 @@ public class CollectorTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void lastSeen() {
+    public void lastSeenManual() {
 
         Collector<MarketData, AtomicReference<MarketData>, MarketData> lastSeen = Collector.of(
                 AtomicReference::new,
@@ -66,6 +68,22 @@ public class CollectorTest extends ChronicleQueueTestBase {
         MarketData actual = listener.accumulation();
         assertEquals(expected, actual);
     }
+
+    @Test
+    public void lastSeen() {
+
+        Accumulation<Optional<MarketData>> listener = Accumulations.of(
+                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                reducingConcurrent(CollectorUtil.throwingMerger())
+        );
+
+        writeToQueue(listener);
+
+        MarketData expected = createMarketData();
+        MarketData actual = listener.accumulation().orElseThrow(NoSuchElementException::new);
+        assertEquals(expected, actual);
+    }
+
 
     @Test
     public void map() {
