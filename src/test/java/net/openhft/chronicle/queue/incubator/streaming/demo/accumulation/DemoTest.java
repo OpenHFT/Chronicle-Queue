@@ -21,8 +21,6 @@ public class DemoTest {
 
     public static void main(String[] args) {
 
-        // Todo. Move Accumulation to be an outer class.
-
         // Maintains a count of the number of excerpts encountered
         Reduction<LongSupplier> count = Reductions.counting();
 
@@ -56,23 +54,7 @@ public class DemoTest {
                         .build(),
                 groupingByConcurrent(
                         MarketData::symbol,
-                        mapping(MarketData::last,
-                                reducing(
-                                        new DoubleSummaryStatistics(),
-                                        last -> {
-                                            DoubleSummaryStatistics value = new DoubleSummaryStatistics();
-                                            value.accept(last);
-                                            return value;
-                                        },
-                                        (a, b) -> {
-                                            a.combine(b);
-                                            return a;
-                                        }))));
-
-
-        // Todo: fix the impedance mismatch above. See https://docs.oracle.com/javase/10/docs/api/java/util/IntSummaryStatistics.html
-        // This can be made by mapping to a DoubleExcerptExtractor
-
+                        summarizingDouble(MarketData::last)));
 
         // How to use thread confined objects?
 
