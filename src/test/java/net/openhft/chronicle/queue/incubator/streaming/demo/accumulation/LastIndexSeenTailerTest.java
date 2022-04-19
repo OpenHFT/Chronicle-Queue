@@ -5,8 +5,8 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.Reduction;
+import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import org.junit.After;
 import org.junit.Before;
@@ -46,7 +46,7 @@ public class LastIndexSeenTailerTest {
             appender.writeText("three");
         }
 
-        final Accumulation<LongSupplier> listener = Accumulations.reducingLong(ToLongExcerptExtractor.extractingIndex(), 0, (a, b) -> b);
+        final Reduction<LongSupplier> listener = Reductions.reducingLong(ToLongExcerptExtractor.extractingIndex(), 0, (a, b) -> b);
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .appenderListener(listener)
@@ -62,7 +62,7 @@ public class LastIndexSeenTailerTest {
             appender.writeText("four");
         }
 
-        assertEquals("16d00000003", Long.toHexString(listener.accumulation().getAsLong()));
+        assertEquals("16d00000003", Long.toHexString(listener.reduction().getAsLong()));
 
     }
 

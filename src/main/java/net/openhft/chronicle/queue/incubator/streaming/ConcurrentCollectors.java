@@ -14,14 +14,14 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public final class CollectorUtil {
+public final class ConcurrentCollectors {
 
     // Suppresses default constructor, ensuring non-instantiability.
-    private CollectorUtil() {
+    private ConcurrentCollectors() {
     }
 
     /**
-     * Returns a concurrent {@code Collector} that accumulates the input elements into a
+     * Returns a concurrent {@code Collector} that reduces the input elements into a
      * new {@code List}.
      *
      * @param <T> the type of the input elements
@@ -43,7 +43,7 @@ public final class CollectorUtil {
     }
 
     /**
-     * Returns a concurrent {@code Collector} that accumulates the input elements into a
+     * Returns a concurrent {@code Collector} that reduces the input elements into a
      * new {@code Set}.
      *
      * <p>This is an {@link Collector.Characteristics#UNORDERED unordered}
@@ -91,7 +91,10 @@ public final class CollectorUtil {
         return Collector.of(
                 () -> new AtomicReference<>(identity),
                 (AtomicReference<T> ar, T e) -> ar.accumulateAndGet(e, op),
-                throwingMerger(),
+                (AtomicReference<T> t1, AtomicReference<T> t2) -> {
+                    t1.accumulateAndGet(t2.get(), op);
+                    return t1;
+                },
                 AtomicReference::get,
                 Collector.Characteristics.CONCURRENT);
     }
@@ -126,8 +129,9 @@ public final class CollectorUtil {
             return op.apply(a, b);
         };
 
-        return Collector.of(AtomicReference::new,
-                AtomicReference::set,
+        return Collector.of(
+                AtomicReference::new,
+                (AtomicReference<T> ar, T e) -> ar.accumulateAndGet(e, internalAccumulator),
                 (AtomicReference<T> t1, AtomicReference<T> t2) -> {
                     t1.accumulateAndGet(t2.get(), internalAccumulator);
                     return t1;

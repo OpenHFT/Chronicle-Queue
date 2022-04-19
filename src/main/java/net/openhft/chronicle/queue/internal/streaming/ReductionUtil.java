@@ -3,7 +3,7 @@ package net.openhft.chronicle.queue.internal.streaming;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.AppenderListener;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
+import net.openhft.chronicle.queue.incubator.streaming.Reduction;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -18,10 +18,10 @@ import java.util.stream.Collector;
 
 import static java.util.Objects.requireNonNull;
 
-public final class AccumulationUtil {
+public final class ReductionUtil {
 
     // Suppresses default constructor, ensuring non-instantiability.
-    private AccumulationUtil() {
+    private ReductionUtil() {
     }
 
     public static long accept(@NotNull final AppenderListener appenderListener,
@@ -43,7 +43,7 @@ public final class AccumulationUtil {
         return lastIndex;
     }
 
-    public static final class CollectorAccumulation<E, A, R> implements Accumulation<R> {
+    public static final class CollectorAccumulation<E, A, R> implements Reduction<R> {
         private final ExcerptExtractor<E> extractor;
         private final Collector<E, A, ? extends R> collector;
 
@@ -72,7 +72,7 @@ public final class AccumulationUtil {
         @SuppressWarnings("unchecked")
         @NotNull
         @Override
-        public R accumulation() {
+        public R reduction() {
             if (collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
                 return (R) accumulation;
             }
@@ -82,11 +82,11 @@ public final class AccumulationUtil {
         @Override
         public long accept(@NotNull final ExcerptTailer tailer) {
             requireNonNull(tailer);
-            return AccumulationUtil.accept(this, tailer);
+            return ReductionUtil.accept(this, tailer);
         }
     }
 
-    public static final class LongSupplierAccumulation<A> implements Accumulation<LongSupplier> {
+    public static final class LongSupplierAccumulation<A> implements Reduction<LongSupplier> {
         private final ToLongExcerptExtractor extractor;
         private final ObjLongConsumer<A> accumulator;
         private final A accumulation;
@@ -112,14 +112,14 @@ public final class AccumulationUtil {
 
         @NotNull
         @Override
-        public LongSupplier accumulation() {
+        public LongSupplier reduction() {
             return () -> finisher.applyAsLong(accumulation);
         }
 
         @Override
         public long accept(@NotNull final ExcerptTailer tailer) {
             requireNonNull(tailer);
-            return AccumulationUtil.accept(this, tailer);
+            return ReductionUtil.accept(this, tailer);
         }
     }
 }

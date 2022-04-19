@@ -1,8 +1,8 @@
 package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
 
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.Reduction;
+import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import static java.util.stream.Collectors.*;
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.*;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.*;
 import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
 import static net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor.extractingIndex;
 
@@ -24,31 +24,36 @@ public class DemoTest {
         // Todo. Move Accumulation to be an outer class.
 
         // Maintains a count of the number of excerpts encountered
-        Accumulation<LongSupplier> count = Accumulations.counting();
+        Reduction<LongSupplier> count = Reductions.counting();
 
         // Maintains a view of the highest index encountered or 0 if now index was encountered
-        Accumulation<LongSupplier> maxIndex = Accumulations.reducingLong(extractingIndex(), 0L, Math::max);
+        Reduction<LongSupplier> maxIndex = Reductions.reducingLong(extractingIndex(), 0L, Math::max);
 
         // Maintains a List of all MarketData elements encountered in a List
-        Accumulation<List<MarketData>> list = Accumulations.of(builder(MarketData.class).build(), toConcurrentList());
+        Reduction<List<MarketData>> list = Reductions.of(builder(MarketData.class).build(), toConcurrentList());
 
         // Maintains a Set of all MarketData symbols starting with "S"
-        Accumulation<Set<String>> symbolsStartingWithS = Accumulations.of(builder(MarketData.class).build()
+        Reduction<Set<String>> symbolsStartingWithS = Reductions.of(
+                builder(MarketData.class).build()
                         .map(MarketData::symbol)
                         .filter(s -> s.startsWith("S")),
                 toConcurrentSet());
 
         // Maintains a Map of the latest MarketData message per symbol where the
         // messages were previously written by a MethodWriter of type MarketDataProvider
-        Accumulation<Map<String, MarketData>> latest = Accumulations.of(
-                builder(MarketData.class).withMethod(MarketDataProvider.class, MarketDataProvider::marketData).build(),
+        Reduction<Map<String, MarketData>> latest = Reductions.of(
+                builder(MarketData.class)
+                        .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                        .build(),
                 toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()));
 
 
         // Maintains statistics per symbol on MarketData::last using vanilla Java
         // classes (creates objects).
-        Accumulation<ConcurrentMap<String, DoubleSummaryStatistics>> stats = Accumulations.of(
-                ExcerptExtractor.builder(MarketData.class).withMethod(MarketDataProvider.class, MarketDataProvider::marketData).build(),
+        Reduction<ConcurrentMap<String, DoubleSummaryStatistics>> stats = Reductions.of(
+                ExcerptExtractor.builder(MarketData.class)
+                        .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                        .build(),
                 groupingByConcurrent(
                         MarketData::symbol,
                         mapping(MarketData::last,

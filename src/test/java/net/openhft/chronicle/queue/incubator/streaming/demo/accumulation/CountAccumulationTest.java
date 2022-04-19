@@ -7,8 +7,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.Reduction;
+import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 import java.util.stream.Collector;
 
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.throwingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.throwingMerger;
 import static org.junit.Assert.assertEquals;
 
 public class CountAccumulationTest extends ChronicleQueueTestBase {
@@ -36,19 +36,19 @@ public class CountAccumulationTest extends ChronicleQueueTestBase {
 
     @Test
     public void countCustom() {
-        Accumulation<AtomicLong> listener = Accumulations.of(
+        Reduction<AtomicLong> listener = Reductions.of(
                 (wire, index) -> 1L,
                 Collector.of(AtomicLong::new, AtomicLong::addAndGet, throwingMerger(), Collector.Characteristics.CONCURRENT));
 
         count(listener);
-        assertEquals(3, listener.accumulation().get());
+        assertEquals(3, listener.reduction().get());
     }
 
     @Test
     public void countBuiltIn() {
-        Accumulation<LongSupplier> listener = Accumulations.counting();
+        Reduction<LongSupplier> listener = Reductions.counting();
         count(listener);
-        assertEquals(3, listener.accumulation().getAsLong());
+        assertEquals(3, listener.reduction().getAsLong());
     }
 
     private void count(AppenderListener listener) {

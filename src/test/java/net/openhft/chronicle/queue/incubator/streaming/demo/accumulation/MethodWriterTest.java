@@ -7,9 +7,9 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.Reduction;
+import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,8 +22,8 @@ import java.util.stream.Collector;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toConcurrentMap;
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.replacingMerger;
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.throwingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.replacingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.throwingMerger;
 import static org.junit.Assert.assertEquals;
 
 public class MethodWriterTest extends ChronicleQueueTestBase {
@@ -49,15 +49,17 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     @Test
     public void lastSeen() {
 
-        final Accumulation<AtomicReference<MarketData>> listener = Accumulations.of(
-                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+        final Reduction<AtomicReference<MarketData>> listener = Reductions.of(
+                ExcerptExtractor.builder(MarketData.class)
+                        .withMethod(ServiceOut.class, ServiceOut::marketData).
+                        build(),
                 Collector.of(AtomicReference<MarketData>::new, AtomicReference::set, throwingMerger(), Collector.Characteristics.CONCURRENT)
         );
 
         writeToQueue(listener);
 
         MarketData expected = createMarketData();
-        MarketData actual = listener.accumulation().get();
+        MarketData actual = listener.reduction().get();
         assertEquals(expected, actual);
     }
 
@@ -65,7 +67,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     @Test
     public void map() {
 
-        final Accumulation<Map<String, MarketData>> listener = Accumulations.of(
+        final Reduction<Map<String, MarketData>> listener = Reductions.of(
                 ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                 collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap));
 
@@ -74,7 +76,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
         Map<String, MarketData> expected = new HashMap<>();
         expected.put(expectedSymbol.symbol(), expectedSymbol);
 
-        assertEquals(expected, listener.accumulation());
+        assertEquals(expected, listener.reduction());
     }
 
     private void writeToQueue(AppenderListener listener) {

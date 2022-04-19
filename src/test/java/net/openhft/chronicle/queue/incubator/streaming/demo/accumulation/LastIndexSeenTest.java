@@ -7,8 +7,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.Reduction;
+import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,7 +16,7 @@ import org.junit.Test;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-import static net.openhft.chronicle.queue.incubator.streaming.Accumulations.reducingLong;
+import static net.openhft.chronicle.queue.incubator.streaming.Reductions.reducingLong;
 import static net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor.extractingIndex;
 import static org.junit.Assert.assertEquals;
 
@@ -36,23 +36,23 @@ public class LastIndexSeenTest extends ChronicleQueueTestBase {
 
     @Test
     public void lastIndexSeen() {
-        Accumulation<LongSupplier> listener = Accumulations.reducingLong(extractingIndex(), 0, (a, b) -> b);
+        Reduction<LongSupplier> listener = Reductions.reducingLong(extractingIndex(), 0, (a, b) -> b);
 
         writeToQueue(listener);
 
-        long indexLastSeen = listener.accumulation().getAsLong();
+        long indexLastSeen = listener.reduction().getAsLong();
         assertEquals("16d00000002", Long.toHexString(indexLastSeen));
     }
 
     @Test
     public void minAndMaxIndexSeen() {
-        Accumulation<LongSupplier> minListener = reducingLong(extractingIndex(), Long.MAX_VALUE, Math::min);
-        Accumulation<LongSupplier> maxListener = reducingLong(extractingIndex(), Long.MIN_VALUE, Math::max);
+        Reduction<LongSupplier> minListener = reducingLong(extractingIndex(), Long.MAX_VALUE, Math::min);
+        Reduction<LongSupplier> maxListener = reducingLong(extractingIndex(), Long.MIN_VALUE, Math::max);
 
         writeToQueue(minListener.andThen(maxListener));
 
-        long min = minListener.accumulation().getAsLong();
-        long max = maxListener.accumulation().getAsLong();
+        long min = minListener.reduction().getAsLong();
+        long max = maxListener.reduction().getAsLong();
 
         assertEquals("16d00000000", Long.toHexString(min));
         assertEquals("16d00000002", Long.toHexString(max));

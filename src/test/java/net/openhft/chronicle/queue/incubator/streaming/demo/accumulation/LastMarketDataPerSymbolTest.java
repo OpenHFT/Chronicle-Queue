@@ -7,8 +7,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulation;
-import net.openhft.chronicle.queue.incubator.streaming.Accumulations;
+import net.openhft.chronicle.queue.incubator.streaming.Reduction;
+import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;
@@ -17,12 +17,11 @@ import org.junit.Test;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
 import static java.util.stream.Collectors.toConcurrentMap;
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.replacingMerger;
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.toConcurrentSet;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.replacingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.toConcurrentSet;
 import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
 import static org.junit.Assert.assertEquals;
 
@@ -50,7 +49,7 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     @Test
     public void lastMarketDataPerSymbol() {
 
-        final Accumulation<Map<String, MarketData>> listener = Accumulations.of(
+        final Reduction<Map<String, MarketData>> listener = Reductions.of(
                 builder(MarketData.class).build(),
                 collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap));
 
@@ -59,13 +58,13 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
         final Map<String, MarketData> expected = MARKET_DATA_SET.stream()
                 .collect(toMap(MarketData::symbol, Function.identity(), (a, b) -> b));
 
-        assertEquals(expected, listener.accumulation());
+        assertEquals(expected, listener.reduction());
     }
 
     @Test
     public void symbolSet() {
 
-        Accumulation<Set<String>> listener = Accumulations.of(
+        Reduction<Set<String>> listener = Reductions.of(
                 builder(MarketData.class).build().map(MarketData::symbol),
                 toConcurrentSet());
 
@@ -75,7 +74,7 @@ public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
                 .map(MarketData::symbol)
                 .collect(toSet());
 
-        assertEquals(expected, listener.accumulation());
+        assertEquals(expected, listener.reduction());
     }
 
 

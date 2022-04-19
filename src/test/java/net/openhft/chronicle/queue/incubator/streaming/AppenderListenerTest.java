@@ -14,11 +14,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.replacingMerger;
-import static net.openhft.chronicle.queue.incubator.streaming.CollectorUtil.toConcurrentList;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.replacingMerger;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.toConcurrentList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -74,7 +73,7 @@ public class AppenderListenerTest {
         String path = OS.getTarget() + "/appenderListenerAggregateMapTest";
 
 
-        final Accumulation<Map<String, String>> appenderListener = new Accumulation<Map<String, String>>() {
+        final Reduction<Map<String, String>> appenderListener = new Reduction<Map<String, String>>() {
 
             final ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
 
@@ -84,7 +83,7 @@ public class AppenderListenerTest {
             }
 
             @Override
-            public @NotNull Map<String, String> accumulation() {
+            public @NotNull Map<String, String> reduction() {
                 return Collections.unmodifiableMap(map);
             }
         };
@@ -117,9 +116,9 @@ public class AppenderListenerTest {
         final Map<String, String> expected = new HashMap<>();
         expected.put("hello", "Bye-now");
 
-        assertEquals(expected, appenderListener.accumulation());
+        assertEquals(expected, appenderListener.reduction());
 
-        final Map<String, String> accumulation = appenderListener.accumulation();
+        final Map<String, String> accumulation = appenderListener.reduction();
         try {
             accumulation.clear();
             fail("Was not unmodifiable");
@@ -132,7 +131,7 @@ public class AppenderListenerTest {
     public void aggregateListCustom() {
         String path = OS.getTarget() + "/appenderListenerAggregateCollectionTest";
 
-        Accumulation<List<String>> appenderListener = Accumulations.of(
+        Reduction<List<String>> appenderListener = Reductions.of(
                 ExcerptExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(),
                 collectingAndThen(toConcurrentList(), Collections::unmodifiableList)
         );
@@ -149,9 +148,9 @@ public class AppenderListenerTest {
         }
         IOTools.deleteDirWithFiles(path);
 
-        assertEquals(Arrays.asList("G'Day", "Bye-now"), appenderListener.accumulation());
+        assertEquals(Arrays.asList("G'Day", "Bye-now"), appenderListener.reduction());
 
-        final List<String> accumulation = appenderListener.accumulation();
+        final List<String> accumulation = appenderListener.reduction();
         try {
             accumulation.clear();
             fail("Was not unmodifiable");
