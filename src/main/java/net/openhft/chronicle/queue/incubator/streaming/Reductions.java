@@ -84,7 +84,20 @@ public final class Reductions {
         public LongSupplier reduction() {
             return () -> counter;
         }
-    }
 
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            final Counting that = (Counting) o;
+            return this.counter == that.counter;
+        }
+
+        @Override
+        public int hashCode() {
+            return Long.hashCode(counter);
+        }
+    }
 
 }

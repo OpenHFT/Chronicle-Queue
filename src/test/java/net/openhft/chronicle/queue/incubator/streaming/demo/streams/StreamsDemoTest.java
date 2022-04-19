@@ -43,13 +43,30 @@ class StreamsDemoTest {
         )) {
 
             String s = Streams.of(queue.createTailer(), builder(MarketData.class).build())
-                    .skip(100)
+                    .skip(0)
+                    // skip 100
                     .limit(50)
                     .map(Object::toString)
                     .collect(Collectors.joining(","));
 
-            System.out.println(s);
-
+            assertEquals("!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {\n" +
+                    "  symbol: MSFT,\n" +
+                    "  last: 100.0,\n" +
+                    "  high: 110.0,\n" +
+                    "  low: 90.0\n" +
+                    "}\n" +
+                    ",!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {\n" +
+                    "  symbol: APPL,\n" +
+                    "  last: 200.0,\n" +
+                    "  high: 220.0,\n" +
+                    "  low: 180.0\n" +
+                    "}\n" +
+                    ",!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {\n" +
+                    "  symbol: MSFT,\n" +
+                    "  last: 101.0,\n" +
+                    "  high: 110.0,\n" +
+                    "  low: 90.0\n" +
+                    "}\n", s);
         }
     }
 
@@ -299,7 +316,15 @@ class StreamsDemoTest {
                                     .build())
                     .collect(toList());
 
-            System.out.println("list = " + list);
+            // We will see the last entry in all positions
+            List<MarketData> expected = Stream.of(
+                            new MarketData("MSFT", 101, 110, 90),
+                            new MarketData("MSFT", 101, 110, 90),
+                            new MarketData("MSFT", 101, 110, 90)
+                    )
+                    .collect(toList());
+
+            assertEquals(expected, list);
 
         }
     }
