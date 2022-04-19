@@ -119,10 +119,17 @@ public final class CollectorUtil {
     Collector<T, ?, Optional<T>> reducingConcurrent(@NotNull final BinaryOperator<T> op) {
         requireNonNull(op);
 
+        final BinaryOperator<T> internalAccumulator = (a, b) -> {
+            if (a == null) {
+                return b;
+            }
+            return op.apply(a, b);
+        };
+
         return Collector.of(AtomicReference::new,
                 AtomicReference::set,
                 (AtomicReference<T> t1, AtomicReference<T> t2) -> {
-                    t1.accumulateAndGet(t2.get(), op);
+                    t1.accumulateAndGet(t2.get(), internalAccumulator);
                     return t1;
                 },
                 (AtomicReference<T> ar) -> Optional.ofNullable(ar.get()),
