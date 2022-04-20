@@ -55,6 +55,7 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
 
         if (methodRef != null) {
             if (supplier == null) {
+                // () -> null means null will be used as reuse meaning new objects are created
                 return ExcerptExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), () -> null);
             }
             return ExcerptExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), guardedSupplier());

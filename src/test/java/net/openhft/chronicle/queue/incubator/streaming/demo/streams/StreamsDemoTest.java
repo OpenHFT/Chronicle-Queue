@@ -11,9 +11,11 @@ import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
+import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -235,7 +237,7 @@ class StreamsDemoTest {
 
     @Test
     void streamParallel() {
-        final int no = 1_00_000;
+        final int no = 100_000;
 
         try (SingleChronicleQueue q = create(Q_NAME)) {
             ExcerptAppender appender = q.acquireAppender();
@@ -250,7 +252,7 @@ class StreamsDemoTest {
             Set<Thread> threads = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
             long sum = Streams.of(q.createTailer().disableThreadSafetyCheck(true),
-                            builder(Shares.class).build())
+                            builder(Shares.class).withReusing(Shares::new).build())
                     .parallel()
                     .peek(v -> threads.add(Thread.currentThread()))
                     .mapToLong(Shares::noShares)
@@ -262,6 +264,74 @@ class StreamsDemoTest {
             if (Runtime.getRuntime().availableProcessors() > 2) {
                 assertTrue(threads.size() > 1);
             }
+
+        }
+    }
+
+    @Test
+    @Disabled
+    void performance() {
+        final int no = 100_000;
+
+        try (SingleChronicleQueue q = create(Q_NAME)) {
+            ExcerptAppender appender = q.acquireAppender();
+            for (int i = 0; i < no; i++) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire()
+                            .getValueOut()
+                            .object(new Shares("AGDG", i));
+                }
+            }
+
+            long st = 0;
+            long it = 0;
+            for (int i = 0; i < 105; i++) {
+
+
+                ExcerptTailer tailer = q.createTailer().disableThreadSafetyCheck(true);
+
+                final long iterationBegin = System.currentTimeMillis();
+                final Shares shares = new Shares();
+                long sum = 0;
+                for (; ; ) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (dc.isPresent()) {
+                            Wire wire = dc.wire();
+                            if (wire != null) {
+                                Shares s = wire.getValueIn().object(shares, Shares.class);
+                                sum += s.noShares();
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                final long iterationDurationMs = System.currentTimeMillis() - iterationBegin;
+
+                final long streamBegin = System.currentTimeMillis();
+
+                long streamSum = Streams.ofLong(q.createTailer().disableThreadSafetyCheck(true),
+                                builder(Shares.class)
+                                        .withReusing(Shares::new)
+                                        .build()
+                                        .mapToLong(Shares::noShares))
+                        .sum();
+
+                final long streamDurationMs = System.currentTimeMillis() - streamBegin;
+
+                assertEquals(streamSum, sum);
+                System.out.println("streamDurationMs = " + streamDurationMs);
+                System.out.println("iterationDurationMs = " + iterationDurationMs);
+
+                if (i > 5) {
+                    st += streamDurationMs;
+                    it += iterationDurationMs;
+                }
+
+            }
+            System.out.println("st = " + st);
+            System.out.println("it = " + it);
 
         }
     }
