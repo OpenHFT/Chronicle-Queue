@@ -39,7 +39,7 @@ The tailer can be set to a certain configuration and/or position before being su
 <2> The `ExcerptExtractor` used to convert an excerpt to a Java object.
 In the example above, an extractor of type `MarketData` is used which is obtained via a builder function `ExcerptExtractor.builder()`.
 
-The `Stream` above exemplifies a pagination service where the third page of events from the Queue is shown (each page has 50 rows).
+The `Stream` above shows an example of a pagination service where the third page of events from the Queue is shown (each page has 50 rows).
 Once the `Stream` is created, it behaves like any `Stream` and can take advantage of the whole `Stream` ecosystem.
 
 The snippet above might produce the following output (shortened):
@@ -104,7 +104,7 @@ MarketData latestAppleMarketData = latest.reduction().get("AAPL");  <7>
 <6> Register the accumulation with the queue so that it is automatically maintained when excerpts are added.
 <7> Example of how to access the concurrent reduction.
 
-The `Reduction` above exemplifies a latest-seen service where the latest `MarketData` per symbol (key) is maintained.
+The `Reduction` above shows an example of a latest-seen service where the latest `MarketData` per symbol (key) is maintained.
 
 The `Reductions.of()` takes an `ExcerptExtractor` that is used to extract objects from the queue and a standard Java Collector (which needs to be concurrent). The Collector shown above operates on Maps and, as described above, will map objects of type `MarketData` using `MarketData::symbol` to extract keys and `Function.identity()` to extract values.
 In case there is already an old value associated with a particular key, the provided merger `Reductions.replacingMerger()` is applied (which will replace the old existing value for a key with the new value).
