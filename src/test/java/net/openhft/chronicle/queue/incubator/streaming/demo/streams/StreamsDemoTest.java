@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.incubator.streaming.demo.streams;
 
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -36,13 +37,14 @@ class StreamsDemoTest {
 
     @Test
     void streamTypeMarketDataSimple() {
+        ClassAliasPool.CLASS_ALIASES.addAlias(MarketData.class);
         try (SingleChronicleQueue queue = createThenValueOuts(Q_NAME,
                 vo -> vo.object(new MarketData("MSFT", 100, 110, 90)),
-                vo -> vo.object(new MarketData("APPL", 200, 220, 180)),
+                vo -> vo.object(new MarketData("AAPL", 200, 220, 180)),
                 vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
         )) {
 
-            String s = Streams.of(queue.createTailer(), builder(MarketData.class).build())
+            String s = Streams.of(queue.createTailer(), ExcerptExtractor.builder(MarketData.class).build())
                     .skip(0)
                     // skip 100
                     .limit(50)
@@ -56,7 +58,7 @@ class StreamsDemoTest {
                     "  low: 90.0\n" +
                     "}\n" +
                     ",!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {\n" +
-                    "  symbol: APPL,\n" +
+                    "  symbol: AAPL,\n" +
                     "  last: 200.0,\n" +
                     "  high: 220.0,\n" +
                     "  low: 180.0\n" +
@@ -233,7 +235,7 @@ class StreamsDemoTest {
 
     @Test
     void streamParallel() {
-        final int no = 100_000;
+        final int no = 1_00_000;
 
         try (SingleChronicleQueue q = create(Q_NAME)) {
             ExcerptAppender appender = q.acquireAppender();
@@ -247,7 +249,7 @@ class StreamsDemoTest {
 
             Set<Thread> threads = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-            long sum = Streams.of(q.createTailer(),
+            long sum = Streams.of(q.createTailer().disableThreadSafetyCheck(true),
                             builder(Shares.class).build())
                     .parallel()
                     .peek(v -> threads.add(Thread.currentThread()))
@@ -257,7 +259,9 @@ class StreamsDemoTest {
             long expected = (long) (no - 1) * no / 2L;
             assertEquals(expected, sum);
 
-            System.out.println("threads = " + threads);
+            if (Runtime.getRuntime().availableProcessors() > 2) {
+                assertTrue(threads.size() > 1);
+            }
 
         }
     }
@@ -284,7 +288,7 @@ class StreamsDemoTest {
     void streamObjectReuse() {
         try (SingleChronicleQueue queue = createThenValueOuts(Q_NAME,
                 vo -> vo.object(new MarketData("MSFT", 100, 110, 90)),
-                vo -> vo.object(new MarketData("APPL", 200, 220, 180)),
+                vo -> vo.object(new MarketData("AAPL", 200, 220, 180)),
                 vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
         )) {
 
@@ -306,7 +310,7 @@ class StreamsDemoTest {
     void streamIllegalObjectReuse() {
         try (SingleChronicleQueue queue = createThenValueOuts(Q_NAME,
                 vo -> vo.object(new MarketData("MSFT", 100, 110, 90)),
-                vo -> vo.object(new MarketData("APPL", 200, 220, 180)),
+                vo -> vo.object(new MarketData("AAPL", 200, 220, 180)),
                 vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
         )) {
 

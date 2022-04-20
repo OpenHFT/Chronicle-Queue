@@ -91,6 +91,7 @@ public class CollectorTest extends ChronicleQueueTestBase {
         );
 
         writeToQueue(listener);
+
         MarketData expectedSymbol = createMarketData();
         Map<String, MarketData> expected = new HashMap<>();
         expected.put(expectedSymbol.symbol(), expectedSymbol);

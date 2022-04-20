@@ -1,25 +1,26 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
-import net.openhft.chronicle.core.annotation.NonNegative;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToDoubleExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.PrimitiveIterator;
-import java.util.Spliterator;
+import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+import java.util.function.LongConsumer;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public final class StreamsUtil {
 
-    private static final int MAX_SPLIT = 1;  // For some strange reason, different threads are used on the same Spliterator
-    private static final int MAX_BATCH_SIZE = 2048;
+    private static final int BATCH_UNIT_INCREASE = 1 << 10;
+    private static final int MAX_BATCH_SIZE = 1 << 24;
+
 
     // Suppresses default constructor, ensuring non-instantiability.
     private StreamsUtil() {
@@ -28,7 +29,7 @@ public final class StreamsUtil {
     public static final class VanillaSpliterator<T> implements Spliterator<T> {
 
         private final Iterator<T> iterator;
-        private int splits;
+        private int batchSize = 2 * BATCH_UNIT_INCREASE;
 
         public VanillaSpliterator(@NotNull final Iterator<T> iterator) {
             requireNonNull(iterator);
@@ -37,33 +38,38 @@ public final class StreamsUtil {
 
         @Override
         public boolean tryAdvance(Consumer<? super T> action) {
-            if (iterator.hasNext()) {
-                action.accept(iterator.next());
-                return true;
+            synchronized (iterator) {
+                if (iterator.hasNext()) {
+                    action.accept(iterator.next());
+                    return true;
+                }
+                return false;
             }
-            return false;
         }
 
         @Override
         public void forEachRemaining(Consumer<? super T> action) {
-            iterator.forEachRemaining(action);
+            // A bit problematic
+            synchronized (iterator) {
+                iterator.forEachRemaining(action);
+            }
         }
 
         @Override
         public Spliterator<T> trySplit() {
-            if (splits++ < MAX_SPLIT) {
-                // For some reason, this spliterator gets invoked by different threads.
+            synchronized (iterator) {
                 if (iterator.hasNext()) {
-                    final int n = MAX_BATCH_SIZE;
+                    final int n = Math.min(MAX_BATCH_SIZE, batchSize);
                     @SuppressWarnings("unchecked") final T[] a = (T[]) new Object[n];
                     int j = 0;
                     do {
                         a[j] = iterator.next();
                     } while (++j < n && iterator.hasNext());
-                    return new ArraySpliterator<>(a, 0, j, characteristics());
+                    batchSize += BATCH_UNIT_INCREASE;
+                    return Spliterators.spliterator(a, 0, j, characteristics());
                 }
+                return null;
             }
-            return null;
         }
 
         @Override
@@ -77,61 +83,108 @@ public final class StreamsUtil {
         }
     }
 
-    static final class ArraySpliterator<T> implements Spliterator<T> {
-        private final T[] array;
-        private int index;
-        private final int fence;  // last pos + 1
-        private final int characteristics;
+    public static final class VanillaSpliteratorOfLong
+            extends AbstractPrimitiveSpliterator<Long, LongConsumer, Spliterator.OfLong, PrimitiveIterator.OfLong>
+            implements Spliterator.OfLong {
 
-        public ArraySpliterator(@NotNull final T[] array,
-                                @NonNegative final int origin,
-                                @NonNegative final int fence,
-                                @NonNegative final int additionalCharacteristics) {
-            this.array = array;
-            this.index = origin;
-            this.fence = fence;
-            this.characteristics = additionalCharacteristics | Spliterator.SIZED | Spliterator.SUBSIZED;
+        public VanillaSpliteratorOfLong(@NotNull final PrimitiveIterator.OfLong iterator) {
+            super(iterator, (a, i) -> a.accept(i.nextLong()), PrimitiveIterator.OfLong::forEachRemaining);
+        }
+
+        @NotNull
+        protected OfLong split(int n) {
+            final long[] a = new long[n];
+            int j = 0;
+            do {
+                a[j] = iterator.nextLong();
+            } while (++j < n && iterator.hasNext());
+            return Spliterators.spliterator(a, 0, j, characteristics());
+        }
+    }
+
+    public static final class VanillaSpliteratorOfDouble
+            extends AbstractPrimitiveSpliterator<Double, DoubleConsumer, Spliterator.OfDouble, PrimitiveIterator.OfDouble>
+            implements Spliterator.OfDouble {
+
+        public VanillaSpliteratorOfDouble(@NotNull final PrimitiveIterator.OfDouble iterator) {
+            super(iterator, (a, i) -> a.accept(i.nextDouble()), PrimitiveIterator.OfDouble::forEachRemaining);
+        }
+
+        @NotNull
+        protected OfDouble split(int n) {
+            final double[] a = new double[n];
+            int j = 0;
+            do {
+                a[j] = iterator.nextDouble();
+            } while (++j < n && iterator.hasNext());
+            return Spliterators.spliterator(a, 0, j, characteristics());
+        }
+    }
+
+    static abstract class AbstractPrimitiveSpliterator<
+            T,
+            C,
+            S extends Spliterator.OfPrimitive<T, C, S>,
+            I extends PrimitiveIterator<T, C>
+            >
+            implements Spliterator.OfPrimitive<T, C, S> {
+
+        protected final I iterator;
+        protected final BiConsumer<C, I> advancer;
+        protected final BiConsumer<I, C> forEachRemainer;
+        private int batchSize = 2 * BATCH_UNIT_INCREASE;
+
+        protected AbstractPrimitiveSpliterator(@NotNull final I iterator,
+                                               @NotNull final BiConsumer<C, I> advancer,
+                                               BiConsumer<I, C> forEachRemainer) {
+
+            this.iterator = requireNonNull(iterator);
+            this.advancer = requireNonNull(advancer);
+            this.forEachRemainer = requireNonNull(forEachRemainer);
         }
 
         @Override
-        public Spliterator<T> trySplit() {
-            final int lo = index;
-            final int mid = (lo + fence) >>> 1;
-            if (lo >= mid) {
-                // Unable to split
+        public S trySplit() {
+            synchronized (iterator) {
+                if (iterator.hasNext()) {
+                    final int n = Math.min(MAX_BATCH_SIZE, batchSize);
+                    batchSize += BATCH_UNIT_INCREASE;
+                    return split(n);
+                }
                 return null;
             }
-            index = mid;
-            return new ArraySpliterator<>(array, lo, index, characteristics);
         }
 
+        @NotNull
+        abstract S split(int n);
+
         @Override
-        public void forEachRemaining(@NotNull Consumer<? super T> action) {
-            requireNonNull(action);
-            for (int i = index; i < fence; i++) {
-                action.accept(array[i]);
+        public boolean tryAdvance(C action) {
+            synchronized (iterator) {
+                if (iterator.hasNext()) {
+                    advancer.accept(action, iterator);
+                    return true;
+                }
+                return false;
             }
         }
 
         @Override
-        public boolean tryAdvance(@NotNull Consumer<? super T> action) {
-            requireNonNull(action);
-            if (index >= 0 && index < fence) {
-                final T t = array[index++];
-                action.accept(t);
-                return true;
+        public void forEachRemaining(C action) {
+            // A bit problematic
+            synchronized (iterator) {
+                forEachRemainer.accept(iterator, action);
             }
-            return false;
         }
 
         @Override
         public long estimateSize() {
-            return (fence - index);
+            return Long.MAX_VALUE;
         }
 
         @Override
         public int characteristics() {
-            return characteristics;
+            return ORDERED;
         }
     }
 
@@ -230,6 +283,56 @@ public final class StreamsUtil {
             }
             final long val = next;
             next = Long.MIN_VALUE;
+            return val;
+        }
+
+    }
+
+    public static final class ExcerptTailerIteratorOfDouble implements PrimitiveIterator.OfDouble {
+
+        private final ExcerptTailer tailer;
+        private final ToDoubleExcerptExtractor extractor;
+
+        private double next = Double.NaN;
+
+        public ExcerptTailerIteratorOfDouble(@NotNull final ExcerptTailer tailer,
+                                             @NotNull final ToDoubleExcerptExtractor extractor) {
+            this.tailer = tailer;
+            this.extractor = extractor;
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (Double.isNaN(next)) {
+                return true;
+            }
+            long lastIndex = -1;
+            for (; ; ) {
+                try (final DocumentContext dc = tailer.readingDocument()) {
+                    final Wire wire = dc.wire();
+                    if (dc.isPresent() && wire != null) {
+                        lastIndex = dc.index();
+                        next = extractor.extractAsDouble(wire, lastIndex);
+                        if (!Double.isNaN(next)) {
+                            return true;
+                        }
+                        // Retry reading yet another message
+                    } else {
+                        // We made no progress so we are at the end
+                        break;
+                    }
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public double nextDouble() {
+            if (Double.isNaN(next) && !hasNext()) {
+                throw new NoSuchElementException();
+            }
+            final double val = next;
+            next = Double.NaN;
             return val;
         }
 

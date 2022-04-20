@@ -22,17 +22,21 @@ public class DemoTest {
     public static void main(String[] args) {
 
         // Maintains a count of the number of excerpts encountered
-        Reduction<LongSupplier> count = Reductions.counting();
+        Reduction<LongSupplier> counting = Reductions.counting();
+        // ...
+        long count = counting.reduction().getAsLong();
 
         // Maintains a view of the highest index encountered or 0 if now index was encountered
-        Reduction<LongSupplier> maxIndex = Reductions.reducingLong(extractingIndex(), 0L, Math::max);
+        Reduction<LongSupplier> maxIndexing = Reductions.reducingLong(extractingIndex(), 0L, Math::max);
+
+        long maxIndex = maxIndexing.reduction().getAsLong();
 
         // Maintains a List of all MarketData elements encountered in a List
         Reduction<List<MarketData>> list = Reductions.of(builder(MarketData.class).build(), toConcurrentList());
 
         // Maintains a Set of all MarketData symbols starting with "S"
         Reduction<Set<String>> symbolsStartingWithS = Reductions.of(
-                builder(MarketData.class).build()
+                builder(MarketData.class).withReusing(MarketData::new).build()
                         .map(MarketData::symbol)
                         .filter(s -> s.startsWith("S")),
                 toConcurrentSet());
@@ -45,6 +49,10 @@ public class DemoTest {
                         .build(),
                 toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()));
 
+        MarketData latestAppleMarketData = latest.reduction().get("AAPL");
+
+        // This creates a live view of the reduction.
+        Map<String, MarketData> liveQueueBackedMap = latest.reduction();
 
         // Maintains statistics per symbol on MarketData::last using vanilla Java
         // classes (creates objects).
@@ -54,7 +62,11 @@ public class DemoTest {
                         .build(),
                 groupingByConcurrent(
                         MarketData::symbol,
-                        summarizingDouble(MarketData::last)));
+                        summarizingDouble(MarketData::last)
+                )
+        );
+
+        double averageApplePrice = stats.reduction().get("AAPL").getAverage();
 
         // How to use thread confined objects?
 

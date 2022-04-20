@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.LongFunction;
 import java.util.function.LongPredicate;
+import java.util.function.LongToDoubleFunction;
 import java.util.function.LongUnaryOperator;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
@@ -13,7 +14,7 @@ import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 public interface ToLongExcerptExtractor {
 
     /**
-     * Extracts a value of type T from the provided {@code wire} and {@code index} or else {@link Long#MIN_VALUE}
+     * Extracts a value of type {@code long } from the provided {@code wire} and {@code index} or else {@link Long#MIN_VALUE}
      * if no value can be extracted.
      * <p>
      * {@link Long#MIN_VALUE} may be returned if the queue was written with a method writer and there are messages in the
@@ -24,18 +25,18 @@ public interface ToLongExcerptExtractor {
      *
      * @param wire  to use
      * @param index to use
-     * @return extracted value or {@code null}
+     * @return extracted value or {@link Long#MIN_VALUE}
      */
     long extractAsLong(@NotNull Wire wire, @NonNegative long index);
 
     /**
-     * Creates and returns a new ExcerptExtractor consisting of the results (of type R) of applying the provided
-     * {@code mapper } to the elements of this ExcerptExtractor.
+     * Creates and returns a new ToLongExcerptExtractor consisting of the results (of type R) of applying the provided
+     * {@code mapper } to the elements of this ToLongExcerptExtractor.
      * <p>
      * Values mapped to {@link Long#MIN_VALUE} are removed.
      *
      * @param mapper to apply
-     * @return a new mapped ExcerptExtractor
+     * @return a new mapped ToLongExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
     default ToLongExcerptExtractor map(@NotNull final LongUnaryOperator mapper) {
@@ -51,9 +52,9 @@ public interface ToLongExcerptExtractor {
 
     /**
      * Creates and returns a new ExcerptExtractor consisting of applying the provided
-     * {@code mapper } to the elements of this ExcerptExtractor.
+     * {@code mapper } to the elements of this ToLongExcerptExtractor.
      * <p>
-     * Values mapped to {@code null } are removed.
+     * Values mapped to {@link Long#MIN_VALUE } are removed.
      *
      * @param mapper to apply
      * @return a new mapped ExcerptExtractor
@@ -71,12 +72,33 @@ public interface ToLongExcerptExtractor {
     }
 
     /**
+     * Creates and returns a new ToDoubleExcerptExtractor consisting of applying the provided
+     * {@code mapper } to the elements of this ToLongExcerptExtractor.
+     * <p>
+     * Values mapped to {@link Long#MIN_VALUE } are removed.
+     *
+     * @param mapper to apply
+     * @return a new mapped ToDoubleExcerptExtractor
+     * @throws NullPointerException if the provided {@code mapper} is {@code null}
+     */
+    default <T> ToDoubleExcerptExtractor mapToDouble(@NotNull final LongToDoubleFunction mapper) {
+        requireNonNull(mapper);
+        return (wire, index) -> {
+            final long value = extractAsLong(wire, index);
+            if (value == Long.MIN_VALUE) {
+                return Double.NaN;
+            }
+            return mapper.applyAsDouble(value);
+        };
+    }
+
+    /**
      * Creates and returns a new ToLongExcerptExtractor consisting of the elements of this ToLongExcerptExtractor
      * that match the provided {@code predicate}.
      *
      * @param predicate to apply to each element to determine if it
      *                  should be included
-     * @return a ExcerptExtractor consisting of the elements of this ExcerptExtractor that match
+     * @return a ToLongExcerptExtractor consisting of the elements of this ToLongExcerptExtractor that match
      * @throws NullPointerException if the provided {@code predicate} is {@code null}
      */
     default ToLongExcerptExtractor filter(@NotNull final LongPredicate predicate) {
