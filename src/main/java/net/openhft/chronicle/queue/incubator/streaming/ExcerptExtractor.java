@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.core.annotation.NonNegative;
 import net.openhft.chronicle.queue.internal.streaming.ExcerptExtractorBuilder;
-import net.openhft.chronicle.queue.internal.streaming.IncubatorWarning;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

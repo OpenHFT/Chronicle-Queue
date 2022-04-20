@@ -272,7 +272,7 @@ class StreamsDemoTest {
     }
 
     @Test
-    @Disabled
+    @Disabled("Performance test")
     void performance() {
         final int no = 100_000;
 
@@ -289,7 +289,6 @@ class StreamsDemoTest {
             long st = 0;
             long it = 0;
             for (int i = 0; i < 105; i++) {
-
 
                 ExcerptTailer tailer = q.createTailer().disableThreadSafetyCheck(true);
 

@@ -10,6 +10,10 @@ public final class IncubatorWarning {
                         " not be used in production code. See net.openhft.chronicle.queue.incubator.package-info.java for details.");
     }
 
+    // Suppresses default constructor, ensuring non-instantiability.
+    private IncubatorWarning() {
+    }
+
     public static void warnOnce() {
         // trigger static code
     }

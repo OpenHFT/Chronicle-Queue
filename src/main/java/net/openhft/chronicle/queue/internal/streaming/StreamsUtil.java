@@ -124,7 +124,7 @@ public final class StreamsUtil {
         }
     }
 
-    static abstract class AbstractPrimitiveSpliterator<
+    abstract static class AbstractPrimitiveSpliterator<
             T,
             C,
             S extends Spliterator.OfPrimitive<T, C, S>,

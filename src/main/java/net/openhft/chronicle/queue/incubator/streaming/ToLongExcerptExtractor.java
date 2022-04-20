@@ -81,7 +81,7 @@ public interface ToLongExcerptExtractor {
      * @return a new mapped ToDoubleExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default <T> ToDoubleExcerptExtractor mapToDouble(@NotNull final LongToDoubleFunction mapper) {
+    default ToDoubleExcerptExtractor mapToDouble(@NotNull final LongToDoubleFunction mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final long value = extractAsLong(wire, index);

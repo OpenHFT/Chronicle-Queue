@@ -7,8 +7,6 @@ import net.openhft.chronicle.queue.internal.streaming.ReductionUtil;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
-
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public interface Reduction<T> extends AppenderListener {
