@@ -46,19 +46,19 @@ The snippet above might produce the following output (shortened):
 [source,text]
 
 ----
-!net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData {
+!MarketData {
   symbol: MSFT,
   last: 100.0,
   high: 110.0,
   low: 90.0
 }
-,!net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData {
+,!.MarketData {
   symbol: APPL,
   last: 200.0,
   high: 220.0,
   low: 180.0
 }
-,!net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData {
+,!MarketData {
   symbol: MSFT,
   last: 101.0,
   high: 110.0,
