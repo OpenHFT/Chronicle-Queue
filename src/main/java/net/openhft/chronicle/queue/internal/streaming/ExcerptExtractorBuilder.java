@@ -12,6 +12,10 @@ import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builder<E> {
 
+    static {
+        IncubatorWarning.warnOnce();
+    }
+
     private final Class<E> elementType;
 
     private Supplier<? extends E> supplier;

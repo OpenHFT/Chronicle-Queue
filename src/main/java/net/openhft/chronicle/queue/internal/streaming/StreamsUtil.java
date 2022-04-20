@@ -18,9 +18,12 @@ import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public final class StreamsUtil {
 
+    static {
+        IncubatorWarning.warnOnce();
+    }
+
     private static final int BATCH_UNIT_INCREASE = 1 << 10;
     private static final int MAX_BATCH_SIZE = 1 << 24;
-
 
     // Suppresses default constructor, ensuring non-instantiability.
     private StreamsUtil() {

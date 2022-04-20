@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.internal.streaming.IncubatorWarning;
 import net.openhft.chronicle.queue.internal.streaming.StreamsUtil;
 import org.jetbrains.annotations.NotNull;
 
