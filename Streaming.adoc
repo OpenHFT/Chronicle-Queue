@@ -12,21 +12,20 @@ toc::[]
 Chronicle Queue Streaming adds two additional features to Chronicle Queue:
 
 * Acting as a Stream Bridge between a Chronicle Queue and standard `java.util.stream.Stream` objects.
-* Maintaining Accumulation views which are concurrent materialized views of underlying Chronicle Queues.
+* Maintaining concurrent Reduction views which are materialized views of underlying Chronicle Queues.
 
-Chronicle Queue Streaming is *an incubating feature* meaning it could be changed and even dropped in future releases.
-Hence, running Chronicle Queue Streaming in production code is discouraged.
+Chronicle Queue Streaming is *an incubating feature* meaning it could be changed and even dropped in future releases. Hence, running Chronicle Queue Streaming in production code is discouraged.
 
 == Stream Bridge Overview
 
-The Stream Bridge allows standard `` objects to be created directly from Chronicle Queues.
+The Stream Bridge allows standard `Stream`, `LongStream` and `DoubleStream` objects to be created directly from Chronicle Queues.
 Here is an example how a Chronicle Queue that contains `MarketData` objects can be converted and used as a Stream:
 
 [source,java]
 ----
 String s = Streams.of(
-               queue.createTailer(),               <1>
-               builder(MarketData.class).build()   <2>
+               queue.createTailer(),                                <1>
+               ExcerptExtractor.builder(MarketData.class).build()   <2>
          )
         .skip(100)
         .limit(50)
@@ -35,7 +34,7 @@ String s = Streams.of(
 ----
 
 <1> The `ExceprtTailer` to use when reading excerpts from the Queue.
-The tailer can be set to a certain position before being submitted to the method above.
+The tailer can be set to a certain configuration and/or position before being submitted to the method above.
 
 <2> The `ExcerptExtractor` used to convert an excerpt to a Java object.
 In the example above, an extractor of type `MarketData` is used which is obtained via a builder function `ExcerptExtractor.builder()`.
@@ -47,19 +46,19 @@ The snippet above might produce the following output (shortened):
 [source,text]
 
 ----
-!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+!net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData {
   symbol: MSFT,
   last: 100.0,
   high: 110.0,
   low: 90.0
 }
-,!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+,!net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData {
   symbol: APPL,
   last: 200.0,
   high: 220.0,
   low: 180.0
 }
-,!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+,!net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData {
   symbol: MSFT,
   last: 101.0,
   high: 110.0,
@@ -68,56 +67,63 @@ The snippet above might produce the following output (shortened):
 ...
 ----
 
-== Accumulation Overview
+== Reduction Overview
 
-An `Accumulation` allows access to a continuously updated and concurrent view of an underlying Queue's content.
-The `Accumulation` can be maintained automatically.
+A `Reduction` allows access to a continuously updated and concurrent view of an underlying Queue's content.
+The `Reduction` can be maintained automatically.
 
-Here is an example how an `Accumulation` that can be attached to a Chronicle Queue containing `MarketData` objects:
+Here is an example how a `Reduction` that can be attached to a Chronicle Queue containing `MarketData` objects:
 
 [source,java]
 ----
-Accumulation<Map<String, MarketData>> accumulation = Accumulations.toMap(
-        Accumulator.merging(
-                builder(MarketData.class).build(),  <1>
-                MarketData::symbol,                 <2>
-                Function.identity(),                <3>
-                Accumulator.replacingMerger()       <4>
+Reduction<Map<String, MarketData>> latest = Reductions.of(
+        ExcerptExtractor.builder(MarketData.class)
+                .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                .build(),             <1>
+        Collectors.toConcurrentMap(   <2>
+                MarketData::symbol,   <3>
+                Function.identity(),  <4>
+                replacingMerger()     <5>
         )
-);
+    );
 
 ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .path("market-data-queue")
-                .appenderListener(accumulation)     <5>
+                .appenderListener(latest)     <6>
                 .build()
+
+MarketData latestAppleMarketData = latest.reduction().get("AAPL");  <7>
+
 ----
 
 <1> `ExcertpExtractor` that will extract objects of type `MarketData`.
-<2> Classifier that will extract keys from `MarketData` objects.
-<3> Value extractor (in this case, it will only pass through objects)
-<4> Merger that will be applied on the old and new value if a key is already associated with an old value.
-<5> Register the accumulation with the queue so that it is automatically maintained when excerpts are added.
+<2> A standard Java Collector which needs to be concurrent.
+<3> Key extractor that will extract keys from `MarketData` objects.
+<4> Value extractor (in this case, it will only pass through objects)
+<5> Merger that will be applied on the old and new value if a key is already associated with an old value.
+<6> Register the accumulation with the queue so that it is automatically maintained when excerpts are added.
+<7> Usage example of how to access the concurrent reduction.
 
-The `Accumulation` above exemplifies a latest-seen service where the latest `MarketData` per symbol (key) is maintained.
+The `Reduction` above exemplifies a latest-seen service where the latest `MarketData` per symbol (key) is maintained.
 
-The `Accumulations.toMap()` takes an `Accumulator` that operates on Maps and, as described above, will map objects of type `MarketData` using `MarketData::symbol` to extract keys and `Function.identity()` to extract values.
-In case there is already an old value associated with a particular key, the provided merger `Accumulator.replacingMerger()` is applied (which will replace the old existing value for a key with the new value).
+The `Reductions.of()` takes an `ExcerptExtractor` that is used to extract objects from the queue and a standard Java Collector (which needs to be concurrent). The Collector shown above operates on Maps and, as described above, will map objects of type `MarketData` using `MarketData::symbol` to extract keys and `Function.identity()` to extract values.
+In case there is already an old value associated with a particular key, the provided merger `Reductions.replacingMerger()` is applied (which will replace the old existing value for a key with the new value).
 
-Once an `Accumulation` is created, it can accept an `ExcerptTailer` to boostrap from an existing queue.
-As shown above, it can also be registered with a Queue as an `AppenderListener` so that any updates made to the Queue also automatically will update the `Accumulation`, effectively creating a "fire-and-forget" data accumulation structure.
+Once a `Reduction` is created, it can accept an `ExcerptTailer` to boostrap from an existing queue.
+As shown above, it can also be registered with a Queue as an `AppenderListener` so that any updates made to the Queue also automatically will update the `Reduction`, effectively creating a "fire-and-forget" data reduction structure.
 
 The snippet above might produce the following output (shortened):
 
 [source,text]
 ----
-accumulation.accumulation() = {MSFT=!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+accumulation.accumulation() = {MSFT=!MarketData {
   symbol: MSFT,
   last: 101.0,
   high: 110.0,
   low: 90.0
 }
-, APPL=!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
-  symbol: APPL,
+, APPL=!MarketData {
+  symbol: AAPL,
   last: 200.0,
   high: 220.0,
   low: 180.0
@@ -242,6 +248,15 @@ Iterator<MarketData> iterator = Streams.iterator(
 
 As can be seen, the procedure here is similar to creating a `Stream`.
 
+
+==== Parallel Streams
+Streams handle thread-safety issues with `ExcerptTailers` but in order to use parallel streams, the tailer's thread-safety checks must be turned off manually before parallel Streams are used:
+
+[source,java]
+----
+ExcerptTailer tailer = q.createTailer().disableThreadSafetyCheck(true);
+----
+
 === Constrains and Best Practices
 
 This chapter contains tips for using the Stream Bridge feature.
@@ -285,19 +300,19 @@ This might print something like this:
 
 [source,text]
 ----
-list = [!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+list = [!MarketData {
   symbol: MSFT,
   last: 101.0,
   high: 110.0,
   low: 90.0
 }
-, !net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+, !MarketData {
   symbol: MSFT,
   last: 101.0,
   high: 110.0,
   low: 90.0
 }
-, !net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData {
+, !MarketData {
   symbol: MSFT,
   last: 101.0,
   high: 110.0,
@@ -308,7 +323,7 @@ list = [!net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.Marke
 
 ==== Closing an ExcerptTailer
 
-In the examples above, an `ExcerptTailer` was created on demand and was not properly closed.
+In the examples above, an `ExcerptTailer` was created on demand but was not properly closed.
 In memory sensitive applications, it is recommended that this is taken care of as tailers may have allocated internal resources.
 Here is an example:
 
@@ -335,18 +350,22 @@ Once these objects are reclaimed by the Garbage Collector, jitter may be incurre
 
 To Be Written...
 
-== Accumulation
+== Reduction
 
 === Examples
 
-This chapter contains a number of examples of how to use `Accumulation` objects.
+This chapter contains a number of examples of how to use `Reduction` objects.
 
 ==== Counting Excerpts
 
 [source,java]
 ----
-Accumulation<LongSupplier> listener = Accumulations.counting();
+Reduction<LongSupplier> counting = Reductions.counting() <1>
+...
+long count = counting.reduction().getAsLong();           <2>
 ----
+<1> Maintains a count of the number of excerpts encountered.
+<2> Shows how one can access the current reduction value.
 
 ==== Last Index Seen
 
@@ -354,9 +373,13 @@ This Accumulation will hold the latest index seen or 0 if no index was seen.
 
 [source,java]
 ----
-Accumulation<LongSupplier> listener =
-        Accumulations.reducingLong(extractingIndex(), 0, (a, b) -> b);
+Reduction<LongSupplier> lastSeeing =
+        Reductions.reducingLong(extractingIndex(), 0, (a, b) -> b); <1>
+...
+long lastSeen = lastSeeing.reduction().getAsLong();
+
 ----
+<1> Maintains a view of the last index encountered or 0 if no index was encountered
 
 ==== Highest Index Seen
 
@@ -364,9 +387,12 @@ This Accumulation will hold the highest index seen or 0 if no index was seen.
 
 [source,java]
 ----
-Accumulation<LongSupplier> maxListener =
-        reducingLong(extractingIndex(), 0, Math::max);
+Reduction<LongSupplier> maxIndexing =
+        Reductions.reducingLong(extractingIndex(), 0L, Math::max); <1>
+...
+long maxIndex = maxIndexing.reduction().getAsLong();
 ----
+<1> Maintains a view of the highest index encountered or 0 if no index was encountered.
 
 ==== Lowest Index Seen
 
@@ -374,50 +400,38 @@ This Accumulation will hold the lowest index seen or `Long.MAX_VALUE` if no inde
 
 [source,java]
 ----
-Accumulation<LongSupplier> minListener =
-        reducingLong(extractingIndex(), Long.MAX_VALUE, Math::min);
+Reduction<LongSupplier> minListener =
+        Reductions.reducingLong(extractingIndex(), Long.MAX_VALUE, Math::min);
 ----
 
 ==== List of Elements
 
-Maintains a List of all MarketData elements encountered in a List.
+Maintains a List of all MarketData elements encountered in a List. This should be used with caution as a queue can contain many elements requiring a lot of heap memory.
 
 [source,java]
 ----
-Accumulation<List<MarketData>> list =
-        Accumulations.toList(builder(MarketData.class).build());
+Reduction<List<MarketData>> listing =
+        Reductions.of(builder(MarketData.class).build(), ConcurrentCollectors.toConcurrentList()); <1>
 ----
-
-==== Set of Elements with Mapping
-
-Maintains a Set of all symbols in MarketData objects.
-
-[source,java]
-----
-Accumulation<Set<String>> symbolsStartingWithS =
-        Accumulations.toSet(builder(MarketData.class).build()  <1>
-            .map(MarketData::symbol));                         <2>
-
-----
-
-<1> Extract MarketData objects
-<2> Map ExcerptExtractor<MarketData> to ExcerptExtractor<String> extracting symbols.
+<1> Maintains a List of all MarketData elements encountered in a List.
 
 ==== Set of Elements with Mapping and Filtering
 
-Maintains a Set of all MarketData symbols starting with "S"
+Maintains a Set of all symbols that starts with an "S" in MarketData objects.
 
 [source,java]
 ----
-Accumulation<Set<String>> symbolsStartingWithS =
-        Accumulations.toSet(builder(MarketData.class).build()  <1>
-            .map(MarketData::symbol)                           <2>
-            .filter(s -> s.startsWith("S")));                  <3>
+Reduction<Set<String>> symbolsStartingWithS = Reductions.of(
+       builder(MarketData.class).withReusing(MarketData::new).build() <1>
+                .map(MarketData::symbol)                              <2>
+                .filter(s -> s.startsWith("S")),                      <3>
+        ConcurrentCollectors.toConcurrentSet());                      <4>
 ----
 
 <1> Extract MarketData objects.
 <2> Map ExcerptExtractor<MarketData> to ExcerptExtractor<String> extracting symbols.
-<3> Filter out only those symbols starting with "S".
+<3> Retain only symbols starting with "S".
+<4> Collect to a concurrent Set.
 
 ==== Set of Elements with Object Reuse
 
@@ -425,88 +439,88 @@ Maintains a Set of all symbols in MarketData objects reusing intermediate Market
 
 [source,java]
 ----
-Accumulation<Set<String>> symbolsStartingWithS =
-        Accumulations.toSet(
-                builder(MarketData.class)              <1>
-                    .withReusing(MarketData::new)      <2>
+Reduction<Set<String>> symbolsStartingWithS =
+        Reduction.of(
+                builder(MarketData.class)                       <1>
+                    .withReusing(MarketData::new)               <2>
                     .build()
-            .map(MarketData::symbol));                 <3>
+                .map(MarketData::symbol),                       <3>
+               ConcurrentCollectors.toConcurrentSet());         <4>
 ----
 
 <1> Extract MarketData objects.
 <2> Provide a constructor used to create object(s) to reuse.
 <3> Map ExcerptExtractor<MarketData> to ExcerptExtractor<String> extracting symbols.
+<4> Collect to a concurrent Set.
 
 NOTE: The reuse of object is safe in this case as immutable values are derived directly from the reused object.
 
 ==== Merging entries in a Map
 
-Maintains a Map of the latest MarketData message per symbol where the messages were previously written by a MethodWriter of type MarketDataProvider
+Maintains a Map of the latest MarketData message per symbol where the messages were previously written by a MethodWriter of type MarketDataProvider. This is effectively a queue backed Map that will always reflect a state of the underlying queue.
 
 [source,java]
 ----
-Accumulation<Map<String, MarketData>> latest = Accumulations.toMap(
-        merging(builder(MarketData.class)
-                    .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
-                    .build(),
+Reduction<Map<String, MarketData>> latest = Reductions.of(
+        ExcerptExtractor.builder(MarketData.class)
+                .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                .build(),
+        Collectors.toConcurrentMap(
                 MarketData::symbol,
                 Function.identity(),
                 replacingMerger()
-        ));
+        )
+);
+...
+MarketData latestAppleMarketData = latest.reduction().get("AAPL");
+
+Map<String, MarketData> liveQueueBackedMap = latest.reduction(); <1>
+
 ----
+<1> This creates a live concurrent view of the reduction that can be invoked at any time.
 
-==== Using a Custom Map Aggregation
+==== Using a protected Reduction
 
-An Aggregation has an underlying aggregation and a view (potentially protecting the underlying aggregation from inadvertent modification) from which the underlying aggregation can be viewed.
-By default, the underlying aggregation and the view is the same but a view can be added using a builder.
-
-In the example above, we used convenience methods to produce a merging map.
-Here is how it could be built in a more manual fashion:
+Many collectors can be used in combination with a "protective coat" around the actuall reduction. Here is an example of providing an unmodifiable view of a map using standard Java Collector constructs:
 
 [source,java]
 ----
-Accumulation<Map<String, MarketData>> listener =
-                mapBuilder(ConcurrentHashMap::new,        <1>
-                        String.class,                     <2>
-                        MarketData.class                  <3>
-        )
-                .withAccumulator(Accumulator.merging(
-                        builder(MarketData.class)
-                                .build(),
+Reduction<Map<String, MarketData>> latestProtected = Reductions.of(
+        ExcerptExtractor.builder(MarketData.class)
+                .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                .build(),
+        Collectors.collectingAndThen(
+                Collectors.toConcurrentMap(
                         MarketData::symbol,
                         Function.identity(),
-                        Accumulator.replacingMerger()))
-                .addViewer(Collections::unmodifiableMap)  <4>
-                .build();
-
+                        replacingMerger()),
+                Collections::unmodifiableMap
+        )
+);
 ----
 
-<1> Supplier of the underlying aggregation which needs to be concurrent in the general case.
-<2> Key type
-<3> Value type
-<4> Adds a view to the Accumulation so that the view is unmodifiable.
 
 ==== Register with a Queue
 
-An Aggregation can be added to a Chronicle Queue using the `SingleChronicleQueueBuilder::appenderListener` method.
-This means the Aggregation will be automatically updated upon excerpts being persisted to the queue.
+A Reduction can be added to a Chronicle Queue using the `SingleChronicleQueueBuilder::appenderListener` method.
+This means the Reduction will be automatically updated upon excerpts being persisted to the queue.
 
 [source,java]
 ----
 ChronicleQueue q = SingleChronicleQueueBuilder.builder()
         .path("my-queue")
-        .appenderListener(aggregation)
+        .appenderListener(reduction)
         .build();
 ----
 
 ==== Bootstrapping from a Tailer
 
-Existing exerpts in a queue can be replayed onto an Aggregation by means of the `Aggregation::accept` method.
-This provides an easy way to bootstrap the Aggregation upon restart.
+Existing exerpts in a queue can be replayed onto an Reduction by means of the `Reduction::accept` method.
+This provides an easy way to bootstrap the Reduction upon restart.
 
 [source,java]
 ----
-accumulation.accept(queue.createTailer());
+reduction.accept(queue.createTailer());
 ----
 
 === Detailed Description

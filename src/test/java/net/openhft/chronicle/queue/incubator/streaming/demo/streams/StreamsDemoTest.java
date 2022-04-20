@@ -8,7 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Streams;
 import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
-import net.openhft.chronicle.queue.incubator.streaming.demo.accumulation.MarketData;
+import net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
@@ -46,7 +46,10 @@ class StreamsDemoTest {
                 vo -> vo.object(new MarketData("MSFT", 101, 110, 90))
         )) {
 
-            String s = Streams.of(queue.createTailer(), ExcerptExtractor.builder(MarketData.class).build())
+            String s = Streams.of(
+                            queue.createTailer(),
+                            ExcerptExtractor.builder(MarketData.class).build()
+                    )
                     .skip(0)
                     // skip 100
                     .limit(50)
@@ -221,7 +224,7 @@ class StreamsDemoTest {
 
             Set<Thread> threads = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-            long sum = Streams.ofLong(q.createTailer(),
+            long sum = Streams.ofLong(q.createTailer().disableThreadSafetyCheck(true),
                             (wire, index) -> wire.getValueIn().readLong())
                     .parallel()
                     .peek(v -> threads.add(Thread.currentThread()))
@@ -252,7 +255,7 @@ class StreamsDemoTest {
             Set<Thread> threads = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
             long sum = Streams.of(q.createTailer().disableThreadSafetyCheck(true),
-                            builder(Shares.class).withReusing(Shares::new).build())
+                            builder(Shares.class).build())
                     .parallel()
                     .peek(v -> threads.add(Thread.currentThread()))
                     .mapToLong(Shares::noShares)

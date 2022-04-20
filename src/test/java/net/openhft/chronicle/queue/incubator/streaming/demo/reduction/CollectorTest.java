@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
+package net.openhft.chronicle.queue.incubator.streaming.demo.reduction;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -20,20 +20,18 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collector;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toConcurrentMap;
-import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.replacingMerger;
-import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.throwingMerger;
+import static java.util.stream.Collectors.*;
+import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.*;
 import static org.junit.Assert.assertEquals;
 
-public class MethodWriterTest extends ChronicleQueueTestBase {
+public class CollectorTest extends ChronicleQueueTestBase {
 
-    private static final String Q_NAME = MethodWriterTest.class.getSimpleName();
+    private static final String Q_NAME = CollectorTest.class.getSimpleName();
 
     private static final List<MarketData> MARKET_DATA_SET = Arrays.asList(
             new MarketData("MSFT", 10, 11, 9),
             new MarketData("MSFT", 100, 110, 90),
-            new MarketData("APPL", 200, 220, 180)
+            new MarketData("AAPL", 200, 220, 180)
     );
 
     @Before
@@ -47,37 +45,79 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void lastSeen() {
+    public void lastSeenManual() {
 
-        final Reduction<AtomicReference<MarketData>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class)
-                        .withMethod(ServiceOut.class, ServiceOut::marketData).
-                        build(),
-                Collector.of(AtomicReference<MarketData>::new, AtomicReference::set, throwingMerger(), Collector.Characteristics.CONCURRENT)
+        Collector<MarketData, AtomicReference<MarketData>, MarketData> lastSeen = Collector.of(
+                AtomicReference::new,
+                AtomicReference::set,
+                (a, b) -> a,
+                AtomicReference::get,
+                Collector.Characteristics.CONCURRENT
+        );
+
+        Reduction<MarketData> listener = Reductions.of(
+                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                lastSeen
         );
 
         writeToQueue(listener);
 
         MarketData expected = createMarketData();
-        MarketData actual = listener.reduction().get();
+        MarketData actual = listener.reduction();
         assertEquals(expected, actual);
     }
 
+    @Test
+    public void lastSeen() {
+
+        Reduction<Optional<MarketData>> listener = Reductions.of(
+                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                reducingConcurrent(replacingMerger())
+        );
+
+        writeToQueue(listener);
+
+        MarketData expected = createMarketData();
+        MarketData actual = listener.reduction().orElseThrow(NoSuchElementException::new);
+        assertEquals(expected, actual);
+    }
 
     @Test
     public void map() {
 
-        final Reduction<Map<String, MarketData>> listener = Reductions.of(
+        Reduction<Map<String, MarketData>> listener = Reductions.of(
                 ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
-                collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap));
+                collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap)
+        );
 
         writeToQueue(listener);
+
         MarketData expectedSymbol = createMarketData();
         Map<String, MarketData> expected = new HashMap<>();
         expected.put(expectedSymbol.symbol(), expectedSymbol);
 
         assertEquals(expected, listener.reduction());
+        assertEquals("java.util.Collections$UnmodifiableMap", listener.reduction().getClass().getName());
     }
+
+
+    @Test
+    public void composite() {
+
+        final Reduction<Map<String, List<Double>>> listener = Reductions.of(
+                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                groupingByConcurrent(MarketData::symbol, mapping(MarketData::last, toList()))
+        );
+
+        writeToQueue(listener);
+        MarketData expectedSymbol = createMarketData();
+
+        Map<String, List<Double>> expected = new HashMap<>();
+        expected.put(expectedSymbol.symbol(), Arrays.asList(0D, expectedSymbol.last()));
+
+        assertEquals(expected, listener.reduction());
+    }
+
 
     private void writeToQueue(AppenderListener listener) {
         final SetTimeProvider tp = new SetTimeProvider(TimeUnit.DAYS.toNanos(365));

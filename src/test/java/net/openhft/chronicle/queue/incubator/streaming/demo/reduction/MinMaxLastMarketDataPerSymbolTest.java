@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
+package net.openhft.chronicle.queue.incubator.streaming.demo.reduction;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -31,7 +31,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     private static final List<MarketData> MARKET_DATA_SET = Arrays.asList(
             new MarketData("MSFT", 10, 11, 9),
             new MarketData("MSFT", 100, 110, 90),
-            new MarketData("APPL", 200, 220, 180)
+            new MarketData("AAPL", 200, 220, 180)
     );
 
 

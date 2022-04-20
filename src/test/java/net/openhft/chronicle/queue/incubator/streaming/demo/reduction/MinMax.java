@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.incubator.streaming.demo.accumulation;
+package net.openhft.chronicle.queue.incubator.streaming.demo.reduction;
 
 public final class MinMax {
 
