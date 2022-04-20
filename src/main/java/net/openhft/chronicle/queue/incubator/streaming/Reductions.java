@@ -6,6 +6,7 @@ import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.concurrent.atomic.LongAccumulator;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.*;
@@ -39,19 +40,44 @@ public final class Reductions {
         return new ReductionUtil.LongSupplierAccumulation<>(extractor, supplier, accumulator, finisher);
     }
 
-    // Specialized Long Accumulations
+    public static <A>
+    Reduction<DoubleSupplier> ofDouble(@NotNull final ToDoubleExcerptExtractor extractor,
+                                       @NotNull final Supplier<A> supplier,
+                                       @NotNull final ObjDoubleConsumer<A> accumulator,
+                                       @NotNull final ToDoubleFunction<A> finisher) {
+        requireNonNull(extractor);
+        requireNonNull(supplier);
+        requireNonNull(accumulator);
+        requireNonNull(finisher);
+        return new ReductionUtil.DoubleSupplierAccumulation<>(extractor, supplier, accumulator, finisher);
+    }
 
-    public static Reduction<LongSupplier> reducingLong(@NotNull final ToLongExcerptExtractor longExtractor,
+    // Specialized Reductions
+
+    public static Reduction<LongSupplier> reducingLong(@NotNull final ToLongExcerptExtractor extractor,
                                                        final long identity,
                                                        @NotNull final LongBinaryOperator accumulator) {
-        requireNonNull(longExtractor);
+        requireNonNull(extractor);
         requireNonNull(accumulator);
 
         return Reductions.ofLong(
-                longExtractor,
+                extractor,
                 () -> new LongAccumulator(accumulator, identity),
                 LongAccumulator::accumulate,
                 LongAccumulator::get);
+    }
+
+    public static Reduction<DoubleSupplier> reducingDouble(@NotNull final ToDoubleExcerptExtractor extractor,
+                                                           final double identity,
+                                                           @NotNull final DoubleBinaryOperator accumulator) {
+        requireNonNull(extractor);
+        requireNonNull(accumulator);
+
+        return Reductions.ofDouble(
+                extractor,
+                () -> new DoubleAccumulator(accumulator, identity),
+                DoubleAccumulator::accumulate,
+                DoubleAccumulator::get);
     }
 
     public static Reduction<LongSupplier> counting() {
@@ -62,7 +88,6 @@ public final class Reductions {
                 LongAdder::sum
         );
     }
-
 
     /**
      * A Reduction class that counts the number of excerpts that have been processed.

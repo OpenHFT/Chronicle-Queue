@@ -9,6 +9,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
+import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
+
 public interface Reduction<T> extends AppenderListener {
 
     /**
@@ -44,7 +46,7 @@ public interface Reduction<T> extends AppenderListener {
      * @throws NullPointerException if the provided {@code tailer} is {@code null}
      */
     default long accept(@NotNull final ExcerptTailer tailer) {
-        Objects.requireNonNull(tailer);
+        requireNonNull(tailer);
         return ReductionUtil.accept(this, tailer);
     }
 }
