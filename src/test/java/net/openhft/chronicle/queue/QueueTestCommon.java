@@ -25,6 +25,10 @@ public class QueueTestCommon {
     protected Map<ExceptionKey, Integer> exceptions;
     protected boolean finishedNormally;
 
+    public QueueTestCommon() {
+        ignoreException("The incubating features are subject to change");
+    }
+
     @Before
     public void assumeFinishedNormally() {
         finishedNormally = true;
