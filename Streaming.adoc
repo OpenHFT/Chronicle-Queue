@@ -96,13 +96,13 @@ MarketData latestAppleMarketData = latest.reduction().get("AAPL");  <7>
 
 ----
 
-<1> `ExcertpExtractor` that will extract objects of type `MarketData`.
+<1> `ExcertpExtractor` that will extract objects of type `MarketData` previously written via a method writer.
 <2> A standard Java Collector which needs to be concurrent.
 <3> Key extractor that will extract keys from `MarketData` objects.
-<4> Value extractor (in this case, it will only pass through objects)
+<4> Value extractor (in this case, it will only pass through objects).
 <5> Merger that will be applied on the old and new value if a key is already associated with an old value.
 <6> Register the accumulation with the queue so that it is automatically maintained when excerpts are added.
-<7> Usage example of how to access the concurrent reduction.
+<7> Example of how to access the concurrent reduction.
 
 The `Reduction` above exemplifies a latest-seen service where the latest `MarketData` per symbol (key) is maintained.
 
@@ -248,9 +248,8 @@ Iterator<MarketData> iterator = Streams.iterator(
 
 As can be seen, the procedure here is similar to creating a `Stream`.
 
-
 ==== Parallel Streams
-Streams handle thread-safety issues with `ExcerptTailers` but in order to use parallel streams, the tailer's thread-safety checks must be turned off manually before parallel Streams are used:
+Streams handle thread-safety issues with `ExcerptTailers` but in order to use parallel streams, the tailer's internal thread-safety checks must be turned off manually before parallel Streams are used:
 
 [source,java]
 ----
@@ -499,6 +498,22 @@ Reduction<Map<String, MarketData>> latestProtected = Reductions.of(
 );
 ----
 
+
+==== More Complex Reductions
+As Collectors can be composed to an arbitrary depth, more complex reductions can easily be constructed. As long as the first-level collector is concurrent, the lower level ones need not be concurrent. Here is an example:
+[source,java]
+----
+Reduction<ConcurrentMap<String, DoubleSummaryStatistics>> stats = Reductions.of(
+        ExcerptExtractor.builder(MarketData.class)
+                .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                .build(),
+        groupingByConcurrent(
+                MarketData::symbol,
+                summarizingDouble(MarketData::last)
+        )
+);
+----
+This will maintain statistics per symbol on `MarketData::last` using vanilla Java classes (creates objects).
 
 ==== Register with a Queue
 
