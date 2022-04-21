@@ -149,7 +149,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private boolean doubleBuffer;
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
-    private AppenderListener appenderListener;
+    private ExcerptListener appenderListener;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -1156,19 +1156,35 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Set an AppenderListener which is called when an Excerpt is actually written.
-     * This is called while the writeLock is still held, after the messages has been written.
-     * For asynchronous writes, this is called in the background thread.
+     * Sets an AppenderListener which is invoked after an excerpt has been durably persisted to a queue.
+     * <p>
+     * The Thread that invokes this listener is unspecified and may change, even
+     * from invocation to invocation. This means implementations must ensure thread-safety
+     * to guarantee correct behaviour. In particular, <em>it is an error to assume
+     * the appending Thread will always be used do invoke this listener</em>.
+     * <p>
+     * If this listener throws an Exception, it is relayed to the call site.
+     * Therefore, care should be taken to minimise the probability of throwing Exceptions.
+     * <p>
+     * It is imperative that actions performed by the listener are as performant
+     * as possible as any delay incurred by the invocation of this listener
+     * will carry over to the appender used to actually persist the message
+     * (i.e. both for synchronous and asynchronous appenders actually storing messages).
+     * <p>
+     * No promise is given as to when this listener is invoked. However, eventually
+     * the listener will be called for each excerpt persisted to the queue.
+     * <p>
+     * No promise is given as to the order in which invocations are made of this listener.
      *
      * @param appenderListener to call
      * @return this
      */
-    public SingleChronicleQueueBuilder appenderListener(AppenderListener appenderListener) {
+    public SingleChronicleQueueBuilder appenderListener(ExcerptListener appenderListener) {
         this.appenderListener = appenderListener;
         return this;
     }
 
-    public AppenderListener appenderListener() {
+    public ExcerptListener appenderListener() {
         return appenderListener;
     }
 

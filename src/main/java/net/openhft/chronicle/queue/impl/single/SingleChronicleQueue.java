@@ -128,7 +128,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final int deltaCheckpointInterval;
     private final boolean useSparseFile;
     private final long sparseCapacity;
-    final AppenderListener appenderListener;
+    final ExcerptListener appenderListener;
     protected int sourceId;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;

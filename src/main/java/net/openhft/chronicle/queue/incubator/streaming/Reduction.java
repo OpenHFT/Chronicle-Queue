@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.core.annotation.NonNegative;
-import net.openhft.chronicle.queue.AppenderListener;
+import net.openhft.chronicle.queue.ExcerptListener;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.internal.streaming.ReductionUtil;
 import net.openhft.chronicle.wire.Wire;
@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public interface Reduction<T> extends AppenderListener {
+public interface Reduction<T> extends ExcerptListener {
 
     /**
      * Consumes an excerpt from the provided {@code wire} at the index at the provided {@code index}.
@@ -17,7 +17,7 @@ public interface Reduction<T> extends AppenderListener {
      * If this method throws an Exception, it is relayed to the call site.
      * Therefore, care should be taken to minimise the probability of throwing Exceptions.
      * <p>
-     * If this method is referenced as an {@link AppenderListener} then the Accumulation must be
+     * If this method is referenced as an {@link ExcerptListener} then the Accumulation must be
      * thread-safe.
      **/
     void onExcerpt(@NotNull Wire wire, @NonNegative long index);

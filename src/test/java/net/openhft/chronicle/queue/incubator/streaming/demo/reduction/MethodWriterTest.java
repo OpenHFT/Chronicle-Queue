@@ -2,10 +2,10 @@ package net.openhft.chronicle.queue.incubator.streaming.demo.reduction;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.AppenderListener;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
@@ -79,7 +79,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
         assertEquals(expected, listener.reduction());
     }
 
-    private void writeToQueue(AppenderListener listener) {
+    private void writeToQueue(ExcerptListener listener) {
         final SetTimeProvider tp = new SetTimeProvider(TimeUnit.DAYS.toNanos(365));
         try (ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .path(Q_NAME)

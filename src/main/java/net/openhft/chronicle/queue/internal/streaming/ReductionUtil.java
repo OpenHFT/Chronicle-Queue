@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.AppenderListener;
+import net.openhft.chronicle.queue.ExcerptListener;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
@@ -22,7 +22,7 @@ public final class ReductionUtil {
     private ReductionUtil() {
     }
 
-    public static long accept(@NotNull final AppenderListener appenderListener,
+    public static long accept(@NotNull final ExcerptListener excerptListener,
                               @NotNull final ExcerptTailer tailer) {
         requireNonNull(tailer);
         long lastIndex = -1;
@@ -32,7 +32,7 @@ public final class ReductionUtil {
                 final Wire wire = dc.wire();
                 if (dc.isPresent() && wire != null) {
                     lastIndex = dc.index();
-                    appenderListener.onExcerpt(wire, lastIndex);
+                    excerptListener.onExcerpt(wire, lastIndex);
                 } else {
                     end = true;
                 }
@@ -41,19 +41,19 @@ public final class ReductionUtil {
         return lastIndex;
     }
 
-    public static final class CollectorAccumulation<E, A, R> implements Reduction<R> {
+    public static final class CollectorReduction<E, A, R> implements Reduction<R> {
         private final ExcerptExtractor<E> extractor;
         private final Collector<E, A, ? extends R> collector;
 
         private final A accumulation;
 
-        public CollectorAccumulation(@NotNull final ExcerptExtractor<E> extractor,
-                                     @NotNull final Collector<E, A, ? extends R> collector) {
+        public CollectorReduction(@NotNull final ExcerptExtractor<E> extractor,
+                                  @NotNull final Collector<E, A, ? extends R> collector) {
             this.extractor = extractor;
             this.collector = collector;
 
             if (!collector.characteristics().contains(Collector.Characteristics.CONCURRENT)) {
-                Jvm.warn().on(CollectorAccumulation.class, "The collector " + collector + " should generally have the characteristics CONCURRENT");
+                Jvm.warn().on(CollectorReduction.class, "The collector " + collector + " should generally have the characteristics CONCURRENT");
             }
             this.accumulation = collector.supplier().get();
         }
@@ -84,16 +84,16 @@ public final class ReductionUtil {
         }
     }
 
-    public static final class LongSupplierAccumulation<A> implements Reduction<LongSupplier> {
+    public static final class LongSupplierReduction<A> implements Reduction<LongSupplier> {
         private final ToLongExcerptExtractor extractor;
         private final ObjLongConsumer<A> accumulator;
         private final A accumulation;
         private final ToLongFunction<A> finisher;
 
-        public LongSupplierAccumulation(@NotNull final ToLongExcerptExtractor extractor,
-                                        @NotNull final Supplier<A> supplier,
-                                        @NotNull final ObjLongConsumer<A> accumulator,
-                                        @NotNull final ToLongFunction<A> finisher) {
+        public LongSupplierReduction(@NotNull final ToLongExcerptExtractor extractor,
+                                     @NotNull final Supplier<A> supplier,
+                                     @NotNull final ObjLongConsumer<A> accumulator,
+                                     @NotNull final ToLongFunction<A> finisher) {
             this.extractor = requireNonNull(extractor);
             this.accumulator = requireNonNull(accumulator);
             requireNonNull(supplier);
@@ -122,16 +122,16 @@ public final class ReductionUtil {
         }
     }
 
-    public static final class DoubleSupplierAccumulation<A> implements Reduction<DoubleSupplier> {
+    public static final class DoubleSupplierReduction<A> implements Reduction<DoubleSupplier> {
         private final ToDoubleExcerptExtractor extractor;
         private final ObjDoubleConsumer<A> accumulator;
         private final A accumulation;
         private final ToDoubleFunction<A> finisher;
 
-        public DoubleSupplierAccumulation(@NotNull final ToDoubleExcerptExtractor extractor,
-                                          @NotNull final Supplier<A> supplier,
-                                          @NotNull final ObjDoubleConsumer<A> accumulator,
-                                          @NotNull final ToDoubleFunction<A> finisher) {
+        public DoubleSupplierReduction(@NotNull final ToDoubleExcerptExtractor extractor,
+                                       @NotNull final Supplier<A> supplier,
+                                       @NotNull final ObjDoubleConsumer<A> accumulator,
+                                       @NotNull final ToDoubleFunction<A> finisher) {
             this.extractor = requireNonNull(extractor);
             this.accumulator = requireNonNull(accumulator);
             requireNonNull(supplier);

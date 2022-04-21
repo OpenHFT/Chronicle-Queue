@@ -2,10 +2,10 @@ package net.openhft.chronicle.queue.incubator.streaming.demo.reduction;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.AppenderListener;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
 import net.openhft.chronicle.queue.incubator.streaming.Reductions;
@@ -51,7 +51,7 @@ public class CountAccumulationTest extends ChronicleQueueTestBase {
         assertEquals(3, listener.reduction().getAsLong());
     }
 
-    private void count(AppenderListener listener) {
+    private void count(ExcerptListener listener) {
         final SetTimeProvider tp = new SetTimeProvider(1_000_000_000);
         try (ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .path(Q_NAME)

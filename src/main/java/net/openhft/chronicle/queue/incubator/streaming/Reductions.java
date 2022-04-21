@@ -25,7 +25,7 @@ public final class Reductions {
                     @NotNull final Collector<E, A, ? extends R> collector) {
         requireNonNull(extractor);
         requireNonNull(collector);
-        return new ReductionUtil.CollectorAccumulation<>(extractor, collector);
+        return new ReductionUtil.CollectorReduction<>(extractor, collector);
     }
 
     public static <A>
@@ -37,7 +37,7 @@ public final class Reductions {
         requireNonNull(supplier);
         requireNonNull(accumulator);
         requireNonNull(finisher);
-        return new ReductionUtil.LongSupplierAccumulation<>(extractor, supplier, accumulator, finisher);
+        return new ReductionUtil.LongSupplierReduction<>(extractor, supplier, accumulator, finisher);
     }
 
     public static <A>
@@ -49,7 +49,7 @@ public final class Reductions {
         requireNonNull(supplier);
         requireNonNull(accumulator);
         requireNonNull(finisher);
-        return new ReductionUtil.DoubleSupplierAccumulation<>(extractor, supplier, accumulator, finisher);
+        return new ReductionUtil.DoubleSupplierReduction<>(extractor, supplier, accumulator, finisher);
     }
 
     // Specialized Reductions

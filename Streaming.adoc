@@ -110,7 +110,7 @@ The `Reductions.of()` takes an `ExcerptExtractor` that is used to extract object
 In case there is already an old value associated with a particular key, the provided merger `Reductions.replacingMerger()` is applied (which will replace the old existing value for a key with the new value).
 
 Once a `Reduction` is created, it can accept an `ExcerptTailer` to boostrap from an existing queue.
-As shown above, it can also be registered with a Queue as an `AppenderListener` so that any updates made to the Queue also automatically will update the `Reduction`, effectively creating a "fire-and-forget" data reduction structure.
+As shown above, it can also be registered with a Queue as an `ExcerptListener` so that any updates made to the Queue also automatically will update the `Reduction`, effectively creating a "fire-and-forget" data reduction structure.
 
 The snippet above might produce the following output (shortened):
 
