@@ -545,6 +545,6 @@ To Be Written...
 == To be Documented
 
 * Configuration Accumulators (concrete classes)
-* Parallel streams
+* Parallel streams (Thread-safe ExcerptTailer)
 * ExcerptExtractor.ofType() error handling (what if there is another message on the queue?)
 * Extractors' use of `null` and `Long.MIN_VALUE`
