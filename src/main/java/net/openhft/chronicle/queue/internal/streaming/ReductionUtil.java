@@ -22,8 +22,8 @@ public final class ReductionUtil {
     private ReductionUtil() {
     }
 
-    public static long accept(@NotNull final ExcerptListener excerptListener,
-                              @NotNull final ExcerptTailer tailer) {
+    public static long accept(@NotNull final ExcerptTailer tailer,
+                              @NotNull final ExcerptListener excerptListener) {
         requireNonNull(tailer);
         long lastIndex = -1;
         boolean end = false;
@@ -80,7 +80,7 @@ public final class ReductionUtil {
         @Override
         public long accept(@NotNull final ExcerptTailer tailer) {
             requireNonNull(tailer);
-            return ReductionUtil.accept(this, tailer);
+            return ReductionUtil.accept(tailer, this);
         }
     }
 
@@ -118,7 +118,7 @@ public final class ReductionUtil {
         @Override
         public long accept(@NotNull final ExcerptTailer tailer) {
             requireNonNull(tailer);
-            return ReductionUtil.accept(this, tailer);
+            return ReductionUtil.accept(tailer, this);
         }
     }
 
@@ -156,7 +156,7 @@ public final class ReductionUtil {
         @Override
         public long accept(@NotNull final ExcerptTailer tailer) {
             requireNonNull(tailer);
-            return ReductionUtil.accept(this, tailer);
+            return ReductionUtil.accept(tailer, this);
         }
     }
 }

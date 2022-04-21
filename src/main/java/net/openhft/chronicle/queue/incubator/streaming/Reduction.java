@@ -45,6 +45,6 @@ public interface Reduction<T> extends ExcerptListener {
      */
     default long accept(@NotNull final ExcerptTailer tailer) {
         requireNonNull(tailer);
-        return ReductionUtil.accept(this, tailer);
+        return ReductionUtil.accept(tailer, this);
     }
 }

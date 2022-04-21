@@ -1,12 +1,15 @@
 package net.openhft.chronicle.queue.incubator.streaming.demo.reduction;
 
-import net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
-import net.openhft.chronicle.queue.incubator.streaming.Reduction;
-import net.openhft.chronicle.queue.incubator.streaming.Reductions;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.incubator.streaming.*;
+import net.openhft.chronicle.threads.PauserMode;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
@@ -91,6 +94,45 @@ public class DemoTest {
         );
 
         double averageApplePrice = stats.reduction().get("AAPL").getAverage();
+
+
+        // This is a demo of a queue-backed map that is continuously listening to a queue
+        // and any change is reflected in the Reduction.
+
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder.single("my-queue")
+                .build();
+
+        Reduction<Map<String, MarketData>> queueBackedMapping = Reductions.of(
+                ExcerptExtractor.builder(MarketData.class)
+                        .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                        .build(),
+                Collectors.collectingAndThen(
+                        Collectors.toConcurrentMap(
+                                MarketData::symbol,
+                                Function.identity(),
+                                replacingMerger()
+                        ),
+                        Collections::unmodifiableMap
+                )
+        );
+
+        // This provides a concurrent automatically updated view of the queue-backed map.
+        Map<String, MarketData> queueBackedMap = queueBackedMapping.reduction();
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+        try (AutoTailers.CloseableRunnable runnable = AutoTailers.createRunnable(
+                queue::createTailer,
+                queueBackedMapping,
+                PauserMode.balanced
+        )) {
+            executorService.submit(runnable);
+            Thread.sleep(TimeUnit.SECONDS.toMillis(10));
+        } catch (InterruptedException ie) {
+            // do nothing
+        }
+        net.openhft.chronicle.threads.Threads.shutdown(executorService);
+
 
         // How to use thread confined objects?
 

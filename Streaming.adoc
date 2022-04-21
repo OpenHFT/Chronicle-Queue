@@ -480,7 +480,7 @@ Map<String, MarketData> liveQueueBackedMap = latest.reduction(); <1>
 
 ==== Using a protected Reduction
 
-Many collectors can be used in combination with a "protective coat" around the actuall reduction. Here is an example of providing an unmodifiable view of a map using standard Java Collector constructs:
+Many collectors can be used in combination with a "protective coat" around the actual reduction. Here is an example of providing an unmodifiable view of a map using standard Java Collector constructs:
 
 [source,java]
 ----
@@ -538,13 +538,66 @@ This provides an easy way to bootstrap the Reduction upon restart.
 reduction.accept(queue.createTailer());
 ----
 
+==== Automatically Tail a Queue Maintaining a Reduction
+
+This example shows how a Thread can be setup to automatically tail a queue while maintaining a Reduction. Any data added to the queue will be consumed by the Thread and might contribute to the Reduction.
+
+[source,java]
+----
+SingleChronicleQueue queue = SingleChronicleQueueBuilder.single("my-queue")
+                .build();
+
+Reduction<Map<String, MarketData>> queueBackedMapping = Reductions.of(
+        ExcerptExtractor.builder(MarketData.class)
+                .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
+                .build(),
+        Collectors.collectingAndThen(
+                Collectors.toConcurrentMap(
+                        MarketData::symbol,
+                        Function.identity(),
+                        replacingMerger()
+                ),
+                Collections::unmodifiableMap
+        )
+); <1>
+
+// This provides a concurrent automatically updated view of the queue-backed map.
+Map<String, MarketData> queueBackedMap = queueBackedMapping.reduction();        <2>
+
+ExecutorService executorService = Executors.newSingleThreadExecutor();          <3>
+
+try (AutoTailers.CloseableRunnable runnable = AutoTailers.createRunnable(       <4>
+        queue::createTailer,                                                    <5>
+        queueBackedMapping,                                                     <6>
+        PauserMode.balanced                                                     <7>
+)) {
+    executorService.submit(runnable);                                           <8>
+    Thread.sleep(TimeUnit.SECONDS.toMillis(10));                                <9>
+} catch (InterruptedException ie) {                                             <10>
+    // do nothing
+}
+net.openhft.chronicle.threads.Threads.shutdown(executorService);                <11>
+----
+<1> This is the same Reduction previously described in <<_using_a_protected_reduction>> and will maintain a queue-backed map Reduction.
+<2> This variable can be used to inspect the Reduction at any time.
+<3> Creates a new ExecutorService with a single thread.
+<4> Creates a Runnable that can be submitted to the ExecutorService in <3>
+<5> Signifies how an ExcerptTailer is obtained.
+<6> Provides an ExcerptListener (in this case the Reduction) to be invoked on every encountered excerpt.
+<7> Tells the Thread how to pause if there are no more Excerpts to consume.
+<8> Submits the runnable to the executor service.
+<9> Waits for 10 seconds. In a real case, the Thread might run forever.
+<10> When exiting the TWR block, the runnable is automatically closed and will consequently exit shortly after.
+<11> Waits for the thread to shut down
+
 === Detailed Description
 
 To Be Written...
 
-== To be Documented
+== To be Documented or todo
 
 * Configuration Accumulators (concrete classes)
 * Parallel streams (Thread-safe ExcerptTailer)
 * ExcerptExtractor.ofType() error handling (what if there is another message on the queue?)
 * Extractors' use of `null` and `Long.MIN_VALUE`
+* Add a "Poller"
