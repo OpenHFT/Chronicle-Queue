@@ -13,6 +13,9 @@ import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public final class InternalAutoTailers {
 
+    private InternalAutoTailers() {
+    }
+
     public static final class RunnablePoller extends AbstractPoller implements AutoTailers.CloseableRunnable {
 
         private final Pauser pauser;
@@ -56,7 +59,7 @@ public final class InternalAutoTailers {
         }
     }
 
-    private static abstract class AbstractPoller implements AutoCloseable {
+    private abstract static class AbstractPoller implements AutoCloseable {
 
         protected final ExcerptListener excerptListener;
         protected final ExcerptTailer tailer;

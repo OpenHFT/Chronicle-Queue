@@ -602,6 +602,7 @@ To Be Written...
 * Extractors' use of `null` and `Long.MIN_VALUE`
 * ConcurrentCollectors.* need to be transitively concurrent
 * Maybe provide a Supplier<ExcerptTailer> so that streams can close the tailer after use?
-* Binary Compatibility Plugin to ignore "incubator" packages
+* Binary Compatibility Plugin to ignore "incubator" packages (regardless if this is an incubating feature or not)
 * Reduction.of(ExcerptExtractor).collecting(Collector)
 * Reduction.of(ExcerptExtractor).reducing()
+* Review Streams using reusable objects. Maybe just in sequential streams?
