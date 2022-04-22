@@ -603,3 +603,5 @@ To Be Written...
 * ConcurrentCollectors.* need to be transitively concurrent
 * Maybe provide a Supplier<ExcerptTailer> so that streams can close the tailer after use?
 * Binary Compatibility Plugin to ignore "incubator" packages
+* Reduction.of(ExcerptExtractor).collecting(Collector)
+* Reduction.of(ExcerptExtractor).reducing()
