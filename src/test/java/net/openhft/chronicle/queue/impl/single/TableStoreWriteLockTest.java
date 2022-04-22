@@ -88,8 +88,6 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             t.start();
             t.join();
             testLock.lock();
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Forced unlock")));
             expectException("Unlocking forcibly");
             expectException("Forced unlock");
         }
@@ -128,8 +126,6 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     public void unlockWillWarnIfNotLocked() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.unlock();
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Write lock was already unlocked.")));
             expectException("Write lock was already unlocked.");
         }
     }
@@ -141,8 +137,6 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             waitForLockToBecomeLocked(testLock);
             testLock.unlock();
             assertTrue(testLock.locked());
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Write lock was locked by someone else!")));
             expectException("Write lock was locked by someone else!");
             process.destroy();
             process.waitFor();
@@ -156,8 +150,6 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             waitForLockToBecomeLocked(testLock);
             testLock.forceUnlock();
             assertFalse(testLock.locked());
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Forced unlock for the lock")));
             expectException("Forced unlock for the lock");
             process.destroy();
             process.waitFor();
@@ -178,8 +170,6 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             testLock.lock();
             testLock.forceUnlock();
             assertFalse(testLock.locked());
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TableStoreWriteLock.class && ek.message.startsWith("Forced unlock for the lock")));
             expectException("Forced unlock for the lock");
         }
     }
