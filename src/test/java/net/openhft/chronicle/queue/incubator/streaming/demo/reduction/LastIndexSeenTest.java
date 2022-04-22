@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 import static net.openhft.chronicle.queue.incubator.streaming.Reductions.reducingLong;
-import static net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor.extractingIndex;
+import static net.openhft.chronicle.queue.incubator.streaming.ToLongDocumentExtractor.extractingIndex;
 import static org.junit.Assert.assertEquals;
 
 public class LastIndexSeenTest extends ChronicleQueueTestBase {

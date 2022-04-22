@@ -21,7 +21,7 @@ public final class Reductions {
     }
 
     public static <E, A, R>
-    Reduction<R> of(@NotNull final ExcerptExtractor<E> extractor,
+    Reduction<R> of(@NotNull final DocumentExtractor<E> extractor,
                     @NotNull final Collector<E, A, ? extends R> collector) {
         requireNonNull(extractor);
         requireNonNull(collector);
@@ -29,7 +29,7 @@ public final class Reductions {
     }
 
     public static <A>
-    Reduction<LongSupplier> ofLong(@NotNull final ToLongExcerptExtractor extractor,
+    Reduction<LongSupplier> ofLong(@NotNull final ToLongDocumentExtractor extractor,
                                    @NotNull final Supplier<A> supplier,
                                    @NotNull final ObjLongConsumer<A> accumulator,
                                    @NotNull final ToLongFunction<A> finisher) {
@@ -41,7 +41,7 @@ public final class Reductions {
     }
 
     public static <A>
-    Reduction<DoubleSupplier> ofDouble(@NotNull final ToDoubleExcerptExtractor extractor,
+    Reduction<DoubleSupplier> ofDouble(@NotNull final ToDoubleDocumentExtractor extractor,
                                        @NotNull final Supplier<A> supplier,
                                        @NotNull final ObjDoubleConsumer<A> accumulator,
                                        @NotNull final ToDoubleFunction<A> finisher) {
@@ -54,7 +54,7 @@ public final class Reductions {
 
     // Specialized Reductions
 
-    public static Reduction<LongSupplier> reducingLong(@NotNull final ToLongExcerptExtractor extractor,
+    public static Reduction<LongSupplier> reducingLong(@NotNull final ToLongDocumentExtractor extractor,
                                                        final long identity,
                                                        @NotNull final LongBinaryOperator accumulator) {
         requireNonNull(extractor);
@@ -67,7 +67,7 @@ public final class Reductions {
                 LongAccumulator::get);
     }
 
-    public static Reduction<DoubleSupplier> reducingDouble(@NotNull final ToDoubleExcerptExtractor extractor,
+    public static Reduction<DoubleSupplier> reducingDouble(@NotNull final ToDoubleDocumentExtractor extractor,
                                                            final double identity,
                                                            @NotNull final DoubleBinaryOperator accumulator) {
         requireNonNull(extractor);

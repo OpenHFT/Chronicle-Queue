@@ -2,8 +2,8 @@ package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.core.annotation.NonNegative;
 import net.openhft.chronicle.queue.ExcerptListener;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.internal.streaming.ReductionUtil;
+import net.openhft.chronicle.wire.MarshallableIn;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
@@ -43,7 +43,7 @@ public interface Reduction<T> extends ExcerptListener {
      * @return the last index seen or -1 if no index was seen
      * @throws NullPointerException if the provided {@code tailer} is {@code null}
      */
-    default long accept(@NotNull final ExcerptTailer tailer) {
+    default long accept(@NotNull final MarshallableIn tailer) {
         requireNonNull(tailer);
         return ReductionUtil.accept(tailer, this);
     }

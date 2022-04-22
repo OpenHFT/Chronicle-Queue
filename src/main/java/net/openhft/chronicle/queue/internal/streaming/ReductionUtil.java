@@ -2,12 +2,12 @@ package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ExcerptListener;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
-import net.openhft.chronicle.queue.incubator.streaming.ToDoubleExcerptExtractor;
-import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToDoubleDocumentExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToLongDocumentExtractor;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.MarshallableIn;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,7 +22,7 @@ public final class ReductionUtil {
     private ReductionUtil() {
     }
 
-    public static long accept(@NotNull final ExcerptTailer tailer,
+    public static long accept(@NotNull final MarshallableIn tailer,
                               @NotNull final ExcerptListener excerptListener) {
         requireNonNull(tailer);
         long lastIndex = -1;
@@ -42,12 +42,12 @@ public final class ReductionUtil {
     }
 
     public static final class CollectorReduction<E, A, R> implements Reduction<R> {
-        private final ExcerptExtractor<E> extractor;
+        private final DocumentExtractor<E> extractor;
         private final Collector<E, A, ? extends R> collector;
 
         private final A accumulation;
 
-        public CollectorReduction(@NotNull final ExcerptExtractor<E> extractor,
+        public CollectorReduction(@NotNull final DocumentExtractor<E> extractor,
                                   @NotNull final Collector<E, A, ? extends R> collector) {
             this.extractor = extractor;
             this.collector = collector;
@@ -78,19 +78,19 @@ public final class ReductionUtil {
         }
 
         @Override
-        public long accept(@NotNull final ExcerptTailer tailer) {
+        public long accept(@NotNull final MarshallableIn tailer) {
             requireNonNull(tailer);
             return ReductionUtil.accept(tailer, this);
         }
     }
 
     public static final class LongSupplierReduction<A> implements Reduction<LongSupplier> {
-        private final ToLongExcerptExtractor extractor;
+        private final ToLongDocumentExtractor extractor;
         private final ObjLongConsumer<A> accumulator;
         private final A accumulation;
         private final ToLongFunction<A> finisher;
 
-        public LongSupplierReduction(@NotNull final ToLongExcerptExtractor extractor,
+        public LongSupplierReduction(@NotNull final ToLongDocumentExtractor extractor,
                                      @NotNull final Supplier<A> supplier,
                                      @NotNull final ObjLongConsumer<A> accumulator,
                                      @NotNull final ToLongFunction<A> finisher) {
@@ -116,19 +116,19 @@ public final class ReductionUtil {
         }
 
         @Override
-        public long accept(@NotNull final ExcerptTailer tailer) {
+        public long accept(@NotNull final MarshallableIn tailer) {
             requireNonNull(tailer);
             return ReductionUtil.accept(tailer, this);
         }
     }
 
     public static final class DoubleSupplierReduction<A> implements Reduction<DoubleSupplier> {
-        private final ToDoubleExcerptExtractor extractor;
+        private final ToDoubleDocumentExtractor extractor;
         private final ObjDoubleConsumer<A> accumulator;
         private final A accumulation;
         private final ToDoubleFunction<A> finisher;
 
-        public DoubleSupplierReduction(@NotNull final ToDoubleExcerptExtractor extractor,
+        public DoubleSupplierReduction(@NotNull final ToDoubleDocumentExtractor extractor,
                                        @NotNull final Supplier<A> supplier,
                                        @NotNull final ObjDoubleConsumer<A> accumulator,
                                        @NotNull final ToDoubleFunction<A> finisher) {
@@ -154,7 +154,7 @@ public final class ReductionUtil {
         }
 
         @Override
-        public long accept(@NotNull final ExcerptTailer tailer) {
+        public long accept(@NotNull final MarshallableIn tailer) {
             requireNonNull(tailer);
             return ReductionUtil.accept(tailer, this);
         }

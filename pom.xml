@@ -322,6 +322,7 @@
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                             <!-- Reduce the API surface of ChronicleReader -->
                             <binaryCompatibilityPercentageRequired>86.1</binaryCompatibilityPercentageRequired>
+                            <expression>japi-compliance-checker -skip-internal-packages .*\.incubator -lib %s %s %s -report-path %s</expression>
                         </configuration>
                     </execution>
                 </executions>

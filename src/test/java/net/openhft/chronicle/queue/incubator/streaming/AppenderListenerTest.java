@@ -132,7 +132,7 @@ public class AppenderListenerTest {
         String path = OS.getTarget() + "/appenderListenerAggregateCollectionTest";
 
         Reduction<List<String>> appenderListener = Reductions.of(
-                ExcerptExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(),
+                DocumentExtractor.builder(String.class).withMethod(HelloWorld.class, HelloWorld::hello).build(),
                 collectingAndThen(toConcurrentList(), Collections::unmodifiableList)
         );
 

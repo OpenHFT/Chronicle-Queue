@@ -5,9 +5,9 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Streams;
-import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToLongDocumentExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.demo.reduction.MarketData;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static net.openhft.chronicle.queue.incubator.streaming.CreateUtil.*;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
+import static net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor.builder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,7 +48,7 @@ class StreamsDemoTest {
 
             String s = Streams.of(
                             queue.createTailer(),
-                            ExcerptExtractor.builder(MarketData.class).build()
+                            DocumentExtractor.builder(MarketData.class).build()
                     )
                     .skip(0)
                     // skip 100
@@ -85,7 +85,7 @@ class StreamsDemoTest {
                 vo -> vo.writeLong(2),
                 vo -> vo.writeLong(3)
         )) {
-            long last = Streams.ofLong(q.createTailer(), ToLongExcerptExtractor.extractingIndex())
+            long last = Streams.ofLong(q.createTailer(), ToLongDocumentExtractor.extractingIndex())
                     .max()
                     .orElse(-1);
 
@@ -175,7 +175,7 @@ class StreamsDemoTest {
 
             List<News> newsList = Streams.of(
                             q.createTailer(),
-                            ExcerptExtractor.builder(News.class).withMethod(Messages.class, Messages::news).build()
+                            DocumentExtractor.builder(News.class).withMethod(Messages.class, Messages::news).build()
                     )
                     .sorted(Comparator.comparing(News::symbol))
                     .collect(toList());
@@ -187,7 +187,7 @@ class StreamsDemoTest {
 
             final LongSummaryStatistics stat = Streams.of(
                             q.createTailer(),
-                            ExcerptExtractor.builder(Shares.class).withMethod(Messages.class, Messages::shares).build()
+                            DocumentExtractor.builder(Shares.class).withMethod(Messages.class, Messages::shares).build()
                     )
                     .mapToLong(Shares::noShares)
                     .summaryStatistics();
@@ -196,7 +196,7 @@ class StreamsDemoTest {
             assertLongSummaryStatisticsEqual(expectedStat, stat);
 
             final LongSummaryStatistics stat2 = Streams.ofLong(q.createTailer(),
-                            ExcerptExtractor.builder(Shares.class).
+                            DocumentExtractor.builder(Shares.class).
                                     withMethod(Messages.class, Messages::shares)
                                     .withReusing(Shares::new)
                                     .build()

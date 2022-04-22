@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
 import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -51,13 +51,13 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
         // This first Accumulation will keep track of the min and max value for all symbols
 
         final Reduction<MinMax> globalListener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).build(),
+                DocumentExtractor.builder(MarketData.class).build(),
                 Collector.of(MinMax::new, MinMax::merge, throwingMerger(), Collector.Characteristics.CONCURRENT)
         );
 
         // This second Accumulation will track min and max value for each symbol individually
         final Reduction<Map<String, MinMax>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).build(),
+                DocumentExtractor.builder(MarketData.class).build(),
                 collectingAndThen(toConcurrentMap(MarketData::symbol, MinMax::new, MinMax::merge), Collections::unmodifiableMap)
         );
 
@@ -77,7 +77,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     public void lastMarketDataPerSymbol() {
 
         final Reduction<Map<String, MarketData>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).build(),
+                DocumentExtractor.builder(MarketData.class).build(),
                 collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap)
         );
 
@@ -94,7 +94,7 @@ public class MinMaxLastMarketDataPerSymbolTest extends ChronicleQueueTestBase {
     public void symbolSet() {
 
         Reduction<Set<String>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class)
+                DocumentExtractor.builder(MarketData.class)
                         .withReusing(MarketData::new) // Reuse is safe as we only extract immutable data (String symbol).
                         .build()
                         .map(MarketData::symbol),

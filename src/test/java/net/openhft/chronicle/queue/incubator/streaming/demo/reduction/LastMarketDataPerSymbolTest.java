@@ -21,7 +21,7 @@ import java.util.function.Function;
 import static java.util.stream.Collectors.*;
 import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.replacingMerger;
 import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.toConcurrentSet;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
+import static net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor.builder;
 import static org.junit.Assert.assertEquals;
 
 public class LastMarketDataPerSymbolTest extends ChronicleQueueTestBase {

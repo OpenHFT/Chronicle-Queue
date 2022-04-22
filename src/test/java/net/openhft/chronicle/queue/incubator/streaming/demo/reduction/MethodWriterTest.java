@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
 import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import org.junit.After;
@@ -50,7 +50,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     public void lastSeen() {
 
         final Reduction<AtomicReference<MarketData>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class)
+                DocumentExtractor.builder(MarketData.class)
                         .withMethod(ServiceOut.class, ServiceOut::marketData).
                         build(),
                 Collector.of(AtomicReference<MarketData>::new, AtomicReference::set, throwingMerger(), Collector.Characteristics.CONCURRENT)
@@ -68,7 +68,7 @@ public class MethodWriterTest extends ChronicleQueueTestBase {
     public void map() {
 
         final Reduction<Map<String, MarketData>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                DocumentExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                 collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap));
 
         writeToQueue(listener);

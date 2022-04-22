@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,16 +13,16 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public final class ExcerptExtractorUtil {
+public final class DocumentExtractorUtil {
 
     // Suppresses default constructor, ensuring non-instantiability.
-    private ExcerptExtractorUtil() {
+    private DocumentExtractorUtil() {
     }
 
     public static <I, E>
-    ExcerptExtractor<E> ofMethod(@NotNull final Class<I> type,
-                                 @NotNull final BiConsumer<? super I, ? super E> methodReference,
-                                 @Nullable final Supplier<? extends E> supplier) {
+    DocumentExtractor<E> ofMethod(@NotNull final Class<I> type,
+                                  @NotNull final BiConsumer<? super I, ? super E> methodReference,
+                                  @Nullable final Supplier<? extends E> supplier) {
         final MethodNameAndMessageType<E> info = methodOf(type, methodReference);
         final String expectedEventName = info.name();
         final Class<E> elementType = info.messageType();

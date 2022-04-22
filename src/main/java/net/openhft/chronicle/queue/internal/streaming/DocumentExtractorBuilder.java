@@ -1,8 +1,8 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
 import net.openhft.chronicle.core.util.ThreadConfinementAsserter;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.Builder;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor.Builder;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.BiConsumer;
@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builder<E> {
+public final class DocumentExtractorBuilder<E> implements DocumentExtractor.Builder<E> {
 
     static {
         IncubatorWarning.warnOnce();
@@ -22,7 +22,7 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
     private boolean threadConfinedReuse;
     private MethodRef<Object, E> methodRef;
 
-    public ExcerptExtractorBuilder(@NotNull final Class<E> elementType) {
+    public DocumentExtractorBuilder(@NotNull final Class<E> elementType) {
         this.elementType = requireNonNull(elementType);
     }
 
@@ -51,14 +51,14 @@ public final class ExcerptExtractorBuilder<E> implements ExcerptExtractor.Builde
 
     @NotNull
     @Override
-    public ExcerptExtractor<E> build() {
+    public DocumentExtractor<E> build() {
 
         if (methodRef != null) {
             if (supplier == null) {
                 // () -> null means null will be used as reuse meaning new objects are created
-                return ExcerptExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), () -> null);
+                return DocumentExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), () -> null);
             }
-            return ExcerptExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), guardedSupplier());
+            return DocumentExtractorUtil.ofMethod(methodRef.interfaceType(), methodRef.methodReference(), guardedSupplier());
         }
 
         if (supplier == null) {

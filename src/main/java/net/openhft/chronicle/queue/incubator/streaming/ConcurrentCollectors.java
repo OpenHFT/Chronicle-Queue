@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -12,6 +11,8 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toConcurrentMap;
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 public final class ConcurrentCollectors {
@@ -56,16 +57,11 @@ public final class ConcurrentCollectors {
     @NotNull
     public static <T>
     Collector<T, ?, Set<T>> toConcurrentSet() {
-        return Collector.of(
-                () -> Collections.newSetFromMap(new ConcurrentHashMap<>()),
-                Set::add,
-                (left, right) -> {
-                    left.addAll(right);
-                    return left;
-                },
-                // UNORDERED is set but not used by the logic in this package
-                Collector.Characteristics.CONCURRENT, Collector.Characteristics.UNORDERED
-        );
+        return collectingAndThen(
+                toConcurrentMap(Function.identity(),
+                        t -> Boolean.TRUE,
+                        retainingMerger()),
+                Map::keySet);
     }
 
     /**

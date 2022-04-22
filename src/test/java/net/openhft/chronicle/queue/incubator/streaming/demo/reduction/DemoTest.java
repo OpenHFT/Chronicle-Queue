@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.groupingByConcurrent;
 import static java.util.stream.Collectors.summarizingDouble;
 import static net.openhft.chronicle.queue.incubator.streaming.ConcurrentCollectors.replacingMerger;
-import static net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor.builder;
-import static net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor.extractingIndex;
+import static net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor.builder;
+import static net.openhft.chronicle.queue.incubator.streaming.ToLongDocumentExtractor.extractingIndex;
 
 public class DemoTest {
 
@@ -49,7 +49,7 @@ public class DemoTest {
         // Maintains a Map of the latest MarketData message per symbol where the
         // messages were previously written by a MethodWriter of type MarketDataProvider
         Reduction<Map<String, MarketData>> latest = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class)
+                DocumentExtractor.builder(MarketData.class)
                         .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
                         .build(),
                 Collectors.toConcurrentMap(
@@ -68,7 +68,7 @@ public class DemoTest {
         // Maintains a protected Map of the latest MarketData message per symbol where the
         // messages were previously written by a MethodWriter of type MarketDataProvider
         Reduction<Map<String, MarketData>> latestProtected = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class)
+                DocumentExtractor.builder(MarketData.class)
                         .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
                         .build(),
                 Collectors.collectingAndThen(
@@ -84,7 +84,7 @@ public class DemoTest {
         // Maintains statistics per symbol on MarketData::last using vanilla Java
         // classes (creates objects).
         Reduction<ConcurrentMap<String, DoubleSummaryStatistics>> stats = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class)
+                DocumentExtractor.builder(MarketData.class)
                         .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
                         .build(),
                 groupingByConcurrent(
@@ -103,7 +103,7 @@ public class DemoTest {
                 .build();
 
         Reduction<Map<String, MarketData>> queueBackedMapping = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class)
+                DocumentExtractor.builder(MarketData.class)
                         .withMethod(MarketDataProvider.class, MarketDataProvider::marketData)
                         .build(),
                 Collectors.collectingAndThen(

@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
 import net.openhft.chronicle.queue.incubator.streaming.Reductions;
 import org.junit.After;
@@ -57,7 +57,7 @@ public class CollectorTest extends ChronicleQueueTestBase {
         );
 
         Reduction<MarketData> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                DocumentExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                 lastSeen
         );
 
@@ -72,7 +72,7 @@ public class CollectorTest extends ChronicleQueueTestBase {
     public void lastSeen() {
 
         Reduction<Optional<MarketData>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                DocumentExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                 reducingConcurrent(replacingMerger())
         );
 
@@ -87,7 +87,7 @@ public class CollectorTest extends ChronicleQueueTestBase {
     public void map() {
 
         Reduction<Map<String, MarketData>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                DocumentExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                 collectingAndThen(toConcurrentMap(MarketData::symbol, Function.identity(), replacingMerger()), Collections::unmodifiableMap)
         );
 
@@ -106,7 +106,7 @@ public class CollectorTest extends ChronicleQueueTestBase {
     public void composite() {
 
         final Reduction<Map<String, List<Double>>> listener = Reductions.of(
-                ExcerptExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
+                DocumentExtractor.builder(MarketData.class).withMethod(ServiceOut.class, ServiceOut::marketData).build(),
                 groupingByConcurrent(MarketData::symbol, mapping(MarketData::last, toList()))
         );
 

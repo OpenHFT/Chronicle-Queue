@@ -1,10 +1,11 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.queue.ExcerptListener;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.incubator.streaming.AutoTailers;
 import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.wire.MarshallableIn;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Supplier;
@@ -20,7 +21,7 @@ public final class InternalAutoTailers {
 
         private final Pauser pauser;
 
-        public RunnablePoller(@NotNull final Supplier<ExcerptTailer> tailerSupplier,
+        public RunnablePoller(@NotNull final Supplier<? extends MarshallableIn> tailerSupplier,
                               @NotNull final ExcerptListener excerptListener,
                               @NotNull final Supplier<Pauser> pauserSupplier) {
             super(tailerSupplier, excerptListener);
@@ -37,14 +38,14 @@ public final class InternalAutoTailers {
                     }
                 }
             } finally {
-                tailer.close();
+                closer.run();
             }
         }
     }
 
     public static final class EventHandlerPoller extends AbstractPoller implements AutoTailers.CloseableEventHandler {
 
-        public EventHandlerPoller(@NotNull final Supplier<ExcerptTailer> tailerSupplier,
+        public EventHandlerPoller(@NotNull final Supplier<? extends MarshallableIn> tailerSupplier,
                                   @NotNull final ExcerptListener excerptListener) {
             super(tailerSupplier, excerptListener);
         }
@@ -52,7 +53,7 @@ public final class InternalAutoTailers {
         @Override
         public boolean action() throws InvalidEventHandlerException {
             if (!running) {
-                tailer.close();
+                closer.run();
                 throw InvalidEventHandlerException.reusable();
             }
             return ReductionUtil.accept(tailer, excerptListener) != -1;
@@ -62,19 +63,36 @@ public final class InternalAutoTailers {
     private abstract static class AbstractPoller implements AutoCloseable {
 
         protected final ExcerptListener excerptListener;
-        protected final ExcerptTailer tailer;
+        protected final MarshallableIn tailer;
+        protected final Runnable closer;
         protected volatile boolean running = true;
 
-        protected AbstractPoller(@NotNull final Supplier<ExcerptTailer> tailerSupplier,
+        protected AbstractPoller(@NotNull final Supplier<? extends MarshallableIn> tailerSupplier,
                                  @NotNull final ExcerptListener excerptListener) {
             requireNonNull(tailerSupplier);
             this.excerptListener = requireNonNull(excerptListener);
             this.tailer = requireNonNull(tailerSupplier.get());
+            this.closer = closer(tailer);
         }
 
         @Override
         public final void close() {
             running = false;
+        }
+
+        private static Runnable closer(MarshallableIn tailer) {
+            if (tailer instanceof AutoCloseable) {
+                final AutoCloseable ac = (AutoCloseable) tailer;
+                return () -> {
+                    try {
+                        ac.close();
+                    } catch (Exception e) {
+                        throw Jvm.rethrow(e);
+                    }
+                };
+            }
+            return () -> {
+            };
         }
     }
 

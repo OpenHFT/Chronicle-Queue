@@ -12,7 +12,7 @@ import java.util.function.DoubleUnaryOperator;
 import static java.lang.Double.isNaN;
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public interface ToDoubleExcerptExtractor {
+public interface ToDoubleDocumentExtractor {
 
     /**
      * Extracts a value of type {@code double } from the provided {@code wire} and {@code index} or else {@link Double#NaN}
@@ -22,7 +22,7 @@ public interface ToDoubleExcerptExtractor {
      * queue but of another type.
      * <p>
      * Extractors that must include {@link Double#NaN} as a valid value must use other means of
-     * aggregating values (e.g. use an {@link ExcerptExtractor ExcerptExtractor<Double> }.
+     * aggregating values (e.g. use an {@link DocumentExtractor ExcerptExtractor<Double> }.
      *
      * @param wire  to use
      * @param index to use
@@ -40,7 +40,7 @@ public interface ToDoubleExcerptExtractor {
      * @return a new mapped ToDoubleExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default ToDoubleExcerptExtractor map(@NotNull final DoubleUnaryOperator mapper) {
+    default ToDoubleDocumentExtractor map(@NotNull final DoubleUnaryOperator mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final double value = extractAsDouble(wire, index);
@@ -61,7 +61,7 @@ public interface ToDoubleExcerptExtractor {
      * @return a new mapped ExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default <T> ExcerptExtractor<T> mapToObj(@NotNull final DoubleFunction<? extends T> mapper) {
+    default <T> DocumentExtractor<T> mapToObj(@NotNull final DoubleFunction<? extends T> mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final double value = extractAsDouble(wire, index);
@@ -82,7 +82,7 @@ public interface ToDoubleExcerptExtractor {
      * @return a new mapped ToLongExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default ToLongExcerptExtractor mapToLong(@NotNull final DoubleToLongFunction mapper) {
+    default ToLongDocumentExtractor mapToLong(@NotNull final DoubleToLongFunction mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final double value = extractAsDouble(wire, index);
@@ -102,7 +102,7 @@ public interface ToDoubleExcerptExtractor {
      * @return a ToDoubleExcerptExtractor consisting of the elements of this ToDoubleExcerptExtractor that match
      * @throws NullPointerException if the provided {@code predicate} is {@code null}
      */
-    default ToDoubleExcerptExtractor filter(@NotNull final DoublePredicate predicate) {
+    default ToDoubleDocumentExtractor filter(@NotNull final DoublePredicate predicate) {
         requireNonNull(predicate);
         return (wire, index) -> {
             final double value = extractAsDouble(wire, index);

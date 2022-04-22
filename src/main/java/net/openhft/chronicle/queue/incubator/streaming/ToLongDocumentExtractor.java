@@ -11,7 +11,7 @@ import java.util.function.LongUnaryOperator;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
-public interface ToLongExcerptExtractor {
+public interface ToLongDocumentExtractor {
 
     /**
      * Extracts a value of type {@code long } from the provided {@code wire} and {@code index} or else {@link Long#MIN_VALUE}
@@ -21,7 +21,7 @@ public interface ToLongExcerptExtractor {
      * queue but of another type.
      * <p>
      * Extractors that must include {@link Long#MIN_VALUE} as a valid value must use other means of
-     * aggregating values (e.g. use an {@link ExcerptExtractor ExcerptExtractor<Long> }.
+     * aggregating values (e.g. use an {@link DocumentExtractor ExcerptExtractor<Long> }.
      *
      * @param wire  to use
      * @param index to use
@@ -39,7 +39,7 @@ public interface ToLongExcerptExtractor {
      * @return a new mapped ToLongExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default ToLongExcerptExtractor map(@NotNull final LongUnaryOperator mapper) {
+    default ToLongDocumentExtractor map(@NotNull final LongUnaryOperator mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final long value = extractAsLong(wire, index);
@@ -60,7 +60,7 @@ public interface ToLongExcerptExtractor {
      * @return a new mapped ExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default <T> ExcerptExtractor<T> mapToObj(@NotNull final LongFunction<? extends T> mapper) {
+    default <T> DocumentExtractor<T> mapToObj(@NotNull final LongFunction<? extends T> mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final long value = extractAsLong(wire, index);
@@ -81,7 +81,7 @@ public interface ToLongExcerptExtractor {
      * @return a new mapped ToDoubleExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default ToDoubleExcerptExtractor mapToDouble(@NotNull final LongToDoubleFunction mapper) {
+    default ToDoubleDocumentExtractor mapToDouble(@NotNull final LongToDoubleFunction mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final long value = extractAsLong(wire, index);
@@ -101,7 +101,7 @@ public interface ToLongExcerptExtractor {
      * @return a ToLongExcerptExtractor consisting of the elements of this ToLongExcerptExtractor that match
      * @throws NullPointerException if the provided {@code predicate} is {@code null}
      */
-    default ToLongExcerptExtractor filter(@NotNull final LongPredicate predicate) {
+    default ToLongDocumentExtractor filter(@NotNull final LongPredicate predicate) {
         requireNonNull(predicate);
         return (wire, index) -> {
             final long value = extractAsLong(wire, index);
@@ -120,7 +120,7 @@ public interface ToLongExcerptExtractor {
 
     // peek
 
-    static ToLongExcerptExtractor extractingIndex() {
+    static ToLongDocumentExtractor extractingIndex() {
         return (wire, index) -> index;
     }
 

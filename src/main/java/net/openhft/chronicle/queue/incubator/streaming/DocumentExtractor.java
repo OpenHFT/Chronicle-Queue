@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.incubator.streaming;
 
 import net.openhft.chronicle.core.annotation.NonNegative;
-import net.openhft.chronicle.queue.internal.streaming.ExcerptExtractorBuilder;
+import net.openhft.chronicle.queue.internal.streaming.DocumentExtractorBuilder;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,7 +11,7 @@ import java.util.function.*;
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
 @FunctionalInterface
-public interface ExcerptExtractor<T> {
+public interface DocumentExtractor<T> {
 
     /**
      * Extracts a value of type T from the provided {@code wire} and {@code index} or else {@code null}
@@ -38,7 +38,7 @@ public interface ExcerptExtractor<T> {
      * @return a new mapped ExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default <R> ExcerptExtractor<R> map(@NotNull final Function<? super T, ? extends R> mapper) {
+    default <R> DocumentExtractor<R> map(@NotNull final Function<? super T, ? extends R> mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final T value = extract(wire, index);
@@ -59,7 +59,7 @@ public interface ExcerptExtractor<T> {
      * @return a new mapped ExcerptExtractor
      * @throws NullPointerException if the provided {@code mapper} is {@code null}
      */
-    default ToLongExcerptExtractor mapToLong(@NotNull final ToLongFunction<? super T> mapper) {
+    default ToLongDocumentExtractor mapToLong(@NotNull final ToLongFunction<? super T> mapper) {
         requireNonNull(mapper);
         return (wire, index) -> {
             final T value = extract(wire, index);
@@ -79,7 +79,7 @@ public interface ExcerptExtractor<T> {
      * @return a ExcerptExtractor consisting of the elements of this ExcerptExtractor that match
      * @throws NullPointerException if the provided {@code predicate} is {@code null}
      */
-    default ExcerptExtractor<T> filter(@NotNull final Predicate<? super T> predicate) {
+    default DocumentExtractor<T> filter(@NotNull final Predicate<? super T> predicate) {
         requireNonNull(predicate);
         return (wire, index) -> {
             final T value = extract(wire, index);
@@ -103,7 +103,7 @@ public interface ExcerptExtractor<T> {
      *
      * @param <E> element type to extract
      */
-    interface Builder<E> extends net.openhft.chronicle.core.util.Builder<ExcerptExtractor<E>> {
+    interface Builder<E> extends net.openhft.chronicle.core.util.Builder<DocumentExtractor<E>> {
 
         /**
          * Specifies a {@code supplier} of element that shall be reused when extracting elements from excerpts.
@@ -162,7 +162,7 @@ public interface ExcerptExtractor<T> {
      */
     static <E> Builder<E> builder(@NotNull final Class<E> elementType) {
         requireNonNull(elementType);
-        return new ExcerptExtractorBuilder<>(elementType);
+        return new DocumentExtractorBuilder<>(elementType);
     }
 
 }

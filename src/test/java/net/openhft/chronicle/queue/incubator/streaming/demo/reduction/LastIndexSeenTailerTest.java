@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.incubator.streaming.Reduction;
 import net.openhft.chronicle.queue.incubator.streaming.Reductions;
-import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToLongDocumentExtractor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,7 +46,7 @@ public class LastIndexSeenTailerTest {
             appender.writeText("three");
         }
 
-        final Reduction<LongSupplier> listener = Reductions.reducingLong(ToLongExcerptExtractor.extractingIndex(), 0, (a, b) -> b);
+        final Reduction<LongSupplier> listener = Reductions.reducingLong(ToLongDocumentExtractor.extractingIndex(), 0, (a, b) -> b);
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.builder()
                 .appenderListener(listener)

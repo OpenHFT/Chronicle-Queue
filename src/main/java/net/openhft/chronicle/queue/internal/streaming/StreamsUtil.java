@@ -1,10 +1,10 @@
 package net.openhft.chronicle.queue.internal.streaming;
 
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.incubator.streaming.ExcerptExtractor;
-import net.openhft.chronicle.queue.incubator.streaming.ToDoubleExcerptExtractor;
-import net.openhft.chronicle.queue.incubator.streaming.ToLongExcerptExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.DocumentExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToDoubleDocumentExtractor;
+import net.openhft.chronicle.queue.incubator.streaming.ToLongDocumentExtractor;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.MarshallableIn;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
@@ -191,15 +191,15 @@ public final class StreamsUtil {
         }
     }
 
-    public static final class ExcerptTailerIterator<T> implements Iterator<T> {
+    public static final class ExcerptIterator<T> implements Iterator<T> {
 
-        private final ExcerptTailer tailer;
-        private final ExcerptExtractor<T> extractor;
+        private final MarshallableIn tailer;
+        private final DocumentExtractor<T> extractor;
 
         private T next;
 
-        public ExcerptTailerIterator(@NotNull final ExcerptTailer tailer,
-                                     @NotNull final ExcerptExtractor<T> extractor) {
+        public ExcerptIterator(@NotNull final MarshallableIn tailer,
+                               @NotNull final DocumentExtractor<T> extractor) {
             this.tailer = tailer;
             this.extractor = extractor;
         }
@@ -241,15 +241,15 @@ public final class StreamsUtil {
 
     }
 
-    public static final class ExcerptTailerIteratorOfLong implements PrimitiveIterator.OfLong {
+    public static final class ExcerptIteratorOfLong implements PrimitiveIterator.OfLong {
 
-        private final ExcerptTailer tailer;
-        private final ToLongExcerptExtractor extractor;
+        private final MarshallableIn tailer;
+        private final ToLongDocumentExtractor extractor;
 
         private long next = Long.MIN_VALUE;
 
-        public ExcerptTailerIteratorOfLong(@NotNull final ExcerptTailer tailer,
-                                           @NotNull final ToLongExcerptExtractor extractor) {
+        public ExcerptIteratorOfLong(@NotNull final MarshallableIn tailer,
+                                     @NotNull final ToLongDocumentExtractor extractor) {
             this.tailer = tailer;
             this.extractor = extractor;
         }
@@ -291,15 +291,15 @@ public final class StreamsUtil {
 
     }
 
-    public static final class ExcerptTailerIteratorOfDouble implements PrimitiveIterator.OfDouble {
+    public static final class ExcerptIteratorOfDouble implements PrimitiveIterator.OfDouble {
 
-        private final ExcerptTailer tailer;
-        private final ToDoubleExcerptExtractor extractor;
+        private final MarshallableIn tailer;
+        private final ToDoubleDocumentExtractor extractor;
 
         private double next = Double.NaN;
 
-        public ExcerptTailerIteratorOfDouble(@NotNull final ExcerptTailer tailer,
-                                             @NotNull final ToDoubleExcerptExtractor extractor) {
+        public ExcerptIteratorOfDouble(@NotNull final MarshallableIn tailer,
+                                       @NotNull final ToDoubleDocumentExtractor extractor) {
             this.tailer = tailer;
             this.extractor = extractor;
         }
