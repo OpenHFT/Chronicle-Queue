@@ -596,8 +596,10 @@ To Be Written...
 
 == To be Documented or todo
 
-* Configuration Accumulators (concrete classes)
+* Configuration Reductions (concrete classes)
 * Parallel streams (Thread-safe ExcerptTailer)
 * ExcerptExtractor.ofType() error handling (what if there is another message on the queue?)
 * Extractors' use of `null` and `Long.MIN_VALUE`
-* Add a "Poller"
+* ConcurrentCollectors.* need to be transitively concurrent
+* Maybe provide a Supplier<ExcerptTailer> so that streams can close the tailer after use?
+* Binary Compatibility Plugin to ignore "incubator" packages
