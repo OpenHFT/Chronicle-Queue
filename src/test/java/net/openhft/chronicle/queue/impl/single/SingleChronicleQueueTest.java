@@ -254,6 +254,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
         // explicitly call so as to clean and release everything
         afterChecks();
+        recordExceptions();
         IOTools.deleteDirWithFilesOrThrow(tmpDir);
     }
 
