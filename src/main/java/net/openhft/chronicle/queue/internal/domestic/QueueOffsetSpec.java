@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.internal.domestic;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalTime;
@@ -8,11 +9,11 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.function.Function;
 
-public final class QueueOffsetSpec {
+public final class QueueOffsetSpec extends SelfDescribingMarshallable {
 
     private static final String TOKEN_DELIMITER = ";";
-    private final Type type;
-    private final String[] spec;
+    private Type type;
+    private String[] spec;
     private QueueOffsetSpec(final Type type, final String[] spec) {
         this.type = type;
         this.spec = spec;

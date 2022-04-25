@@ -90,6 +90,7 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     @Test
     public void testReadMarshallable() {
         expectException("Overriding roll epoch from existing metadata");
+        ignoreException("Overwriting final field id in class java.time.ZoneRegion");
         final String tmpDir = getTmpDir().toString();
         SingleChronicleQueueBuilder builder = Marshallable.fromString("!net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder {\n" +
                 "  writeBufferMode: None,\n" +

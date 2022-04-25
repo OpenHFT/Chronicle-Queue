@@ -3771,7 +3771,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     private static class MapWrapper extends SelfDescribingMarshallable {
-        final Map<CharSequence, Double> map = new HashMap<>();
+        Map<CharSequence, Double> map = new HashMap<>();
     }
 
     static class MyMarshable extends SelfDescribingMarshallable implements Demarshallable {

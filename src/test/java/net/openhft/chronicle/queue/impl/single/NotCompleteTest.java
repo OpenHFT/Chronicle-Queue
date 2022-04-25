@@ -182,8 +182,8 @@ public class NotCompleteTest extends ChronicleQueueTestBase {
     static class Person implements Marshallable {
         static final String INTERRUPT = "Arthur";
         static final String THROW = "Thrower";
-        final int age;
-        final String name;
+        int age;
+        String name;
 
         Person(int age, String name) {
             this.age = age;

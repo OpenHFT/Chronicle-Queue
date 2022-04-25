@@ -86,7 +86,7 @@ public class ProxyTest extends ChronicleQueueTestBase {
 
     public static class Message extends SelfDescribingMarshallable {
 
-        private final StringBuilder message = new StringBuilder();
+        private StringBuilder message = new StringBuilder();
 
         CharSequence message() {
             return message;

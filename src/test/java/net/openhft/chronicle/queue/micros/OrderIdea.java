@@ -20,10 +20,10 @@ package net.openhft.chronicle.queue.micros;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
 public class OrderIdea extends SelfDescribingMarshallable {
-    final String symbol;
-    final Side side;
-    final double limitPrice;
-    final double quantity;
+    String symbol;
+    Side side;
+    double limitPrice;
+    double quantity;
 
     public OrderIdea(String symbol, Side side, double limitPrice, double quantity) {
         this.symbol = symbol;
