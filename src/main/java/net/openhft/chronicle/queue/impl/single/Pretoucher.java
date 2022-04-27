@@ -57,9 +57,11 @@ public final class Pretoucher extends AbstractCloseable {
         this.cycleChangedListener = cycleChangedListener;
         this.earlyAcquireNextCycle = earlyAcquireNextCycle;
         this.canWrite = canWrite;
-        queue.addCloseListener(this);
         pretoucherState = new PretoucherState(this::getStoreWritePosition);
         pretouchTimeProvider = () -> queue.time().currentTimeMillis() + (EARLY_ACQUIRE_NEXT_CYCLE ? PRETOUCHER_PREROLL_TIME_MS : 0);
+
+        // always put references to "this" last.
+        queue.addCloseListener(this);
     }
 
     public void execute() throws InvalidEventHandlerException {

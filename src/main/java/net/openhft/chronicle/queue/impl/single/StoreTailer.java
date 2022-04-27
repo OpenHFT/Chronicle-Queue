@@ -74,7 +74,6 @@ class StoreTailer extends AbstractCloseable
             this.indexValue = indexValue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
-            queue.addCloseListener(this);
 
             if (indexValue == null) {
                 toStart();
@@ -88,6 +87,9 @@ class StoreTailer extends AbstractCloseable
             if (error)
                 close();
         }
+
+        // always put references to "this" last.
+        queue.addCloseListener(this);
     }
 
     @Override
