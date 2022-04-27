@@ -71,28 +71,34 @@ class StoreAppender extends AbstractCloseable
         this.checkInterrupts = checkInterrupts;
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
-
         this.writeContext = new StoreAppenderContext();
+        this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+
+        try {
+            queue.cleanupStoreFilesWithNoData();
+            normaliseEOFs();
+
+            int cycle = queue.cycle();
+            int lastCycle = queue.lastCycle();
+            if (lastCycle != cycle && lastCycle >= 0) {
+                final WriteLock writeLock = queue.writeLock();
+                writeLock.lock();
+                try {
+                    // ensure that the EOF is written on the last cycle
+                    setCycle2(lastCycle, false);
+                } finally {
+                    writeLock.unlock();
+                }
+            }
+        } catch (RuntimeException ex) {
+            // Perhaps initialization code needs to be moved away from constructor
+            close();
+
+            throw ex;
+        }
 
         // always put references to "this" last.
         queue.addCloseListener(this);
-
-        queue.cleanupStoreFilesWithNoData();
-        normaliseEOFs();
-
-        int cycle = queue.cycle();
-        int lastCycle = queue.lastCycle();
-        if (lastCycle != cycle && lastCycle >= 0) {
-            final WriteLock writeLock = queue.writeLock();
-            writeLock.lock();
-            try {
-                // ensure that the EOF is written on the last cycle
-                setCycle2(lastCycle, false);
-            } finally {
-                writeLock.unlock();
-            }
-        }
-        finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
     }
 
     private static void releaseBytesFor(Wire w) {
