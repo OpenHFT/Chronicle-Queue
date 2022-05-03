@@ -1325,14 +1325,18 @@ method2 [!Message2 {
 ==== Detailed tracing of timings
 
 Chronicle Queue supports explicit, or implicit, nanosecond resolution timing for messages as they pass end-to-end over across your system.
-We support using nano-time across machines, without the need for specialist hardware.
+We support using nano-time across machines, without the need for specialist hardware. To enable this, set the `sourceId` of the queue.
 
 .Enabling high resolution timings
 [source,Java]
 ----
+ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
+        ...
+        .sourceId(1)
+        .build();
+
 SidedMarketDataListener combiner = out.acquireAppender()
         .methodWriterBuilder(SidedMarketDataListener.class)
-        .recordHistory(true)
         .get();
 
 combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
