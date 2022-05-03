@@ -225,7 +225,7 @@ public class ChronicleHistoryReader implements HistoryReader {
     protected void processMessage(CharSequence methodName, MessageHistory history) {
         CharSequence extraHistoId = histosByMethod ? ("_" + methodName) : "";
         long lastTime = 0;
-        // if the tailer has recordHistory(true) then the MessageHistory will be
+        // if the tailer has recordHistory (sourceId != 0) then the MessageHistory will be
         // written with a single timing and nothing else. This is then carried through
         int firstWriteOffset = history.timings() - (history.sources() * 2);
         if (!(firstWriteOffset == 0 || firstWriteOffset == 1)) {
