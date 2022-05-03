@@ -99,6 +99,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
+    @Deprecated
     private Boolean useSparseFiles;
     private Long sparseCapacity;
     private File path;
@@ -321,12 +322,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public SingleChronicleQueue build() {
         boolean needEnterprise = checkEnterpriseFeaturesRequested();
         preBuild();
-        if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null &&
+        if (OS.isSparseFileSupported() &&
                 (rollCycle == null || rollCycle.lengthInMillis() > 60_000)) {
             RollCycle rc = rollCycle == null ? RollCycles.FAST_DAILY : rollCycle;
             final long msgs = rc.maxMessagesPerCycle();
             sparseCapacity = Math.min(512L << 30, Math.max(4L << 30, msgs * 128));
-            useSparseFiles = true;
         }
 
         SingleChronicleQueue chronicleQueue;
@@ -673,6 +673,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
+    @Deprecated
     public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
         if (useSparseFiles && OS.isLinux() && OS.is64Bit())
             this.useSparseFiles = useSparseFiles;
@@ -681,6 +682,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
+    @Deprecated
     public SingleChronicleQueueBuilder sparseCapacity(long sparseCapacity) {
         this.sparseCapacity = sparseCapacity;
         return this;
@@ -694,6 +696,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
+   @Deprecated
     public boolean useSparseFiles() {
         return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
     }
