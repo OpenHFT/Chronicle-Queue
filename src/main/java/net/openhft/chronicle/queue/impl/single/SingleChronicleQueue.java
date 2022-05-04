@@ -154,6 +154,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             fileAbsolutePath = path.getAbsolutePath();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
+            // the maximum message size is 1L << 30 so greater overlapSize has no effect
             overlapSize = Math.min(Math.max(64 << 10, builder.blockSize() / 4), 1L << 30);
             useSparseFile = builder.useSparseFiles();
             sparseCapacity = builder.sparseCapacity();
