@@ -689,14 +689,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public long sparseCapacity() {
-        long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
-
         // can add an index2index & an index in one go.
         long minSize = Math.max(QueueUtil.testBlockSize(), 64L * indexCount());
-        return Math.max(minSize, bs);
+        return Math.max(minSize, DEFAULT_SPARSE_CAPACITY);
     }
 
-   @Deprecated
+    @Deprecated
     public boolean useSparseFiles() {
         return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
     }
@@ -1068,7 +1066,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable
-                                                               Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
+                                                       Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
                                                        @Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");

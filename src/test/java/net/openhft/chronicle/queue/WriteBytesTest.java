@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
@@ -83,7 +84,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
         try (ChronicleQueue queue = builder
                 .build()) {
-            final boolean useSparseFiles = builder.useSparseFiles();
+            final boolean useSparseFiles = OS.isSparseFileSupported();
 
             ExcerptAppender appender = queue.acquireAppender();
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
