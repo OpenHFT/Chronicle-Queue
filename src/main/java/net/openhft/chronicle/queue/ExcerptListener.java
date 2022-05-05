@@ -19,7 +19,7 @@ public interface ExcerptListener {
      * Therefore, care should be taken to minimise the probability of throwing Exceptions.
      *
      * @param wire  representing access to the excerpt that was stored (non-null).
-     * @param index in the queue where the except was placed (non-negative)
+     * @param index in the queue where the except was placed (non-negative) 
      */
     void onExcerpt(@NotNull Wire wire, @NonNegative long index);
 
