@@ -154,7 +154,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             fileAbsolutePath = path.getAbsolutePath();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
-            overlapSize = Math.max(64 << 10, builder.blockSize() / 4);
+            // the maximum message size is 1L << 30 so greater overlapSize has no effect
+            overlapSize = Math.min(Math.max(64 << 10, builder.blockSize() / 4), 1L << 30);
             useSparseFile = builder.useSparseFiles();
             sparseCapacity = builder.sparseCapacity();
             eventLoop = builder.eventLoop();
@@ -872,7 +873,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @PackageLocal
     MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
-        long overlapSize = OS.pageAlign(blockSize / 4);
+        long overlapSize = OS.pageAlign(Math.min(blockSize / 4, 1L << 30));
         return useSparseFile
                 ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
                 : MappedFile.of(file, chunkSize, overlapSize, readOnly);
