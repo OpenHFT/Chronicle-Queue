@@ -125,7 +125,6 @@ When reading from a queue that has been created using a `MethodWriter`:
 [source, java]
 ....
 MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
-methodWriterBuilder.recordHistory(true);
 StringEvents events = methodWriterBuilder.build();
 events.say("hello");
 ....
