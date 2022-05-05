@@ -311,6 +311,7 @@
             <plugin>
                 <groupId>net.openhft</groupId>
                 <artifactId>binary-compatibility-enforcer-plugin</artifactId>
+                <version>1.0.13</version>
                 <executions>
                     <execution>
                         <phase>verify</phase>
@@ -321,7 +322,17 @@
                             <referenceVersion>5.23ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                             <!-- Reduce the API surface of ChronicleReader -->
-                            <binaryCompatibilityPercentageRequired>86.1</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>89.3</binaryCompatibilityPercentageRequired>
+                            <extraOptions>
+                                <!--This skips "internal" but checks "impl"-->
+                                <extraOption>
+                                    <name>-keep-internal</name>
+                                </extraOption>
+                                <extraOption>
+                                    <name>skip-internal-packages</name>
+                                    <value>.*internal.*</value>
+                                </extraOption>
+                            </extraOptions>
                         </configuration>
                     </execution>
                 </executions>
