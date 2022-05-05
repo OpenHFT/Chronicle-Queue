@@ -84,7 +84,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
         try (ChronicleQueue queue = builder
                 .build()) {
-            final boolean useSparseFiles = OS.isSparseFileSupported();
+            final boolean useSparseFiles = builder.useSparseFiles();
 
             ExcerptAppender appender = queue.acquireAppender();
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {

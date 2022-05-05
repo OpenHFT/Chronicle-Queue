@@ -322,11 +322,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public SingleChronicleQueue build() {
         boolean needEnterprise = checkEnterpriseFeaturesRequested();
         preBuild();
-        if (OS.isSparseFileSupported() &&
+        if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null &&
                 (rollCycle == null || rollCycle.lengthInMillis() > 60_000)) {
             RollCycle rc = rollCycle == null ? RollCycles.FAST_DAILY : rollCycle;
             final long msgs = rc.maxMessagesPerCycle();
             sparseCapacity = Math.min(512L << 30, Math.max(4L << 30, msgs * 128));
+            useSparseFiles = true;
         }
 
         SingleChronicleQueue chronicleQueue;
@@ -689,9 +690,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public long sparseCapacity() {
+        long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
         // can add an index2index & an index in one go.
         long minSize = Math.max(QueueUtil.testBlockSize(), 64L * indexCount());
-        return Math.max(minSize, DEFAULT_SPARSE_CAPACITY);
+        return Math.max(minSize, bs);
     }
 
     @Deprecated
