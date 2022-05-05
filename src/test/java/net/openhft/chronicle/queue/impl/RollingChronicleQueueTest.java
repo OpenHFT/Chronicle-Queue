@@ -203,8 +203,11 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals(5, q.countExcerpts(start, end));
 
             Thread.yield();
-            assertEquals(expected,
-                    q.dump());
+            // on a roll, the file might be truncated making the size remaining just a few bytes
+            assertEquals(expected
+                            .replaceAll(" \\d+ (bytes remaining)", " X $1"),
+                    q.dump()
+                            .replaceAll(" \\d+ (bytes remaining)", " X $1"));
         }
     }
 
