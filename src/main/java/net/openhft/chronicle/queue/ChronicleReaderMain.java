@@ -131,7 +131,7 @@ public class ChronicleReaderMain {
         }
         if (commandLine.hasOption('r')) {
             final String r = commandLine.getOptionValue('r');
-            chronicleReader.asMethodReader(r.equals("null") ? null : r);
+            chronicleReader.asMethodReader(r.equals("null") ? "" : r);
             chronicleReader.showMessageHistory(commandLine.hasOption('g'));
         }
         if (commandLine.hasOption('w')) {
