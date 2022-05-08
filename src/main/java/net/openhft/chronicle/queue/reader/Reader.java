@@ -55,11 +55,10 @@ public interface Reader {
 
     /**
      * specify method reader interface to use
-     * @param methodReaderInterface interface class name. If null, a dummy reader is created
-     *                              TODO: x.23 this argument will become @NonNull
+     * @param methodReaderInterface interface class name. If empty, a dummy reader is created
      * @return this
      */
-    Reader asMethodReader(@Nullable String methodReaderInterface);
+    Reader asMethodReader(@NotNull String methodReaderInterface);
 
     Reader withWireType(@NotNull WireType wireType);
 

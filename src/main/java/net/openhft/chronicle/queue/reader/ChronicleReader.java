@@ -276,8 +276,8 @@ public class ChronicleReader implements Reader {
         return this;
     }
 
-    public ChronicleReader asMethodReader(@Nullable String methodReaderInterface) {
-        if (methodReaderInterface == null)
+    public ChronicleReader asMethodReader(@NotNull String methodReaderInterface) {
+        if (methodReaderInterface.isEmpty())
             entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType);
         else try {
             this.methodReaderInterface = Class.forName(methodReaderInterface);
