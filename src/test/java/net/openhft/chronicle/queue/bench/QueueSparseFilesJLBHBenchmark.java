@@ -43,13 +43,14 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private NanoSampler writeProbe;
     private NanoSampler readProbe;
     private static int round = 1;
-    static Bytes<?> bytesArr = Bytes.elasticByteBuffer(1_000);
+    //static Bytes<?> bytesArr = Bytes.elasticByteBuffer(1_000_000);
+    private int count = 0;
 
     public static void main(String[] args) {
         int throughput = 100_000;
-        int warmUp = 1_000_000;
+        int warmUp = 200_000;
         iterations = 200_000;
-        bytesArr.write("Hello World");
+        //bytesArr.write("Hello World");
 
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(warmUp)
@@ -68,8 +69,8 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
 
         if (round == 1) {
             // Uses sparse file for memory mapping
-            sourceQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
-            sinkQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
+            sourceQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(512L << 32).build();
+            sinkQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(512L << 32).build();
         } else if (round == 2) {
             // UsesConfigures chunking for memory mapping using a large memory block
             sourceQueue = single("benchmark/chunking-largeBlockSize").blockSize(64L << 30).build();
@@ -89,14 +90,17 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     @Override
     public void run(long startTimeNS) {
         try (DocumentContext dc = appender.writingDocument()) {
-            dc.wire().write().bytes(bytesArr);
+            Bytes bytes = dc.wire().bytes();
+            bytes.writeSkip(1L<<20);
+            bytes.writeInt(count++);
             writeProbe.sampleNanos(System.nanoTime() - startTimeNS);
         }
 
         long beforeReadNS = System.nanoTime();
         try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.wire() != null) {
-                dc.wire().read();
+                Bytes bytes = dc.wire().bytes();
+                bytes.readSkip(1L<<20);
                 long afterReadNS = System.nanoTime();
                 jlbh.sample(afterReadNS - startTimeNS);
                 readProbe.sampleNanos(afterReadNS - beforeReadNS);
