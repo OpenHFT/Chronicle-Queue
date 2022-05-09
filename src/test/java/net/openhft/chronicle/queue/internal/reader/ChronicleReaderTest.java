@@ -835,7 +835,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     public void shouldRespectWireType() {
         basicReader().
                 asMethodReader(Say.class.getName()).
-                withWireType(WireType.JSON).
+                withWireType(WireType.JSON_ONLY).
                 execute();
 
         capturedOutput.poll();
