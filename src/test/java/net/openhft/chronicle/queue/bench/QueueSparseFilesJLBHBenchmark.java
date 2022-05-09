@@ -64,22 +64,20 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
 
     @Override
     public void init(JLBH jlbh) {
-        IOTools.deleteDirWithFiles("sparseFile", 5);
-        IOTools.deleteDirWithFiles("chunking-largeBlockSize", 5);
-        IOTools.deleteDirWithFiles("chunking-standardBlockSize", 5);
+        IOTools.deleteDirWithFiles("benchmark", 5);
 
         if (round == 1) {
             // Uses sparse file for memory mapping
-            sourceQueue = single("sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
-            sinkQueue = single("sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
+            sourceQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
+            sinkQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
         } else if (round == 2) {
             // UsesConfigures chunking for memory mapping using a large memory block
-            sourceQueue = single("chunking-largeBlockSize").blockSize(64L << 30).build();
-            sinkQueue = single("chunking-largeBlockSize").blockSize(64L << 30).build();
+            sourceQueue = single("benchmark/chunking-largeBlockSize").blockSize(64L << 30).build();
+            sinkQueue = single("benchmark/chunking-largeBlockSize").blockSize(64L << 30).build();
         } else {
             // Configures chunking for memory mapping using a small memory block
-            sourceQueue = single("chunking-standardBlockSize").blockSize(256L << 20).sourceId(1).build();
-            sinkQueue = single("chunking-standardBlockSize").blockSize(256L << 20).sourceId(1).build();
+            sourceQueue = single("benchmark/chunking-standardBlockSize").blockSize(256L << 20).build();
+            sinkQueue = single("benchmark/chunking-standardBlockSize").blockSize(256L << 20).build();
         }
         appender = sourceQueue.acquireAppender();
         tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
