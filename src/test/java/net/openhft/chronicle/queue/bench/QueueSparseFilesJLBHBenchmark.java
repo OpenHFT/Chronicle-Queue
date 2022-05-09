@@ -43,14 +43,12 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private NanoSampler writeProbe;
     private NanoSampler readProbe;
     private static int round = 1;
-    //static Bytes<?> bytesArr = Bytes.elasticByteBuffer(1_000_000);
     private int count = 0;
 
     public static void main(String[] args) {
         int throughput = 100_000;
         int warmUp = 200_000;
         iterations = 200_000;
-        //bytesArr.write("Hello World");
 
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(warmUp)
@@ -91,8 +89,8 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     public void run(long startTimeNS) {
         try (DocumentContext dc = appender.writingDocument()) {
             Bytes bytes = dc.wire().bytes();
-            bytes.writeSkip(1L<<20);
-            bytes.writeInt(count++);
+            bytes.writeSkip(1L << 20);
+            bytes.writeInt(count);
             writeProbe.sampleNanos(System.nanoTime() - startTimeNS);
         }
 
@@ -100,12 +98,14 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
         try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.wire() != null) {
                 Bytes bytes = dc.wire().bytes();
-                bytes.readSkip(1L<<20);
+                bytes.readSkip(1L << 20);
+                bytes.readInt();
                 long afterReadNS = System.nanoTime();
                 jlbh.sample(afterReadNS - startTimeNS);
                 readProbe.sampleNanos(afterReadNS - beforeReadNS);
             }
         }
+        count++;
     }
 
     @Override
