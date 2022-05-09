@@ -839,7 +839,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 execute();
 
         capturedOutput.poll();
-        assertEquals("\"say\":\"hello\"\n",
+        assertEquals("\"say\":\"hello\"",
                 capturedOutput.poll());
     }
 
