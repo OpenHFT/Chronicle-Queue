@@ -18,7 +18,6 @@
 package net.openhft.chronicle.queue.bench;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
@@ -32,7 +31,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 /*
-Chronicle Queue performance is compared when using sparse files and chunking( with standard and large blockSize). The results illustrate similar performance for both configurations.
+Chronicle Queue performance is compared when using sparse files and chunking( with standard and large blockSize).
  */
 public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private static int iterations;
