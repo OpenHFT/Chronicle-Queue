@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle.queue.bench;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
@@ -30,7 +32,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 /*
-Chronicle Queue performance is compared when using sparse files and chunking. The results illustrate similar performance for both configurations.
+Chronicle Queue performance is compared when using sparse files and chunking( with standard and large blockSize). The results illustrate similar performance for both configurations.
  */
 public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private static int iterations;
@@ -42,11 +44,13 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private NanoSampler writeProbe;
     private NanoSampler readProbe;
     private static int round = 1;
+    static Bytes<?> bytesArr = Bytes.elasticByteBuffer(1_000);
 
     public static void main(String[] args) {
         int throughput = 100_000;
         int warmUp = 1_000_000;
-        iterations = 500_000;
+        iterations = 200_000;
+        bytesArr.write("Hello World");
 
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(warmUp)
@@ -62,27 +66,33 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     @Override
     public void init(JLBH jlbh) {
         IOTools.deleteDirWithFiles("sparseFile", 5);
-        IOTools.deleteDirWithFiles("chunking", 5);
+        IOTools.deleteDirWithFiles("chunking-largeBlockSize", 5);
+        IOTools.deleteDirWithFiles("chunking-standardBlockSize", 5);
 
         if (round == 1) {
+            // Uses sparse file for memory mapping
             sourceQueue = single("sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
             sinkQueue = single("sparseFile").useSparseFiles(true).sparseCapacity(64L << 30).build();
+        } else if (round == 2) {
+            // UsesConfigures chunking for memory mapping using a large memory block
+            sourceQueue = single("chunking-largeBlockSize").blockSize(64L << 30).build();
+            sinkQueue = single("chunking-largeBlockSize").blockSize(64L << 30).build();
         } else {
-            sourceQueue = single("chunking").blockSize(64L << 30).build();
-            sinkQueue = single("chunking").blockSize(64L << 30).build();
+            // Configures chunking for memory mapping using a small memory block
+            sourceQueue = single("chunking-standardBlockSize").blockSize(256L << 20).sourceId(1).build();
+            sinkQueue = single("chunking-standardBlockSize").blockSize(256L << 20).sourceId(1).build();
         }
         appender = sourceQueue.acquireAppender();
         tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
         this.jlbh = jlbh;
-        writeProbe = round == 1 ? jlbh.addProbe("write (sparse file)") : jlbh.addProbe("write (chunking)");
-        readProbe = round == 1 ? jlbh.addProbe("read (sparse file)") : jlbh.addProbe("read (chunking)");
+        writeProbe = round == 1 ? jlbh.addProbe("write (sparse file)") : round == 2 ? jlbh.addProbe("write (chunking-largeBlockSize)") : jlbh.addProbe("write (chunking-standardBlockSize)");
+        readProbe = round == 1 ? jlbh.addProbe("read (sparse file)") : round == 2 ? jlbh.addProbe("read (chunking-largeBlockSize)") : jlbh.addProbe("read (chunking-standardBlockSize)");
     }
 
     @Override
     public void run(long startTimeNS) {
-
         try (DocumentContext dc = appender.writingDocument()) {
-            dc.wire().write().text("Hello world");
+            dc.wire().write().bytes(bytesArr);
             writeProbe.sampleNanos(System.nanoTime() - startTimeNS);
         }
 
@@ -101,7 +111,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     public void complete() {
         sinkQueue.close();
         sourceQueue.close();
-        if (round == 1) {
+        if (round != 3) {
             round++;
             main(null);
         }
