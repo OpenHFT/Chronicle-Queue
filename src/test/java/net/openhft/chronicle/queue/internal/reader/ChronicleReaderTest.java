@@ -835,12 +835,12 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     public void shouldRespectWireType() {
         basicReader().
                 asMethodReader(Say.class.getName()).
-                withWireType(WireType.JSON_ONLY).
+                withWireType(WireType.JSON).
                 execute();
 
         capturedOutput.poll();
         assertEquals("\"say\":\"hello\"",
-                capturedOutput.poll());
+                capturedOutput.poll().trim());
     }
 
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {
