@@ -99,6 +99,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
+    @Deprecated
     private Boolean useSparseFiles;
     private Long sparseCapacity;
     private File path;
@@ -673,6 +674,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
+    @Deprecated
     public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
         if (useSparseFiles && OS.isLinux() && OS.is64Bit())
             this.useSparseFiles = useSparseFiles;
@@ -681,6 +683,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
+    @Deprecated
     public SingleChronicleQueueBuilder sparseCapacity(long sparseCapacity) {
         this.sparseCapacity = sparseCapacity;
         return this;
@@ -688,12 +691,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public long sparseCapacity() {
         long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
-
         // can add an index2index & an index in one go.
         long minSize = Math.max(QueueUtil.testBlockSize(), 64L * indexCount());
         return Math.max(minSize, bs);
     }
 
+    @Deprecated
     public boolean useSparseFiles() {
         return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
     }
@@ -1065,7 +1068,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable
-                                                               Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
+                                                       Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
                                                        @Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
