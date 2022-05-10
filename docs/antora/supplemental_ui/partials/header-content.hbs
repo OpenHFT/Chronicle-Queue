@@ -13,8 +13,14 @@
     </div>
     <div id="topbar-nav" class="navbar-menu">
       <div class="navbar-end">
-        <a class="navbar-item" href="{{{or site.url (or siteRootUrl siteRootPath)}}}">Home</a>
-        <div class="navbar-item has-dropdown is-hoverable">
+       <div class="navbar-item has-dropdown is-hoverable">
+           <a class="navbar-link" href="#">Docs</a>
+                 <div class="navbar-dropdown">
+                      <a class="navbar-item" href="https://docs.chronicle.software/chronicle-fix">Chronicle FIX</a>
+                      <a class="navbar-item" href="https://docs.chronicle.software/chronicle-queue">Chronicle Queue</a>
+                 </div>
+       </div>
+          <div class="navbar-item has-dropdown is-hoverable">
           <a class="navbar-link" href="#">Resources</a>
           <div class="navbar-dropdown">
             <a class="navbar-item" href="https://gitter.im/OpenHFT/Lobby">Gitter Chat</a>
