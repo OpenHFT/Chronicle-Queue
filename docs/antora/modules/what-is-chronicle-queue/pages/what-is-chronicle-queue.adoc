@@ -5,7 +5,7 @@ author: Julia Gustafsson
 :navtitle: What is Chronicle Queue
 :source-highlighter: highlight.js
 
-== A Low-latency message queue
+== A Low-Latency Message Queue
 Chronicle Queue is a "record everything" message queue which operates with microsecond real-time latency. It can be used for rapid Interprocess Communication (IPC) without affecting your system performance. Hence, it is tailored to transfer and store large amounts of data in low-latency environments, where recording of information is a central e.g. the most demanding High Frequency Trading systems.
 
 You could consider Chronicle Queue to be similar to a low-latency broker-less durable/persisted JVM topic. It is a distributed, unbounded, and persisted queue that:
@@ -45,7 +45,7 @@ NOTE: 100 million events per minute is sending an event every 660 nanoseconds; r
 IMPORTANT: This performance is not achieved using a *large cluster of machines*.
 This is using one thread to publish, and one thread to consume.
 
-== No garbage collection
+== No Garbage Collection
 High-performance applications simply cannot tolerate the non-deterministic slowdowns that the Java garbage collector yields when cleaning the heap. Therefore, Chronicle Queue avoids garbage collection altogether by managing the memory stack manually with `RandomAccessFiles`. This means a Chronicle Queue can be viewed as a management interface over off-heap memory, on which anyone can build their own solution. E.g. it is suitable for exceptionally fast interprocess communication (IPC) with no negative impact on the system performance.
 
 == Persistent
@@ -58,7 +58,7 @@ Replication for Chronicle Queue supports Chronicle Wire Enterprise. This enables
 
 Chronicle Queue also supports LZW, Snappy, and GZIP compression. These formats however add significant latency. These are only useful if you have strict limitations on network bandwidth.
 
-=== Delivery mode semantics
+=== Delivery Mode Semantics
 Chronicle Queue supports a number of semantics:
 
 * Every message is replayed on restart.

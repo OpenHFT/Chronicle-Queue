@@ -8,7 +8,7 @@ author: Julia Gustafsson
 Chronicle have tutorials in
 The TensorFlow tutorials are written as Jupyter notebooks and run directly in Google Colab—a hosted notebook environment that requires no setup. Click the Run in Google Colab button.
 
-== What you need to get started
+== What You Need to Get Started
 - Maven 3.6.x
 - Java 8 update 180+
 - Intellij CE or another IDE
@@ -20,7 +20,7 @@ image::Two-hop-latency.PNG[]
 
 https://github.com/OpenHFT/Chronicle-Queue-Demo/tree/master/order-processor
 
-== Downloading and running sample programs
+== Downloading and Running Sample Programs
 
 If you're running Windows, you will need to install the `git` client and `open-ssh` Cygwin, https://cygwin.com/install.html[here],
 with a guide showing installation and packages http://www.mcclean-cooper.com/valentino/cygwin_install/[here].

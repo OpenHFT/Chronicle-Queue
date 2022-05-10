@@ -20,12 +20,12 @@ _cycle_ numbers present in the directory. Maintaining this table allows an `Exce
 
 The following sections describe how rolling is performed, how the roll cycle interval can be customized, and finally provide some general advice to consider when deciding the rolling schedule.
 
-== How rolling works
+== How Rolling Works
 When the queue reaches the point in time when it should roll, the appender will atomically write an end-of-file (EOF) mark at the end of the current file, to indicate that no other appender should write to it. Likewise, no tailer should read further than this mark.
 
 If the process was shut down and later restarted after rolling should have occurred, the appender will try to locate the old file(s) and write the EOF marker. However, after a certain timeout, the tailers will act as if there is an EOF mark in the file(s) regardless.
 
-== Roll cycle configuration
+== Roll Cycle Configuration
 The interval for rolling is configured using the queue's attribute `rollCycle`. As an example, the queue can be configured to roll its file (i.e. create a new file) every day by providing the `RollCycle.DAILY`:
 
 [source, java]
@@ -50,7 +50,7 @@ In the case where another Chronicle Queue instance is created before any appends
 ====
 
 [#epoch]
-== Controlling the exact roll time
+== Controlling the Exact Roll Time
 Chronicle Queue is UTC time based and uses `System.currentTimeMillis()` to evaluate when it is time to roll the queue. Rolling occurs whenever a new time frame of the selected kind is started, meaning for minutely rolling a new queue is created when a new minute begins and daily rolls occurs at midnight UTC time.
 
 This behavior can be changed using Chronicle Queue’s attribute `epoch()`. Epoch refers to a milliseconds offset to the set time frame.In other words, if you set the epoch to be `epoch(1)` and use `RollCycle.DAILY` the queue will roll at 1 millisecond past midnight UTC time.Putting it together:
@@ -75,7 +75,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
 
 IMPORTANT: We do not recommend that you change the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
 
-== Available roll-cycles
+== Available Roll-Cycles
 As described earlier, the roll-cycle determines how often a new queue is created. However, each roll-cycle also leverages queues with a varying message capacity. This results in different roll-cycles having a maximum capacity in terms of throughput.
 
 The available roll-cycles and their capacities are summarized in the table below:
@@ -113,7 +113,7 @@ The available roll-cycles and their capacities are summarized in the table below
 
 IMPORTANT: Roll-cycles named _TEST*_ should only be used in test environments.
 
-== Timezone rollover ★
+== Timezone Rollover ★
 Chronicle Queue bases its roll times on the UTC time zone. However, Chronicle Queue Enterprise supports time zone rollover. This allows specifying a time and periodicity of queue rollovers which takes account of the user's local timezone, rather than UTC.
 
 [IMPORTANT]
@@ -144,7 +144,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
     .build();
 ----
 
-== Archiving old queue files ★
+== Archiving Old Queue Files ★
 Over time, it may become necessary to automatically delete or archive old queue files. An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete.
 
 To facilitate this operation, Chronicle Queue Enterprise tracks references to its _roll-cycle_ files internally. Ensuring there are no references to a given file it is done by checking that `ChronicleQueue.numberOfReferences()` returns zero.
@@ -170,13 +170,13 @@ public void removeOldQueueFiles() throws IOException {
 }
 ----
 
-== General advice on rolling
+== General Advice on Rolling
 At roll-time, a few unavoidable objects and memory mappings are created, and the old memory mappings are released. This activity can introduce slight jitter to your application. Chronicle aim's to keep this to a minimum, and control when it occurs. However, it is still recommended avoiding rolling at critical points in time to the extent possible.
 
-=== Adapt to down-time
+=== Adapt to Down-Time
 In systems that are not always active, it is advised to schedule rolls during the down-time. However, for applications with a buzy feed and no down-time, Chronicle recommends using minutely rolling (a new queue is created every minute). This keep jitter to a minimum, as only one minute’s worth of data has to be unmapped on a queue-roll.
 
-=== Avoid large files
+=== Avoid Large Files
 It is generally recommended limiting the size of queue files to around < 250GB as unmapping a large `.cq4` file has can cause unwanted jitter. Therefore, if possible, use a more regular roll-cycle to avoid any performance penalties associated with unmapping large files.
 
 

@@ -1,4 +1,4 @@
-= Wire type
+= Wire Type
 keywords: wire type, chronicle queue, queue, java
 author: Julia Gustafsson
 :reftext: Wire type

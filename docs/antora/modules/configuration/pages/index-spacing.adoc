@@ -1,4 +1,4 @@
-= Index sizing
+= Index Sizing
 keywords: index sizing, chronicle queue, queue, java
 author: Julia Gustafsson
 :reftext: Index sizing

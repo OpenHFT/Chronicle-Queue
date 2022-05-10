@@ -14,7 +14,7 @@ Chronicle Queue Enterprise introduces the ability to encrypt your message queues
 * The same encryption key must be available when accessing these encrypted queue files.
 ====
 
-== AES encryption
+== AES Encryption
 AES 64-bit encryption can be used by specifying `aesEncryption` at queue build time, and supplying an 8-bit encryption key.
 
 For example:
@@ -34,7 +34,7 @@ public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
     }
 ....
 
-== Customer specified encryption
+== Customer Specified Encryption
 You can supply a bespoke encryption method to encrypt your messages using, perhaps, a more complex encryption method.
 
 For example, you could perhaps combine encryption with salting, and/or compression.
