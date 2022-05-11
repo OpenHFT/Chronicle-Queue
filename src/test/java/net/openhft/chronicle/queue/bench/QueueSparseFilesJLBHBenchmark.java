@@ -37,7 +37,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private static final int throughput = Integer.getInteger("throughput", 100_000);
     private static final int runTime = Integer.getInteger("runTime", 30);
     private static final long iterations = (long) throughput * runTime;
-    private static int round = 1;
+    private final int round;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
@@ -47,19 +47,26 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private NanoSampler readProbe;
     private int count = 0;
 
-    public static void main(String[] args) {
-        System.out.println("-Dthroughput=" + throughput + " -DrunTime=" + runTime);
-        int warmUp = 200_000;
+    public QueueSparseFilesJLBHBenchmark(int round) {
+        this.round = round;
+    }
 
-        JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(warmUp)
-                .iterations(iterations)
-                .throughput(throughput)
-                .recordOSJitter(false)
-                .skipFirstRun(true)
-                .runs(5)
-                .jlbhTask(new QueueSparseFilesJLBHBenchmark());
-        new JLBH(lth).start();
+    public static void main(String... args) {
+        System.out.println("-Dthroughput=" + throughput
+                + " -DrunTime=" + runTime);
+        int warmUp = 200_000;
+        for (int round = 1; round <= 3; round++) {
+            System.out.println("========\nround= " + round + "\n========\n");
+            JLBHOptions lth = new JLBHOptions()
+                    .warmUpIterations(warmUp)
+                    .iterations(iterations)
+                    .throughput(throughput)
+                    .recordOSJitter(false)
+                    .skipFirstRun(true)
+                    .runs(5)
+                    .jlbhTask(new QueueSparseFilesJLBHBenchmark(round));
+            new JLBH(lth).start();
+        }
     }
 
     @Override
@@ -113,9 +120,5 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     public void complete() {
         sinkQueue.close();
         sourceQueue.close();
-        if (round != 3) {
-            round++;
-            main(null);
-        }
     }
 }
