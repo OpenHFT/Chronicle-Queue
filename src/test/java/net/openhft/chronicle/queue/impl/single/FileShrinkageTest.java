@@ -14,39 +14,39 @@ import java.io.RandomAccessFile;
 public class FileShrinkageTest extends ChronicleQueueTestBase {
 
     @Test
-    public void testNoShrinkage() throws IOException, InterruptedException {
+    public void testShrinkSynchronously() throws IOException, InterruptedException {
 
         final File dataDir = getTmpDir();
-
-        SetTimeProvider timeProvider = new SetTimeProvider();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
 
         File file;
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .fileShrinkage(FileShrinkage.SHRINK_SYNCHRONOUSLY)
                 .timeProvider(timeProvider).build()) {
-            ExcerptAppender excerptAppender = queue.acquireAppender();
+            final ExcerptAppender excerptAppender = queue.acquireAppender();
             excerptAppender.writeText("hello");
             file = excerptAppender.currentFile();
         }
 
         timeProvider.advanceMillis(2_000);
         Thread.sleep(2_000);
+
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(timeProvider)
                 .fileShrinkage(FileShrinkage.SHRINK_SYNCHRONOUSLY)
                 .build()) {
 
-            queue.acquireAppender();
 
-            RandomAccessFile raf = new RandomAccessFile(file, "r");
-            long len = raf.length();
+            // we should not have to do this,  but even if we do it still does not work.
+            //  queue.acquireAppender();
 
-            System.out.println("len=" + len + ", file=" + file.getAbsolutePath());
-            Assert.assertTrue(len > 5206000);
-            Assert.assertTrue(len < 530000);
-            System.out.println(len);
+            try (final RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+                final long len = raf.length();
+                System.out.println("len=" + len + ", file=" + file.getAbsolutePath());
+                Assert.assertTrue("len=" + len, len > 520000 && len < 530000);
+            }
         }
     }
 
