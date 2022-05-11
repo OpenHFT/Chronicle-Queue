@@ -34,7 +34,10 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 Chronicle Queue performance is compared when using sparse files and chunking( with standard and large blockSize).
  */
 public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
-    private static int iterations;
+    private static final int throughput = Integer.getInteger("throughput", 100_000);
+    private static final int runTime = Integer.getInteger("runTime", 30);
+    private static final long iterations = (long) throughput * runTime;
+    private static int round = 1;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
@@ -42,13 +45,11 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private JLBH jlbh;
     private NanoSampler writeProbe;
     private NanoSampler readProbe;
-    private static int round = 1;
     private int count = 0;
 
     public static void main(String[] args) {
-        int throughput = 100_000;
+        System.out.println("-Dthroughput=" + throughput + " -DrunTime=" + runTime);
         int warmUp = 200_000;
-        iterations = 200_000;
 
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(warmUp)
