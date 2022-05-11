@@ -1812,7 +1812,8 @@ Replication has three modes of operation;
 Replication between hosts ensures real-time backup of all your queue data.
 For more information see <<docs/replication.adoc#, Queue Replication>> and <<docs/queue-replication-message-protocol-overview.adoc#, TCP/IP Replication Protocol>>.
 
-image::https://raw.githubusercontent.com/OpenHFT/Chronicle-Queue/master/docs/images/queue-replication.png[]
+.Queue Replication
+image::./docs/images/chronicle-queue.png[750,600]
 
 ==== Further information
 
