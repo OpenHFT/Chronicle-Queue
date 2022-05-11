@@ -67,18 +67,18 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
 
         if (round == 1) {
             // Uses sparse file for memory mapping
-            sourceQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(512L << 32).build();
-            sinkQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(512L << 32).build();
+            sourceQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(1L << 40).build();
+            sinkQueue = single("benchmark/sparseFile").useSparseFiles(true).sparseCapacity(1L << 40).build();
         } else if (round == 2) {
             // UsesConfigures chunking for memory mapping using a large memory block
-            sourceQueue = single("benchmark/chunking-largeBlockSize").blockSize(64L << 30).build();
-            sinkQueue = single("benchmark/chunking-largeBlockSize").blockSize(64L << 30).build();
+            sourceQueue = single("benchmark/chunking-largeBlockSize").blockSize(1L << 40).build();
+            sinkQueue = single("benchmark/chunking-largeBlockSize").blockSize(1L << 40).build();
         } else {
             // Configures chunking for memory mapping using a small memory block
-            sourceQueue = single("benchmark/chunking-standardBlockSize").blockSize(256L << 20).build();
-            sinkQueue = single("benchmark/chunking-standardBlockSize").blockSize(256L << 20).build();
+            sourceQueue = single("benchmark/chunking-standardBlockSize").blockSize(64L << 20).build();
+            sinkQueue = single("benchmark/chunking-standardBlockSize").blockSize(64L << 20).build();
         }
-        appender = sourceQueue.acquireAppender();
+        appender = sourceQueue.acquireAppender().disableThreadSafetyCheck(true);
         tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
         this.jlbh = jlbh;
         writeProbe = round == 1 ? jlbh.addProbe("write (sparse file)") : round == 2 ? jlbh.addProbe("write (chunking-largeBlockSize)") : jlbh.addProbe("write (chunking-standardBlockSize)");
@@ -89,7 +89,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     public void run(long startTimeNS) {
         try (DocumentContext dc = appender.writingDocument()) {
             Bytes bytes = dc.wire().bytes();
-            bytes.writeSkip(1L << 20);
+            bytes.writeSkip(4L << 10);
             bytes.writeInt(count);
             writeProbe.sampleNanos(System.nanoTime() - startTimeNS);
         }
@@ -98,7 +98,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
         try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.wire() != null) {
                 Bytes bytes = dc.wire().bytes();
-                bytes.readSkip(1L << 20);
+                bytes.readSkip(4L << 10);
                 bytes.readInt();
                 long afterReadNS = System.nanoTime();
                 jlbh.sample(afterReadNS - startTimeNS);
