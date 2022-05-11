@@ -1,4 +1,4 @@
-= Index count
+= Index Count
 keywords: index count, chronicle queue, queue, java
 author: Julia Gustafsson
 :reftext: Index count

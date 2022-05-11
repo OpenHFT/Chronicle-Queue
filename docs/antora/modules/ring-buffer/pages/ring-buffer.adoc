@@ -16,7 +16,7 @@ TIP: https://jerryshea.github.io/2018/07/27/RingBuffer.html[This article] gives 
 .Chronicle Ring Buffer
 image::chronicle-ring.png[Chronicle Ring Buffer, width=700px]
 
-== The mechanics of Chronicle Ring Buffer
+== The Mechanics of Chronicle Ring Buffer
 
 The Chronicle Queue Enterprise Ring Buffer is a multi-writer, multi-reader, zero-garbage collection, monitored ring buffer implementation which takes `Bytes`. As the Chronicle stack is built on `Bytes`, you can use the ring buffer for byte arrays, packed objects, or you can serialise (or de-serialise objects out of, or into, it using https://github.com/OpenHFT/Chronicle-Wire[Chronicle Wire].
 
@@ -24,7 +24,7 @@ Backing the ring buffer with a persistent BytesStore (that is, one backed with a
 
 IMPORTANT: The maximum size of a message that can be written to a ring buffer is 1/4 of its capacity. An exception will be thrown if this is exceeded. The exception may be thrown at either read or write time depending on how the RB is written to, and whether asserts are enabled.
 
-== Common scenarios
+== Common Scenarios
 - Back the ring buffer with an in-memory BytesStore. +
 You can have multiple writers and multiple readers in the same process. The ring buffer does not survive longer than the process.
 
@@ -78,7 +78,7 @@ The ring buffer can be used in one of two ways in `EnterpriseSingleChronicleQueu
 - Asynchronous writes
 - Writes and reads using ring buffer
 
-=== Asynchronous writes
+=== Asynchronous Writes
 
 If `writeBufferMode` is set to `BufferMode.Asynchronous` then any writes to the queue will be given to the ring buffer. A background task is created in the builder's event loop to drain the ring buffer in to the underlying (disk-backed) Chronicle queue. Reads are made from the underlying queue. This use-case is designed to help with very "bursty" writes,
 which cannot afford to be blocked by a slow underlying disk sub-system. The ring's buffer size must be carefully chosen to allow for the maximum burst size.
@@ -98,14 +98,14 @@ which cannot afford to be blocked by a slow underlying disk sub-system. The ring
         ...
     }
 ----
-=== Writes and reads using ring buffer
+=== Writes and Reads Using Ring Buffer
 
 If both `writeBufferMode` and `readBufferMode` are set to `BufferMode.Asynchronous` then any writes to the queue will
 be given to the ring buffer and reads will read from the ring buffer. This gives the lowest possible latency as the
 disk subsystem is not involved at all. As with asynchronous writes, a background task is created in the builder's event
 loop to drain the ring buffer in to the underlying (disk-backed) chronicle queue.
 
-==== Example for asynchronous reads and writes using a memory-mapped file and two processes
+==== Example for Asynchronous Reads and Writes Using a Memory-Mapped File and Two Processes
 
 If you don't need access across processes, then no need to set `bufferBytesStoreCreator`. The default `bufferBytesStoreCreator` will create an in-memory `ByteStore`.
 
@@ -148,10 +148,10 @@ the only benefit to be gained with a memory mapped file is if it mapped to a fas
     }
 ----
 
-=== Drainer thread
+=== Drainer Thread
 When the queue's event loop is closed, the drainer thread will wait up to 5 seconds to finish draining to the underlying queue. If draining can not complete, a warning message is logged
 
-== Unsupported operations
+== Unsupported Operations
 The following operations are unsupported when using `EnterpriseSingleChronicleQueue` backed by a ring buffer:
 
 * Writing and reading of metadata

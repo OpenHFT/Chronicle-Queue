@@ -1,4 +1,4 @@
-= Pre-touching
+= Pre-Touching
 keywords: chronicle queue, queue, java, performance, low-latency, preloader, pre-touching
 author: Niel Clifford, Julia Gustafsson
 :reftext: Pre-touching
@@ -19,7 +19,7 @@ There are two ways to perform pre-touching, outlined below:
 * **Triggering pre-touches manually** - Perform pre-touching once for the current appender using `ExcerptAppender.pretouch()`
 * **Automatically pre-touching using Chronicle's preloader ★** - The preloader automatically pre-touches segments at a given time interval _(Enterprise feature)_.
 
-== Pre-touching once
+== Pre-Touching Once
 A single pre-touching operation can be performed by the appender by calling `pretouch()` as follows:
 
 [source, java]
@@ -45,7 +45,7 @@ newSingleThreadScheduledExecutor().scheduleAtFixedRate(
 <3> The period between successive executions
 <4> The time unit of the `initialDelay` and period parameters
 
-== Automatic pre-touching ★
+== Automatic Pre-Touching ★
 The easiest way to configure periodical pre-touching is by using Chronicle's out-of-process preloader. It can be activated in the Chronicle Queue Builder as follows:
 
 [source, java]

@@ -1,4 +1,4 @@
-= Read/write proxies
+= Read/Write Proxies
 keywords: queue, java, proxy, appending, tailing, chronicle
 author: Julia Gustafsson
 :reftext: Read/write proxies

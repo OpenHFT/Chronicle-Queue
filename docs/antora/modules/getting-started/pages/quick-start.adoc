@@ -1,4 +1,4 @@
-= Get started with Chronicle Queue
+= Get Started with Chronicle Queue
 keywords: chronicle queue, queue, java
 author: Julia Gustafsson
 :reftext: Get started with Chronicle Queue
@@ -52,7 +52,7 @@ dependencies {
 == Hello World with Chronicle Queue
 Now that the installation is complete it is time to create a first queue and try appending and reading messages from it.
 
-=== Creating a new queue
+=== Creating a New Queue
 A new Chronicle Queue is obtained from a builder by passing the field `singleBuilder` the path where the queue is to be stored. The example below creates an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
 
 [source, java]
@@ -68,7 +68,7 @@ The queue files will reside in the directory `getting-started` and files are nam
 ${java.io.tmpdir}/getting-started/{today}.cq4
 ----
 
-=== Writing to a queue
+=== Writing to a Queue
 Messages are written, or appended, to a queue using an appender. The appender writes messages to the end of the queue only, there is no way to insert messages at a specific location.
 
 Here is how you can append a simple text message containing the text "Hello World!":
@@ -112,7 +112,7 @@ queue.close();
 
 IMPORTANT: No data will be lost when closing the queue. This procedure only cleans up resources that were used at runtime.
 
-=== Putting it all together
+=== Putting it all Together
 
 Putting these instructions together, the application looks as follows:
 

@@ -1,4 +1,4 @@
-= ★ Buffer modes
+= ★ Buffer Modes
 keywords: buffer modes, chronicle queue, queue, java
 author: Julia Gustafsson
 :reftext: Buffer modes
