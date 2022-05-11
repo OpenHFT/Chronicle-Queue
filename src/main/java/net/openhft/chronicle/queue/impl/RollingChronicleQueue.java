@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.impl.single.FileShrinkage;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -110,4 +111,8 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the checkpointInterval used by delta wire
      */
     int deltaCheckpointInterval();
+
+    default FileShrinkage fileShrinkage() {
+        return FileShrinkage.SHRINK_ASYNCHRONOUSLY;
+    }
 }
