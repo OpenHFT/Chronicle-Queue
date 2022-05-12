@@ -37,7 +37,7 @@ Chronicle Queue performance is compared when using sparse files and chunking( wi
 mvn exec:java -Dexec.mainClass=net.openhft.chronicle.queue.bench.QueueSparseFilesJLBHBenchmark -Dexec.classpathScope=test
  */
 public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
-    private static final int throughput = Integer.getInteger("throughput", 100_000);
+    private static final int throughput = Integer.getInteger("throughput", 10_000);
     private static final int runTime = Integer.getInteger("runTime", 30);
     private static final long iterations = (long) throughput * runTime;
     private final int round;
