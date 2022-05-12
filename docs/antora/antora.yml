@@ -1,6 +1,6 @@
 name: chronicle-queue
 title: Chronicle Queue Docs
-version: develop
+version: ""
 start_page: introduction:introduction.adoc
 nav:
   - modules/ROOT/nav.adoc

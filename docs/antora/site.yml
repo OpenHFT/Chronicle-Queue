@@ -13,7 +13,7 @@ content:
       tags: [testdoc]
 ui:
   bundle:
-    url: ui-bundle.zip # As of now, the UI bundle is built locally on Julia's laptop. Contact her to make changes.
+    url: ui-bundle.zip # The UI bundle (page styling) is in Chronicle-Antora library.
   supplemental_files: ./supplemental_ui
     #path: ui.yml
     #  contents: |
