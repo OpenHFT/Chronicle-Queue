@@ -1,4 +1,4 @@
-= Roll cycle
+= Roll Cycle
 keywords: roll cycle, chronicle queue, queue, java
 author: Julia Gustafsson
 :reftext: Roll cycle

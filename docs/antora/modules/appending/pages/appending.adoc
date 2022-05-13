@@ -81,7 +81,7 @@ appender.writeDocument(w -> w.write("trade").marshallable(
                 .write("trader").text("peter")));
 ----
 
-== Writing raw data
+== Writing Raw Data
 You can write "raw data" which is self-describing. The types will always be correct; position is the only indication as to the meaning of those values.
 
 [source,Java]
@@ -172,7 +172,7 @@ Hello World
 000402e0 6C 6F 20 57 6F 72 6C 64                          lo World
 ----
 
-== Writing to a queue using `ChronicleWriter`
+== Writing to a Queue Using `ChronicleWriter`
 
 If using `MethodReader` and `MethodWriter` then you can write single-argument method calls to a queue
 using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
@@ -212,7 +212,7 @@ or
 
 If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
 
-== Read/write proxies
+== Read/Write Proxies
 Chronicle v4.4+ supports the use of proxies to write and read messages. You start by defining an asynchronous `interface`, where all methods have:
 
 - Arguments which are only inputs
