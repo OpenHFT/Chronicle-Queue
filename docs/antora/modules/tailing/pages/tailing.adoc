@@ -102,7 +102,7 @@ An abstraction can be added to filter messages, or assign messages to just one m
 
 As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic. Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
 
-== Tailers and file handlers clean up
+== Tailers and File Handlers Clean Up
 
 Chronicle Queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
 If you are writing your code not have GC pauses and you explicitly want to clean up the file handlers, you can call the following:
@@ -146,7 +146,7 @@ boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
         readingDocument().isPresent();
 ----
 
-== Restartable tailers
+== Restartable Tailers
 
 AKA named tailers.
 
@@ -187,7 +187,7 @@ NOTE: The `direction()` is not preserved across restarts, only the next index to
 NOTE: The index of a tailer is only progressed when the `DocumentContext.close()` is called.
 If this is prevented by an error, the same message will be read on each restart.
 
-== Command line tools - reading and writing a Chronicle Queue
+== Command Line Tools - Reading and Writing a Chronicle Queue
 
 Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
 
@@ -284,7 +284,7 @@ $ ./bin/dump_queue.sh <file path>
 ----
 
 '''
-=== Reading a queue using `ChronicleReaderMain`
+=== Reading a Queue Using `ChronicleReaderMain`
 
 The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project). As mentioned above, it is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
 

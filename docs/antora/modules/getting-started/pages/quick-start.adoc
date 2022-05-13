@@ -8,10 +8,10 @@ author: Julia Gustafsson
 This section helps you get started with Chronicle Queue in a few minutes. The process can be summed up in five steps:
 
 . <<Installing Chronicle Queue>>
-. <<Creating a new queue>>
-. <<Writing to a queue>>
-. <<Reading from a queue>>
-. <<Cleaning up>>
+. <<Creating a New Queue>>
+. <<Writing to a Queue>>
+. <<Reading From a Queue>>
+. <<Cleaning Up>>
 
 The provided guide does not intend to be an exhaustive explanation of these steps but rather provide enough information to get you up and running quickly. Hence, most of the topics are explained in greater depth throughout the Chronicle Queue documentation.
 
@@ -81,7 +81,7 @@ appender.writeText("Hello World!"); #<2>
 <1> Creates an appender
 <2> Writes "Hello World!" to the queue
 
-=== Reading from a queue
+=== Reading From a Queue
 Reading a from a queue is easiest done using a tailer, namely `ExcerptTailer`. The term _tailing_ stems from reading from the queue's tail, i.e. the end of the queue. However, you are not limited to only read from the end of the queue using the tailer.
 
 Here is how it is used to read the "Hello World" message that was just written to the queue:
@@ -102,7 +102,7 @@ You can also dump the raw contents of the queue to the console using the method 
 queue.dump();
 ----
 
-=== Cleaning up
+=== Cleaning Up
 Chronicle Queue stores its data off-heap, therefore it is recommended that you call `.close()` once you have finished working with Chronicle Queue to free up resources.
 
 [source, java]
@@ -112,7 +112,7 @@ queue.close();
 
 IMPORTANT: No data will be lost when closing the queue. This procedure only cleans up resources that were used at runtime.
 
-=== Putting it all Together
+=== Putting It All Together
 
 Putting these instructions together, the application looks as follows:
 

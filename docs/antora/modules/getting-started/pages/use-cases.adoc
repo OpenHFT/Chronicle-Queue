@@ -1,4 +1,4 @@
-= Use cases
+= Use Cases
 keywords: chronicle queue, queue, java, use cases
 author: Julia Gustafsson
 :reftext: Use cases
