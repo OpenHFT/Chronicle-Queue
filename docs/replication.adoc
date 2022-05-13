@@ -8,7 +8,7 @@
 Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle Queue from one host, to one or more other hosts using TCP/IP.
 
 .Chronicle Queue Replication
-image::images/queue-replication.png[]
+image::images/chronicle-queue.png[500,450]
 
 === Replication protocol overview
 
