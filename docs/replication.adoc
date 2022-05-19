@@ -26,7 +26,9 @@ One of the reasons that we enforce this is that, in a microservices architecture
 
 Any message that is written to the `source` is copied to the `sink`. The `sink` therefore becomes a mirror image of the `source`.
 
-At startup, replication locks the `source` queue, and waits for the `sink`(s) to report the number of records it has. If the `sink` has more records, they are replayed back to `source` before it is unlocked and made usable again. This is done to provide automatic data re-synchronisation after a failover to the `sink`.
+At startup, replication locks the `source` queue, and waits for the `sink`(s) to report the number of records it has.
+If the `sink` has more records, they are replayed back to `source` (this is also known as "back filling") before it is unlocked and made usable again.
+This is done to provide automatic data re-synchronisation after a failover to the `sink`.
 
 The set of hosts onto which the queue is replicated, is defined as a `cluster`. The configuration for a cluster is as follows:
 
