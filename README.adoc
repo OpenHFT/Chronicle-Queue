@@ -1832,3 +1832,5 @@ image::./docs/images/chronicle-queue.png[750,600]
 
 == Chronicle Software Release Notes
 https://chronicle.software/release-notes[Leave your e-mail] to get information about the latest releases and patches to stay up-to-date. 
+
+TESTING SONARCLOUD
