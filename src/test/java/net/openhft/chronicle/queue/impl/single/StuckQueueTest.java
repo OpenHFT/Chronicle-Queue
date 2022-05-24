@@ -24,8 +24,7 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
     @Test
     public void test() throws IOException {
 
-        // todo remove see https://github.com/OpenHFT/Chronicle-Queue/issues/837
-        assumeFalse(Jvm.isMacArm());
+
         // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
         assumeFalse(OS.isWindows());
 
