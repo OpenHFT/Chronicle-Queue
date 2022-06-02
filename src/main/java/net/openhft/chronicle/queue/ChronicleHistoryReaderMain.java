@@ -45,9 +45,10 @@ public class ChronicleHistoryReaderMain {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
-        final ChronicleHistoryReader chronicleHistoryReader = chronicleHistoryReader();
-        setup(commandLine, chronicleHistoryReader);
-        chronicleHistoryReader.execute();
+        try (final ChronicleHistoryReader chronicleHistoryReader = chronicleHistoryReader()) {
+            setup(commandLine, chronicleHistoryReader);
+            chronicleHistoryReader.execute();
+        }
     }
 
     protected void setup(@NotNull final CommandLine commandLine, @NotNull final ChronicleHistoryReader chronicleHistoryReader) {
