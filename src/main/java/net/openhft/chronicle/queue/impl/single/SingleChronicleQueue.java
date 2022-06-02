@@ -194,7 +194,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             // release the write lock if the process is dead
             if (writeLock instanceof TableStoreWriteLock) {
-                ((TableStoreWriteLock) writeLock).forceUnlockIfProcessIsDead();
+                writeLock.forceUnlockIfProcessIsDead();
             }
 
             this.appendLock = builder.appendLock();

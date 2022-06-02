@@ -116,15 +116,16 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
 
-            ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
+            try (ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
                     .withBasePath(queuePath3.toPath())
                     .withTimeUnit(TimeUnit.MICROSECONDS)
-                    .withMessageSink(System.out::println);
-            Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
-            chronicleHistoryReader.outputData();
+                    .withMessageSink(System.out::println)) {
+                Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
+                chronicleHistoryReader.outputData();
 
-            Assert.assertEquals(5, histos.size());
-            Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
+                Assert.assertEquals(5, histos.size());
+                Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
+            }
         } finally {
             IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
         }

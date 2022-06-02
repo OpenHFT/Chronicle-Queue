@@ -5,11 +5,13 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.util.ToolsUtil;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Closeable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -18,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class ChronicleHistoryReader implements HistoryReader {
+public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
     protected Path basePath;
@@ -34,6 +36,7 @@ public class ChronicleHistoryReader implements HistoryReader {
     protected long lastWindowCount = 0;
     protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
     protected int lastHistosSize = 0;
+    protected ExcerptTailer tailer;
 
     static {
         ToolsUtil.warnIfResourceTracing();
@@ -87,15 +90,21 @@ public class ChronicleHistoryReader implements HistoryReader {
         return this;
     }
 
+    // TODO: rename as queue is now cached
     @NotNull
     protected ChronicleQueue createQueue() {
+        if (tailer != null && ! tailer.queue().isClosed()) {
+            return tailer.queue();
+        }
         if (!Files.exists(basePath)) {
             throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
         }
-        return SingleChronicleQueueBuilder
+        SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .readOnly(true)
                 .build();
+        tailer = queue.createTailer();
+        return queue;
     }
 
     @Override
@@ -107,18 +116,17 @@ public class ChronicleHistoryReader implements HistoryReader {
 
     @Override
     public Map<String, Histogram> readChronicle() {
-        try (final ChronicleQueue q = createQueue()) {
-            final ExcerptTailer tailer = q.createTailer();
-            final WireParselet parselet = parselet();
-            final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(Long.toString(methodId), wire.read());
-            MessageHistory.set(new VanillaMessageHistory());
-            try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, fieldNumberParselet, null, parselet)) {
+        createQueue();
 
-                while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
-                    ++counter;
-                    if (this.progress && counter % 1_000_000L == 0) {
-                        Jvm.debug().on(getClass(), "Progress: " + counter);
-                    }
+        final WireParselet parselet = parselet();
+        final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(Long.toString(methodId), wire.read());
+        MessageHistory.set(new VanillaMessageHistory());
+        try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, fieldNumberParselet, null, parselet)) {
+
+            while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
+                ++counter;
+                if (this.progress && counter % 1_000_000L == 0) {
+                    Jvm.debug().on(getClass(), "Progress: " + counter);
                 }
             }
         }
@@ -262,5 +270,10 @@ public class ChronicleHistoryReader implements HistoryReader {
     @NotNull
     protected Histogram histogram() {
         return new Histogram(60, 4);
+    }
+
+    @Override
+    public void close() {
+        tailer.queue().close();
     }
 }
