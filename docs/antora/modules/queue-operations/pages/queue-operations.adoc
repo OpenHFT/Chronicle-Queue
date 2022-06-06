@@ -1,4 +1,4 @@
-= Queue operations
+= Queue Operations
 keywords: queue, java, appending, tailing, chronicle
 author: Julia Gustafsson
 :reftext: Queue operations

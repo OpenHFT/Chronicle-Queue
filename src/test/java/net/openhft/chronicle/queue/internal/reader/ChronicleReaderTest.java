@@ -240,7 +240,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         basicReader()
                 // matches goodbye, but not hello or history
                 .withInclusionRegex("goodbye")
-                .asMethodReader(null)
+                .asMethodReader("")
                 .execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
@@ -839,8 +839,8 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 execute();
 
         capturedOutput.poll();
-        assertEquals("\"say\":\"hello\"\n",
-                capturedOutput.poll());
+        assertEquals("\"say\":\"hello\"",
+                capturedOutput.poll().trim());
     }
 
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {

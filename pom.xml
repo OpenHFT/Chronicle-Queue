@@ -21,13 +21,13 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.31</version>
+        <version>1.1.32</version>
         <relativePath />
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.23ea7-SNAPSHOT</version>
+    <version>5.23ea8-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -57,13 +57,6 @@
     </dependencyManagement>
 
     <dependencies>
-
-        <dependency>
-            <groupId>org.openjdk.jol</groupId>
-            <artifactId>jol-core</artifactId>
-            <version>0.10</version>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>net.openhft</groupId>
@@ -124,6 +117,13 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-core</artifactId>
+            <type>test-jar</type>
+        </dependency>
+
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
@@ -311,6 +311,7 @@
             <plugin>
                 <groupId>net.openhft</groupId>
                 <artifactId>binary-compatibility-enforcer-plugin</artifactId>
+                <version>1.0.13</version>
                 <executions>
                     <execution>
                         <phase>verify</phase>
@@ -321,7 +322,17 @@
                             <referenceVersion>5.23ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                             <!-- Reduce the API surface of ChronicleReader -->
-                            <binaryCompatibilityPercentageRequired>86.1</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>89.3</binaryCompatibilityPercentageRequired>
+                            <extraOptions>
+                                <!--This skips "internal" but checks "impl"-->
+                                <extraOption>
+                                    <name>-keep-internal</name>
+                                </extraOption>
+                                <extraOption>
+                                    <name>skip-internal-packages</name>
+                                    <value>.*internal.*</value>
+                                </extraOption>
+                            </extraOptions>
                         </configuration>
                     </execution>
                 </executions>

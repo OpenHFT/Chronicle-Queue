@@ -114,7 +114,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         basicReader().
                 // matches goodbye, but not hello or history
                 withInclusionRegex("goodbye").
-                asMethodReader(null).
+                asMethodReader("").
                 execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("method2")));

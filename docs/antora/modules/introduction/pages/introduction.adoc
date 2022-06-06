@@ -5,13 +5,13 @@ author: Per Minborg, Julia Gustafsson
 :navtitle: Introduction
 :source-highlighter: highlight.js
 
-== A high performance message queue
+== A High Performance Message Queue
 Chronicle Queue is a low-latency message queue that allows persistence of messages in high performance, mission critical applications. It can be used for low latency Interprocess Communication (IPC) without affecting your system performance, hence is tailored to transfer large amounts of data.
 
-== Overview of documentation
+== Overview of Documentation
 The Chronicle Queue documentation comprises two parts of which the first is this comprehensive user guide, and the second a rich library of runnable code examples.
 
-=== User guide
+=== User Guide
 The user guide is structured as follows:
 
 WARNING: This section is under construction
@@ -24,12 +24,12 @@ WARNING: This section is under construction
 * **★ Replication** - Replication is an Enterprise feature allowing queues to be automatically replicated across machines or cores. This chapter teaches how that is accomplished.
 * **★ Encryption** - Learn how to protect the contents of a Chronicle Queue with encryption.
 
-=== Runnable demos
+=== Runnable Demos
 Chronicle has gathered all runnable code demonstrations on GitHub for easy access. The demos are great examples of how the learnings from the user guide can be put into practise.
 
 NOTE: The documentation primarily covers usage of Chronicle Queue with Java. If you are interested in the C++ version please contact link:mailto:sales@chronicle.software[sales@chronicle.software].
 
-== Where to begin
+== Where to Begin
 If this is your first time getting to know Chronicle Queue, you may want to familiarize yourself with the overall capabilities of Queue by reading xref:what-is-chronicle-queue:what-is-chronicle-queue.adoc[What is Chronicle Queue?]. Thereafter, follow the xref:getting-started:quick-start.adoc[Quick-start Guide] to get set up in minutes. Then you are ready to explore the rest of the chapters that explores
 
 In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You find our demonstrations [here].
@@ -47,7 +47,7 @@ Chronicle Queue Enterprise is a commercially supported version of Chronicle Queu
 
 For more information on Chronicle Queue Enterprise, please contact link:mailto:sales@chronicle.software[sales@chronicle.software].
 
-== Phone home
+== Phone Home
 Chronicle Queue sends usage data and platform information via a secure connection to Google Analytics, a web analytics service provided by Google, Inc.("Google"). This data is collected to learn how Chronicle's products are used, which in turn helps us focus our resources more efficiently in our effort to improve our libraries and provide better and more widely adopted solutions for the community.
 
 Learn more about what data is collected and why link:https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc[here.]

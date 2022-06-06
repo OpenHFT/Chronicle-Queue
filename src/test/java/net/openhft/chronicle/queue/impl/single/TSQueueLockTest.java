@@ -88,8 +88,6 @@ public class TSQueueLockTest extends QueueTestCommon {
             t.start();
             t.join();
             testLock.acquireLock();
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TSQueueLock.class && ek.message.startsWith("Forced unlock")));
             expectException("Unlocking forcibly");
             expectException("Forced unlock");
         }
@@ -129,8 +127,6 @@ public class TSQueueLockTest extends QueueTestCommon {
     public void unlockWillWarnIfNotLocked() {
         try (final TSQueueLock testLock = createTestLock()) {
             testLock.unlock();
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TSQueueLock.class && ek.message.startsWith("Queue lock was locked by another thread")));
             expectException("Queue lock was locked by another thread");
         }
     }
@@ -142,8 +138,6 @@ public class TSQueueLockTest extends QueueTestCommon {
             waitForLockToBecomeLocked(testLock);
             testLock.unlock();
             assertTrue(testLock.isLocked());
-            assertTrue(exceptions.keySet().stream()
-                    .anyMatch(ek -> ek.level == LogLevel.WARN && ek.clazz == TSQueueLock.class && ek.message.startsWith("Queue lock was locked by another thread")));
             expectException("Queue lock was locked by another thread");
             process.destroy();
             process.waitFor();

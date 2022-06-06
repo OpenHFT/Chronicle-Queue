@@ -7,12 +7,12 @@ author: Julia Gustafsson
 
 This chapter explains and motivates the low-level implementation details of Chronicle Queue.
 
-== Append-only data structure
+== Append-Only Data Structure
 Chronicle Queue is designed for sequential writes and reads. It also supports random access, and updates in-place. Although the size of an existing entry cannot be changed, an entry can be padded for future use.
 
 This append-only structure is more efficient for passing data between threads using the `CPU L2 cache` coherence bus. It can also be faster than attempting to pass an object between threads, as it avoids random access which can be common in `Java` objects where there can be a lot of reference chasing. Further, it is more efficient for persistence to disk; HDD and SSD are much more efficient when being accessed sequentially and simplifies replication.
 
-== Why memory mapped files?
+== Why Memory Mapped Files?
 Chronicle Queue is built on a class called `MappedBytes` in Chronicle Bytes. This visualises the file to act as an unbounded array of bytes mapped to a file. As data is appended, the queue will add memory mappings transparently, growing whenever data is written.
 
 The key benefit of using memory-mapped files is that the queue is no longer limited by the size of the JVM, or even the size of the main memory. Instead, the limitation is the available disk space. If you want to load 100 TB into a JVM for replay the operating system does all the heavy lifting for you.
@@ -20,7 +20,7 @@ The key benefit of using memory-mapped files is that the queue is no longer limi
 Another benefit of using a memory-mapped file is the ability to bind a portion of memory to an object. The key attributes in the header are bound when first loading, and after that they work like a normal object, updating off-heap memory and the file in a thread-safe manner.
 Enabling operations like `compareAndSet`, atomic add, or set max value (a set which only ever increases the value). As the data access is thread-safe, it can be shared between threads, or processes, as fast as the time it takes for an L2 cache miss; up to 25 nano-seconds.
 
-== Queue header
+== Queue Header
 Every queue starts with a header that stores basic information e.g. the wire type, the roll cycle, and how indexing is performed.
 
 Below follows an example of a queue header:
@@ -54,7 +54,7 @@ header: !SCQStore { # <2>
 NOTE: The `SCQStore` "bootstraps" the queue itself. A custom implementation could be provided to adapt the behavior of the queue, provided it supports the same interface. The rolling and indexing strategies can also be customized.
 
 [#_queue_documents]
-== Queue documents
+== Queue Documents
 A queue message comprise two parts, a 4-byte header followed by an xref:getting-started:glossary.adoc#e[excerpt]. The excerpt , also referred to as the message, contains the actual data, which could be of any type, including text, numbers, or serialised blobs. Regardless of the type, all information is stored as a series of bytes in the excerpt.
 
 .A Chronicle Queue stores an ordered collection of messages

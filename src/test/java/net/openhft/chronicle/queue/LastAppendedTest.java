@@ -4,17 +4,18 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RequiredForClient
 public class LastAppendedTest extends ChronicleQueueTestBase {
+
     @Test
-    public void testLastWritten() {
+    void testLastWritten() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         try (ChronicleQueue outQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build()) {
@@ -55,7 +56,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 msg.msg("somedata-3");
                 msg.msg("somedata-4");
 
-               // System.out.println(inQueue.dump());
+                // System.out.println(inQueue.dump());
 
                 AtomicReference<String> actualValue = new AtomicReference<>();
 
@@ -65,20 +66,20 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                     MethodReader methodReader = excerptTailer.methodReader((LATMsg) actualValue::set);
 
                     methodReader.readOne();
-                    Assert.assertEquals("somedata-2", actualValue.get());
+                    assertEquals("somedata-2", actualValue.get());
 
                     methodReader.readOne();
-                    Assert.assertEquals("somedata-3", actualValue.get());
+                    assertEquals("somedata-3", actualValue.get());
 
                     methodReader.readOne();
-                    Assert.assertEquals("somedata-4", actualValue.get());
+                    assertEquals("somedata-4", actualValue.get());
                 }
             }
         }
     }
 
     @Test
-    public void testLastWrittenMetadata() {
+    void testLastWrittenMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         try (ChronicleQueue outQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build()) {
@@ -124,13 +125,13 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                     MethodReader methodReader = excerptTailer.methodReader((LATMsg) actualValue::set);
 
                     methodReader.readOne();
-                    Assert.assertEquals("somedata-2", actualValue.get());
+                    assertEquals("somedata-2", actualValue.get());
 
                     methodReader.readOne();
-                    Assert.assertEquals("somedata-3", actualValue.get());
+                    assertEquals("somedata-3", actualValue.get());
 
                     methodReader.readOne();
-                    Assert.assertEquals("somedata-4", actualValue.get());
+                    assertEquals("somedata-4", actualValue.get());
                 }
             }
         }

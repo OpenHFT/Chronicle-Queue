@@ -9,7 +9,7 @@ This demo shows a publisher writing to a queue while a bridger process writes to
 
 NOTE: The source code for this demo can be found link:https://github.com/OpenHFT/Chronicle-Queue-Demo/tree/master/message-history-demo[here].
 
-== Running the demo from IntelliJ
+== Running the Demo from IntelliJ
 The following steps are needed
 
 - Open the `pom.xml` as a project
@@ -19,7 +19,7 @@ The following steps are needed
 
 NOTE: You can run the `PublisherMain` with `-Devents=1000000` for more events, and `-Drate=5000` to adjust the rate per second of messages.
 
-== Running the demo from Maven
+== Running the Demo from Maven
 
 .Prebuilding the code
 [source,sh]
@@ -69,7 +69,7 @@ WARNING: An illegal reflective access operation has occurred
 WARNING: Illegal reflective access by net.openhft.compiler.MyJavaFileManager (file:/C:/Users/peter/.m2/repository/net/openhft/compiler/2.3.4/compiler-2.3.4.jar) to method com.sun.tools.javac.file.JavacFileManager.listLocationsForModules(javax.tools.JavaFileManager$Location)
 ----
 
-== Expected output
+== Expected Output
 
 The microsecond timestamps are based on wall clock, however the nanosecond time stamps are based on the uptime of the machine.
 

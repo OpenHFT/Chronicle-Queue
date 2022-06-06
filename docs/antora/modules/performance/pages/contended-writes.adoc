@@ -1,4 +1,4 @@
-= Contended writes
+= Contended Writes
 keywords: contended writes, chronicle queue, queue, java, performance, low-latency
 author: Niel Clifford, Julia Gustafsson
 :reftext: Contended writes
@@ -20,7 +20,7 @@ ChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
 
 IMPORTANT: During a buffered write, `DocumentContext.index()` will throw an `IndexNotAvailableException`. This is because no index is assigned until the buffer is written back to the queue, which happens when the `DocumentContext` is closed.
 
-== General advice on double buffering
+== General Advice on Double Buffering
 Double buffering is only useful if:
 
 * the majority of the objects being written to the queue are big enough
@@ -31,7 +31,7 @@ Double buffering is only useful if:
 Below are benchmark results for various data sizes at the frequency of 10 KHz for a cumbersome message (see `net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark`).
 
 === 1 KB messages
-==== Double-buffer disabled
+==== Double-Buffer Disabled
 ----
 ------------------ SUMMARY (Concurrent) --------------------
 Percentile   run1         run2         run3      % Variation
@@ -52,7 +52,7 @@ worst:      82477.06     45891.58     28172.29        29.54
 ------------------------------------------------------------
 ----
 
-==== Double-buffer enabled
+==== Double-Buffer Enabled
 ----
 ------------------ SUMMARY (Concurrent) --------------------
 Percentile   run1         run2         run3      % Variation
@@ -74,7 +74,7 @@ worst:      69042.18     28368.90     28876.80         1.18
 ----
 
 === 4 KB messages
-==== Double-buffer disabled
+==== Double-Buffer Disabled
 ----
 ------------------ SUMMARY (Concurrent) --------------------
 Percentile   run1         run2         run3      % Variation
@@ -95,7 +95,7 @@ worst:      35504.13     42778.62     87130.11        40.87
 ------------------------------------------------------------
 ----
 
-==== Double-buffer enabled
+==== Double-Buffer Enabled
 ----
 ------------------ SUMMARY (Concurrent) --------------------
 Percentile   run1         run2         run3      % Variation

@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
@@ -22,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 public class AcquireReleaseTest extends ChronicleQueueTestBase {
     @Test
     public void testAcquireAndRelease() {
-        File dir = getTmpDir();
+        File dir = IOTools.createTempDirectory("testAcquireAndRelease").toFile();
 
         AtomicInteger acount = new AtomicInteger();
         AtomicInteger qcount = new AtomicInteger();

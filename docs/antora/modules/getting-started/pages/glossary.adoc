@@ -15,7 +15,7 @@ author: Julia Gustafsson
 
 [#e]
 == E
-* *Exerpt:* An excerpt is the part of the documents that Chronicle Queue writes, that contains the actual data.When writing message to a Chronicle Queue, a new link:./glossary.adoc#d[document] (containing an excerpt) is created and written to.
+* *Exerpt:* An excerpt is the part of the documents that Chronicle Queue writes, that contains the actual data.When writing message to a Chronicle Queue, a new xref:advanced:advanced.adoc#_queue_documents[document] (containing an excerpt) is created and written to.
 
 [#m]
 == M
