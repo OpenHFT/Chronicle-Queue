@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -204,6 +205,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
                 .binary(queueDir)
                 .rollCycle(RollCycles.TEST4_SECONDLY)
                 .timeProvider(timeProvider)
+                .blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize())
                 .build();
     }
 }

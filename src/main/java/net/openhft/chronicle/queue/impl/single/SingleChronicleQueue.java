@@ -875,7 +875,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(Math.min(blockSize / 4, 1L << 30));
-        return useSparseFile
+        return blockSize == 0
                 ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
                 : MappedFile.of(file, chunkSize, overlapSize, readOnly);
     }

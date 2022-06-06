@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
@@ -80,10 +81,11 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
         final SingleChronicleQueueBuilder builder = binary(dir)
                 .testBlockSize()
                 .rollCycle(TEST4_DAILY)
+                .blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize())
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
         try (ChronicleQueue queue = builder
                 .build()) {
-            final boolean useSparseFiles = builder.useSparseFiles();
+            final boolean useSparseFiles = OS.isSparseFileSupported() && builder.blockSize() == 0;
 
             ExcerptAppender appender = queue.acquireAppender();
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
@@ -503,7 +505,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "# # HINT\n" +
                     "# position: 1564, header: 65\n" +
                     "--- !!data #binary\n" +
-                    "\"\\xC0\": \"\": \"\": \"\": \"\": \"\": \"\": \n" +
+                    "\"\\xC0\": \"\": \"\": \"\": \"\": \"\": \"\":\n" +
                     "# position: 1576, header: 66\n" +
                     "--- !!data #binary\n" +
                     "00000620                                      c2 c1 c1 c1              ····\n" +
@@ -523,7 +525,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "00000660 c5 c5 c5 c5                                      ····             \n" +
                     "# position: 1636, header: 71\n" +
                     "--- !!data #binary\n" +
-                    "\"\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\": \n" +
+                    "\"\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\":\n" +
                     "# position: 1648, header: 72\n" +
                     "--- !!data #binary\n" +
                     "00000670             c8 c7 c7 c7  c7 c7 c7 c7                 ···· ····    \n" +
@@ -856,7 +858,6 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "00000ba0             1f 1f 1f 1f  1f 1f 1f 1f                 ···· ····    \n" +
                     "# position: 2988, header: 160\n" +
                     "--- !!data\n" +
-                    "        \n" +
                     "# position: 3000, header: 161\n" +
                     "--- !!data\n" +
                     "!!!!!!!!\n" +

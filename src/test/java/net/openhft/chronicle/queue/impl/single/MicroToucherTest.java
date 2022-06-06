@@ -20,7 +20,7 @@ public class MicroToucherTest extends QueueTestCommon {
     @Test
     public void touchPageSparse() {
         assumeTrue(OS.isLinux());
-        touchPage(b -> b.useSparseFiles(true).rollCycle(RollCycles.HUGE_DAILY), 66561);
+        touchPage(b -> b.rollCycle(RollCycles.HUGE_DAILY), 66561);
     }
 
     @Test

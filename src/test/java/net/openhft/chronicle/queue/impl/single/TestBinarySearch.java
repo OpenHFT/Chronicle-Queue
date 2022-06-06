@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -46,6 +47,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
+                .blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize())
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
