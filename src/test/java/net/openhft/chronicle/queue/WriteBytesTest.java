@@ -856,6 +856,7 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
                     "00000ba0             1f 1f 1f 1f  1f 1f 1f 1f                 ···· ····    \n" +
                     "# position: 2988, header: 160\n" +
                     "--- !!data\n" +
+                    "        \n" +
                     "# position: 3000, header: 161\n" +
                     "--- !!data\n" +
                     "!!!!!!!!\n" +
