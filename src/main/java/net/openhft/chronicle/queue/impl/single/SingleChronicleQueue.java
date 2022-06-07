@@ -126,6 +126,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
+    @Deprecated
     private final boolean useSparseFile;
     private final long sparseCapacity;
     final AppenderListener appenderListener;
