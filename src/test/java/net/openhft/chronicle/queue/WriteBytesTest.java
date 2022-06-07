@@ -81,11 +81,10 @@ public class WriteBytesTest extends ChronicleQueueTestBase {
         final SingleChronicleQueueBuilder builder = binary(dir)
                 .testBlockSize()
                 .rollCycle(TEST4_DAILY)
-                .blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize())
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
         try (ChronicleQueue queue = builder
                 .build()) {
-            final boolean useSparseFiles = OS.isSparseFileSupported() && builder.blockSize() == 0;
+            final boolean useSparseFiles = builder.useSparseFiles();
 
             ExcerptAppender appender = queue.acquireAppender();
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {

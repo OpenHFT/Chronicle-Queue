@@ -29,7 +29,6 @@ public class OnReleaseTest extends QueueTestCommon {
                 .binary(path)
                 .rollCycle(RollCycles.MINUTELY)
                 .timeProvider(stp)
-                .blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize())
                 .storeFileListener((c, f) -> {
                     System.out.println("write released " + f);
                     writeRoll.incrementAndGet();
@@ -39,7 +38,6 @@ public class OnReleaseTest extends QueueTestCommon {
                      .binary(path)
                      .rollCycle(RollCycles.MINUTELY)
                      .timeProvider(stp)
-                     .blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize())
                      .storeFileListener((c, f) -> {
                          System.out.println("read released " + f);
                          readRoll.incrementAndGet();

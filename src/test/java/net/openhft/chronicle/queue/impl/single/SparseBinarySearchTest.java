@@ -65,7 +65,6 @@ public class SparseBinarySearchTest extends ChronicleQueueTestBase {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(rollCycle)
                 .timeProvider(stp)
-                .blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize())
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();

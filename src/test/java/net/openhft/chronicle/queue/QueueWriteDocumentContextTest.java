@@ -202,7 +202,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .testBlockSize();
         final SingleChronicleQueue queue = builder.build();
-        useSparseFiles = OS.isSparseFileSupported() && builder.blockSize() == 0;
+        useSparseFiles = builder.useSparseFiles();
         return queue;
     }
 }

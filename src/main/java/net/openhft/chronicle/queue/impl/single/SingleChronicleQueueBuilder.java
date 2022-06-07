@@ -667,11 +667,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public long blockSize() {
 
-       // long bs = blockSize == null ? OS.is64Bit() ? 64L << 20 : QueueUtil.testBlockSize() : blockSize;
+        long bs = blockSize == null ? OS.is64Bit() ? 64L << 20 : QueueUtil.testBlockSize() : blockSize;
 
         // can add an index2index & an index in one go.
         long minSize = Math.max(QueueUtil.testBlockSize(), 32L * indexCount());
-        return blockSize != null ? Math.max(minSize, blockSize) : 0;
+        return Math.max(minSize, bs);
     }
 
     @Deprecated
@@ -690,9 +690,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public long sparseCapacity() {
+        long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
+
         // can add an index2index & an index in one go.
         long minSize = Math.max(QueueUtil.testBlockSize(), 64L * indexCount());
-        return Math.max(minSize, DEFAULT_SPARSE_CAPACITY);
+        return Math.max(minSize, bs);
     }
 
     @Deprecated
