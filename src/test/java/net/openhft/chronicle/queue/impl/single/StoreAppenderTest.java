@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -27,14 +26,14 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Test
     public void clearUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).singleThreadedCheckReset());
+            queue.acquireAppender().singleThreadedCheckReset();
         }
     }
 
     @Test
     public void resetUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).singleThreadedCheckReset());
+            queue.acquireAppender().singleThreadedCheckReset();
         }
     }
 
