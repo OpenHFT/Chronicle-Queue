@@ -104,18 +104,20 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
             sourceQueue = single(ROOTDIR + "chunking-standardBlockSize").blockSize(NORMALBLOCK).build();
             sinkQueue = single(ROOTDIR + "chunking-standardBlockSize").blockSize(NORMALBLOCK).build();
         }
-        appender = sourceQueue.acquireAppender().disableThreadSafetyCheck(true);
-        tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
+        appender = sourceQueue.acquireAppender();
+        appender.singleThreadedCheckDisabled(true);
+        tailer = sinkQueue.createTailer();
+        tailer.singleThreadedCheckDisabled(true);
         this.jlbh = jlbh;
         writeProbe = round == 1 ? jlbh.addProbe("write (sparse file)") : round == 2 ? jlbh.addProbe("write (chunking-largeBlockSize)") : jlbh.addProbe("write (chunking-standardBlockSize)");
         readProbe = round == 1 ? jlbh.addProbe("read (sparse file)") : round == 2 ? jlbh.addProbe("read (chunking-largeBlockSize)") : jlbh.addProbe("read (chunking-standardBlockSize)");
 
-        tailerThread = new Thread( () -> {
-            try(final AffinityLock affinityLock = AffinityLock.acquireLock(READ_CPU)) {
-                while(!stopped) {
+        tailerThread = new Thread(() -> {
+            try (final AffinityLock affinityLock = AffinityLock.acquireLock(READ_CPU)) {
+                while (!stopped) {
                     long beforeReadNS = System.nanoTime();
-                    try(DocumentContext dc = tailer.readingDocument()) {
-                        if(!dc.isPresent())
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        if (!dc.isPresent())
                             continue;
                         Bytes bytes = dc.wire().bytes();
                         bytes.readSkip(CHUNKSIZE);

@@ -69,7 +69,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.ALWAYS.name()));
         }
 
-        disableThreadSafetyCheck(true);
+        singleThreadedCheckDisabled(true);
     }
 
     protected void performClose() {

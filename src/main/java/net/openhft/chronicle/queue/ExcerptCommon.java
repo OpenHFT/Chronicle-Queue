@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.SingleThreadedChecked;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,7 +28,7 @@ import java.io.File;
  * The ExcerptCommon is common to both ExcerptAppender
  * and ExcerptTailer.
  */
-public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
+public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, SingleThreadedChecked {
 
     /**
      * Returns the source id of the backing ChronicleQueue
@@ -54,8 +55,12 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable {
      * @param disableThreadSafetyCheck true to turn off the thread safety check
      * @return this.
      */
+    @Deprecated(/* to be removed in x.25 */)
     @NotNull
-    E disableThreadSafetyCheck(boolean disableThreadSafetyCheck);
+    default E disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        singleThreadedCheckDisabled(disableThreadSafetyCheck);
+        return (E) this;
+    }
 
     /**
      * @return the current file being worked on or null if not known.

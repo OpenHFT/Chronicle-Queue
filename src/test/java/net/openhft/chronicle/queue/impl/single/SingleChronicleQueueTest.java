@@ -322,6 +322,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     if (b.readRemaining() == 0)
                         return;
                     b.readPosition(0);
+                    b.singleThreadedCheckReset();
                     result.add(b);
                     throw new RejectedExecutionException();
                 }, 1, 1, TimeUnit.MICROSECONDS);

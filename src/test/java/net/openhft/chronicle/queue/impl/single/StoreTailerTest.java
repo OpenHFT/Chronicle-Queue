@@ -211,7 +211,8 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 } catch (IllegalStateException expected) {
 //                    expected.printStackTrace();
                 }
-                tailer.disableThreadSafetyCheck(true).readText();
+                tailer.singleThreadedCheckDisabled(true);
+                tailer.readText();
             }
         }.run();
     }
@@ -235,7 +236,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 } catch (IllegalStateException expected) {
 //                    expected.printStackTrace();
                 }
-                tailer.disableThreadSafetyCheck(true);
+                tailer.singleThreadedCheckDisabled(true);
                 assertEquals("Testing2", readMethodCall(tailer));
             }
         }.run();
@@ -258,7 +259,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 } catch (IllegalStateException expected) {
 //                    expected.printStackTrace();
                 }
-                ((AbstractCloseable) tailer).clearUsedByThread();
+                ((AbstractCloseable) tailer).singleThreadedCheckReset();
                 tailer.readText();
             }
         }.run();
@@ -284,7 +285,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 } catch (IllegalStateException expected) {
 //                    expected.printStackTrace();
                 }
-                ((AbstractCloseable) tailer).clearUsedByThread();
+                ((AbstractCloseable) tailer).singleThreadedCheckReset();
                 assertEquals("Testing2", readMethodCall(tailer));
             }
         }.run();

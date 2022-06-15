@@ -27,14 +27,14 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Test
     public void clearUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).clearUsedByThread());
+            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).singleThreadedCheckReset());
         }
     }
 
     @Test
     public void resetUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).resetUsedByThread());
+            assertThrows(UnsupportedOperationException.class, () -> ((StoreAppender) queue.acquireAppender()).singleThreadedCheckReset());
         }
     }
 

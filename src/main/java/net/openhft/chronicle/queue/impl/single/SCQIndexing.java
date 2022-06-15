@@ -108,7 +108,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         this.indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
         this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
-        disableThreadSafetyCheck(true);
+        singleThreadedCheckDisabled(true);
     }
 
     private LongArrayValuesHolder newLogArrayValuesHolder(Supplier<LongArrayValues> las) {

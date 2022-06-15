@@ -113,7 +113,8 @@ public class MethodReaderBenchmark implements JLBHTask {
         consumerThread = new Thread(() -> {
             try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
 
-                tailer = queue.createTailer().disableThreadSafetyCheck(true);
+                tailer = queue.createTailer();
+                tailer.singleThreadedCheckDisabled(true);
 
                 noArgsCallSampler = jlbh.addProbe("No args call");
                 oneIntCallSampler = jlbh.addProbe("One int call");

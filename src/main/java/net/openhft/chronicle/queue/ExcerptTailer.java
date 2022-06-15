@@ -229,10 +229,4 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      */
     @NotNull
     TailerState state();
-
-    // Need to add this here until we can release Ring. https://github.com/ChronicleEnterprise/Chronicle-Ring/issues/12
-    @Override
-    default @NotNull ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        return this;
-    }
 }

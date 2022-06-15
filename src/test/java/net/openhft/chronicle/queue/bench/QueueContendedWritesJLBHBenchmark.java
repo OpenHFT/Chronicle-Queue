@@ -71,7 +71,8 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         concurrent = jlbh.addProbe("Concurrent");
         concurrent2 = jlbh.addProbe("Concurrent2");
         queue = single("replica").rollCycle(RollCycles.LARGE_DAILY).doubleBuffer(false).build();
-        tailer = queue.createTailer().disableThreadSafetyCheck(true);
+        tailer = queue.createTailer();
+        tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();
         writerThread1 = new Thread(() -> {
             try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {

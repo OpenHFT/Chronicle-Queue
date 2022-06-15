@@ -118,7 +118,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             }
             bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);
             // these MappedBytes are shared, but the assumption is they shouldn't grow. Supports 2K entries.
-            bytes.disableThreadSafetyCheck(true);
+            bytes.singleThreadedCheckDisabled(true);
 
             // eagerly initialize backing MappedFile page - otherwise wire.writeFirstHeader() will try to lock the file
             // to allocate the first byte store and that will cause lock overlap
@@ -150,7 +150,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
         } finally {
             if (bytes != null)
-                bytes.clearUsedByThread();
+                bytes.singleThreadedCheckReset();
         }
     }
 
