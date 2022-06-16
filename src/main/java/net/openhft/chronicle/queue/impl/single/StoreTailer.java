@@ -24,12 +24,10 @@ import java.io.StreamCorruptedException;
 import java.text.ParseException;
 
 import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
-import static net.openhft.chronicle.core.UnsafeMemory.MEMORY;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
 import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
-import static net.openhft.chronicle.wire.Wires.END_OF_DATA;
 import static net.openhft.chronicle.wire.Wires.isEndOfFile;
 
 /**
@@ -94,20 +92,25 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public @NotNull StoreTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        final Wire privateWire = privateWire();
-        if (privateWire != null) {
-            ((MappedBytes) privateWire.bytes()).disableThreadSafetyCheck(disableThreadSafetyCheck);
-        }
-        super.disableThreadSafetyCheck(disableThreadSafetyCheck);
+        singleThreadedCheckDisabled(disableThreadSafetyCheck);
         return this;
     }
 
     @Override
-    public void clearUsedByThread() {
-        super.clearUsedByThread();
+    public void singleThreadedCheckDisabled(boolean singleThreadedCheckDisabled) {
         final Wire privateWire = privateWire();
         if (privateWire != null) {
-            ((MappedBytes) privateWire.bytes()).clearUsedByThread();
+            privateWire.bytes().singleThreadedCheckDisabled(singleThreadedCheckDisabled);
+        }
+        super.singleThreadedCheckDisabled(singleThreadedCheckDisabled);
+    }
+
+    @Override
+    public void singleThreadedCheckReset() {
+        super.singleThreadedCheckReset();
+        final Wire privateWire = privateWire();
+        if (privateWire != null) {
+            ((MappedBytes) privateWire.bytes()).singleThreadedCheckReset();
         }
     }
 
@@ -810,6 +813,7 @@ class StoreTailer extends AbstractCloseable
 
         final MappedBytes bytes = s.bytes();
         bytes.disableThreadSafetyCheck(disableThreadSafetyCheck());
+
         final Wire wire2 = wireType.apply(bytes);
         wire2.usePadding(s.dataVersion() > 0);
         final AbstractWire wire = (AbstractWire) readAnywhere(wire2);

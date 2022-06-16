@@ -12,4 +12,4 @@ updates:
     schedule:
       interval: "monthly"
     allow:
-      - dependency-type: "direct"
+      - dependency-type: "production"

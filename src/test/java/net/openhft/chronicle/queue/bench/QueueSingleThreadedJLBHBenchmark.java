@@ -76,7 +76,8 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         sourceQueue = single(PATH).build();
         sinkQueue = single(PATH).build();
         appender = sourceQueue.acquireAppender();
-        tailer = sinkQueue.createTailer().disableThreadSafetyCheck(true);
+        tailer = sinkQueue.createTailer();
+        tailer.singleThreadedCheckDisabled(true);
         this.jlbh = jlbh;
     }
 

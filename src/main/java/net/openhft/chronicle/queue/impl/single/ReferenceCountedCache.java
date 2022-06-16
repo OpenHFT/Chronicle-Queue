@@ -28,7 +28,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         this.transformer = transformer;
         this.creator = creator;
 
-        disableThreadSafetyCheck(true);
+        singleThreadedCheckDisabled(true);
     }
 
     @NotNull

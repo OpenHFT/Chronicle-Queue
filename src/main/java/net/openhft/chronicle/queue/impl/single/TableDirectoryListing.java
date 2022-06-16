@@ -39,7 +39,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         if (tableStore.readOnly()) {
             throw new IllegalArgumentException(getClass().getSimpleName() + " should only be used for writable queues");
         }
-        disableThreadSafetyCheck(true);
+        singleThreadedCheckDisabled(true);
     }
 
     @Override

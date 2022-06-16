@@ -807,16 +807,6 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    @Override
-    public void clearUsedByThread() {
-        throw new UnsupportedOperationException("clearUsedByThread should never be called on a StoreAppender. They are ThreadLocal and bound to the thread they're created on.");
-    }
-
-    @Override
-    public void resetUsedByThread() {
-        throw new UnsupportedOperationException("resetUsedByThread should never be called on a StoreAppender. They are ThreadLocal and bound to the thread they're created on.");
-    }
-
     final class StoreAppenderContext implements WriteDocumentContext {
 
         boolean isClosed = true;
@@ -828,6 +818,16 @@ class StoreAppender extends AbstractCloseable
         private boolean alreadyClosedFound;
         private StackTrace closedHere;
         private boolean chainedElement;
+
+        @Override
+        public void reset() {
+            isClosed = true;
+            metaData = false;
+            rollbackOnClose = false;
+            buffered = false;
+            alreadyClosedFound = false;
+            chainedElement = false;
+        }
 
         @Override
         public int sourceId() {

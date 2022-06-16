@@ -55,20 +55,16 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     private final BufferMode readBufferMode;
     private final BufferMode writeBufferMode;
     private final Class<?> testClass;
+    private final Datum datum;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
-    private final Datum datum;
     private boolean stopped = false;
     private Thread tailerThread;
     private JLBH jlbh;
     private NanoSampler writeProbe;
     private ScheduledExecutorService pretoucherExecutorService;
-
-    public static void main(String[] args) {
-        new Builder().run();
-    }
 
     public QueueMultiThreadedJLBHBenchmark(int iterations, String path, String tailerAffinity, @Nullable RollCycle rollCycle,
                                            int messageSize, @Nullable Long blockSize, boolean usePretoucher,
@@ -88,6 +84,10 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
         this.datum = new Datum(messageSize);
     }
 
+    public static void main(String[] args) {
+        new Builder().run();
+    }
+
     @Override
     public void init(JLBH jlbh) {
         this.jlbh = jlbh;
@@ -95,10 +95,10 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
 
         sourceQueue = createQueueInstance();
         sinkQueue = useSingleQueueInstance ? sourceQueue : createQueueInstance();
-        appender = sourceQueue.acquireAppender()
-                .disableThreadSafetyCheck(true);
-        tailer = sinkQueue.createTailer()
-                .disableThreadSafetyCheck(true);
+        appender = sourceQueue.acquireAppender();
+        appender.singleThreadedCheckDisabled(true);
+        tailer = sinkQueue.createTailer();
+        tailer.singleThreadedCheckDisabled(true);
 
         NanoSampler readProbe = jlbh.addProbe("read");
         writeProbe = jlbh.addProbe("write");
@@ -167,8 +167,8 @@ public class QueueMultiThreadedJLBHBenchmark implements JLBHTask {
     }
 
     private static class Datum implements BytesMarshallable {
-        public long ts = 0;
         public final byte[] filler;
+        public long ts = 0;
 
         public Datum(int messageSize) {
             this.filler = new byte[messageSize - 8];

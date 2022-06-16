@@ -16,6 +16,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -419,6 +420,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    @Ignore("TODO FIX core/issue/409")
     public void shouldPrintTimestampsToLocalTime() {
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();

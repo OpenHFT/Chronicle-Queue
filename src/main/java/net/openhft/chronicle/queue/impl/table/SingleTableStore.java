@@ -94,7 +94,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             mappedWire = wireType.apply(mappedBytes);
             mappedWire.usePadding(true);
 
-            disableThreadSafetyCheck(true);
+            singleThreadedCheckDisabled(true);
         } finally {
             assert wire.endUse();
         }
@@ -114,7 +114,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedWire = wireType.apply(mappedBytes);
         mappedWire.usePadding(true);
 
-        disableThreadSafetyCheck(true);
+        singleThreadedCheckDisabled(true);
     }
 
     public static <T, R> R doWithSharedLock(@NotNull final File file,

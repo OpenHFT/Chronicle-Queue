@@ -83,7 +83,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             } else
                 this.dataVersion = 0;
 
-            disableThreadSafetyCheck(true);
+            singleThreadedCheckDisabled(true);
             failed = false;
         } finally {
             if (failed)
@@ -117,7 +117,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 rollCycle.defaultIndexSpacing());
         this.dataVersion = 1;
 
-        disableThreadSafetyCheck(true);
+        singleThreadedCheckDisabled(true);
     }
 
     @NotNull
@@ -292,8 +292,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public MappedBytes bytes() {
         throwExceptionIfClosed();
 
-        return MappedBytes.mappedBytes(mappedFile)
-                .disableThreadSafetyCheck(true);
+        final MappedBytes mbytes = MappedBytes.mappedBytes(mappedFile);
+        mbytes.singleThreadedCheckDisabled(true);
+        return mbytes;
     }
 
     @Override

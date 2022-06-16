@@ -226,7 +226,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
 
-            disableThreadSafetyCheck(true);
+            singleThreadedCheckDisabled(true);
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);
@@ -550,7 +550,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 : indexForId(id);
         final StoreTailer storeTailer = new StoreTailer(this, pool, index);
         directoryListing.refresh(true);
-        storeTailer.clearUsedByThread();
+        storeTailer.singleThreadedCheckReset();
         return storeTailer;
     }
 
@@ -1015,7 +1015,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             mappedFileCache = new ReferenceCountedCache<>(
                     MappedBytes::mappedBytes,
                     SingleChronicleQueue.this::mappedFile);
-            disableThreadSafetyCheck(true);
+            singleThreadedCheckDisabled(true);
         }
 
         @SuppressWarnings("resource")
@@ -1053,7 +1053,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     createFile(path);
                     mappedBytes = mappedFileCache.get(path);
                 }
-                mappedBytes.disableThreadSafetyCheck(true);
+                mappedBytes.singleThreadedCheckDisabled(true);
                 mappedBytes.chunkCount(chunkCount);
 
 //                pauseUnderload();

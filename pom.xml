@@ -27,7 +27,7 @@
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.23ea9-SNAPSHOT</version>
+    <version>5.23ea20-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -232,8 +232,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <!-- <version>3.0.0-M5</version> Clears Thread.interrupted() -->
-                <version>3.0.0-M4</version>
                 <configuration>
                     <forkCount>1</forkCount>
                     <!--                    <reuseForks>false</reuseForks>-->
@@ -322,7 +320,7 @@
                             <referenceVersion>5.23ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                             <!-- Reduce the API surface of ChronicleReader -->
-                            <binaryCompatibilityPercentageRequired>89.3</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>94</binaryCompatibilityPercentageRequired>
                             <extraOptions>
                                 <!--This skips "internal" but checks "impl"-->
                                 <extraOption>
