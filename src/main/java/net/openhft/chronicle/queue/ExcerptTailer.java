@@ -47,7 +47,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
         return readingDocument(false);
     }
 
-/**
+    /**
      * Returns the {@link DocumentContext } for this ExcerptTailer.
      * <p>
      * This is equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but without the use of a
@@ -56,7 +56,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
      *
      * @param includeMetaData if the DocumentContext shall be meta data aware.
-     *
      * @return the document context
      */
     @NotNull
@@ -71,11 +70,13 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * The index includes the cycle and the sequence number within that cycle.
      *
      * @return the current index of this Tailer
-     *
      */
     @Override
     long index();
-    default long lastReadIndex() { return -1; }
+
+    default long lastReadIndex() {
+        return -1;
+    }
 
     /**
      * Returns the current cycle for this Tailer.
@@ -149,7 +150,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * When striding is enabled AND direction is BACKWARD, skip to the entries easiest to find, doesn't need to be every entry.
      *
      * @param striding skip to the indexStride if that is easy, doesn't always happen.
-     *
      * @return this ExcerptTailer
      */
     ExcerptTailer striding(boolean striding);
@@ -168,7 +168,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * The direction determines the direction of movement upon reading an excerpt.
      *
      * @param direction which is either of NONE, FORWARD, BACKWARD
-
      * @return this ExcerptTailer
      * @throws NullPointerException if the provide {@code direction} is {@code null}
      */
@@ -189,8 +188,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *
      * @param queue which was written to.
      * @return this ExcerptTailer
-     *
-     * @throws IORuntimeException if the provided {@code queue} couldn't be wound to the last index.
+     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
      * @throws NullPointerException if the provided {@code queue} is {@code null}
      */
     @NotNull
@@ -229,4 +227,11 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      */
     @NotNull
     TailerState state();
+
+    // Ring still needs this
+    @Deprecated(/* to be removed in x.25 */)
+    @Override
+    default ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
+        return this;
+    }
 }
