@@ -3,7 +3,9 @@ package net.openhft.chronicle.queue.internal.reader;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -12,11 +14,11 @@ import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.queue.reader.ContentBasedLimiter;
 import net.openhft.chronicle.queue.reader.Reader;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -419,9 +421,9 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         assertEquals(expectedPollCountWhenDocumentIsEmpty, pollMethod.invocationCount);
     }
 
-    @Test
-    @Ignore("TODO FIX core/issue/409")
-    public void shouldPrintTimestampsToLocalTime() {
+    @RequiredForClient
+    @Test(timeout = 10_000)
+    public void shouldPrintTimestampsToLocalTime() throws IOException {
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
              final ExcerptAppender excerptAppender = queue.acquireAppender()) {
@@ -438,14 +440,10 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             }
 
             // UTC by default
-            System.clearProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY);
             assertTimesAreInZone(queueDir, ZoneId.of("UTC"), timestamps);
 
             // Local timezone
-            System.setProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY, ZoneId.systemDefault().toString());
             assertTimesAreInZone(queueDir, ZoneId.systemDefault(), timestamps);
-        } finally {
-            System.clearProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY);
         }
     }
 
@@ -493,23 +491,32 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         assertEquals(4, capturedOutput.stream().filter(msg -> msg.contains("hello")).count());
     }
 
-    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) {
-        ChronicleReader reader = new ChronicleReader()
-                .asMethodReader(SayWhen.class.getName())
-                .withBasePath(queueDir.toPath())
-                .withMessageSink(capturedOutput::add);
-        reader.execute();
-
-        MicroTimestampLongConverter mtlc = new MicroTimestampLongConverter(zoneId.toString());
-        int i = 0;
-        while (!capturedOutput.isEmpty()) {
-            final String actualValue = capturedOutput.poll();
-            if (actualValue.contains("sayWhen")) {
-                final String expectedTimestamp = mtlc.asString(timestamps.get(i++));
-                assertTrue(String.format("%s contains %s", actualValue, expectedTimestamp), actualValue.contains(expectedTimestamp));
-            }
+    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) throws IOException {
+        final Process readerProcess = JavaProcessBuilder.create(ChronicleReaderRunner.class)
+                .withProgramArguments(queueDir.toString())
+                .withJvmArguments("-D" + AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY + "=" + zoneId.toString())
+                .start();
+        while (readerProcess.isAlive()) {
+            Jvm.pause(10);
         }
-        assertEquals("Didn't check all the timestamps", timestamps.size(), i);
+        String output = new String(IOTools.readAsBytes(readerProcess.getInputStream()));
+        MicroTimestampLongConverter mtlc = new MicroTimestampLongConverter(zoneId.toString());
+        for (Long timestamp : timestamps) {
+            final String expectedTimestamp = mtlc.asString(timestamp);
+            int timestampIndex = output.indexOf(expectedTimestamp);
+            assertTrue(String.format("%s contains %s", output, expectedTimestamp), timestampIndex > 0);
+            output = output.substring(timestampIndex + expectedTimestamp.length());
+        }
+    }
+
+    private static class ChronicleReaderRunner {
+        public static void main(String[] args) {
+            ChronicleReader reader = new ChronicleReader()
+                    .asMethodReader(SayWhen.class.getName())
+                    .withBasePath(Paths.get(args[0]))
+                    .withMessageSink(System.out::println);
+            reader.execute();
+        }
     }
 
     @Test
