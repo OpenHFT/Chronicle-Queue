@@ -261,6 +261,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     private ScanResult moveToIndexFromTheStart(@NotNull ExcerptContext ec, long index) {
         try {
             Wire wire = ec.wire();
+            if (wire == null)
+                return ScanResult.END_OF_FILE;
+
             wire.bytes().readPositionUnlimited(0);
             if (wire.readDataHeader())
                 return linearScan(wire, index, 0, wire.bytes().readPosition());
@@ -276,8 +279,8 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         if (index2Index.getVolatileValue() == NOT_INITIALIZED)
             return null;
 
-        Wire wire = ec.wireForIndex();
-        LongArrayValues index2index = getIndex2index(wire);
+        Wire wireForIndex = ec.wireForIndex();
+        LongArrayValues index2index = getIndex2index(wireForIndex);
         long primaryOffset = toAddress0(index);
 
         long secondaryAddress = 0;
@@ -293,7 +296,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         if (secondaryAddress <= 0) {
             return null;
         }
-        @NotNull final LongArrayValues array1 = arrayForAddress(wire, secondaryAddress);
+        @NotNull final LongArrayValues array1 = arrayForAddress(wireForIndex, secondaryAddress);
         long secondaryOffset = toAddress1(index);
 
         do {
@@ -304,11 +307,14 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                 continue;
             }
 
+            Wire wire = ec.wire();
+            if (wire == null)
+                break;
             if (index == startIndex) {
-                ec.wire().bytes().readPositionUnlimited(fromAddress);
+                wire.bytes().readPositionUnlimited(fromAddress);
                 return ScanResult.FOUND;
             } else {
-                return linearScan(ec.wire(), index, startIndex, fromAddress);
+                return linearScan(wire, index, startIndex, fromAddress);
             }
         } while (secondaryOffset >= 0);
 

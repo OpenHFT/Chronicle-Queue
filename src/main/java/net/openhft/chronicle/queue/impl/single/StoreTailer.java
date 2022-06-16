@@ -158,7 +158,7 @@ class StoreTailer extends AbstractCloseable
         return privateWire();
     }
 
-    public Wire privateWire() {
+    public @Nullable Wire privateWire() {
         return context.wire();
     }
 
@@ -219,8 +219,9 @@ class StoreTailer extends AbstractCloseable
             if (tryAgain)
                 next = next0(includeMetaData);
 
-            if (context.present(next)) {
-                Bytes<?> bytes = context.wire().bytes();
+            Wire wire = context.wire();
+            if (wire != null && context.present(next)) {
+                Bytes<?> bytes = wire.bytes();
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
                 address = bytes.addressForRead(bytes.readPosition(), 4);
@@ -239,7 +240,7 @@ class StoreTailer extends AbstractCloseable
                 state = TailerState.END_OF_CYCLE;
             }
 
-            setAddress(context.wire() != null);
+            setAddress(wire != null);
 
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
@@ -648,11 +649,15 @@ class StoreTailer extends AbstractCloseable
 
         index(index);
         final ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
-        final Bytes<?> bytes = privateWire().bytes();
         switch (scanResult) {
             case FOUND:
-                state = FOUND_IN_CYCLE;
-                moveToState.onSuccessfulLookup(index, direction, bytes.readPosition());
+                Wire privateWire = privateWire();
+                if (privateWire == null)
+                    state = END_OF_CYCLE;
+                else {
+                    state = FOUND_IN_CYCLE;
+                    moveToState.onSuccessfulLookup(index, direction, privateWire.bytes().readPosition());
+                }
                 break;
 
             case NOT_REACHED:
@@ -803,17 +808,21 @@ class StoreTailer extends AbstractCloseable
     private void resetWires() {
         final WireType wireType = queue.wireType();
 
-        final MappedBytes bytes = store.bytes();
-        bytes.singleThreadedCheckDisabled(this.singleThreadedCheckDisabled());
+        SingleChronicleQueueStore s = store;
+        if (s == null) return;
+
+        final MappedBytes bytes = s.bytes();
+        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck());
+
         final Wire wire2 = wireType.apply(bytes);
-        wire2.usePadding(store.dataVersion() > 0);
+        wire2.usePadding(s.dataVersion() > 0);
         final AbstractWire wire = (AbstractWire) readAnywhere(wire2);
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
 
         final Wire wireForIndexOld = wireForIndex;
-        wireForIndex = readAnywhere(wireType.apply(store().bytes()));
+        wireForIndex = readAnywhere(wireType.apply(s.bytes()));
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
         assert wire != wireForIndexOld;
 
@@ -825,7 +834,11 @@ class StoreTailer extends AbstractCloseable
     private Wire readAnywhere(@NotNull final Wire wire) {
         final Bytes<?> bytes = wire.bytes();
         bytes.readLimitToCapacity();
-        wire.usePadding(store.dataVersion() > 0);
+
+        SingleChronicleQueueStore s = store;
+        if (s != null)
+            wire.usePadding(s.dataVersion() > 0);
+
         return wire;
     }
 
@@ -908,14 +921,20 @@ class StoreTailer extends AbstractCloseable
             // give the position of the last entry and
             // flag we want to count it even though we don't know if it will be meta data or not.
 
-            final long sequenceNumber = store.moveToEndForRead(privateWire());
+            Wire w = privateWire();
+
+            if (w == null) {
+                return callOriginalToEnd();
+            }
+
+            final long sequenceNumber = wireStore.moveToEndForRead(w);
 
             // fixes #378
             if (sequenceNumber == -1L) {
                 return callOriginalToEnd();
             }
 
-            final Bytes<?> bytes = privateWire().bytes();
+            final Bytes<?> bytes = w.bytes();
             state = isEndOfFile(bytes.readVolatileInt(bytes.readPosition())) ? END_OF_CYCLE : FOUND_IN_CYCLE;
 
             index(rollCycle.toIndex(lastCycle, sequenceNumber));
