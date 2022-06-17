@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -125,6 +126,8 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
                 try (DocumentContext dc = outQueue.acquireAppender().writingDocument(true)) {
                     dc.wire().write("some metadata");
                 }
+
+                Jvm.pause(1_000);
 
                 AtomicReference<String> actualValue = new AtomicReference<>();
 
