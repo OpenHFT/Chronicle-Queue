@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
@@ -12,14 +13,23 @@ import java.io.File;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
+import static net.openhft.chronicle.testframework.FlakyTestRunner.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RequiredForClient
 public class LastAppendedTest extends ChronicleQueueTestBase {
+    @Test
+    public void testLastIndexAppendedAcrossRestarts() throws Throwable {
+        builder(this::testLastWritten0).build().run();
+    }
 
     @Test
-    public void testLastWritten() {
-        SetTimeProvider timeProvider = new SetTimeProvider(0).advanceMillis(1000);
+    public void testLastWrittenMetadata() throws Throwable {
+        builder(this::testLastWrittenMetadata0).build().run();
+    }
+
+    void testLastWritten0() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
 
         final File outQueueDir = getTmpDir();
         final File inQueueDir = getTmpDir();
@@ -62,10 +72,6 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
             msg.msg("somedata-3");
             msg.msg("somedata-4");
 
-        }
-
-        try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build();
-             ChronicleQueue inQueue = single(inQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
 
             final AtomicReference<String> actualValue = new AtomicReference<>();
 
@@ -97,8 +103,8 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
 
 
     @Test
-    void testLastWrittenMetadata() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
+    void testLastWrittenMetadata0() {
+        SetTimeProvider timeProvider = new SetTimeProvider().advanceMillis(1000);
 
         final File outQueueDir = getTmpDir();
         final File inQueueDir = getTmpDir();
@@ -137,11 +143,6 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = outQueue.acquireAppender().writingDocument(true)) {
                 dc.wire().write("some metadata");
             }
-        }
-
-
-        try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build();
-             ChronicleQueue inQueue = single(inQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
 
             AtomicReference<String> actualValue = new AtomicReference<>();
 
