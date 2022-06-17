@@ -5,10 +5,13 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.MappedUniqueTimeProvider;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.shutdown.PriorityHook;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
+import net.openhft.chronicle.core.time.UniqueMicroTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,7 +31,7 @@ public class DirectoryUtils {
     @NotNull
     public static File tempDir(String name) {
         String replacedName = name.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_');
-        final File tmpDir = new File(OS.getTarget(), replacedName + "-" + Time.uniqueId());
+        final File tmpDir = new File(OS.getTarget(), replacedName + "-" + uniqueId());
         DeleteStatic.INSTANCE.add(tmpDir);
 
         // Log the temporary directory in OSX as it is quite obscure
@@ -38,6 +41,18 @@ public class DirectoryUtils {
 
         return tmpDir;
     }
+
+    public static String uniqueId() {
+        long l;
+        try {
+            l = MappedUniqueTimeProvider.INSTANCE.currentTimeMicros();
+        } catch (IllegalStateException var3) {
+            l = SystemTimeProvider.INSTANCE.currentTimeMicros();
+        }
+
+        return Long.toString(l, 36);
+    }
+
 
     public static void deleteDir(@NotNull String dir) {
         IOTools.deleteDirWithFiles(new File(dir));
