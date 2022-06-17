@@ -90,7 +90,7 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
 
     @Test
     void testLastWrittenMetadata() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
+        SetTimeProvider timeProvider = new SetTimeProvider(0).advanceMillis(1000);
 
         try (ChronicleQueue outQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build()) {
             try (ChronicleQueue inQueue = single(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
