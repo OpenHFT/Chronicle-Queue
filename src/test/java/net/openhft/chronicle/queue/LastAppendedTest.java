@@ -1,10 +1,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
@@ -13,22 +11,12 @@ import java.io.File;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static net.openhft.chronicle.testframework.FlakyTestRunner.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RequiredForClient
 public class LastAppendedTest extends ChronicleQueueTestBase {
-   // @Test
-   // public void testLastWritten() {
-    //    builder(this::testLastWritten0).build().run();
-   // }
-
-
-   // public void testLastWrittenMetadata() {
-  //      builder(this::testLastWrittenMetadata0).build().run();
-  //  }
     @Test
-    void testLastWritten0() {
+    void testLastWritten() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         final File outQueueDir = getTmpDir();

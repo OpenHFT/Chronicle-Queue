@@ -129,6 +129,8 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
                     Jvm.debug().on(getClass(), "Progress: " + counter);
                 }
             }
+        } finally {
+            MessageHistory.set(null);
         }
 
         return histos;
