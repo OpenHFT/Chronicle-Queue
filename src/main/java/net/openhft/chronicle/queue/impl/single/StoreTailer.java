@@ -372,7 +372,7 @@ class StoreTailer extends AbstractCloseable
 
         final boolean foundCycle = cycle(queue.rollCycle().toCycle(index()));
 
-        if (foundCycle) {
+        if (foundCycle && this.cycle >= 0) {
             final long lastSequenceNumberInThisCycle = store().sequenceForPosition(this, Long.MAX_VALUE, false);
             final long nextIndex = queue.rollCycle().toIndex(this.cycle, lastSequenceNumberInThisCycle);
             moveToIndexInternal(nextIndex);
