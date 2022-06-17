@@ -4,25 +4,28 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
+import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
 public class LastAppendedTest extends ChronicleQueueTestBase {
+
+    public static final RollCycles ROLL_CYCLE = RollCycles.TEST4_SECONDLY;
+
     @Test
     void testLastWritten() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
+        SetTimeProvider timeProvider = new SetTimeProvider(0).advanceMillis(1000);
 
         final File outQueueDir = getTmpDir();
         final File inQueueDir = getTmpDir();
 
-        try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build();
-             ChronicleQueue inQueue = single(inQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
+        try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(ROLL_CYCLE).sourceId(1).timeProvider(timeProvider).build();
+             ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build()) {
 
             // write some initial data to the inqueue
             final LATMsg msg = inQueue.acquireAppender()
@@ -65,24 +68,24 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
             // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
             {
                 ExcerptTailer excerptTailer = inQueue.createTailer().afterLastWritten(outQueue);
-                    long index = excerptTailer.index();
+                long index = excerptTailer.index();
                 MethodReader methodReader = excerptTailer.methodReader((LATMsg) actualValue::set);
 
+                methodReader.readOne();
+                try {
+                    assertEquals("somedata-2", actualValue.get());
                     methodReader.readOne();
-                    try {
-                        Assert.assertEquals("somedata-2", actualValue.get());
-                        methodReader.readOne();
-                        Assert.assertEquals("somedata-3", actualValue.get());
-                        methodReader.readOne();
-                        Assert.assertEquals("somedata-4", actualValue.get());
-                    } catch (AssertionError ae) {
-                        System.out.println("index: " + Long.toHexString(index));
-                        System.out.println("inQueue");
-                        System.out.println(inQueue.dump());
-                        System.out.println("outQueue");
-                        System.out.println(outQueue.dump());
-                        throw ae;
-                    }
+                    assertEquals("somedata-3", actualValue.get());
+                    methodReader.readOne();
+                    assertEquals("somedata-4", actualValue.get());
+                } catch (AssertionError ae) {
+                    System.out.println("index: " + Long.toHexString(index));
+                    System.out.println("inQueue");
+                    System.out.println(inQueue.dump());
+                    System.out.println("outQueue");
+                    System.out.println(outQueue.dump());
+                    throw ae;
+                }
             }
         }
     }
@@ -95,8 +98,8 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
         final File outQueueDir = getTmpDir();
         final File inQueueDir = getTmpDir();
 
-        try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(1).timeProvider(timeProvider).build();
-             ChronicleQueue inQueue = single(inQueueDir).rollCycle(RollCycles.TEST_SECONDLY).sourceId(2).timeProvider(timeProvider).build()) {
+        try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(ROLL_CYCLE).sourceId(1).timeProvider(timeProvider).build();
+             ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build()) {
 
 
             // write some initial data to the inqueue
@@ -132,28 +135,28 @@ public class LastAppendedTest extends ChronicleQueueTestBase {
 
             AtomicReference<String> actualValue = new AtomicReference<>();
 
-                // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
-                {
-                    ExcerptTailer excerptTailer = inQueue.createTailer().afterLastWritten(outQueue);
-                    long index = excerptTailer.index();
-                    MethodReader methodReader = excerptTailer.methodReader((LATMsg) actualValue::set);
-                    try {
-                        Assert.assertEquals("somedata-2", actualValue.get());
-                        methodReader.readOne();
-                        Assert.assertEquals("somedata-3", actualValue.get());
-                        methodReader.readOne();
-                        Assert.assertEquals("somedata-4", actualValue.get());
-                    } catch (AssertionError ae) {
-                        System.out.println("index: " + Long.toHexString(index));
-                        System.out.println("inQueue");
-                        System.out.println(inQueue.dump());
-                        System.out.println("outQueue");
-                        System.out.println(outQueue.dump());
-                        throw ae;
-                    }
+            // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
+            {
+                ExcerptTailer excerptTailer = inQueue.createTailer().afterLastWritten(outQueue);
+                long index = excerptTailer.index();
+                MethodReader methodReader = excerptTailer.methodReader((LATMsg) actualValue::set);
+                try {
+                    assertEquals("somedata-2", actualValue.get());
+                    methodReader.readOne();
+                    assertEquals("somedata-3", actualValue.get());
+                    methodReader.readOne();
+                    assertEquals("somedata-4", actualValue.get());
+                } catch (AssertionError ae) {
+                    System.out.println("index: " + Long.toHexString(index));
+                    System.out.println("inQueue");
+                    System.out.println(inQueue.dump());
+                    System.out.println("outQueue");
+                    System.out.println(outQueue.dump());
+                    throw ae;
                 }
             }
         }
     }
 }
+
 
