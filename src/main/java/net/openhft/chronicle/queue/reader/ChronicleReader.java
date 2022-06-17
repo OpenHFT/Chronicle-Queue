@@ -152,6 +152,8 @@ public class ChronicleReader implements Reader {
                 } else {
                     throw e;
                 }
+            } finally {
+                MessageHistory.set(null);
             }
         } while (retryLastOperation);
 
