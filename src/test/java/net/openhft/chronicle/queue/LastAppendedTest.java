@@ -18,16 +18,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RequiredForClient
 public class LastAppendedTest extends ChronicleQueueTestBase {
-    @Test
-    public void testLastIndexAppendedAcrossRestarts() throws Throwable {
-        builder(this::testLastWritten0).build().run();
-    }
+   // @Test
+   // public void testLastWritten() {
+    //    builder(this::testLastWritten0).build().run();
+   // }
 
-    @Test
-    public void testLastWrittenMetadata() throws Throwable {
-        builder(this::testLastWrittenMetadata0).build().run();
-    }
 
+   // public void testLastWrittenMetadata() {
+  //      builder(this::testLastWrittenMetadata0).build().run();
+  //  }
+    @Test
     void testLastWritten0() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
