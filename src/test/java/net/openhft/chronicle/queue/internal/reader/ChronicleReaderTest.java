@@ -70,7 +70,9 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     public void before() {
         // Reader opens queues in read-only mode
         if (OS.isWindows())
-            if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") || testName.getMethodName().equals("shouldBeAbleToReadFromReadOnlyFile")))
+            if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") ||
+                    testName.getMethodName().equals("shouldBeAbleToReadFromReadOnlyFile") ||
+                    testName.getMethodName().equals("shouldPrintTimestampsToLocalTime")))
                 expectException("Read-only mode is not supported on Windows");
 
         dataDir = getTmpDir().toPath();
