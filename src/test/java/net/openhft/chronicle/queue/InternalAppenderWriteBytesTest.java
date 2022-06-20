@@ -21,6 +21,8 @@ import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
@@ -284,6 +286,18 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             result.clear();
             tailer.readBytes(result);
             assertEquals(test2, result);
+        }
+    }
+
+    @Test
+    public void testModCountAndToLong() throws Exception {
+        try {
+            try (final SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
+                q.listCyclesBetween(-481902163, -1911694226);
+            }
+            fail("testModCountAndToLong should have thrown IllegalStateException");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("'file not found' for the lowerCycle"));
         }
     }
 
