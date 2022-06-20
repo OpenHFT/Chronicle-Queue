@@ -33,7 +33,7 @@ This is done to provide automatic data re-synchronisation after a failover to th
 The set of hosts onto which the queue is replicated, is defined as a `cluster`. The configuration for a cluster is as follows:
 
 ```
-!QueueReplicationCfg {
+!ChronicleQueueReplicationCfg {
   cluster: {
     context: !QueueClusterContext {
       heartbeatIntervalMs: 300000,
