@@ -262,6 +262,7 @@ class StoreTailer extends AbstractCloseable
 
     // throws UnrecoverableTimeoutException
     private boolean next0(final boolean includeMetaData) throws StreamCorruptedException {
+        context.metaData(false);
         for (int i = 0; i < 1000; i++) {
             switch (state) {
                 case UNINITIALISED:
@@ -270,7 +271,10 @@ class StoreTailer extends AbstractCloseable
                         return false;
                     if (includeMetaData) {
                         if (moveToCycle(queue.rollCycle().toCycle(firstIndex))) {
-                            inACycleFound(wire().bytes());
+                            final Bytes<?> bytes = wire().bytes();
+                            inACycleFound(bytes);
+                            final int header = bytes.readInt(bytes.readPosition() - 4);
+                            context.metaData(Wires.isReadyMetaData(header));
                             return true;
                         }
                     } else {

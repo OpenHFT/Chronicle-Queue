@@ -164,36 +164,6 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         return builder.build();
     }
 
-    private static final class CapturingStringEvents implements OnEvents {
-        private final OnEvents delegate;
-
-        CapturingStringEvents(final OnEvents delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public void onEvent(final String event) {
-            delegate.onEvent(event);
-        }
-    }
-
-    private static final class MutableTimeProvider implements TimeProvider {
-        private long currentTimeMillis;
-
-        @Override
-        public long currentTimeMillis() {
-            return currentTimeMillis;
-        }
-
-        void setTime(final long millis) {
-            this.currentTimeMillis = millis;
-        }
-
-        void addTime(final long duration, final TimeUnit unit) {
-            this.currentTimeMillis += unit.toMillis(duration);
-        }
-    }
-
     @Test
     public void disableThreadSafety() throws InterruptedException {
         new ThreadSafetyTestingTemplate() {
@@ -305,8 +275,53 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         return messageHolder.get();
     }
 
+    @Test
+    public void readMetaData() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build();
+             ExcerptTailer tailer = queue.createTailer();
+             ExcerptAppender appender = queue.acquireAppender()) {
+            appender.writeText("Hello World");
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                assertTrue(dc.isPresent());
+                assertTrue(dc.isMetaData());
+                assertEquals("header", dc.wire().readEvent(String.class));
+            }
+        }
+    }
+
     interface Foobar {
         void say(String message);
+    }
+
+    private static final class CapturingStringEvents implements OnEvents {
+        private final OnEvents delegate;
+
+        CapturingStringEvents(final OnEvents delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void onEvent(final String event) {
+            delegate.onEvent(event);
+        }
+    }
+
+    private static final class MutableTimeProvider implements TimeProvider {
+        private long currentTimeMillis;
+
+        @Override
+        public long currentTimeMillis() {
+            return currentTimeMillis;
+        }
+
+        void setTime(final long millis) {
+            this.currentTimeMillis = millis;
+        }
+
+        void addTime(final long duration, final TimeUnit unit) {
+            this.currentTimeMillis += unit.toMillis(duration);
+        }
     }
 
     abstract class ThreadSafetyTestingTemplate {
