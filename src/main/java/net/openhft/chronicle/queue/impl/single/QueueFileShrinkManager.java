@@ -28,8 +28,10 @@ import java.io.RandomAccessFile;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static net.openhft.chronicle.queue.impl.single.FileShrinkage.*;
+
 public enum QueueFileShrinkManager {
-    ; // none
+    ;
     public static final String THREAD_NAME = "queue~file~shrink~daemon";
     // don't use this with a Pretoucher enabled!
     public static final boolean RUN_SYNCHRONOUSLY = Jvm.getBoolean("chronicle.queue.synchronousFileShrinking");
@@ -38,10 +40,23 @@ public enum QueueFileShrinkManager {
     private static final ScheduledExecutorService EXECUTOR = Threads.acquireScheduledExecutorService(THREAD_NAME, true);
     private static final long DELAY_S = 10;
 
-    public static void scheduleShrinking(@NotNull final File queueFile, final long writePos) {
+    public static FileShrinkage defaultFileShrink() {
+
         if (DISABLE_QUEUE_FILE_SHRINKING)
-            return;
+            return NONE;
+
         if (RUN_SYNCHRONOUSLY)
+            return SHRINK_SYNCHRONOUSLY;
+
+        return SHRINK_ASYNCHRONOUSLY;
+    }
+
+    public static void scheduleShrinking(@NotNull final File queueFile, final long writePos, @NotNull FileShrinkage fileShrink) {
+
+        if (fileShrink == NONE)
+            return;
+
+        if (fileShrink == SHRINK_SYNCHRONOUSLY)
             task(queueFile, writePos);
         else {
             // The shrink is deferred a bit to allow any potentially lagging tailers/pre-touchers
@@ -63,6 +78,10 @@ public enum QueueFileShrinkManager {
                 }
                 try (RandomAccessFile raf = new RandomAccessFile(queueFile, "rw")) {
                     raf.setLength(writePos);
+                    System.out.println("setLength=" + writePos + ", raf=" + queueFile.getAbsolutePath());
+
+                    System.out.println("reaad=" + new RandomAccessFile(queueFile, "r").length());
+
 
                 } catch (IOException ex) {
                     // on microsoft windows, keep retrying until the file is unmapped

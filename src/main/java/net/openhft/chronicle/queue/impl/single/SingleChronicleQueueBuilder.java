@@ -66,6 +66,7 @@ import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
+import static net.openhft.chronicle.queue.impl.single.QueueFileShrinkManager.defaultFileShrink;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
@@ -162,6 +163,25 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public static void addAliases() {
         // static initialiser.
+    }
+
+
+    private FileShrinkage fileShrinkage = defaultFileShrink();
+
+    /**
+     * @return if set, shrinks the .cq4 file after roll
+     */
+    public FileShrinkage fileShrinkage() {
+        return fileShrinkage;
+    }
+
+    /**
+     * @return sets shrinks the .cq4 file after roll, or use net.openhft.chronicle.queue.impl.single.FileShrink#NONE
+     * if not required, default is net.openhft.chronicle.queue.impl.single.FileShrink#SHRINK_ASYNCHRONOUSLY
+     */
+    public SingleChronicleQueueBuilder fileShrinkage(FileShrinkage fileShrink) {
+        this.fileShrinkage = fileShrink;
+        return this;
     }
 
     /**
@@ -263,6 +283,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 queue.indexCount(),
                 queue.indexSpacing());
 
+        wireStore.fileShrinkage(queue.fileShrinkage());
         wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
         return wireStore;
     }

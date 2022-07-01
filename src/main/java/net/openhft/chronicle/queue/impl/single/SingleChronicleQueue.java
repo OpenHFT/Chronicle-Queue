@@ -130,6 +130,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final boolean useSparseFile;
     private final long sparseCapacity;
     final AppenderListener appenderListener;
+
+    @NotNull
+    private final FileShrinkage fileShrink;
+
     protected int sourceId;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
@@ -139,6 +143,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
+            fileShrink = builder.fileShrinkage();
             rollCycle = builder.rollCycle();
             cycleCalculator = cycleCalculator(builder.rollTimeZone());
             epoch = builder.epoch();
@@ -435,6 +440,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public int deltaCheckpointInterval() {
         return deltaCheckpointInterval;
+    }
+
+    @Override
+    public FileShrinkage fileShrinkage() {
+        return fileShrink;
     }
 
     /**

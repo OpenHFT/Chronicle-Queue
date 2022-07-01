@@ -39,6 +39,8 @@ import java.io.*;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import static net.openhft.chronicle.queue.impl.single.QueueFileShrinkManager.*;
+
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
@@ -56,6 +58,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     private final int dataVersion;
     @NotNull
     private final transient Sequence sequence;
+
+    @NotNull
+    private FileShrinkage fileShrinkage = defaultFileShrink();
 
     private int cycle;
 
@@ -77,6 +82,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             this.indexing.writePosition = writePosition;
             this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
             this.indexing.sequence = sequence;
+
+            try {
+                ValueIn read = wire.read(MetaDataField.fileShrinkage);
+                if (read.isPresent())
+                    this.fileShrinkage = read.asEnum(FileShrinkage.class);
+            } catch (Exception ignore) {
+            }
+
             if (wire.bytes().readRemaining() > 0) {
                 final int version = wire.read(MetaDataField.dataFormat).int32();
                 this.dataVersion = version > 1 ? 0 : version;
@@ -342,6 +355,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         intForBinding(wireOut, writePosition)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
                 .write(MetaDataField.dataFormat).int32(dataVersion);
+        wire.write(MetaDataField.fileShrinkage).asEnum(fileShrinkage);
     }
 
     @Override
@@ -409,10 +423,19 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         }
     }
 
+    public FileShrinkage fileShrinkage() {
+        return fileShrinkage;
+    }
+
+    public SingleChronicleQueueStore fileShrinkage(@NotNull FileShrinkage fileShrinkage) {
+        this.fileShrinkage = fileShrinkage;
+        return this;
+    }
+
     boolean writeEOFAndShrink(@NotNull Wire wire, long timeoutMS) {
         if (wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition())) {
             // only if we just written EOF
-            QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
+            scheduleShrinking(mappedFile.file(), wire.bytes().writePosition(), fileShrinkage);
             return true;
         }
         return false;
