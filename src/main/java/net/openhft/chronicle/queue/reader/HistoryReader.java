@@ -28,8 +28,20 @@ public interface HistoryReader {
 
     HistoryReader withSummaryOutput(int offset);
 
+    /**
+     * set the index to start at
+     * @param startIndex start index
+     * @return this
+     */
+    HistoryReader withStartIndex(long startIndex);
+
     void execute();
 
+    /**
+     * Read until the end of the queue, accumulating latency histograms.
+     * Can be called repeatedly and will start where last finished
+     * @return histograms
+     */
     Map<String, Histogram> readChronicle();
 
     void outputData();
