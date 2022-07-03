@@ -35,6 +35,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     protected long firstTimeStampNanos = 0;
     protected long lastWindowCount = 0;
     protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
+    protected Long startIndex;
     protected int lastHistosSize = 0;
     protected ExcerptTailer tailer;
 
@@ -90,6 +91,12 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         return this;
     }
 
+    @Override
+    public ChronicleHistoryReader withStartIndex(long startIndex) {
+        this.startIndex = startIndex;
+        return this;
+    }
+
     // TODO: rename as queue is now cached
     @NotNull
     protected ChronicleQueue createQueue() {
@@ -99,11 +106,14 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         if (!Files.exists(basePath)) {
             throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
         }
+        // TODO: allow builder to be overridden
         SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .readOnly(true)
                 .build();
         tailer = queue.createTailer();
+        if (startIndex != null && !tailer.moveToIndex(startIndex))
+            throw new IllegalArgumentException("Could not move to startIndex " + Long.toHexString(startIndex));
         return queue;
     }
 
@@ -117,12 +127,14 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     @Override
     public Map<String, Histogram> readChronicle() {
         createQueue();
+        resetHistos();
 
+        // we have to create MR every time so that it refers to our MessageHistory
         final WireParselet parselet = parselet();
         final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(Long.toString(methodId), wire.read());
+        final MessageHistory prev = MessageHistory.get();
         MessageHistory.set(new VanillaMessageHistory());
         try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, fieldNumberParselet, null, parselet)) {
-
             while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
                 ++counter;
                 if (this.progress && counter % 1_000_000L == 0) {
@@ -130,7 +142,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
                 }
             }
         } finally {
-            MessageHistory.set(null);
+            MessageHistory.set(prev);
         }
 
         return histos;
@@ -266,6 +278,10 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     protected void windowPassed() {
         outputData();
+        resetHistos();
+    }
+
+    private void resetHistos() {
         histos.values().forEach(Histogram::reset);
     }
 

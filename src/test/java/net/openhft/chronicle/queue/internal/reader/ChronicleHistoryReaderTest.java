@@ -23,10 +23,11 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 
-public class ChronicleHistoryReaderTest extends QueueTestCommon {
+public class ChronicleHistoryReaderTest extends ChronicleQueueTestBase {
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitial() {
@@ -57,14 +58,17 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     private void checkWithQueueHistoryRecordHistoryInitial(Class<? extends DummyListener> dummyClass) {
+        // this is because there is no way to tell CHR to open a queue with a particular sourceId
         expectException("Overriding sourceId from existing metadata, was 0, overriding to");
 
-        MessageHistory.set(null);
+        final SetTimeMessageHistory mh = new SetTimeMessageHistory();
+        mh.addSourceDetails(true);
+        MessageHistory.set(mh);
 
         int extraTiming = 1;
-        File queuePath1 = IOTools.createTempFile("testWithQueueHistory1-");
-        File queuePath2 = IOTools.createTempFile("testWithQueueHistory2-");
-        File queuePath3 = IOTools.createTempFile("testWithQueueHistory3-");
+        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
+        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
+        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
         try {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out.acquireAppender()
@@ -131,6 +135,154 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void testPredictable() {
+        runPredictable(0, null, "Timings below in MICROSECONDS\n" +
+                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                "count:                   100          100          100          100          100 \n" +
+                "50:                        9           19            9           19           60 \n" +
+                "90:                        9           19            9           19           60 \n" +
+                "99:                        9           19            9           19           60 \n" +
+                "99.9:                                                                            \n" +
+                "99.99:                                                                           \n" +
+                "99.999:                                                                          \n" +
+                "99.9999:                                                                         \n" +
+                "worst:                     9           19            9           19           60 \n");
+    }
+
+    @Test
+    public void testPredictableStartIndex() {
+        runPredictable(0, 33L, "Timings below in MICROSECONDS\n" +
+                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                "count:                    67           67           67           67           67 \n" +
+                "50:                        9           19            9           19           60 \n" +
+                "90:                        9           19            9           19           60 \n" +
+                "99:                        9           19            9           19           60 \n" +
+                "99.9:                                                                            \n" +
+                "99.99:                                                                           \n" +
+                "99.999:                                                                          \n" +
+                "99.9999:                                                                         \n" +
+                "worst:                     9           19            9           19           60 \n");
+    }
+
+    @Test
+    public void testPredictableMeasurementWindow() {
+        runPredictable(2_800, null, "Timings below in MICROSECONDS\n" +
+                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                "count:                     1            1            1            1            1 \n" +
+                "50:                        9           19            9           19           60 \n" +
+                "90:                        9           19            9           19           60 \n" +
+                "99:                        9           19            9           19           60 \n" +
+                "99.9:                                                                            \n" +
+                "99.99:                                                                           \n" +
+                "99.999:                                                                          \n" +
+                "99.9999:                                                                         \n" +
+                "worst:                     9           19            9           19           60 \n" +
+                "Timings below in MICROSECONDS\n" +
+                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                "count:                    40           40           40           40           40 \n" +
+                "50:                        9           19            9           19           60 \n" +
+                "90:                        9           19            9           19           60 \n" +
+                "99:                        9           19            9           19           60 \n" +
+                "99.9:                                                                            \n" +
+                "99.99:                                                                           \n" +
+                "99.999:                                                                          \n" +
+                "99.9999:                                                                         \n" +
+                "worst:                     9           19            9           19           60 \n" +
+                "Timings below in MICROSECONDS\n" +
+                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                "count:                    40           40           40           40           40 \n" +
+                "50:                        9           19            9           19           60 \n" +
+                "90:                        9           19            9           19           60 \n" +
+                "99:                        9           19            9           19           60 \n" +
+                "99.9:                                                                            \n" +
+                "99.99:                                                                           \n" +
+                "99.999:                                                                          \n" +
+                "99.9999:                                                                         \n" +
+                "worst:                     9           19            9           19           60 \n" +
+                "Timings below in MICROSECONDS\n" +
+                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                "count:                    19           19           19           19           19 \n" +
+                "50:                        9           19            9           19           60 \n" +
+                "90:                        9           19            9           19           60 \n" +
+                "99:                        9           19            9           19           60 \n" +
+                "99.9:                                                                            \n" +
+                "99.99:                                                                           \n" +
+                "99.999:                                                                          \n" +
+                "99.9999:                                                                         \n" +
+                "worst:                     9           19            9           19           60 \n");
+    }
+
+    private void runPredictable(int mwMicros, Long startIndexOffset, String output) {
+        // this is because there is no way to tell CHR to open a queue with a particular sourceId
+        expectException("Overriding sourceId from existing metadata, was 0, overriding to");
+
+        final SetTimeMessageHistory mh = new SetTimeMessageHistory();
+        mh.addSourceDetails(true);
+        MessageHistory.set(mh);
+
+        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
+        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
+        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
+        try {
+            StringBuilder sb = new StringBuilder();
+            try (ChronicleQueue q1 = queue(queuePath1, 1);
+                 ChronicleQueue q2 = queue(queuePath2, 2);
+                 ChronicleQueue q3 = queue(queuePath3, 3);
+                 ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
+                         .withBasePath(queuePath3.toPath())
+                         .withTimeUnit(TimeUnit.MICROSECONDS)
+                         .withMeasurementWindow(mwMicros)
+                         .withMessageSink(str -> sb.append(str).append('\n'))) {
+
+                DummyListener writer1 = q1.acquireAppender().methodWriterBuilder(DummyListener.class).get();
+                DummyListener writer2 = q2.acquireAppender().methodWriterBuilder(DummyListener.class).get();
+                DummyListener writer3 = q3.acquireAppender().methodWriterBuilder(DummyListener.class).get();
+                MethodReader reader1 = q1.createTailer().methodReader(writer2);
+                MethodReader reader2 = q2.createTailer().methodReader(writer3);
+
+                for (int i=0; i<100; i++) {
+                    writer1.say("hello " + i);
+                    assertTrue(reader1.readOne());
+                    assertTrue(reader2.readOne());
+                    assertFalse(reader1.readOne());
+                    assertFalse(reader2.readOne());
+                }
+
+                if (startIndexOffset != null)
+                    chronicleHistoryReader.withStartIndex(startIndexOffset + q3.firstIndex());
+                chronicleHistoryReader.readChronicle();
+                chronicleHistoryReader.outputData();
+                Assert.assertEquals(output, sb.toString());
+
+                writer1.say("again");
+                assertTrue(reader1.readOne());
+                assertTrue(reader2.readOne());
+                assertFalse(reader1.readOne());
+                assertFalse(reader2.readOne());
+
+                sb.setLength(0);
+                chronicleHistoryReader.readChronicle();
+                chronicleHistoryReader.outputData();
+                Assert.assertEquals("re-reading should only show new data",
+                        "Timings below in MICROSECONDS\n" +
+                                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                                "count:                     1            1            1            1            1 \n" +
+                                "50:                        9           19            9           19           60 \n" +
+                                "90:                        9           19            9           19           60 \n" +
+                                "99:                        9           19            9           19           60 \n" +
+                                "99.9:                                                                            \n" +
+                                "99.99:                                                                           \n" +
+                                "99.999:                                                                          \n" +
+                                "99.9999:                                                                         \n" +
+                                "worst:                     9           19            9           19           60 \n",
+                        sb.toString());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
+        }
+    }
+
     @NotNull
     private SingleChronicleQueue queue(File queuePath1, int sourceId) {
         return ChronicleQueue.singleBuilder(queuePath1).testBlockSize().sourceId(sourceId).build();
@@ -146,5 +298,14 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         @Override
         @MethodId(1)
         void say(String what);
+    }
+
+    static class SetTimeMessageHistory extends VanillaMessageHistory {
+        long nanoTime = 140_000_000_000_000L;
+
+        @Override
+        protected long nanoTime() {
+            return nanoTime += 10_000;
+        }
     }
 }
