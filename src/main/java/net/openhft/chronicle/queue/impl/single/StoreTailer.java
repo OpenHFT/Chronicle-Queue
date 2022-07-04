@@ -756,7 +756,7 @@ class StoreTailer extends AbstractCloseable
         RollCycle rollCycle = queue.rollCycle();
 
         final SingleChronicleQueueStore wireStore = (cycle == lastCycle) ? this.store : queue.storeForCycle(
-                lastCycle, queue.epoch(), false, this.store);
+                lastCycle, queue.epoch(), false);
         this.setCycle(lastCycle);
         if (wireStore == null)
             throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
@@ -910,10 +910,7 @@ class StoreTailer extends AbstractCloseable
                 return this;
             }
 
-            // TODO fix this so it doesn't replace the same store.
-            final SingleChronicleQueueStore wireStore = queue.storeForCycle(
-                    lastCycle, queue.epoch(), false, this.store);
-            this.setCycle(lastCycle);
+            final SingleChronicleQueueStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
             if (wireStore == null)
                 throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
 
@@ -1109,8 +1106,7 @@ class StoreTailer extends AbstractCloseable
         if (this.cycle == cycle && (state == FOUND_IN_CYCLE || state == NOT_REACHED_IN_CYCLE))
             return true;
 
-        final SingleChronicleQueueStore nextStore = queue.storeForCycle(
-                cycle, queue.epoch(), false, this.store);
+        final SingleChronicleQueueStore nextStore = queue.storeForCycle(cycle, queue.epoch(), false);
 
         if (nextStore == null && store == null)
             return false;

@@ -32,14 +32,29 @@ public interface RollingChronicleQueue extends ChronicleQueue {
 
     /**
      * @param cycle          the cycle
-     * @param epoch          an epoch offset as the number of number of milliseconds since January
+     * @param epoch          an epoch offset as the number of milliseconds since January
+     *                       1, 1970, 00:00:00 GMT
+     * @param createIfAbsent create missing stores if true, or return null if missing
+     * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent
+     * is <code>false</code> and absent
+     */
+    // deprecating this since oldStore is known internally and will be reused when possible
+    @Deprecated(/* to be removed in x.25 */)
+    @Nullable
+    default SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore){
+       return storeForCycle(cycle, epoch, createIfAbsent);
+    }
+
+    /**
+     * @param cycle          the cycle
+     * @param epoch          an epoch offset as the number of milliseconds since January
      *                       1, 1970, 00:00:00 GMT
      * @param createIfAbsent create missing stores if true, or return null if missing
      * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent
      * is <code>false</code> and absent
      */
     @Nullable
-    SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);
+    SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent);
 
     /**
      * @return the first cycle number found, or Integer.MAX_VALUE is none found.

@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.text.ParseException;
 import java.util.NavigableSet;
 
@@ -31,6 +32,7 @@ public class WireStorePool extends SimpleCloseable {
     @NotNull
     private final WireStoreSupplier supplier;
     private final StoreFileListener storeFileListener;
+    private SingleChronicleQueueStore oldStore;
 
     private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
@@ -42,6 +44,9 @@ public class WireStorePool extends SimpleCloseable {
         return new WireStorePool(supplier, storeFileListener);
     }
 
+    // deprecating this since a pool must be aware of its creations and be able to reuse them when needed
+    // instead of the user supplying it with the previous possible reusable instance
+    @Deprecated(/* to be removed in x.25 */)
     @Nullable
     public SingleChronicleQueueStore acquire(
             final int cycle,
@@ -55,7 +60,30 @@ public class WireStorePool extends SimpleCloseable {
             if (store != oldStore) {
                 if (storeFileListener.isActive())
                     BackgroundResourceReleaser.run(() -> storeFileListener.onAcquired(cycle, store.file()));
-                store.cycle(cycle);
+            }
+        }
+        return store;
+    }
+
+    @Nullable
+    public SingleChronicleQueueStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
+        throwExceptionIfClosed();
+
+        SingleChronicleQueueStore store = this.oldStore;
+
+        // since without reuse we would always make sure the cycle file exists
+        // we will have to check that it does for a given store before we can reuse it
+        if (store != null && store.cycle() == cycle && !store.isClosed() && store.currentFile().exists()) {
+            return store;
+        }
+
+        store = this.supplier.acquire(cycle, createIfAbsent);
+        if (store != null) {
+            store.cycle(cycle); // todo should this be done at the creation? cycle = store, new store = new cycle
+            this.oldStore = store;
+            if (storeFileListener.isActive()) {
+                File file = store.file();
+                BackgroundResourceReleaser.run(() -> storeFileListener.onAcquired(cycle, file));
             }
         }
         return store;

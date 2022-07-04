@@ -288,7 +288,7 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
     }
 
     private boolean hasEOF(SingleChronicleQueue q, int cycle) {
-        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
+        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false)) {
             String dump = store.dump();
             System.out.println(dump);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");

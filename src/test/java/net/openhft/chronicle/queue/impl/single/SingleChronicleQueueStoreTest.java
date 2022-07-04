@@ -27,7 +27,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
 
     private static void assertExcerptsAreIndexed(final RollingChronicleQueue queue, final long[] indices,
                                                  final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {
-        try (final SingleChronicleQueueStore wireStore = queue.storeForCycle(queue.cycle(), 0L, true, null);
+        try (final SingleChronicleQueueStore wireStore = queue.storeForCycle(queue.cycle(), 0L, true);
              StoreTailer tailer = (StoreTailer) queue.createTailer()) {
             final SCQIndexing indexing = wireStore.indexing;
             for (int i = 0; i < RECORD_COUNT; i++) {

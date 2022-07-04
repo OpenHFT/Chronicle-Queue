@@ -49,7 +49,7 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
 
             int cycle = q.rollCycle().toCycle(0x18406e100000000L);
 
-            try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
+            try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false)) {
                 String absolutePath = wireStore.file().getAbsolutePath();
                 // System.out.println(absolutePath);
                 Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));

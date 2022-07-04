@@ -336,7 +336,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public @NotNull String dumpLastHeader() {
         StringBuilder sb = new StringBuilder(256);
-        try (SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false, null)) {
+        try (SingleChronicleQueueStore wireStore = storeForCycle(lastCycle(), epoch, false)) {
             sb.append(wireStore.dumpHeader());
         }
         return sb.toString();
@@ -348,7 +348,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         StringBuilder sb = new StringBuilder(1024);
         sb.append(metaStore.dump());
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
-            try (SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false, null)) {
+            try (SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false)) {
                 if (commonStore != null)
                     sb.append(commonStore.dump());
             }
@@ -570,8 +570,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     @Override
-    public final SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore) {
-        return this.pool.acquire(cycle, epoch, createIfAbsent, oldStore);
+    public final SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent) {
+        return this.pool.acquire(cycle, epoch, createIfAbsent);
     }
 
     @Override
@@ -922,7 +922,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             int cycle = cycle();
             for (int lastCycle = lastCycle(); lastCycle < cycle && lastCycle >= 0; lastCycle--) {
-                try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false, null)) {
+                try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false)) {
                     // file not found.
                     if (store == null)
                         break;
@@ -1072,6 +1072,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
                         wireStore = storeFactory.apply(that, wire);
+                        // todo setting cycle at creation (though it should be done in constructor)
+//                        wireStore.cycle(cycle);
                         wire.updateFirstHeader();
                         wire.usePadding(wireStore.dataVersion() > 0);
 

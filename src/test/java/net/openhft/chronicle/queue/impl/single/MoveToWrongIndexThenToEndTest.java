@@ -154,7 +154,7 @@ public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
 
     private long approximateLastIndex(int cycle, SingleChronicleQueue queue,
                                       StoreTailer tailer) {
-        try (SingleChronicleQueueStore wireStore = queue.storeForCycle(cycle, queue.epoch(), false, null)) {
+        try (SingleChronicleQueueStore wireStore = queue.storeForCycle(cycle, queue.epoch(), false)) {
             if (wireStore == null) {
                 return noIndex;
             }

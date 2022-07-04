@@ -431,6 +431,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return indexing.indexSpacing();
     }
 
+    // store is linked to a specific cycle, new cycle = new store
+    // it shouldn't be possible to modify the cycle once the store is instantiated
+    // can't we find the cycle in 2 constructors we have?
     public SingleChronicleQueueStore cycle(int cycle) {
         throwExceptionIfClosedInSetter();
 
