@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class ChronicleHistoryReader implements HistoryReader, Closeable {
@@ -36,6 +37,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     protected long lastWindowCount = 0;
     protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
     protected Long startIndex;
+    protected Supplier<Histogram> histoSupplier = () -> new Histogram(60, 4);
     protected int lastHistosSize = 0;
     protected ExcerptTailer tailer;
 
@@ -94,6 +96,12 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     @Override
     public ChronicleHistoryReader withStartIndex(long startIndex) {
         this.startIndex = startIndex;
+        return this;
+    }
+
+    @Override
+    public ChronicleHistoryReader withHistoSupplier(Supplier<Histogram> histoSupplier) {
+        this.histoSupplier = histoSupplier;
         return this;
     }
 
@@ -287,7 +295,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     @NotNull
     protected Histogram histogram() {
-        return new Histogram(60, 4);
+        return histoSupplier.get();
     }
 
     @Override
