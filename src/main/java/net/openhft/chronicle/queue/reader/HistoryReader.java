@@ -35,6 +35,8 @@ public interface HistoryReader {
      */
     HistoryReader withStartIndex(long startIndex);
 
+    ChronicleHistoryReader withHistoSupplier(Supplier<Histogram> histoSupplier);
+
     void execute();
 
     /**
