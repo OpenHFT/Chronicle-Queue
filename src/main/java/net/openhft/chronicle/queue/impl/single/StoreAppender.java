@@ -264,7 +264,7 @@ class StoreAppender extends AbstractCloseable
 
         SingleChronicleQueueStore oldStore = this.store;
 
-        SingleChronicleQueueStore newStore = storePool.acquire(cycle, queue.epoch(), createIfAbsent, oldStore);
+        SingleChronicleQueueStore newStore = storePool.acquire(cycle,  createIfAbsent, oldStore);
 
         if (newStore != oldStore) {
             this.store = newStore;

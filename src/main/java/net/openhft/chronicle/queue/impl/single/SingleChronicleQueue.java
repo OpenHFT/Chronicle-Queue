@@ -571,7 +571,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Nullable
     @Override
     public final SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore) {
-        return this.pool.acquire(cycle, epoch, createIfAbsent, oldStore);
+        return this.pool.acquire(cycle, createIfAbsent, oldStore);
     }
 
     @Override
@@ -922,7 +922,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try {
             int cycle = cycle();
             for (int lastCycle = lastCycle(); lastCycle < cycle && lastCycle >= 0; lastCycle--) {
-                try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, epoch(), false, null)) {
+                try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, false, null)) {
                     // file not found.
                     if (store == null)
                         break;
@@ -1310,6 +1310,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             assert lowerKey != null;
             assert upperKey != null;
             return tree.subMap(lowerKey, true, upperKey, true).navigableKeySet();
+        }
+
+        @Override
+        public boolean canBeReused(@NotNull SingleChronicleQueueStore store) {
+            setFirstAndLastCycle();
+            int cycle = store.cycle();
+            return !store.isClosed() && cycle >= directoryListing.getMinCreatedCycle() && cycle <= directoryListing.getMaxCreatedCycle();
         }
 
         private Long toKey(int cyle, String m) {

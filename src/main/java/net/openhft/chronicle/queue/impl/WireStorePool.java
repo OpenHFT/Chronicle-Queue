@@ -42,28 +42,38 @@ public class WireStorePool extends SimpleCloseable {
         return new WireStorePool(supplier, storeFileListener);
     }
 
+    @Deprecated(/*"removal in x.24 - @param epoch was removed - use WireStorePool.acquire(int, long, boolean, SingleChronicleQueueStore)"*/)
     @Nullable
     public SingleChronicleQueueStore acquire(
             final int cycle,
             final long epoch,
             boolean createIfAbsent,
             SingleChronicleQueueStore oldStore) {
+       return  acquire(cycle,createIfAbsent,oldStore);
+    }
+
+    @Nullable
+    public SingleChronicleQueueStore acquire(
+            final int cycle,
+            boolean createIfAbsent,
+            SingleChronicleQueueStore oldStore) {
         throwExceptionIfClosed();
+
+        // reuse cycle store when applicable
+        if (oldStore != null && oldStore.cycle() == cycle && !oldStore.isClosed())
+            return oldStore;
 
         SingleChronicleQueueStore store = this.supplier.acquire(cycle, createIfAbsent);
         if (store != null) {
-            if (store != oldStore) {
-                if (storeFileListener.isActive())
-                    BackgroundResourceReleaser.run(() -> storeFileListener.onAcquired(cycle, store.file()));
-                store.cycle(cycle);
-            }
+            store.cycle(cycle);
+            if (store != oldStore && storeFileListener.isActive())
+                BackgroundResourceReleaser.run(() -> storeFileListener.onAcquired(cycle, store.file()));
         }
         return store;
     }
 
     public int nextCycle(final int currentCycle, @NotNull TailerDirection direction) throws ParseException {
         throwExceptionIfClosed();
-
         return supplier.nextCycle(currentCycle, direction);
     }
 
