@@ -75,7 +75,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             mappedFile.reserve(this);
             this.indexing = Objects.requireNonNull(wire.read(MetaDataField.indexing).typedMarshallable());
             this.indexing.writePosition = writePosition;
-            this.sequence = new RollCycleEncodeSequence(writePosition, rollIndexCount(), rollIndexSpacing());
+            this.sequence = new RollCycleEncodeSequence(writePosition, indexing.indexCount(), indexing.indexSpacing());
             this.indexing.sequence = sequence;
             if (wire.bytes().readRemaining() > 0) {
                 final int version = wire.read(MetaDataField.dataFormat).int32();
@@ -421,14 +421,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public int dataVersion() {
         return dataVersion;
-    }
-
-    int rollIndexCount() {
-        return indexing.indexCount();
-    }
-
-    int rollIndexSpacing() {
-        return indexing.indexSpacing();
     }
 
     public SingleChronicleQueueStore cycle(int cycle) {

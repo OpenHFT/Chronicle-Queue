@@ -32,7 +32,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
 
     /**
      * @param cycle          the cycle
-     * @param epoch          an epoch offset as the number of number of milliseconds since January
+     * @param epoch          an epoch offset as the number of milliseconds since January
      *                       1, 1970, 00:00:00 GMT
      * @param createIfAbsent create missing stores if true, or return null if missing
      * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent

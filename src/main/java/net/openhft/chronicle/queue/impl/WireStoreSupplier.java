@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.ParseException;
@@ -46,4 +47,6 @@ public interface WireStoreSupplier {
      * @return the cycles between a range, inclusive
      */
     NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException;
+
+    boolean canBeReused(@NotNull SingleChronicleQueueStore store);
 }

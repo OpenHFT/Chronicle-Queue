@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
@@ -25,6 +26,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -418,6 +420,24 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
             assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
             assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
+        }
+    }
+
+
+    @Ignore("for manual use")
+    @Test
+    public void shouldReuseStoreWhenNoUpdates() {
+        // use vm args -ea -Xmx60m -XX:+HeapDumpOnOutOfMemoryError
+        final File dir = getTmpDir();
+        try (ChronicleQueue queue = ChronicleQueue.single(dir.toString())) {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                appender.writeBytes(Bytes.from("i must not leak"));
+            }
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                while (true) {
+                    tailer.toEnd();
+                }
+            }
         }
     }
 
