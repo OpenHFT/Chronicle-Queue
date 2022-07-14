@@ -23,9 +23,9 @@ public class RollCycleTest extends ChronicleQueueTestBase {
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
-                .fieldlessBinary(path)
+                .binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.DEFAULT)
+                .rollCycle(RollCycles.TEST_DAILY)
                 .timeProvider(timeProvider)
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
