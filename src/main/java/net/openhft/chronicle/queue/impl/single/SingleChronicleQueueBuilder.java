@@ -221,14 +221,17 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return builder(basePathFile, WireType.BINARY_LIGHT);
     }
 
+    @Deprecated(/* to be removed in x.25 */)
     public static SingleChronicleQueueBuilder fieldlessBinary(@NotNull File name) {
         return builder(name, WireType.FIELDLESS_BINARY);
     }
 
+    @Deprecated(/* to be removed in x.25 */)
     public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
         return builder(basePathFile, DEFAULT_ZERO_BINARY);
     }
 
+    @Deprecated(/* to be removed in x.25 */)
     public static SingleChronicleQueueBuilder deltaBinary(@NotNull File basePathFile) {
         return builder(basePathFile, DELTA_BINARY);
     }
@@ -241,6 +244,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      *                           deltaIntervalShift  == 6}, as {@code 1 << 6 == 64 }
      * @return the SingleChronicleQueueBuilder
      */
+    @Deprecated(/* to be removed in x.25 */)
     public static SingleChronicleQueueBuilder deltaBinary(@NotNull File name, byte deltaIntervalShift) {
         @NotNull SingleChronicleQueueBuilder ret = deltaBinary(name);
 
