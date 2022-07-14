@@ -756,6 +756,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
 
     @Test
     public void testWritingIndex() {
+        finishedNormally = false;
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = SingleChronicleQueueBuilder.single(dir)
                 .testBlockSize()
@@ -852,6 +853,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
             }
             assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
+        finishedNormally = true;
     }
 
     @SuppressWarnings("unused")

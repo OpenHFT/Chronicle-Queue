@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
@@ -31,7 +30,8 @@ public class StuckQueueTest extends ChronicleQueueTestBase {
         Path tmpDir = getTmpDir().toPath();
 
         expectException("Failback to readonly tablestore");
-        expectException("reading control code as text");
+        ignoreException("reading control code as text");
+        expectException("Unexpected field lastAcknowledgedIndexReplicated");
 //        expectException("Unable to copy TimedStoreRecovery safely will try anyway");
 //        expectException("Unable to copy SCQStore safely will try anyway");
 //        expectException("Unable to copy SCQSRoll safely");

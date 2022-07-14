@@ -55,41 +55,44 @@ public class RollCycleTest extends ChronicleQueueTestBase {
 
     @Test
     public void newRollCycleIgnored2() throws InterruptedException {
+        finishedNormally = false;
         File path = getTmpDir();
 
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
+        try (ChronicleQueue queue0 = observer.queue) {
 
-        int cyclesToWrite = 100;
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(path)
-                .testBlockSize()
-                .rollCycle(RollCycles.DEFAULT)
-                .timeProvider(timeProvider)
-                .build()) {
-            ExcerptAppender appender = queue.acquireAppender();
-            appender.writeText("0");
-
+            int cyclesToWrite = 100;
             Thread thread = new Thread(observer);
-            thread.start();
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(path)
+                    .testBlockSize()
+                    .rollCycle(RollCycles.DEFAULT)
+                    .timeProvider(timeProvider)
+                    .build()) {
+                ExcerptAppender appender = queue.acquireAppender();
+                appender.writeText("0");
 
-            observer.await();
+                thread.start();
 
-            for (int i = 1; i <= cyclesToWrite; i++) {
-                // two days pass
-                timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
-                appender.writeText(Integer.toString(i));
+                observer.await();
+
+                for (int i = 1; i <= cyclesToWrite; i++) {
+                    // two days pass
+                    timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
+                    appender.writeText(Integer.toString(i));
+                }
+
+                // allow parallel tailer to finish iteration
+                for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
+                    Thread.sleep(1);
+                }
+            } finally {
+                thread.interrupt();
             }
 
-            // allow parallel tailer to finish iteration
-            for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
-                Thread.sleep(1);
-            }
-
-            thread.interrupt();
+            assertEquals(1 + cyclesToWrite, observer.documentsRead);
         }
-
-        assertEquals(1 + cyclesToWrite, observer.documentsRead);
-        observer.queue.close();
+        finishedNormally = true;
     }
 
     @After

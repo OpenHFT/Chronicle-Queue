@@ -1,12 +1,7 @@
 package net.openhft.chronicle.queue.impl.single.stress;
 
-import net.openhft.chronicle.bytes.StopCharTesters;
-import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -18,116 +13,277 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.*;
 
-import static net.openhft.chronicle.queue.RollCycles.DEFAULT;
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
 public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
 
+    public static final RollCycles ROLL_CYCLE = TEST_DAILY;
+
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {
+        finishedNormally = false;
         File path = getTmpDir();
-        TestTimeProvider timeProvider = new TestTimeProvider();
+        SetTimeProvider timeProvider = new SetTimeProvider();
+
+        final ExecutorService scheduledExecutorService = Executors.newSingleThreadExecutor(
+                new NamedThreadFactory("testRead1"));
 
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder
-                .fieldlessBinary(path)
+                .binary(path)
                 .testBlockSize()
-                .rollCycle(DEFAULT)
+                .rollCycle(ROLL_CYCLE)
                 .timeProvider(timeProvider).build()) {
 
             ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
 
-            final ExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
-                    new NamedThreadFactory("test"));
-
             try (ChronicleQueue queue = SingleChronicleQueueBuilder
-                    .fieldlessBinary(path)
+                    .binary(path)
                     .testBlockSize()
-                    .rollCycle(DEFAULT)
+                    .rollCycle(ROLL_CYCLE)
                     .timeProvider(timeProvider)
                     .build()) {
                 ExcerptAppender appender = queue.acquireAppender();
 
-                Assert.assertEquals(0, (int) scheduledExecutorService.submit(observer::call).get());
+                Assert.assertEquals(-2, (int) scheduledExecutorService.submit(observer::call).get());
                 // two days pass
-                timeProvider.add(TimeUnit.DAYS.toMillis(2));
+                timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
                 try (final DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write().text("Day 3 data");
+                    dc.wire().write("say").text("Day 3 data");
                 }
                 Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer::call).get());
                 assertEquals(1, observer.documentsRead);
 
             }
+        } finally {
             scheduledExecutorService.shutdown();
             scheduledExecutorService.awaitTermination(1, TimeUnit.SECONDS);
         }
+        finishedNormally = true;
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testRead2() throws ExecutionException, InterruptedException {
+        finishedNormally = false;
         File path = getTmpDir();
-        TestTimeProvider timeProvider = new TestTimeProvider();
+        SetTimeProvider timeProvider = new SetTimeProvider();
 
+        final ExecutorService es = Executors.newSingleThreadExecutor(
+                new NamedThreadFactory("testRead2"));
         try (ChronicleQueue queue0 = SingleChronicleQueueBuilder
-                .fieldlessBinary(path)
+                .binary(path)
                 .testBlockSize()
-                .rollCycle(DEFAULT)
+                .rollCycle(ROLL_CYCLE)
                 .timeProvider(timeProvider)
                 .build()) {
 
             final ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
 
-            final ExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
-                    new NamedThreadFactory("test"));
-
             try (ChronicleQueue queue = SingleChronicleQueueBuilder
-                    .fieldlessBinary(path)
+                    .binary(path)
                     .testBlockSize()
-                    .rollCycle(DEFAULT)
+                    .rollCycle(ROLL_CYCLE)
                     .timeProvider(timeProvider)
                     .build()) {
 
                 ExcerptAppender appender = queue.acquireAppender();
 
                 try (final DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write().text("Day 1 data");
+                    dc.wire().write("say").text("Day 1 data");
                 }
 
-                Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer).get());
+                Assert.assertEquals(1, (int) es.submit(observer).get());
+
+                assertEquals("--- !!meta-data #binary\n" +
+                                "header: !STStore {\n" +
+                                "  wireType: !WireType BINARY_LIGHT,\n" +
+                                "  metadata: !SCQMeta {\n" +
+                                "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                                "    deltaCheckpointInterval: 64,\n" +
+                                "    sourceId: 0\n" +
+                                "  }\n" +
+                                "}\n" +
+                                "# position: 180, header: 0\n" +
+                                "--- !!data #binary\n" +
+                                "listing.highestCycle: 0\n" +
+                                "# position: 216, header: 1\n" +
+                                "--- !!data #binary\n" +
+                                "listing.lowestCycle: 0\n" +
+                                "# position: 256, header: 2\n" +
+                                "--- !!data #binary\n" +
+                                "listing.modCount: 3\n" +
+                                "# position: 288, header: 3\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.write.lock: -9223372036854775808\n" +
+                                "# position: 328, header: 4\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.append.lock: -9223372036854775808\n" +
+                                "# position: 368, header: 5\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.lastIndexReplicated: -1\n" +
+                                "# position: 416, header: 6\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                                "...\n" +
+                                "# 130596 bytes remaining\n" +
+                                "--- !!meta-data #binary\n" +
+                                "header: !SCQStore {\n" +
+                                "  writePosition: [\n" +
+                                "    400,\n" +
+                                "    1717986918400\n" +
+                                "  ],\n" +
+                                "  indexing: !SCQSIndexing {\n" +
+                                "    indexCount: 8,\n" +
+                                "    indexSpacing: 1,\n" +
+                                "    index2Index: 200,\n" +
+                                "    lastIndex: 1\n" +
+                                "  },\n" +
+                                "  dataFormat: 1\n" +
+                                "}\n" +
+                                "# position: 200, header: -1\n" +
+                                "--- !!meta-data #binary\n" +
+                                "index2index: [\n" +
+                                "  # length: 8, used: 1\n" +
+                                "  304,\n" +
+                                "  0, 0, 0, 0, 0, 0, 0\n" +
+                                "]\n" +
+                                "# position: 304, header: -1\n" +
+                                "--- !!meta-data #binary\n" +
+                                "index: [\n" +
+                                "  # length: 8, used: 1\n" +
+                                "  400,\n" +
+                                "  0, 0, 0, 0, 0, 0, 0\n" +
+                                "]\n" +
+                                "# position: 400, header: 0\n" +
+                                "--- !!data #binary\n" +
+                                "say: Day 1 data\n" +
+                                "...\n" +
+                                "# 130648 bytes remaining\n",
+                        queue.dump());
 
                 // two days pass
-                timeProvider.add(TimeUnit.DAYS.toMillis(2));
+                timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
                 try (final DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write().text("Day 3 data");
+                    dc.wire().write("say").text("Day 3 data");
                 }
 
-                Assert.assertEquals(2, (int) scheduledExecutorService.submit(observer).get());
+                assertEquals("--- !!meta-data #binary\n" +
+                                "header: !STStore {\n" +
+                                "  wireType: !WireType BINARY_LIGHT,\n" +
+                                "  metadata: !SCQMeta {\n" +
+                                "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                                "    deltaCheckpointInterval: 64,\n" +
+                                "    sourceId: 0\n" +
+                                "  }\n" +
+                                "}\n" +
+                                "# position: 180, header: 0\n" +
+                                "--- !!data #binary\n" +
+                                "listing.highestCycle: 2\n" +
+                                "# position: 216, header: 1\n" +
+                                "--- !!data #binary\n" +
+                                "listing.lowestCycle: 0\n" +
+                                "# position: 256, header: 2\n" +
+                                "--- !!data #binary\n" +
+                                "listing.modCount: 5\n" +
+                                "# position: 288, header: 3\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.write.lock: -9223372036854775808\n" +
+                                "# position: 328, header: 4\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.append.lock: -9223372036854775808\n" +
+                                "# position: 368, header: 5\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.lastIndexReplicated: -1\n" +
+                                "# position: 416, header: 6\n" +
+                                "--- !!data #binary\n" +
+                                "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                                "...\n" +
+                                "# 130596 bytes remaining\n" +
+                                "--- !!meta-data #binary\n" +
+                                "header: !SCQStore {\n" +
+                                "  writePosition: [\n" +
+                                "    400,\n" +
+                                "    1717986918400\n" +
+                                "  ],\n" +
+                                "  indexing: !SCQSIndexing {\n" +
+                                "    indexCount: 8,\n" +
+                                "    indexSpacing: 1,\n" +
+                                "    index2Index: 200,\n" +
+                                "    lastIndex: 1\n" +
+                                "  },\n" +
+                                "  dataFormat: 1\n" +
+                                "}\n" +
+                                "# position: 200, header: -1\n" +
+                                "--- !!meta-data #binary\n" +
+                                "index2index: [\n" +
+                                "  # length: 8, used: 1\n" +
+                                "  304,\n" +
+                                "  0, 0, 0, 0, 0, 0, 0\n" +
+                                "]\n" +
+                                "# position: 304, header: -1\n" +
+                                "--- !!meta-data #binary\n" +
+                                "index: [\n" +
+                                "  # length: 8, used: 1\n" +
+                                "  400,\n" +
+                                "  0, 0, 0, 0, 0, 0, 0\n" +
+                                "]\n" +
+                                "# position: 400, header: 0\n" +
+                                "--- !!data #binary\n" +
+                                "say: Day 1 data\n" +
+                                "# position: 420, header: 0 EOF\n" +
+                                "--- !!not-ready-meta-data #binary\n" +
+                                "...\n" +
+                                "# 130648 bytes remaining\n" +
+                                "--- !!meta-data #binary\n" +
+                                "header: !SCQStore {\n" +
+                                "  writePosition: [\n" +
+                                "    400,\n" +
+                                "    1717986918400\n" +
+                                "  ],\n" +
+                                "  indexing: !SCQSIndexing {\n" +
+                                "    indexCount: 8,\n" +
+                                "    indexSpacing: 1,\n" +
+                                "    index2Index: 200,\n" +
+                                "    lastIndex: 1\n" +
+                                "  },\n" +
+                                "  dataFormat: 1\n" +
+                                "}\n" +
+                                "# position: 200, header: -1\n" +
+                                "--- !!meta-data #binary\n" +
+                                "index2index: [\n" +
+                                "  # length: 8, used: 1\n" +
+                                "  304,\n" +
+                                "  0, 0, 0, 0, 0, 0, 0\n" +
+                                "]\n" +
+                                "# position: 304, header: -1\n" +
+                                "--- !!meta-data #binary\n" +
+                                "index: [\n" +
+                                "  # length: 8, used: 1\n" +
+                                "  400,\n" +
+                                "  0, 0, 0, 0, 0, 0, 0\n" +
+                                "]\n" +
+                                "# position: 400, header: 0\n" +
+                                "--- !!data #binary\n" +
+                                "say: Day 3 data\n" +
+                                "...\n" +
+                                "# 130648 bytes remaining\n",
+                        queue.dump());
+                Assert.assertEquals(2, (int) es.submit(observer).get());
 
-               // System.out.println(queue.dump());
+                // System.out.println(queue.dump());
                 assertEquals(2, observer.documentsRead);
             }
-            scheduledExecutorService.shutdown();
-            scheduledExecutorService.awaitTermination(1, TimeUnit.SECONDS);
+        } finally {
+            es.shutdown();
+            es.awaitTermination(1, TimeUnit.SECONDS);
         }
+        finishedNormally = true;
     }
 
-    private class TestTimeProvider implements TimeProvider {
-
-        private volatile long addInMs = 0;
-
-        @Override
-        public long currentTimeMillis() {
-            return System.currentTimeMillis() + addInMs;
-        }
-
-        void add(long addInMs) {
-            this.addInMs = addInMs;
-        }
-    }
-
-    private class ParallelQueueObserver implements Callable, StoreFileListener {
+    private class ParallelQueueObserver implements Callable {
 
         @NotNull
         private final ExcerptTailer tailer;
@@ -139,36 +295,24 @@ public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
         }
 
         @Override
-        public void onAcquired(int cycle, File file) {
-           // System.out.println("Acquiring " + file);
-        }
-
-        @Override
-        public void onReleased(int cycle, File file) {
-           // System.out.println("Releasing " + file);
-        }
-
-        @Override
         public synchronized Integer call() {
+            System.out.println("index=" + Long.toHexString(tailer.index()));
 
             try (final DocumentContext dc = tailer.readingDocument()) {
+                System.out.println("... index=" + Long.toHexString(tailer.index()));
 
-               // System.out.println("index=" + Long.toHexString(dc.index()));
                 if (!dc.isPresent())
-                    return documentsRead;
+                    return -2;
 
                 StringBuilder sb = Wires.acquireStringBuilder();
-                dc.wire().bytes().parse8bit(sb, StopCharTesters.ALL);
+                dc.wire().read("say").text(sb);
 
-                String readText = sb.toString();
-                if (java.util.Objects.equals(readText, "")) {
-                    return documentsRead;
+                if (sb.length() == 0) {
+                    return -1;
                 }
-               // System.out.println("Read a document " + readText);
-                documentsRead++;
-
             }
-            return documentsRead;
+            System.out.println("+++ index=" + Long.toHexString(tailer.index()));
+            return ++documentsRead;
         }
     }
 }

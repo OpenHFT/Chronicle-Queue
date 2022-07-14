@@ -158,8 +158,9 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
     // "see https://github.com/OpenHFT/Chronicle-Queue/issues/719")
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
-        expectException("reading control code as text");
+        ignoreException("reading control code as text");
         expectException("closable tracing disabled");
+        expectException("Unexpected field lastAcknowledgedIndexReplicated");
 
         // too many hacks are required to make the (artificial) code below release resources correctly
         AbstractCloseable.disableCloseableTracing();

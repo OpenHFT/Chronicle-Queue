@@ -27,10 +27,11 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
-        expectException("reading control code as text");
+        ignoreException("reading control code as text");
         ignoreException("Unable to copy TimedStoreRecovery safely");
         expectException("Queues should be configured with the queue directory, not a specific filename");
         ignoreException("Metadata file not found in readOnly mode");
+        expectException("Unexpected field lastAcknowledgedIndexReplicated");
 
         final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
         final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");
