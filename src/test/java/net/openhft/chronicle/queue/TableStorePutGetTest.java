@@ -59,6 +59,8 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
                     "--- !!data #binary\n" +
+                    "chronicle.lastIndexMSynced: -1\n" +
+                    "--- !!data #binary\n" +
                     "=hello: 79671643340800\n" +
                     "...\n" +
                     "--- !!meta-data #binary\n" +

@@ -1740,6 +1740,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "chronicle.lastIndexReplicated: -1\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexMSynced: -1\n" +
                     "...\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -2023,6 +2025,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "chronicle.lastIndexReplicated: -1\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexMSynced: -1\n" +
                     "...\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -2611,6 +2615,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "chronicle.lastIndexReplicated: -1\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexMSynced: -1\n" +
                     "...\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
