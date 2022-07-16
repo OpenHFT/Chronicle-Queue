@@ -2504,9 +2504,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = binary(getTmpDir())
                 .rollCycle(RollCycles.TEST_SECONDLY).timeProvider(timeProvider)
+                .syncMode(SyncMode.SYNC)
                 .build();
              final ExcerptTailer tailer = queue.createTailer(named ? "named" : null)) {
+            tailer.sync();
             try (final ExcerptAppender appender = queue.acquireAppender()) {
+                appender.sync();
 
                 final List<String> stringsToPut = Arrays.asList("one", "two", "three");
 
@@ -2516,14 +2519,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         writingContext.wire()
                                 .write().bytes(stringsToPut.get(0).getBytes());
                     }
+                    appender.sync();
                     try (DocumentContext writingContext = appender.writingDocument()) {
                         writingContext.wire()
                                 .write().bytes(stringsToPut.get(1).getBytes());
                     }
+                    appender.sync();
                     timeProvider.advanceMillis(2100);
                     try (DocumentContext writingContext = appender.writingDocument()) {
                         writingContext.wire().write().bytes(stringsToPut.get(2).getBytes());
                     }
+                    appender.sync();
                 }
 
                 for (String expected : stringsToPut) {
@@ -2534,6 +2540,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         assertEquals(expected, text);
 
                     }
+                    tailer.sync();
                 }
             }
         }

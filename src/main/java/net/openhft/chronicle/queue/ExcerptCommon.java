@@ -69,4 +69,10 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, Si
     default File currentFile() {
         return null;
     }
+
+    /**
+     * Performa sync up to the point the Appender has written or Tailer has read, if supported.
+     */
+    default void sync() {
+    }
 }
