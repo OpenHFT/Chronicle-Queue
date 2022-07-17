@@ -148,7 +148,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
-    private SyncMode syncMode = MappedFile.DEFAULT_SYNC_MODE;
+    private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -1184,7 +1184,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public SyncMode syncMode() {
-        return syncMode;
+        return syncMode == null ? MappedFile.DEFAULT_SYNC_MODE : syncMode;
     }
 
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {
