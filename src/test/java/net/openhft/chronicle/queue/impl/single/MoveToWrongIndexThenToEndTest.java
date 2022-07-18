@@ -70,6 +70,7 @@ public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void testBufferUnderflowException() throws InterruptedException {
+        finishedNormally = false;
         append();
         append();
 
@@ -121,6 +122,7 @@ public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
                 }
             }
         }
+        finishedNormally = true;
     }
 
     private long getLastIndex(Path queuePath) {

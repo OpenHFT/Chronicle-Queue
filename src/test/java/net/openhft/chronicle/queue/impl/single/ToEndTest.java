@@ -347,8 +347,11 @@ public class ToEndTest extends ChronicleQueueTestBase {
                     "# position: 424, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "# position: 480, header: 7\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexMSynced: -1\n" +
                     "...\n" +
-                    "# 130588 bytes remaining\n" +
+                    "# 130540 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

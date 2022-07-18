@@ -17,10 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesRingBufferStats;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
@@ -151,6 +148,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
+    private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -1178,6 +1176,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public AppenderListener appenderListener() {
         return appenderListener;
+    }
+
+    public SingleChronicleQueueBuilder syncMode(SyncMode syncMode) {
+        this.syncMode = syncMode;
+        return this;
+    }
+
+    public SyncMode syncMode() {
+        return syncMode == null ? MappedFile.DEFAULT_SYNC_MODE : syncMode;
     }
 
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {

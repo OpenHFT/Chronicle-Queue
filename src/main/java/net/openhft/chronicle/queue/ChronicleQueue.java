@@ -381,7 +381,9 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return the last index that was replicated to a remote host
      */
-    long lastIndexReplicated();
+    default long lastIndexReplicated() {
+        return -1;
+    }
 
     /**
      * Returns the last index that was replicated and acknowledged by all remote hosts. If no
@@ -391,7 +393,20 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return the last index that was replicated and acknowledged by all remote hosts
      */
-    long lastAcknowledgedIndexReplicated();
+    default long lastAcknowledgedIndexReplicated() {
+        return -1;
+    }
+
+    /**
+     * Returns the last index that was msync-ed to disk. If no
+     * such index exists, returns -1.
+     * <p>
+     *
+     * @return the last index that was msync-ed to disk
+     */
+    default long lastIndexMSynced() {
+        return -1;
+    }
 
     /**
      * Sets the last index that has been sent to a remote host.
@@ -408,6 +423,16 @@ public interface ChronicleQueue extends Closeable {
      * @see #lastAcknowledgedIndexReplicated()
      */
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
+
+    /**
+     * Sets the last index that was mysync-ed to disk
+     *
+     * @param lastIndexMSynced last msync-ed index
+     * @see #lastIndexMSynced()
+     */
+    default void lastIndexMSynced(long lastIndexMSynced) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Refreshes this ChronicleQueue's view of the directory used for storing files.

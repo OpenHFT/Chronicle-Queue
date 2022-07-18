@@ -85,6 +85,9 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "# position: 472, header: 7\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexMSynced: -1\n" +
                     "...\n" +
                     "# 130596 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +

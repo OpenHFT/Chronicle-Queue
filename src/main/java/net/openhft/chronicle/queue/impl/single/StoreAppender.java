@@ -1,9 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -41,7 +38,7 @@ class StoreAppender extends AbstractCloseable
     private final WriteLock appendLock;
 
     @NotNull
-    private final StoreAppenderContext writeContext;
+    private final StoreAppenderContext context;
     private final WireStorePool storePool;
     private final boolean checkInterrupts;
     @UsedViaReflection
@@ -71,7 +68,7 @@ class StoreAppender extends AbstractCloseable
         this.checkInterrupts = checkInterrupts;
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
-        this.writeContext = new StoreAppenderContext();
+        this.context = new StoreAppenderContext();
         this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
 
         try {
@@ -372,20 +369,20 @@ class StoreAppender extends AbstractCloseable
 
     private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(boolean metaData) {
         if (count > 1) {
-            assert metaData == writeContext.metaData;
-            return writeContext;
+            assert metaData == context.metaData;
+            return context;
         }
 
         if (queue.doubleBuffer && writeLock.locked() && !metaData) {
-            writeContext.isClosed = false;
-            writeContext.rollbackOnClose = false;
-            writeContext.buffered = true;
+            context.isClosed = false;
+            context.rollbackOnClose = false;
+            context.buffered = true;
             if (bufferWire == null) {
                 Bytes<?> bufferBytes = Bytes.allocateElasticOnHeap();
                 bufferWire = queue().wireType().apply(bufferBytes);
             }
-            writeContext.wire = bufferWire;
-            writeContext.metaData(false);
+            context.wire = bufferWire;
+            context.metaData(false);
         } else {
             writeLock.lock();
             int cycle = queue.cycle();
@@ -406,15 +403,15 @@ class StoreAppender extends AbstractCloseable
             wire.bytes().readPosition(wire.bytes().writePosition());
         }
 
-        return writeContext;
+        return context;
     }
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
         if (!DISABLE_THREAD_SAFETY)
             this.threadSafetyCheck(true);
-        if (writeContext.wire != null && writeContext.isOpen() && writeContext.chainedElement())
-            return writeContext;
+        if (context.wire != null && context.isOpen() && context.chainedElement())
+            return context;
         return writingDocument(metaData);
     }
 
@@ -493,11 +490,11 @@ class StoreAppender extends AbstractCloseable
     private void openContext(final boolean metaData, final long safeLength) {
         assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
-        writeContext.isClosed = false;
-        writeContext.rollbackOnClose = false;
-        writeContext.buffered = false;
-        writeContext.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
-        writeContext.metaData(metaData);
+        context.isClosed = false;
+        context.rollbackOnClose = false;
+        context.buffered = false;
+        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+        context.metaData(metaData);
     }
 
     boolean checkWritePositionHeaderNumber() {
@@ -641,15 +638,15 @@ class StoreAppender extends AbstractCloseable
             openContext(metadata, safeLength);
 
             try {
-                final Bytes<?> bytes0 = writeContext.wire().bytes();
+                final Bytes<?> bytes0 = context.wire().bytes();
                 bytes0.readPosition(bytes0.writePosition());
                 bytes0.write(bytes);
             } finally {
-                writeContext.close(false);
+                context.close(false);
                 count = 0;
             }
         } finally {
-            writeContext.isClosed = true;
+            context.isClosed = true;
         }
     }
 
@@ -798,11 +795,23 @@ class StoreAppender extends AbstractCloseable
         return store == null ? null : store.currentFile();
     }
 
+    @Override
+    public void sync() {
+        if (store == null)
+            return;
+
+        final Bytes<?> bytes = context.wire().bytes();
+        if (bytes.bytesStore() instanceof MappedBytesStore) {
+            MappedBytesStore mbs = (MappedBytesStore) bytes.bytesStore();
+            mbs.syncUpTo(bytes.readPosition());
+        }
+    }
+
     private class Finalizer {
         @Override
         protected void finalize() throws Throwable {
             super.finalize();
-            writeContext.rollbackOnClose();
+            context.rollbackOnClose();
             warnAndCloseIfNotClosed();
         }
     }

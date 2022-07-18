@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.MappedBytesStore;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.PackageLocal;
@@ -23,7 +24,6 @@ import java.io.File;
 import java.io.StreamCorruptedException;
 import java.text.ParseException;
 
-import static net.openhft.chronicle.bytes.NoBytesStore.NO_PAGE;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
@@ -57,7 +57,6 @@ class StoreTailer extends AbstractCloseable
     private TailerState state = UNINITIALISED;
     private long indexAtCreation = Long.MIN_VALUE;
     private boolean readingDocumentFound = false;
-    private long address = NO_PAGE;
     private boolean striding = false;
 
     public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool) {
@@ -224,7 +223,6 @@ class StoreTailer extends AbstractCloseable
                 Bytes<?> bytes = wire.bytes();
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
-                address = bytes.addressForRead(bytes.readPosition(), 4);
                 this.lastReadIndex = this.index();
                 return context;
             }
@@ -239,8 +237,6 @@ class StoreTailer extends AbstractCloseable
                 // since we can't find an entry at current index, indicate that we're at the end of a cycle
                 state = TailerState.END_OF_CYCLE;
             }
-
-            setAddress(wire != null);
 
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
@@ -599,18 +595,14 @@ class StoreTailer extends AbstractCloseable
 
         moveToState.indexMoveCount++;
         final ScanResult scanResult = moveToCycleResult0(cycle);
-        setAddress(scanResult == FOUND);
         return scanResult == FOUND;
     }
 
     private boolean setAddress(final boolean found) {
         final Wire wire = privateWire();
         if (wire == null) {
-            address = NO_PAGE;
             return false;
         }
-        final Bytes<?> bytes = wire.bytes();
-        address = found ? bytes.addressForRead(bytes.readPosition(), 4) : NO_PAGE;
         return found;
     }
 
@@ -683,7 +675,6 @@ class StoreTailer extends AbstractCloseable
 
     ScanResult moveToIndexResult(final long index) {
         final ScanResult scanResult = moveToIndexResult0(index);
-        setAddress(scanResult == FOUND);
         return scanResult;
     }
 
@@ -692,7 +683,6 @@ class StoreTailer extends AbstractCloseable
         final int firstCycle = queue.firstCycle();
         if (firstCycle == Integer.MAX_VALUE) {
             state = UNINITIALISED;
-            address = NO_PAGE;
             return this;
         }
         if (firstCycle != this.cycle) {
@@ -709,7 +699,6 @@ class StoreTailer extends AbstractCloseable
         Wire wire = privateWire();
         if (wire != null) {
             wire.bytes().readPosition(0);
-            address = wire.bytes().addressForRead(0);
         }
         return this;
     }
@@ -728,7 +717,6 @@ class StoreTailer extends AbstractCloseable
     private boolean moveToIndexInternal(final long index) {
         moveToState.indexMoveCount++;
         final ScanResult scanResult = moveToIndexResult0(index);
-        setAddress(scanResult == FOUND);
         return scanResult == FOUND;
     }
 
@@ -906,7 +894,6 @@ class StoreTailer extends AbstractCloseable
             if (lastCycle == Integer.MIN_VALUE) {
                 if (state() == TailerState.CYCLE_NOT_FOUND)
                     state = UNINITIALISED;
-                setAddress(state == FOUND_IN_CYCLE);
                 return this;
             }
 
@@ -943,7 +930,6 @@ class StoreTailer extends AbstractCloseable
 
             index(rollCycle.toIndex(lastCycle, sequenceNumber));
 
-            setAddress(state == FOUND_IN_CYCLE);
         } catch (@NotNull UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }
@@ -1251,6 +1237,18 @@ class StoreTailer extends AbstractCloseable
         return store == null ? null : store.currentFile();
     }
 
+    @Override
+    public void sync() {
+        if (store == null)
+            return;
+
+        final Bytes<?> bytes = privateWire().bytes();
+        if (bytes.bytesStore() instanceof MappedBytesStore) {
+            MappedBytesStore mbs = (MappedBytesStore) bytes.bytesStore();
+            mbs.syncUpTo(bytes.readPosition());
+        }
+    }
+
     static final class MoveToState {
         private long lastMovedToIndex = Long.MIN_VALUE;
         private TailerDirection directionAtLastMoveTo = TailerDirection.NONE;
@@ -1336,10 +1334,6 @@ class StoreTailer extends AbstractCloseable
                 incrementIndex();
 
             super.close();
-            if (direction == FORWARD)
-                setAddress(context.wire() != null);
-            else if (direction == BACKWARD)
-                setAddress(false);
         }
 
         boolean present(final boolean present) {

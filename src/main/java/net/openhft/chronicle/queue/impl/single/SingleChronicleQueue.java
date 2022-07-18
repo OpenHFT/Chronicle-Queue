@@ -112,6 +112,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final LongValue lastAcknowledgedIndexReplicated;
     @Nullable
     private final LongValue lastIndexReplicated;
+    private final LongValue lastIndexMSynced;
     @NotNull
     private final DirectoryListing directoryListing;
     @NotNull
@@ -136,6 +137,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::createNewAppenderOnceConditionIsMet);
     private final long forceDirectoryListingRefreshIntervalMs;
     private long[] chunkCount = {0};
+    private SyncMode syncMode;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -172,6 +174,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
             doubleBuffer = builder.doubleBuffer();
+            syncMode = builder.syncMode();
             if (metaStore.readOnly() && !builder.readOnly()) {
                 Jvm.warn().on(getClass(), "Forcing queue to be readOnly file=" + path);
                 // need to set this on builder as it is used elsewhere
@@ -203,9 +206,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             if (readOnly) {
                 this.lastIndexReplicated = null;
                 this.lastAcknowledgedIndexReplicated = null;
+                this.lastIndexMSynced = null;
             } else {
                 this.lastIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastIndexReplicated", -1L));
                 this.lastAcknowledgedIndexReplicated = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastAcknowledgedIndexReplicated", -1L));
+                this.lastIndexMSynced = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastIndexMSynced", -1L));
             }
 
             this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
@@ -314,6 +319,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public void lastIndexReplicated(long indexReplicated) {
         if (lastIndexReplicated != null)
             lastIndexReplicated.setMaxValue(indexReplicated);
+    }
+
+    @Override
+    public long lastIndexMSynced() {
+        return lastIndexMSynced == null ? -1 : lastIndexMSynced.getVolatileValue(-1);
+    }
+
+    @Override
+    public void lastIndexMSynced(long lastIndexMSynced) {
+        if (this.lastIndexMSynced != null)
+            this.lastIndexMSynced.setMaxValue(lastIndexMSynced);
     }
 
     @Override
@@ -733,6 +749,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     queueLock,
                     lastAcknowledgedIndexReplicated,
                     lastIndexReplicated,
+                    lastIndexMSynced,
                     writeLock,
                     appendLock,
                     pool,
@@ -875,9 +892,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(Math.min(blockSize / 4, 1L << 30));
-        return useSparseFile
+        final MappedFile mappedFile = useSparseFile
                 ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
                 : MappedFile.of(file, chunkSize, overlapSize, readOnly);
+        mappedFile.syncMode(syncMode);
+        return mappedFile;
     }
 
     boolean isReadOnly() {

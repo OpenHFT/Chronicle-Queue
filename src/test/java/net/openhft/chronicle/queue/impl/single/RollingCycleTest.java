@@ -114,17 +114,20 @@ public class RollingCycleTest extends QueueTestCommon {
                     "# position: 416, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                    "# position: 472, header: 7\n" +
+                    "--- !!data #binary\n" +
+                    "chronicle.lastIndexMSynced: -1\n" +
                     (named
-                            ? "# position: 472, header: 7\n" +
+                            ? "# position: 520, header: 8\n" +
                             "--- !!data #binary\n" +
                             "index.named: 81866371629059\n" +
-                            "# position: 504, header: 8\n" +
+                            "# position: 552, header: 9\n" +
                             "--- !!data #binary\n" +
                             "index.named2: 81866371629059\n" +
                             "...\n" +
-                            "# 130532 bytes remaining\n"
+                            "# 130484 bytes remaining\n"
                             : "...\n" +
-                            "# 130596 bytes remaining\n") +
+                            "# 130548 bytes remaining\n") +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

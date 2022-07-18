@@ -31,9 +31,11 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
             assertEquals(0, queue.entryCount());
 
-            try (DocumentContext dc = queue.acquireAppender().writingDocument()) {
+            final ExcerptAppender appender = queue.acquireAppender();
+            try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("test").text("value");
             }
+            appender.sync();
 
             assertEquals(1, queue.entryCount());
         }
@@ -47,24 +49,31 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
                 timeProvider(timeProvider))) {
 
-            final OnEvents events = queue.acquireAppender().methodWriterBuilder(OnEvents.class).build();
+            final ExcerptAppender appender = queue.acquireAppender();
+            final OnEvents events = appender.methodWriterBuilder(OnEvents.class).build();
             timeProvider.setTime(System.currentTimeMillis());
             events.onEvent("firstEvent");
             timeProvider.addTime(2, TimeUnit.MINUTES);
             events.onEvent("secondEvent");
+            appender.sync();
 
             try (final ChronicleQueue readerQueue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", true).
                     timeProvider(timeProvider))) {
 
                 final ExcerptTailer tailer = readerQueue.createTailer();
+                tailer.sync();
                 tailer.toStart();
+                tailer.sync();
                 try (final DocumentContext context = tailer.readingDocument()) {
                     assertTrue(context.isPresent());
                 }
+                tailer.sync();
                 tailer.toEnd();
+                tailer.sync();
                 try (final DocumentContext context = tailer.readingDocument()) {
                     assertFalse(context.isPresent());
                 }
+                tailer.sync();
             }
         }
     }
