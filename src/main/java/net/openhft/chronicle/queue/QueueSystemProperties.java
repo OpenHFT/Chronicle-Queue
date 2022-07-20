@@ -23,8 +23,9 @@ public final class QueueSystemProperties {
      * Name of a system property used to specify the default roll cycle.
      * <p>
      * System Property key: "net.openhft.queue.builder.defaultRollCycle"
-     * Default unset value: net.openhft.chronicle.queue.RollCycles.DEFAULT
-     * Valid values       : Any name of an entity implementing RollCycle such as "net.openhft.chronicle.queue.RollCycles.MINUTELY"
+     * Fallback if unset  : to {@link net.openhft.chronicle.queue.RollCycles#DEFAULT}
+     * Valid values       : Class name of an entity implementing RollCycle such as "net.openhft.chronicle.queue.harness.WeeklyRollCycle"
+     *                       or enum value in class:name format such as "net.openhft.chronicle.queue.RollCycles:HOURLY"
      */
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
 
