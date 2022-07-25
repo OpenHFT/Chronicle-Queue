@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.SingleThreadedChecked;
+import net.openhft.chronicle.core.io.Syncable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,7 +29,7 @@ import java.io.File;
  * The ExcerptCommon is common to both ExcerptAppender
  * and ExcerptTailer.
  */
-public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, SingleThreadedChecked {
+public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, SingleThreadedChecked, Syncable {
 
     /**
      * Returns the source id of the backing ChronicleQueue
@@ -71,7 +72,7 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, Si
     }
 
     /**
-     * Performa sync up to the point the Appender has written or Tailer has read, if supported.
+     * Perform a sync up to the point the Appender has written or Tailer has read, if supported.
      */
     default void sync() {
     }
