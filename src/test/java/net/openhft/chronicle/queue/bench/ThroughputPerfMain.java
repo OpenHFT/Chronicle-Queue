@@ -1,9 +1,10 @@
 package net.openhft.chronicle.queue.bench;
 
+import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -11,69 +12,70 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wire;
-
-import static net.openhft.chronicle.core.UnsafeMemory.MEMORY;
 
 /*
-ARMv7 Processor rev 10 (v7l), Quad 1 GHz.
-Writing 36,699,566 messages took 20.297 seconds, at a rate of 1,808,092 per second
-Reading 36,699,566 messages took 28.283 seconds, at a rate of 1,297,576 per second
+Ryzen 9 5950X with Corsair MP600 PRO XT
+
+-Dtime=30 -Dsize=1000000 -Dpath=/data/tmp - DblockSizeMB=524288
+Writing 54,626 messages took 30.006 seconds, at a rate of 1,820 per second, with an average latency of 549,290 ns
+Reading 54,626 messages took 16.970 seconds, at a rate of 3,219 per second, with an average latency of 310,652 ns
+
+-Dtime=30 -Dsize=100000 -Dpath=/data/tmp - DblockSizeMB=524288
+Writing 608,464 messages took 30.001 seconds, at a rate of 20,281 per second, with an average latency of 49,306 ns
+Reading 608,464 messages took 21.147 seconds, at a rate of 28,773 per second, with an average latency of 34,754 ns
+
+-Dtime=30 -Dsize=10000 -Dpath=/data/tmp - DblockSizeMB=524288
+Writing 4,753,747 messages took 30.001 seconds, at a rate of 158,451 per second, with an average latency of 6,311 ns
+Reading 4,753,747 messages took 27.304 seconds, at a rate of 174,101 per second, with an average latency of 5,743 ns
+
+-Dtime=30 -Dsize=1000 -Dpath=/data/tmp - DblockSizeMB=524288
+Writing 42,526,957 messages took 30.001 seconds, at a rate of 1,417,508 per second, with an average latency of 705 ns
+Reading 42,526,957 messages took 16.796 seconds, at a rate of 2,532,011 per second, with an average latency of 394 ns
+
+-Dtime=30 -Dsize=300 -Dpath=/data/tmp - DblockSizeMB=524288
+Writing 107,971,666 messages took 30.001 seconds, at a rate of 3,598,924 per second, with an average latency of 277 ns
+Reading 107,971,666 messages took 5.556 seconds, at a rate of 19,433,454 per second, with an average latency of 51 ns
+
+-Dtime=30 -Dsize=100 -Dpath=/data/tmp - DblockSizeMB=524288
+Writing 202,468,247 messages took 30.001 seconds, at a rate of 6,748,769 per second, with an average latency of 148 ns
+Reading 202,468,247 messages took 7.561 seconds, at a rate of 26,776,278 per second, with an average latency of 37 ns
  */
 public class ThroughputPerfMain {
-    static final int time = Integer.getInteger("time", 20);
-    static final int size = Integer.getInteger("size", 40);
-    static final String path = System.getProperty("path", OS.TMP);
+    private static final int TIME = Integer.getInteger("time", 30);
+    private static final int SIZE = Integer.getInteger("size", 40);
+    private static final String PATH = System.getProperty("path", OS.TMP);
+    private static final long blockSizeMB = Long.getLong("blockSizeMB", OS.isSparseFileSupported() ? 512L << 10 : 256L);
 
-    static BytesStore nbs;
+    private static BytesStore nbs;
 
     public static void main(String[] args) {
-        String base = path + "/delete-" + Time.uniqueId() + ".me";
+        String base = PATH + "/delete-" + Time.uniqueId() + ".me";
         long start = System.nanoTime();
         long count = 0;
-        nbs = BytesStore.nativeStoreWithFixedCapacity(size);
-
-        long blockSize = OS.is64Bit() ? 4L << 30 : 256L << 20;
+        nbs = BytesStore.nativeStoreWithFixedCapacity(SIZE);
+        AffinityLock lock = AffinityLock.acquireCore();
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
-                .blockSize(blockSize)
+                .blockSize(blockSizeMB << 20)
                 .build()) {
 
             ExcerptAppender appender = q.acquireAppender();
-            long lastIndex = -1;
             do {
-                int defaultIndexSpacing = q.rollCycle().defaultIndexSpacing();
-                Wire wire = appender.wire();
-                int writeCount = (int) (defaultIndexSpacing - (lastIndex & (defaultIndexSpacing - 1)) - 1);
-                if (wire != null && writeCount > 0) {
-                    MappedBytes bytes = (MappedBytes) wire.bytes();
-                    long address = bytes.addressForWrite(bytes.writePosition());
-                    long bstart = bytes.start();
-                    long bcap = bytes.realCapacity();
-                    long canWrite = bcap - (bytes.writePosition() - bstart);
-                    long lengthCount = writeMessages(address, canWrite, writeCount);
-                    bytes.writeSkip((int) lengthCount);
-                    lastIndex += lengthCount >> 32;
-                    count += lengthCount >> 32;
-
-                } else {
-                    try (DocumentContext dc = appender.writingDocument()) {
-                        dc.wire().bytes().write(nbs);
-                    }
-                    lastIndex = appender.lastIndexAppended();
-                    count++;
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().bytes().write(nbs);
                 }
-            } while (start + time * 1e9 > System.nanoTime());
+                count++;
+            } while (start + TIME * 1e9 > System.nanoTime());
         }
 
         nbs.releaseLast();
         long mid = System.nanoTime();
         long time1 = mid - start;
 
-        Bytes<?> bytes = Bytes.allocateElasticDirect(64);
+        Bytes<?> bytes = Bytes.allocateElasticDirect(SIZE);
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
-                .blockSize(blockSize)
+                .blockSize(blockSizeMB << 20)
                 .build()) {
             ExcerptTailer tailer = q.createTailer();
             for (long i = 0; i < count; i++) {
@@ -86,30 +88,18 @@ public class ThroughputPerfMain {
         bytes.releaseLast();
         long end = System.nanoTime();
         long time2 = end - mid;
+        lock.close();
 
-        System.out.printf("Writing %,d messages took %.3f seconds, at a rate of %,d per second%n",
-                count, time1 / 1e9, (long) (1e9 * count / time1));
-        System.out.printf("Reading %,d messages took %.3f seconds, at a rate of %,d per second%n",
-                count, time2 / 1e9, (long) (1e9 * count / time2));
-
+        System.out.println("-Dtime=" + TIME +
+                " -Dsize=" + SIZE +
+                " -Dpath=" + PATH +
+                " - DblockSizeMB=" + blockSizeMB);
+        System.out.printf("Writing %,d messages took %.3f seconds, at a rate of %,d per second, with an average latency of %,d ns%n",
+                count, time1 / 1e9, (long) (1e9 * count / time1), time1/count);
+        System.out.printf("Reading %,d messages took %.3f seconds, at a rate of %,d per second, with an average latency of %,d ns%n",
+                count, time2 / 1e9, (long) (1e9 * count / time2), time2/count);
+        BackgroundResourceReleaser.releasePendingResources();
         System.gc(); // make sure its cleaned up for windows to delete.
         IOTools.deleteDirWithFiles(base, 2);
-    }
-
-    @SuppressWarnings("restriction")
-    private static long writeMessages(long address, long canWrite, int writeCount) {
-        long length = 0;
-        long count = 0;
-//        writeCount = writeCount == 1 ? 1 : ThreadLocalRandom.current().nextInt(writeCount-1)+1;
-        long fromAddress = nbs.addressForRead(0);
-        while (writeCount > count && length + 4 + size <= canWrite) {
-            MEMORY.copyMemory(fromAddress, address + 4, size);
-            MEMORY.writeOrderedInt(address, size);
-            address += 4 + size;
-            length += 4 + size;
-            count++;
-        }
-//        System.out.println("w "+count+" "+length);
-        return (count << 32) | length;
     }
 }
