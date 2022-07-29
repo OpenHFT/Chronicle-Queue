@@ -1246,6 +1246,7 @@ class StoreTailer extends AbstractCloseable
         if (bytes.bytesStore() instanceof MappedBytesStore) {
             MappedBytesStore mbs = (MappedBytesStore) bytes.bytesStore();
             mbs.syncUpTo(bytes.readPosition());
+            queue.lastIndexMSynced(lastReadIndex);
         }
     }
 
