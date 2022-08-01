@@ -1,0 +1,15 @@
+---
+# first message
+say: Hello World
+...
+---
+waitFor: 10
+...
+---
+# second message
+say: 'Bye, now'
+...
+---
+waitFor: 10
+...
+
