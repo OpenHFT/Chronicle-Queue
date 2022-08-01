@@ -1,0 +1,68 @@
+= Chronicle-Channel
+Peter Lawrey
+
+Support for distributed Channels based on Queue
+
+== Benchmarks
+
+Each benchmark comes in a form tuned for Low Latency or high throughput.
+In each case, there is a service to start first on the target machine, and a benchmark client that can be run on the same machine or another machine.
+
+=== Running a Gateway
+
+.On one machine
+```
+mvn exec:java@Gateway
+```
+
+=== Indirect Echo Service
+
+This is an echo service accessed via a Chronicle Queues on a gateway process.
+
+- An event is published to a queue in a gateway process
+- An echo service subscribes to this queue and receives an event
+- The echo service publishes the echoed event to a second queue on the gateway
+- The benchmark subscribed to events on the queue
+
+==== Low Latency configuration
+
+.On the other machine
+```
+mvn exec:java@EchoViaGateway -Durl=tcp://localhost:1248
+```
+
+.Results on a Ryzen 5950X
+```
+-Durl=tcp://localhost:1248 -Dsize=256 -Dthroughput=50000 -Diterations=1500000 -DpauseMode=balanced -Dbuffered=false
+-------------------------------- SUMMARY (end to end) us ---------------------------------------
+Percentile   run1         run2         run3         run4         run5      % Variation
+50.0:           33.73        33.73        33.73        33.34        33.60         0.76
+90.0:           35.52        35.52        35.39        34.11        35.26         2.68
+99.0:           37.06        37.06        36.80        36.54        36.80         0.93
+99.7:           38.98        38.46        38.08        37.44        37.95         1.79
+99.9:           44.74        39.49        39.36        38.72        39.23         1.31
+99.97:          46.14        44.74        44.74        39.62        40.38         7.93
+99.99:        2920.45        52.54        46.40        44.86        45.76        10.24
+worst:       45547.52     42139.65     42270.72     43450.37     43450.37         2.03
+```
+
+==== High Throughput
+
+.On the other machine
+```
+mvn exec:java@EchoViaGateway-Throughput -Durl=tcp://localhost:1248
+```
+
+.Results on a Ryzen 5950X
+```
+-Durl=tcp://localhost:1248 -Dsize=256 -Dthroughput=500000 -Diterations=15000000 -DpauseMode=balanced -Dbuffered=true
+Percentile   run1         run2         run3         run4         run5      % Variation
+50.0:           50.11        50.37        50.11        50.11        50.24         0.34
+90.0:           58.05        58.18        58.05        58.05        58.05         0.15
+99.0:           63.94        63.81        63.68        63.68        63.81         0.13
+99.7:           67.71        66.94        66.69        66.69        66.94         0.26
+99.9:          132.35        69.50        69.25        69.50        69.50         0.25
+99.97:       11681.79        72.58        73.86        74.88        95.87        17.63
+99.99:       14204.93       871.42      2732.03      3198.98      3575.81        67.42
+```
+
