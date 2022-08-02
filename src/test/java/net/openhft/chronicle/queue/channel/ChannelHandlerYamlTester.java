@@ -41,6 +41,8 @@ public class ChannelHandlerYamlTester implements YamlTester {
     }
 
     public static YamlTester runChannelTest(String name, ChannelHandler handler, Class<?> inClass, Class<?> outClass, String path, String url) {
+        // ensure it's loaded and compiled
+        Wire.newYamlWireOnHeap().methodWriter(outClass).getClass();
         return runChannelTest(name, handler, inClass, w -> w.methodWriter(outClass), path, url);
     }
 
