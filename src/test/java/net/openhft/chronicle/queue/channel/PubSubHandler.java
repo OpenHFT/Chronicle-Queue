@@ -96,9 +96,6 @@ public class PubSubHandler extends AbstractHandler<PubSubHandler> {
                 }
             }
 
-        } catch (ClosedIORuntimeException e) {
-            Jvm.warn().on(getClass(), e.toString());
-
         } finally {
             Closeable.closeQuietly(publicationMap.values());
             synchronized (subscriptionMap) {
