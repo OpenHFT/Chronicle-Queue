@@ -1,7 +1,8 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.bytes.internal.EmptyByteStore;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.UncheckedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -82,7 +83,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         System.err.println("Length is " + tailer.toEnd().index());
 
         ExcerptAppender appender = chronicle.acquireAppender();
-        UncheckedBytes<EmptyByteStore> bytes = new UncheckedBytes<>(BytesStore.empty().bytesForRead());
+        UncheckedBytes<BytesStore> bytes = new UncheckedBytes<>(BytesStore.empty().bytesForRead());
         for (int i = 0; i < count; i++) {
             long start = System.nanoTime();
             try (DocumentContext dc = appender.writingDocument()) {
