@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Higher Frequency Trading
+ * Copyright 2016-2022 Chronicle Software
  *
  *       https://chronicle.software
  *
