@@ -1,0 +1,8 @@
+---
+# subscribe
+---
+# publish to a queue
+---
+from: queue-pub-sub
+say: Hello
+...
