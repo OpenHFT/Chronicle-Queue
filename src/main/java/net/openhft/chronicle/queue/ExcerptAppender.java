@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.core.annotation.SingleThreaded;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
@@ -30,6 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.</p>
  * <p><b>NOTE:</b> Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.</p>
  */
+@SingleThreaded
 public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
 
     /**

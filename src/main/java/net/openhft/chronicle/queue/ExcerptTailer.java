@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.SingleThreaded;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableIn;
@@ -29,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing a Tailer between threads will lead to errors and unpredictable behaviour.</p>
  */
+@SingleThreaded
 public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
