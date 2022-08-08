@@ -91,18 +91,30 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         }
         if (retained.isEmpty() || !Jvm.isResourceTracing())
             return;
-        for (int i = 1; i <= 2_500; i++) {
-            Jvm.pause(1);
-            if (retained.stream().noneMatch(v -> v.refCount() > 0)) {
-                (i > 9 ? Jvm.perf() : Jvm.debug())
-                        .on(getClass(), "Took " + i + " ms to release " + retained);
-                return;
+
+        boolean interrupted = false;
+        try {
+            for (int i = 1; i <= 2_500; i++) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+                if (retained.stream().noneMatch(v -> v.refCount() > 0)) {
+                    (i > 9 ? Jvm.perf() : Jvm.debug())
+                            .on(getClass(), "Took " + i + " ms to release " + retained);
+                    return;
+                }
+            }
+            retained.stream()
+                    .filter(o -> o instanceof ManagedCloseable)
+                    .map(o -> (ManagedCloseable) o)
+                    .forEach(ManagedCloseable::warnAndCloseIfNotClosed);
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
             }
         }
-        retained.stream()
-                .filter(o -> o instanceof ManagedCloseable)
-                .map(o -> (ManagedCloseable) o)
-                .forEach(ManagedCloseable::warnAndCloseIfNotClosed);
     }
 
     void bgCleanup() {
