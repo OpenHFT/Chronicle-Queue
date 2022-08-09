@@ -45,11 +45,6 @@ public class PublishQueueChannel implements ChronicleChannel {
     }
 
     @Override
-    public ChannelHeader headerIn(Function<ChannelHeader, ChannelHeader> redirectFunction) {
-        return publishHandler;
-    }
-
-    @Override
     public void close() {
         Closeable.closeQuietly(
                 tailer,

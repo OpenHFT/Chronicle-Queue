@@ -36,11 +36,6 @@ public class QueuesChannel implements ChronicleChannel {
     }
 
     @Override
-    public ChannelHeader headerIn(Function<ChannelHeader, ChannelHeader> redirectFunction) {
-        return subscribeQueueChannel.headerIn(redirectFunction);
-    }
-
-    @Override
     public void close() {
         Closeable.closeQuietly(
                 publishQueueChannel,
