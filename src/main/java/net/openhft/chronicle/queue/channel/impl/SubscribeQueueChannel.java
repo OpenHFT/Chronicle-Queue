@@ -47,11 +47,6 @@ public class SubscribeQueueChannel implements ChronicleChannel {
     }
 
     @Override
-    public ChannelHeader headerIn(Function<ChannelHeader, ChannelHeader> redirectFunction) {
-        return pipeHandler;
-    }
-
-    @Override
     public void close() {
         Closeable.closeQuietly(
                 tailer,
