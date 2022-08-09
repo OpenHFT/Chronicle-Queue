@@ -1,5 +1,3 @@
-
-
 = Chronicle Queue Performance
 Neil Clifford
 :toc: macro
