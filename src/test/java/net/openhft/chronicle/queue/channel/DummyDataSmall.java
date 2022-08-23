@@ -22,40 +22,16 @@ import net.openhft.chronicle.bytes.BytesIn;
 import net.openhft.chronicle.bytes.BytesOut;
 import net.openhft.chronicle.bytes.util.BinaryLengthLength;
 import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
-import net.openhft.chronicle.wire.converter.NanoTime;
 
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 
-public class DummyData extends BytesInBinaryMarshallable {
-    @NanoTime
-    long timeNS;
-    byte[] data;
-
-    public long timeNS() {
-        return timeNS;
-    }
-
-    public DummyData timeNS(long timeNS) {
-        this.timeNS = timeNS;
-        return this;
-    }
-
-    public byte[] data() {
-        return data;
-    }
-
-    public DummyData data(byte[] data) {
-        this.data = data;
-        return this;
-    }
-
+public class DummyDataSmall extends DummyData {
     @Override
     public void readMarshallable(BytesIn bytes) throws IORuntimeException, BufferUnderflowException, IllegalStateException {
         timeNS = bytes.readLong();
-        int len = bytes.readInt();
-        if (len == -1) {
+        int len = bytes.readUnsignedByte();
+        if ((byte) len == -1) {
             data = null;
         } else {
             if (data == null || data.length != len)
@@ -68,10 +44,15 @@ public class DummyData extends BytesInBinaryMarshallable {
     public void writeMarshallable(BytesOut bytes) throws IllegalStateException, BufferOverflowException, BufferUnderflowException, ArithmeticException {
         bytes.writeLong(timeNS);
         if (data == null) {
-            bytes.writeInt(-1);
+            bytes.writeUnsignedByte( -1);
         } else {
-            bytes.writeInt(data.length);
+            bytes.writeUnsignedByte(data.length);
             bytes.write(data);
         }
+    }
+
+    @Override
+    public BinaryLengthLength binaryLengthLength() {
+        return BinaryLengthLength.LENGTH_8BIT;
     }
 }
