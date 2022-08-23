@@ -56,7 +56,7 @@ worst:       40960.00     42270.72     43581.44     44761.09     43581.44       
 -XX:StartFlightRecording=filename=recording_echo2.jfr,settings=profile
  */
 
-public class PerfChronicleGatewayMain implements JLBHTask {
+public class PerfLatencyMain implements JLBHTask {
 
     static final int THROUGHPUT = Integer.getInteger("throughput", 50_000);
     static final int ITERATIONS = Integer.getInteger("iterations", THROUGHPUT * 30);
@@ -95,7 +95,7 @@ public class PerfChronicleGatewayMain implements JLBHTask {
                 .recordOSJitter(false)
                 .accountForCoordinatedOmission(false)
                 .runs(5)
-                .jlbhTask(new PerfChronicleGatewayMain());
+                .jlbhTask(new PerfLatencyMain());
         new JLBH(lth).start();
     }
 
