@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 public class PerfThroughputMain {
     static final String URL = System.getProperty("url", "tcp://:1248");
     static final int RUN_TIME = Integer.getInteger("runTime", 5);
-    static final int CLIENTS = Integer.getInteger("clients", 1);
+    static final int CLIENTS = Integer.getInteger("clients", 2);
     static final boolean METHODS = Jvm.getBoolean("methods");
     static final String PATH = System.getProperty("path", ".");
 
