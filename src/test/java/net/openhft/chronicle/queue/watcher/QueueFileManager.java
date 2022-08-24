@@ -14,6 +14,7 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+@Deprecated(/* for removal in x.24 */)
 public class QueueFileManager extends JMXFileManager implements QueueFileManagerMBean {
     private final Set<String> files = new ConcurrentSkipListSet<>();
     private static final long TIME_OUT = 5_000;

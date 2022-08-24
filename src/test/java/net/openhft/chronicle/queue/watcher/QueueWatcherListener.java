@@ -14,6 +14,7 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.TreeMap;
 
+@Deprecated(/* for removal in x.24 */)
 public class QueueWatcherListener implements WatcherListener {
     final Map<Path, QueueFileManager> queueFileManagerMap = new TreeMap<>();
 

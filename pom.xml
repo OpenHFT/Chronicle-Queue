@@ -185,13 +185,6 @@
             <artifactId>jmh-generator-annprocess</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>io.hawt</groupId>
-            <artifactId>hawtio-embedded</artifactId>
-            <version>2.14.5</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <repositories>
