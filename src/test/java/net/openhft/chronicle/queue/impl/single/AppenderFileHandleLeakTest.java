@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -12,6 +13,7 @@ import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,10 +23,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
@@ -33,6 +40,8 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
+    private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
+    private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
             new NamedThreadFactory("test"));
@@ -71,7 +80,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, IOException, TimeoutException, ExecutionException {
+    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
 
         File file;
 
@@ -116,7 +125,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
     }
 
-    public void tailerResourcesCanBeReleasedManually0() throws IOException, InterruptedException, TimeoutException, ExecutionException {
+    public void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
 
         File file;
 
@@ -151,7 +160,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException {
+    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws InterruptedException {
         assumeTrue(OS.isLinux() || OS.isMacOSX());
 
         File file;
@@ -201,6 +210,61 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         Assert.assertTrue(isFileHandleClosed(file));
     }
 
+    @Test
+    public void appenderShouldOnlyKeepCurrentRollCycleOpen() {
+        assumeTrue(OS.isLinux() || OS.isMacOSX());
+
+        AtomicLong timeProvider = new AtomicLong(1661323015000L);
+        try (ChronicleQueue queue = createQueue(timeProvider::get)) {
+
+            for (int j = 0; j < 10; j++) {
+                writeMessage(j, queue);
+                assertOnlyCurrentRollCycleIsOpen(timeProvider.get());
+                timeProvider.addAndGet(1_000);
+            }
+        }
+    }
+
+    @Test
+    public void tailerShouldOnlyKeepCurrentRollCycleOpen() {
+        assumeTrue(OS.isLinux() || OS.isMacOSX());
+
+        final long startTime = 1661323015000L;
+        AtomicLong timeProvider = new AtomicLong(startTime);
+        final int messageCount = 10;
+
+        // populate the queue
+        try (ChronicleQueue queue = createQueue(timeProvider::get)) {
+            for (int j = 0; j < messageCount; j++) {
+                writeMessage(j, queue);
+                timeProvider.addAndGet(1_000);
+            }
+        }
+        // there should be no file handles open now
+        assertEquals(0, countMatchingLsofLines(line -> line.contains(queuePath.getAbsolutePath()), Jvm.warn()));
+
+        timeProvider.set(startTime);
+
+        // iterate through messages checking roll cycles are closed
+        try (ChronicleQueue queue = createQueue(timeProvider::get);
+             final ExcerptTailer tailer = queue.createTailer()) {
+            IntStream.range(0, messageCount).forEach(i -> {
+                tailer.readBytes(b -> assertEquals(i, b.readInt()));
+                assertOnlyCurrentRollCycleIsOpen(timeProvider.get());
+                timeProvider.addAndGet(1_000);
+            });
+        }
+    }
+
+    private void assertOnlyCurrentRollCycleIsOpen(long timestamp) {
+        BackgroundResourceReleaser.releasePendingResources();
+        final String currentRollCycleName = ROLL_CYCLE_FORMATTER.format(Instant.ofEpochMilli(timestamp)) + ".cq4";
+        assertEquals("Found open files that are not the table store or the current roll cycle (" + currentRollCycleName + ")", 0,
+                countMatchingLsofLines(
+                        lsofLine -> lsofLine.contains(queuePath.getAbsolutePath())
+                                && !(lsofLine.endsWith("metadata.cq4t") || lsofLine.endsWith(currentRollCycleName)), Jvm.warn()));
+    }
+
     @Override
     public void assertReferencesReleased() {
         threadPool.shutdownNow();
@@ -212,23 +276,29 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         super.assertReferencesReleased();
     }
 
-    private static boolean isFileHandleClosed(File file) throws IOException {
+    private static boolean isFileHandleClosed(File file) {
+        return countMatchingLsofLines(str -> str.contains(file.getAbsolutePath()), Jvm.error()) == 0;
+    }
+
+    private static int countMatchingLsofLines(@NotNull Predicate<String> lsofLineMatcher, @NotNull ExceptionHandler logLevel) {
         Process plsof = null;
         try {
             plsof = new ProcessBuilder("lsof", "-p", String.valueOf(Jvm.getProcessId())).start();
-            int openFilesCount = 0;
+            int matchingLines = 0;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
                 String line;
                 while (plsof.isAlive()) {
                     line = reader.readLine();
-                    if (line != null && line.contains(file.getAbsolutePath())) {
-                        openFilesCount++;
-                        Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open file:\n" + line);
+                    if (line != null && lsofLineMatcher.test(line)) {
+                        matchingLines++;
+                        logLevel.on(AppenderFileHandleLeakTest.class, "Found matching line:\n" + line);
                     }
                 }
                 assertEquals("lsof call terminated with error", 0, plsof.exitValue());
             }
-            return openFilesCount == 0;
+            return matchingLines;
+        } catch (IOException e) {
+            throw new RuntimeException("An error occurred reading command output", e);
         } finally {
             if (plsof != null)
                 plsof.destroy();
