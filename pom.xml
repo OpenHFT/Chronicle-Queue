@@ -317,7 +317,8 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
+                <version>3.1.0</version>
+
                 <executions>
                     <!-- run this first -->
                     <execution>
@@ -546,7 +547,8 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.0.0</version>
+                        <version>3.1.0</version>
+
                         <configuration>
                             <systemProperties>
                                 <systemProperty>
