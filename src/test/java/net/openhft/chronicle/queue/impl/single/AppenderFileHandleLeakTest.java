@@ -32,7 +32,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -55,7 +54,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
             new NamedThreadFactory("test"));
-    private final List<String> lastFileHandles = new ArrayList<>();
     private final TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private final AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
     private File queuePath;
@@ -170,7 +168,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
     }
 
-    @Ignore("TODO FIX")
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws IOException, InterruptedException {
         assumeTrue(OS.isLinux() || OS.isMacOSX());
@@ -182,15 +179,14 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         final int messagesPerThread = 10;
         try (ChronicleQueue queue = createQueue(currentTime::get)) {
             file = queue.file();
-            final List<String> fileHandlesAtStart = new ArrayList<>(lastFileHandles);
 
             for (int j = 0; j < messagesPerThread; j++) {
                 writeMessage(j, queue);
                 currentTime.addAndGet(500);
             }
 
-            fileHandlesAtStart.clear();
-
+            // StoreFileListener#onAcquired() is called on the background resource releaser thread
+            BackgroundResourceReleaser.releasePendingResources();
             int acquiredBefore = storeFileListener.acquiredCounts.size();
             storeFileListener.reset();
 
@@ -212,9 +208,8 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
             assertEquals(messagesPerThread, messageCount);
 
+            // StoreFileListener#onAcquired() is called on the background resource releaser thread
             BackgroundResourceReleaser.releasePendingResources();
-            // tailers do not call StoreFileListener correctly - see
-            // https://github.com/OpenHFT/Chronicle-Queue/issues/694
             Jvm.debug().on(getClass(), "storeFileListener " + storeFileListener);
 
             assertEquals(acquiredBefore, storeFileListener.acquiredCounts.size());
@@ -225,7 +220,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Override
-    public void assertReferencesReleased()  {
+    public void assertReferencesReleased() {
         threadPool.shutdownNow();
         try {
             assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
@@ -238,24 +233,24 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static boolean isFileHandleClosed(File file) throws IOException {
         Process plsof = null;
         try {
-            plsof = new ProcessBuilder("lsof", "|", "grep", file.getAbsolutePath()).start();
+            plsof = new ProcessBuilder("lsof", "-p", String.valueOf(Jvm.getProcessId())).start();
+            int openFilesCount = 0;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
                 String line;
-                while ((line = reader.readLine()) != null) {
-                        // System.out.println(line);
-                    if (line.contains(file.getAbsolutePath())) {
-                        reader.close();
-                        plsof.destroy();
-                        return false;
+                while (plsof.isAlive()) {
+                    line = reader.readLine();
+                    if (line != null && line.contains(file.getAbsolutePath())) {
+                        openFilesCount++;
+                        Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open file:\n" + line);
                     }
                 }
+                assertEquals("lsof call terminated with error", 0, plsof.exitValue());
             }
+            return openFilesCount == 0;
         } finally {
             if (plsof != null)
                 plsof.destroy();
         }
-
-        return true;
     }
 
     private ChronicleQueue createQueue(final TimeProvider timeProvider) {
