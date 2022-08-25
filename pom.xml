@@ -122,6 +122,7 @@
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-core</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
