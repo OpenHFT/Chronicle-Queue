@@ -836,8 +836,10 @@ class StoreTailer extends AbstractCloseable
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
         assert wire != wireForIndexOld;
 
-        if (wireForIndexOld != null)
+        if (wireForIndexOld != null) {
             wireForIndexOld.bytes().releaseLast();
+            queue.flushMappedFileCache_temporaryFix();
+        }
     }
 
     @NotNull

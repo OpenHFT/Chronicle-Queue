@@ -68,7 +68,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
             rv = transformer.apply(value);
         }
 
-        BackgroundResourceReleaser.run(bgCleanup);
+        triggerExpiry();
 
         return rv;
     }
@@ -115,6 +115,18 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    /**
+     * This is part of a temporary fix for https://github.com/OpenHFT/Chronicle-Queue/issues/1148
+     * <p>
+     * It will be removed
+     *
+     * @deprecated This should not be used
+     */
+    @Deprecated
+    public void triggerExpiry() {
+        BackgroundResourceReleaser.run(bgCleanup);
     }
 
     void bgCleanup() {
