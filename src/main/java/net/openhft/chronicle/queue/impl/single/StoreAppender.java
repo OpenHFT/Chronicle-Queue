@@ -294,6 +294,7 @@ class StoreAppender extends AbstractCloseable
             assert wire != old || wire == null;
             releaseBytesFor(old);
         }
+        ((SingleChronicleQueue)queue).flushMappedFileCache_temporaryFix();
     }
 
     private Wire createWire(@NotNull final WireType wireType) {
