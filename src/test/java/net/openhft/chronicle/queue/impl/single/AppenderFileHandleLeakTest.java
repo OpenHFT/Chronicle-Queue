@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.FlakyTestRunner;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
@@ -10,7 +9,10 @@ import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.threads.NamedThreadFactory;
+import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -122,7 +124,9 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
     @Test
     public void tailerResourcesCanBeReleasedManually() throws Exception {
-        FlakyTestRunner.run(this::tailerResourcesCanBeReleasedManually0);
+        FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0)
+                .build()
+                .run();
     }
 
     public void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
@@ -211,6 +215,13 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+        FlakyTestRunner.<RuntimeException>builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
+                .withMaxIterations(3)
+                .build()
+                .run();
+    }
+
     public void appenderShouldOnlyKeepCurrentRollCycleOpen() {
         assumeTrue(OS.isLinux() || OS.isMacOSX());
 
@@ -226,6 +237,13 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+        FlakyTestRunner.<RuntimeException>builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
+                .withMaxIterations(3)
+                .build()
+                .run();
+    }
+
     public void tailerShouldOnlyKeepCurrentRollCycleOpen() {
         assumeTrue(OS.isLinux() || OS.isMacOSX());
 
@@ -258,11 +276,29 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
     private void assertOnlyCurrentRollCycleIsOpen(long timestamp) {
         BackgroundResourceReleaser.releasePendingResources();
+        /*
+         * "A mapped byte buffer and the file mapping that it represents remain valid until the buffer itself is garbage-collected."
+         *
+         * Given we can't guarantee a GC happens, I wonder if this test can ever not be flaky
+         *
+         * See https://docs.oracle.com/javase/8/docs/api/java/nio/MappedByteBuffer.html
+         */
+        System.gc();
         final String currentRollCycleName = ROLL_CYCLE_FORMATTER.format(Instant.ofEpochMilli(timestamp)) + ".cq4";
-        assertEquals("Found open files that are not the table store or the current roll cycle (" + currentRollCycleName + ")", 0,
-                countMatchingLsofLines(
+        TimingPauser pauser = Pauser.balanced();
+        try {
+            while (true) {
+                final int matchingLines = countMatchingLsofLines(
                         lsofLine -> lsofLine.contains(queuePath.getAbsolutePath())
-                                && !(lsofLine.endsWith("metadata.cq4t") || lsofLine.endsWith(currentRollCycleName)), Jvm.warn()));
+                                && !(lsofLine.endsWith("metadata.cq4t") || lsofLine.endsWith(currentRollCycleName)), Jvm.startup());
+                if (matchingLines == 0) {
+                    break;
+                }
+                pauser.pause(5, TimeUnit.SECONDS);
+            }
+        } catch (TimeoutException e) {
+            fail("Files that are not the table store or the current roll cycle (" + currentRollCycleName + ") remain open");
+        }
     }
 
     @Override
