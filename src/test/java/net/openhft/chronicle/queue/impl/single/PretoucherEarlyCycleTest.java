@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -34,7 +33,6 @@ import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-@Ignore("TODO FIX")
 public class PretoucherEarlyCycleTest extends ChronicleQueueTestBase {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private final List<Integer> capturedCycles = new ArrayList<>();

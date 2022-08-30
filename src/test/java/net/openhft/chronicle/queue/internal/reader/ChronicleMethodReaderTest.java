@@ -194,7 +194,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
                 .forEach(msg -> assertThat(msg, containsString("goodbye")));
     }
 
-    @Ignore("TODO FIX")
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleInclusionRegex() {
         basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
@@ -224,7 +224,7 @@ public class ChronicleMethodReaderTest extends ChronicleQueueTestBase {
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
-    @Ignore("TODO FIX")
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
         basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();

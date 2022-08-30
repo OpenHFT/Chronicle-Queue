@@ -27,7 +27,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -131,7 +130,6 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("https://github.com/OpenHFT/Chronicle-Wire/issues/165")
     public void testWriteMarshallableBinary() {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single("test").rollCycle(HOURLY);
 
