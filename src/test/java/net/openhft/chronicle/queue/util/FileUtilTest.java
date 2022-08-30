@@ -31,7 +31,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -118,7 +117,6 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         assertTrue(FileUtil.hasQueueSuffix(file));
     }
 
-    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     @Test
     public void removableQueueFileCandidates() {
         assumeFalse(OS.isWindows());

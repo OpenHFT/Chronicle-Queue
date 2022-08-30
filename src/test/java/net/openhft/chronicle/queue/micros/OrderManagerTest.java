@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -103,7 +102,6 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    @Ignore("TODO FIX")
     public void testWithQueueHistory() throws Throwable {
         FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
