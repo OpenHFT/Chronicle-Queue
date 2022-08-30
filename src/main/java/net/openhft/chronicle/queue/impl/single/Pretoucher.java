@@ -40,6 +40,7 @@ import java.util.function.IntConsumer;
  * Alternatively, the {@code shutdown()} method can be called to close the supplied queue and release any other resources. Invocation of the {@code
  * execute()} method after {@code shutdown()} has been called will cause an {@code IllegalStateException} to be thrown.
  */
+// TODO Move to CQE in x.24
 public final class Pretoucher extends AbstractCloseable {
     static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
     private final long PRETOUCHER_PREROLL_TIME_MS = Jvm.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);

@@ -26,6 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.util.function.LongSupplier;
 
+// TODO Move to CQE in x.24
 class PretoucherState {
     public static final int FACTOR = 4;
     private static final int HEAD_ROOM = Jvm.getInteger("PretoucherState.headRoom", 1 << 20);
