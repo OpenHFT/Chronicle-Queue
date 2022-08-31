@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongConsumer;
 
@@ -47,7 +49,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();
             final Thread reader = new Thread
-                (() -> runReader(queue, startBarrier, lastIndex::set));
+                    (() -> runReader(queue, startBarrier, lastIndex::set));
 
             startWriter(queue, startBarrier);
             reader.start();
@@ -138,8 +140,8 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
 
     private static void waitOn(CyclicBarrier barrier) {
         try {
-            barrier.await();
-        } catch (InterruptedException | BrokenBarrierException e) {
+            barrier.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException | BrokenBarrierException | TimeoutException e) {
             throw new IllegalStateException(e);
         }
     }
