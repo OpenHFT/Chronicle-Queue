@@ -151,14 +151,6 @@ class StoreAppender extends AbstractCloseable
             throw new IllegalStateException("locked: unable to append, file=" + queue.file());
     }
 
-    @Deprecated // Should not be providing accessors to reference-counted objects
-    @NotNull
-    WireStore store() {
-        if (store == null)
-            setCycle(cycle());
-        return store;
-    }
-
     /**
      * @param marshallable to write to excerpt.
      */
