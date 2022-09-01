@@ -83,7 +83,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
-        PRETOUCH = type == StressTestType.PRETOUCH;
+        PRETOUCH = (type == StressTestType.PRETOUCH || type == StressTestType.PRETOUCH_EA);
+        if (type == StressTestType.PRETOUCH_EA)
+            System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
         READERS_READ_ONLY = type == StressTestType.READONLY;
         DUMP_QUEUE = false;
         SHARED_WRITE_QUEUE = type == StressTestType.SHAREDWRITEQ;
@@ -259,6 +261,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         } finally {
 
+            System.clearProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
             Jvm.resetExceptionHandlers();
 
             shutdownAll(10, executorServicePretouch);
@@ -322,7 +325,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     enum StressTestType {
-        VANILLA, READONLY, PRETOUCH, DOUBLEBUFFER, SHAREDWRITEQ;
+        VANILLA, READONLY, PRETOUCH, PRETOUCH_EA, DOUBLEBUFFER, SHAREDWRITEQ;
     }
 
     interface ReaderCheckingStrategy {
