@@ -28,9 +28,8 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
+import net.openhft.chronicle.testframework.Waiters;
 import net.openhft.chronicle.threads.NamedThreadFactory;
-import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -59,6 +58,7 @@ import static org.junit.Assume.assumeTrue;
 public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
+    private static final int LSOF_TIMEOUT = 30_000;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
@@ -301,20 +301,16 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
          */
         System.gc();
         final String currentRollCycleName = ROLL_CYCLE_FORMATTER.format(Instant.ofEpochMilli(timestamp)) + ".cq4";
-        TimingPauser pauser = Pauser.balanced();
-        try {
-            while (true) {
-                final int matchingLines = countMatchingLsofLines(
-                        lsofLine -> lsofLine.contains(queuePath.getAbsolutePath())
-                                && !(lsofLine.endsWith("metadata.cq4t") || lsofLine.endsWith(currentRollCycleName)), Jvm.startup());
-                if (matchingLines == 0) {
-                    break;
-                }
-                pauser.pause(5, TimeUnit.SECONDS);
-            }
-        } catch (TimeoutException e) {
-            fail("Files that are not the table store or the current roll cycle (" + currentRollCycleName + ") remain open");
-        }
+        Waiters.builder(() -> {
+                    final int matchingLines = countMatchingLsofLines(
+                            lsofLine -> lsofLine.contains(queuePath.getAbsolutePath())
+                                    && !(lsofLine.endsWith("metadata.cq4t") || lsofLine.endsWith(currentRollCycleName)), Jvm.startup());
+                    return matchingLines == 0;
+                })
+                .message("Files that are not the table store or the current roll cycle (" + currentRollCycleName + ") remain open")
+                .maxTimeToWaitMs(5_500)
+                .checkIntervalMs(1_000)
+                .run();
     }
 
     @Override
@@ -335,7 +331,8 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static int countMatchingLsofLines(@NotNull Predicate<String> lsofLineMatcher, @NotNull ExceptionHandler logLevel) {
         Process plsof = null;
         try {
-            plsof = new ProcessBuilder("lsof", "-p", String.valueOf(Jvm.getProcessId())).start();
+            long startTime = System.currentTimeMillis();
+            plsof = new ProcessBuilder("lsof", "-b", "-p", String.valueOf(Jvm.getProcessId())).start();
             int matchingLines = 0;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
                 String line;
@@ -344,6 +341,11 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
                     if (line != null && lsofLineMatcher.test(line)) {
                         matchingLines++;
                         logLevel.on(AppenderFileHandleLeakTest.class, "Found matching line:\n" + line);
+                    }
+                    if (System.currentTimeMillis() - startTime > LSOF_TIMEOUT) {
+                        Jvm.error().on(AppenderFileHandleLeakTest.class, "timed out running lsof, terminating forcefully");
+                        plsof.destroyForcibly();
+                        break;
                     }
                 }
                 assertEquals("lsof call terminated with error", 0, plsof.exitValue());
