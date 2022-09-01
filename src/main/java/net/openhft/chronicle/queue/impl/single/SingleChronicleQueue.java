@@ -238,19 +238,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
     }
 
-    /**
-     * This is a brittle, ugly and temporary fix for https://github.com/OpenHFT/Chronicle-Queue/issues/1148
-     * <p>
-     * We will fast-follow with a proper fix whereby the cache is made aware when references are released,
-     * so it can flush itself
-     *
-     * @deprecated This should not be used
-     */
-    @Deprecated
-    public void flushMappedFileCache_temporaryFix() {
-        storeSupplier.mappedFileCache.triggerExpiry();
-    }
-
     protected void createAppenderCondition(@NotNull Condition createAppenderCondition) {
         this.createAppenderCondition = createAppenderCondition;
     }
