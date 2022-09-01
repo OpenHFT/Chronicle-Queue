@@ -250,6 +250,8 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     private void testTailing(Function<Pretoucher, Integer> createGap) {
+        expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
+
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
         try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build();
