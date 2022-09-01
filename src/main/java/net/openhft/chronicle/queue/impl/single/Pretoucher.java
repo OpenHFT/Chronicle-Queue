@@ -24,9 +24,7 @@ import java.util.function.IntConsumer;
  */
 public final class Pretoucher extends AbstractCloseable {
     static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
-    private static final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
-    private static final boolean EARLY_ACQUIRE_NEXT_CYCLE = Jvm.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", false);
-    private static final boolean CAN_WRITE = !Jvm.getBoolean("SingleChronicleQueueExcerpts.dontWrite");
+    private final long PRETOUCHER_PREROLL_TIME_MS = Long.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
     private final SingleChronicleQueue queue;
     private final NewChunkListener chunkListener;
     private final IntConsumer cycleChangedListener;
@@ -43,8 +41,8 @@ public final class Pretoucher extends AbstractCloseable {
                 null,
                 c -> {
                 },
-                EARLY_ACQUIRE_NEXT_CYCLE,
-                CAN_WRITE);
+                Jvm.getBoolean("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", false),
+                !Jvm.getBoolean("SingleChronicleQueueExcerpts.dontWrite"));
     }
 
     // visible for testing
@@ -55,11 +53,21 @@ public final class Pretoucher extends AbstractCloseable {
         this.queue = queue;
         this.chunkListener = chunkListener;
         this.cycleChangedListener = cycleChangedListener;
-        this.earlyAcquireNextCycle = earlyAcquireNextCycle;
+        this.earlyAcquireNextCycle = checkEA(earlyAcquireNextCycle);
         this.canWrite = canWrite;
-        queue.addCloseListener(this);
         pretoucherState = new PretoucherState(this::getStoreWritePosition);
-        pretouchTimeProvider = () -> queue.time().currentTimeMillis() + (EARLY_ACQUIRE_NEXT_CYCLE ? PRETOUCHER_PREROLL_TIME_MS : 0);
+        if (PRETOUCHER_PREROLL_TIME_MS != PRETOUCHER_PREROLL_TIME_DEFAULT_MS && !earlyAcquireNextCycle)
+            Jvm.warn().on(getClass(), "SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs has been set but not earlyAcquireNextCycle");
+        pretouchTimeProvider = () -> queue.time().currentTimeMillis() + (this.earlyAcquireNextCycle ? PRETOUCHER_PREROLL_TIME_MS : 0);
+
+        // always put references to "this" last.
+        queue.addCloseListener(this);
+    }
+
+    private boolean checkEA(boolean ea) {
+        if (ea)
+            Jvm.warn().on(getClass(), "SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
+        return false;
     }
 
     public void execute() throws InvalidEventHandlerException {
