@@ -837,7 +837,6 @@ class StoreTailer extends AbstractCloseable
 
         if (wireForIndexOld != null) {
             wireForIndexOld.bytes().releaseLast();
-            queue.flushMappedFileCache_temporaryFix();
         }
     }
 

@@ -21,12 +21,13 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     private final Map<K, T> cache = new LinkedHashMap<>();
     private final Function<T, V> transformer;
     private final ThrowingFunction<K, T, E> creator;
-    private final Runnable bgCleanup = this::bgCleanup;
+    private final ReferenceChangeListener referenceChangeListener;
 
     public ReferenceCountedCache(final Function<T, V> transformer,
                                  final ThrowingFunction<K, T, E> creator) {
         this.transformer = transformer;
         this.creator = creator;
+        this.referenceChangeListener = new TriggerFlushOnLastReferenceRemoval();
 
         disableThreadSafetyCheck(true);
     }
@@ -42,6 +43,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
             if (value == null) {
                 value = creator.apply(key);
                 value.reserveTransfer(INIT, this);
+                value.addReferenceChangeListener(referenceChangeListener);
                 //System.err.println("Reserved " + value.toString() + " by " + this);
                 cache.put(key, value);
             }
@@ -49,8 +51,6 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
             // this will add to the ref count and so needs to be done inside of sync block
             rv = transformer.apply(value);
         }
-
-        triggerExpiry();
 
         return rv;
     }
@@ -87,29 +87,29 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
                 .forEach(ManagedCloseable::warnAndCloseIfNotClosed);
     }
 
-    /**
-     * This is part of a temporary fix for https://github.com/OpenHFT/Chronicle-Queue/issues/1148
-     * <p>
-     * It will be removed
-     *
-     * @deprecated This should not be used
-     */
-    @Deprecated
-    public void triggerExpiry() {
-        BackgroundResourceReleaser.run(bgCleanup);
-    }
+    private class TriggerFlushOnLastReferenceRemoval implements ReferenceChangeListener {
 
-    void bgCleanup() {
-        // remove all which have been de-referenced by other than me. Garbagy but rare
-        synchronized (cache) {
-            cache.entrySet().removeIf(entry -> {
-                T value = entry.getValue();
-                int refCount = value.refCount();
-                if (refCount == 1) {
-                    value.release(this);
-                }
-                return refCount <= 1;
-            });
+        private final Runnable bgCleanup = this::bgCleanup;
+
+        @Override
+        public void onReferenceRemoved(ReferenceCounted referenceCounted, ReferenceOwner referenceOwner) {
+            if (referenceOwner != ReferenceCountedCache.this && referenceCounted.refCount() == 1) {
+                BackgroundResourceReleaser.run(bgCleanup);
+            }
+        }
+
+        private void bgCleanup() {
+            // remove all which have been de-referenced by other than me. Garbagy but rare
+            synchronized (cache) {
+                cache.entrySet().removeIf(entry -> {
+                    T value = entry.getValue();
+                    int refCount = value.refCount();
+                    if (refCount == 1) {
+                        value.release(ReferenceCountedCache.this);
+                    }
+                    return refCount <= 1;
+                });
+            }
         }
     }
 }
