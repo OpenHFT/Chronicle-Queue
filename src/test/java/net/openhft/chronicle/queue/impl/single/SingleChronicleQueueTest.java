@@ -3596,6 +3596,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore(/*https://github.com/OpenHFT/Chronicle-Queue/issues/1163*/)
     @Test
     public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws IOException, InterruptedException {
 
