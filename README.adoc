@@ -24,37 +24,30 @@ https://player.vimeo.com/video/201989439
 
 == Overview
 
+Chronicle Queue is a persisted low-latency messaging framework for high performance applications.
+
 This project covers the Java version of Chronicle Queue.
-Chronicle Queue is a persisted low-latency messaging framework for high performance and critical applications.
-A {cpp} version of this project is also available and can be evaluated upon request.
-If you are interested in looking at the {cpp} version please contact sales@chronicle.software.
+A {cpp} version of this project is also available and supports Java/{cpp} interoperability plus additional language bindings e.g. Python.
+If you are interested in evaluating the {cpp} version please contact sales@chronicle.software.
 
 At first glance Chronicle Queue can be seen as simply **another queue implementation**.
 However, it has major design choices that should be emphasised.
-Using *non-heap storage options* (`RandomAccessFile`), Chronicle Queue provides a processing environment where applications do not suffer from Garbage Collection (GC).
+Using *off-heap storage*, Chronicle Queue provides an environment where applications do not suffer from Garbage Collection (GC).
 When implementing high-performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java, one of the biggest problems is garbage collection.
 
-Garbage collection may slow down your critical operations non-deterministically at any time.
-In order to avoid non-determinism, and escape from garbage collection delays, off-heap memory solutions are ideal.
-The main idea is to manage your memory manually so it does not suffer from garbage collection.
-Chronicle Queue behaves like a management interface over off-heap memory so you can build your own solutions over it.
-
-Chronicle Queue uses `RandomAccessFiles` while managing memory and this choice brings lots of possibilities. `RandomAccessFiles` permit non-sequential, or random, access to a file's contents.
-To access a file randomly, you open the file, seek a particular location, and read from or write to that file.
-`RandomAccessFiles` can be seen as "large" C-type byte arrays that you can access at any random index "directly" using pointers.
-File portions can be used as `ByteBuffers` if the portion is mapped into memory.
-This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance.
-There is no garbage collection as everything is done off-heap.
+Chronicle Queue allows messages to be added to the end of a queue ("appended"), read from the queue ("tailed"),
+and also supports random-access seek.
 
 == What Is Chronicle Queue?
 
-You could consider Chronicle Queue to be similar to a low latency broker-less durable/persisted JVM topic.
+You could consider a Chronicle Queue to be similar to a low latency broker-less durable/persisted topic that can contain messages of different types and sizes.
 Chronicle Queue is a distributed unbounded persisted queue that:
 
 * supports asynchronous RMI and Publish/Subscribe interfaces with microsecond latencies.
-* passes messages between JVMs in under a microsecond (in optimised examples)
-* passes messages between JVMs on different machines via replication in under 10 microseconds (in optimised examples)
-* provides stable, soft, real-time latencies into the millions of messages per second for a single thread to one queue; with total ordering of every event.
+* passes messages between JVMs in under a microsecond
+* passes messages between JVMs on different machines via replication in under 10 microseconds
+(<<Chronicle Queue Enterprise Edition,Enterprise feature>>)
+* provides stable, soft real-time latencies into the millions of messages per second for a single thread to one queue; with total ordering of every event.
 
 When publishing 40-byte messages, a high percentage of the time we achieve latencies under 1 microsecond.
 The 99th percentile latency is the worst 1 in 100, and the 99.9th percentile is the worst 1 in 1000 latency.
@@ -1482,9 +1475,9 @@ This is much more scalable than being limited to the amount of memory space that
 You can buy a redundant pair of 6TB of enterprise disks very much more cheaply than 6TB of memory.
 
 '''
-==== Monitoring that you have sufficent disk space
+==== Monitoring that you have sufficient disk space
 
-Chronicle Queue runs a background thread to watch for low disk space (see net.openhft.chronicle.threads.DiskSpaceMonitor class) as the JVM can crash when allocating a new memory mapped file if disk space becomes low enough. The disk space monitor checks (for each FileStore you are using Chronicle Queues on):
+Chronicle Queue runs a background thread to watch for low disk space (see `net.openhft.chronicle.threads.DiskSpaceMonitor` class) as the JVM can crash when allocating a new memory mapped file if disk space becomes low enough. The disk space monitor checks (for each FileStore you are using Chronicle Queues on):
 that there is less than 200MB free. If so you will see:
 [source,java]
 ----
