@@ -529,16 +529,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         }
     }
 
-    private static class ChronicleReaderRunner {
-        public static void main(String[] args) {
-            ChronicleReader reader = new ChronicleReader()
-                    .asMethodReader(SayWhen.class.getName())
-                    .withBasePath(Paths.get(args[0]))
-                    .withMessageSink(System.out::println);
-            reader.execute();
-        }
-    }
-
     @Test
     public void findByBinarySearch() {
         final File queueDir = getTmpDir();
@@ -868,7 +858,19 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 execute();
 
         capturedOutput.poll();
-        assertEquals("\"say\":\"hello\"",
+        assertEquals("{\"say\":\"hello\"}",
+                capturedOutput.poll().trim());
+    }
+
+    @Test
+    public void shouldRespectWireType2() {
+        basicReader()
+                .asMethodReader(Say.class.getName())
+                .withWireType(WireType.JSON_ONLY)
+                .execute();
+
+        capturedOutput.poll();
+        assertEquals("{\"say\":\"hello\"}",
                 capturedOutput.poll().trim());
     }
 
@@ -922,6 +924,16 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     @After
     public void clearInterrupt() {
         Thread.interrupted();
+    }
+
+    private static class ChronicleReaderRunner {
+        public static void main(String[] args) {
+            ChronicleReader reader = new ChronicleReader()
+                    .asMethodReader(SayWhen.class.getName())
+                    .withBasePath(Paths.get(args[0]))
+                    .withMessageSink(System.out::println);
+            reader.execute();
+        }
     }
 
     private static final class RecordCounter implements Consumer<String> {
