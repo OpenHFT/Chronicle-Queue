@@ -52,13 +52,15 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static net.openhft.chronicle.testframework.process.JavaProcessBuilder.printProcessOutput;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
-    private static final int LSOF_TIMEOUT = 30_000;
+    private static final int LSOF_TIMEOUT_SECONDS = 10;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
@@ -137,7 +139,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         GcControls.waitForGcCycle();
         GcControls.waitForGcCycle();
 
-        Assert.assertTrue(isFileHandleClosed(file));
+        Assert.assertTrue(queueFilesAreAllClosed());
     }
 
     @Test
@@ -175,7 +177,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
             assertFalse(gcGuard.isEmpty());
         }
 
-        Assert.assertTrue(isFileHandleClosed(file));
+        Assert.assertTrue(queueFilesAreAllClosed());
 
     }
 
@@ -227,7 +229,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
         }
 
-        Assert.assertTrue(isFileHandleClosed(file));
+        Assert.assertTrue(queueFilesAreAllClosed());
     }
 
     @Test
@@ -299,7 +301,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
          *
          * See https://docs.oracle.com/javase/8/docs/api/java/nio/MappedByteBuffer.html
          */
-        System.gc();
+        GcControls.waitForGcCycle();
         final String currentRollCycleName = ROLL_CYCLE_FORMATTER.format(Instant.ofEpochMilli(timestamp)) + ".cq4";
         Waiters.builder(() -> {
                     final int matchingLines = countMatchingLsofLines(
@@ -317,41 +319,43 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     public void assertReferencesReleased() {
         threadPool.shutdownNow();
         try {
-            assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
+            assertTrue(threadPool.awaitTermination(5L, SECONDS));
         } catch (InterruptedException e) {
             throw new AssertionError(e);
         }
         super.assertReferencesReleased();
     }
 
-    private static boolean isFileHandleClosed(File file) {
-        return countMatchingLsofLines(str -> str.contains(file.getAbsolutePath()), Jvm.error()) == 0;
+    private boolean queueFilesAreAllClosed() {
+        return countMatchingLsofLines(str -> str.contains(queuePath.getAbsolutePath()), Jvm.error()) == 0;
     }
 
     private static int countMatchingLsofLines(@NotNull Predicate<String> lsofLineMatcher, @NotNull ExceptionHandler logLevel) {
         Process plsof = null;
         try {
-            long startTime = System.currentTimeMillis();
-            plsof = new ProcessBuilder("lsof", "-b", "-p", String.valueOf(Jvm.getProcessId())).start();
+            plsof = new ProcessBuilder("lsof", "-bnPal", "-L", "-S", "5", "-d", "mem", "-p", String.valueOf(Jvm.getProcessId())).start();
+            boolean completed = plsof.waitFor(LSOF_TIMEOUT_SECONDS, SECONDS);
+            // Note that lsof returns 1 for no results, so we need to be careful that the above command always returns some results (https://github.com/lsof-org/lsof/issues/128)
+            if (!completed || plsof.exitValue() != 0) {
+                printProcessOutput("lsof", plsof);
+                throw new IllegalStateException(completed ? "lsof terminated with exit code " + plsof.exitValue() : "did not complete in " + LSOF_TIMEOUT_SECONDS + " seconds");
+            }
             int matchingLines = 0;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
                 String line;
-                while (plsof.isAlive()) {
+                while (true) {
                     line = reader.readLine();
-                    if (line != null && lsofLineMatcher.test(line)) {
+                    if (line == null) {
+                        break;
+                    }
+                    if (lsofLineMatcher.test(line)) {
                         matchingLines++;
                         logLevel.on(AppenderFileHandleLeakTest.class, "Found matching line:\n" + line);
                     }
-                    if (System.currentTimeMillis() - startTime > LSOF_TIMEOUT) {
-                        Jvm.error().on(AppenderFileHandleLeakTest.class, "timed out running lsof, terminating forcefully");
-                        plsof.destroyForcibly();
-                        break;
-                    }
                 }
-                assertEquals("lsof call terminated with error", 0, plsof.exitValue());
             }
             return matchingLines;
-        } catch (IOException e) {
+        } catch (InterruptedException | IOException e) {
             throw new RuntimeException("An error occurred reading command output", e);
         } finally {
             if (plsof != null)
