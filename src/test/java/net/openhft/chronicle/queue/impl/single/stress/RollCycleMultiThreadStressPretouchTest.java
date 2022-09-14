@@ -28,6 +28,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
 
     @Test
     public void stress() throws Exception {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         super.stress();
     }
 

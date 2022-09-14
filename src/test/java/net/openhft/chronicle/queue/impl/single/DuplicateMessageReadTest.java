@@ -54,6 +54,7 @@ public final class DuplicateMessageReadTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldNotReceiveDuplicateMessages() throws IOException {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         final File location = getTmpDir();
 
         try (final ChronicleQueue chronicleQueue = SingleChronicleQueueBuilder

@@ -295,6 +295,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldReturnExpectedValuesForEmptyPretouchedQueue() {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             pretouchQueue(queue);
@@ -394,6 +395,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldReturnExpectedValuesForNonEmptyQueueRolledByPretouch() {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
