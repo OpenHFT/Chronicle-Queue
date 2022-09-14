@@ -65,7 +65,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     private final WriteMarshallable index2IndexTemplate;
     @NotNull
     private final WriteMarshallable indexTemplate;
-    /** Extracted as field to prevent lambda creation on every method reference pass. */
+    /**
+     * Extracted as field to prevent lambda creation on every method reference pass.
+     */
     private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
 
     LongValue writePosition;
@@ -516,7 +518,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             final LongArrayValues index2indexArr = getIndex2index(wire);
 
             int used2 = Maths.toUInt31(index2indexArr.getUsed());
-            assert used2 > 0;
+            assert used2 > 0 : "used2=" + used2 + ", current-header:" + wire.bytes().toHexString(0, Math.min(4_000, wire.bytes().capacity()));
             Outer:
             for (int index2 = used2 - 1; index2 >= 0; index2--) {
                 long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
@@ -590,7 +592,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     // May throw UnrecoverableTimeoutException
-    private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2) throws  StreamCorruptedException {
+    private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2) throws StreamCorruptedException {
         long secondaryAddress = index2indexArr.getVolatileValueAt(index2);
         if (secondaryAddress == 0) {
             secondaryAddress = newIndex(wire, index2indexArr, index2);
@@ -722,7 +724,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                     int len = Wires.lengthOf(header) + 4;
                     len += BytesUtil.padOffset(len);
 
-                    bytes.readSkip(len );
+                    bytes.readSkip(len);
                     endAddress += len;
 
                     if (Wires.isData(header))
