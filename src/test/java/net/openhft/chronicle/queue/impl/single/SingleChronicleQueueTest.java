@@ -3732,6 +3732,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void lastIndexShouldReturnNegativeOneForEmptyPretouchedQueue() {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
             try (ExcerptAppender appender = queue.acquireAppender()) {

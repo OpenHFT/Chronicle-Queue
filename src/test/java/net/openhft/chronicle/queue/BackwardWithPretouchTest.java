@@ -47,6 +47,7 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
     }
 
     private void test(final int pause) {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis());
         File tmpDir = getTmpDir();

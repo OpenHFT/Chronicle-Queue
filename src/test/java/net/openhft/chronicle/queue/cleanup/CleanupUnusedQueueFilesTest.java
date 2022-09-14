@@ -45,7 +45,7 @@ import static org.junit.Assert.assertTrue;
 
 public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
 
-@Test
+    @Test
     public void testTailingWithEmptyCycles() {
         testTailing(p -> {
             try {
@@ -64,6 +64,7 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
 
     private void testTailing(Function<Pretoucher, Integer> createGap) {
         expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
 
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();

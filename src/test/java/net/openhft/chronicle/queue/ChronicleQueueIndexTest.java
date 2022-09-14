@@ -119,6 +119,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     @Test
     public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
         Assume.assumeTrue(!OS.isWindows());
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         SetTimeProvider tp = new SetTimeProvider(1);
 
         File file1 = getTmpDir();
