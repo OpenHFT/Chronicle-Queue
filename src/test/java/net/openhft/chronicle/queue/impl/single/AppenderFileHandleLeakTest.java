@@ -22,7 +22,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -32,15 +31,11 @@ import net.openhft.chronicle.testframework.Waiters;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -49,18 +44,16 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static net.openhft.chronicle.testframework.process.JavaProcessBuilder.printProcessOutput;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
-    private static final int LSOF_TIMEOUT_SECONDS = 10;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
@@ -277,7 +270,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
             }
         }
         // there should be no file handles open now
-        assertEquals(0, countMatchingLsofLines(line -> line.contains(queuePath.getAbsolutePath()), Jvm.warn()));
+        assertTrue(queueFilesAreAllClosed());
 
         timeProvider.set(startTime);
 
@@ -303,16 +296,25 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
          */
         GcControls.waitForGcCycle();
         final String currentRollCycleName = ROLL_CYCLE_FORMATTER.format(Instant.ofEpochMilli(timestamp)) + ".cq4";
-        Waiters.builder(() -> {
-                    final int matchingLines = countMatchingLsofLines(
-                            lsofLine -> lsofLine.contains(queuePath.getAbsolutePath())
-                                    && !(lsofLine.endsWith("metadata.cq4t") || lsofLine.endsWith(currentRollCycleName)), Jvm.startup());
-                    return matchingLines == 0;
-                })
+        final String absolutePathToCurrentRollCycle = queuePath.toPath().toAbsolutePath().resolve(currentRollCycleName).toString();
+        Waiters.builder(() -> onlyCurrentRollCycleIsOpen(absolutePathToCurrentRollCycle))
                 .message("Files that are not the table store or the current roll cycle (" + currentRollCycleName + ") remain open")
                 .maxTimeToWaitMs(5_500)
                 .checkIntervalMs(1_000)
                 .run();
+    }
+
+    private boolean onlyCurrentRollCycleIsOpen(String absolutePathToCurrentRollCycle) {
+        Set<String> mappedFiles = MappedFileUtil.getAllMappedFiles();
+        List<String> rollCyclesOpen = mappedFiles.stream().filter(
+                        lsofLine -> lsofLine.contains(queuePath.getAbsolutePath())
+                                && !(lsofLine.endsWith("metadata.cq4t")))
+                .collect(Collectors.toList());
+        boolean onlyCurrentFileIsOpen = rollCyclesOpen.contains(absolutePathToCurrentRollCycle) && rollCyclesOpen.size() == 1;
+        if (!onlyCurrentFileIsOpen) {
+            rollCyclesOpen.forEach(line -> Jvm.warn().on(AppenderFileHandleLeakTest.class, "Found file open:\n" + line));
+        }
+        return onlyCurrentFileIsOpen;
     }
 
     @Override
@@ -327,40 +329,12 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     private boolean queueFilesAreAllClosed() {
-        return countMatchingLsofLines(str -> str.contains(queuePath.getAbsolutePath()), Jvm.error()) == 0;
-    }
-
-    private static int countMatchingLsofLines(@NotNull Predicate<String> lsofLineMatcher, @NotNull ExceptionHandler logLevel) {
-        Process plsof = null;
-        try {
-            plsof = new ProcessBuilder("lsof", "-bnPal", "-L", "-S", "5", "-d", "mem", "-p", String.valueOf(Jvm.getProcessId())).start();
-            boolean completed = plsof.waitFor(LSOF_TIMEOUT_SECONDS, SECONDS);
-            // Note that lsof returns 1 for no results, so we need to be careful that the above command always returns some results (https://github.com/lsof-org/lsof/issues/128)
-            if (!completed || plsof.exitValue() != 0) {
-                printProcessOutput("lsof", plsof);
-                throw new IllegalStateException(completed ? "lsof terminated with exit code " + plsof.exitValue() : "did not complete in " + LSOF_TIMEOUT_SECONDS + " seconds");
-            }
-            int matchingLines = 0;
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(plsof.getInputStream()))) {
-                String line;
-                while (true) {
-                    line = reader.readLine();
-                    if (line == null) {
-                        break;
-                    }
-                    if (lsofLineMatcher.test(line)) {
-                        matchingLines++;
-                        logLevel.on(AppenderFileHandleLeakTest.class, "Found matching line:\n" + line);
-                    }
-                }
-            }
-            return matchingLines;
-        } catch (InterruptedException | IOException e) {
-            throw new RuntimeException("An error occurred reading command output", e);
-        } finally {
-            if (plsof != null)
-                plsof.destroy();
-        }
+        GcControls.waitForGcCycle();
+        final List<String> openQueueFiles = MappedFileUtil.getAllMappedFiles().stream()
+                .filter(str -> str.contains(queuePath.getAbsolutePath()))
+                .collect(Collectors.toList());
+        openQueueFiles.forEach(qf -> Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open queue file: " + qf));
+        return openQueueFiles.isEmpty();
     }
 
     private ChronicleQueue createQueue(final TimeProvider timeProvider) {

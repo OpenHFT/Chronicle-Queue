@@ -41,7 +41,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -90,23 +92,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         );
     }
 
-    private static List<String> getMappedQueueFileCount() throws IOException, InterruptedException {
-
-        final int processId = OS.getProcessId();
-        final List<String> fileList = new ArrayList<>();
-
-        final Process pmap = new ProcessBuilder("pmap", Integer.toString(processId)).start();
-        pmap.waitFor();
-        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(pmap.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains(SUFFIX)) {
-                    fileList.add(line);
-                }
-            }
-        }
-
-        return fileList;
+    private static List<String> getMappedQueueFiles() {
+        return MappedFileUtil.getAllMappedFiles().stream()
+                .filter(filename -> filename.contains(SUFFIX))
+                .collect(Collectors.toList());
     }
 
     private static long countEntries(final ChronicleQueue queue, boolean named) {
@@ -3650,7 +3639,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             boolean passed = true;
             if (OS.isLinux()) {
-                List<String> openFiles = getMappedQueueFileCount();
+                List<String> openFiles = getMappedQueueFiles();
                 int filesOpen = openFiles.size();
                 if (filesOpen >= 50) {
                     passed = false;
