@@ -56,6 +56,7 @@ public class PretoucherTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldHandleCycleRoll() {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         File dir = getTmpDir();
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);
              SingleChronicleQueue queue2 = createQueue(dir, clock::get);
@@ -89,10 +90,8 @@ public class PretoucherTest extends ChronicleQueueTestBase {
     @Test
     public void shouldHandleCycleRollByPretoucher() {
         expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
-        cycleRollByPretoucher(0);
-    }
-
-    private void cycleRollByPretoucher(int earlyMillis) {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
+        int earlyMillis = 0;
         File dir = getTmpDir();
         clock.set(100);
         try (final SingleChronicleQueue queue = createQueue(dir, clock::get);

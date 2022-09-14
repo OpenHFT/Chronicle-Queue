@@ -40,6 +40,7 @@ public class PretoucherDontWriteTest extends ChronicleQueueTestBase {
 
     @Test
     public void dontWrite() {
+        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
 
         File dir = getTmpDir();
 
