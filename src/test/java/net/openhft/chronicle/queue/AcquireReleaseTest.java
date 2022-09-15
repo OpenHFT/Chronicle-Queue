@@ -140,9 +140,8 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
 
             // other appender is created
             CompletableFuture.runAsync(queue::acquireAppender).get();  // Here store is Acquired twice (second time in cleanupStoreFilesWithNoData())
-
-            BackgroundResourceReleaser.releasePendingResources();
         }
+        BackgroundResourceReleaser.releasePendingResources();
 
         // Once is called when creating first appender, and twice when creating second appender ( extra time in cleanupStoreFilesWithNoData())
         assertEquals(3, acount.get());
