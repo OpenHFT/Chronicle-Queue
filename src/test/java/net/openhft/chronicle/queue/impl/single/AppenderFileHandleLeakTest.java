@@ -88,22 +88,21 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
         appender.writeBytes(b -> b.writeInt(j));
     }
 
+    /**
+     * These only run on Linux because {@link MappedFileUtil#getAllMappedFiles()} only works
+     * on Linux
+     */
     @Before
     public void setUp() {
+        assumeTrue(OS.isLinux());
+
         System.setProperty("chronicle.queue.disableFileShrinking", "true");
         queuePath = getTmpDir();
     }
 
     @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
-
-        File file;
-
-        assumeTrue(OS.isLinux() || OS.isMacOSX());
-
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
-
-            file = queue.file();
 
             GcControls.requestGcCycle();
             Thread.sleep(100);
@@ -141,15 +140,9 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     public void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
-
-        File file;
-
-        assumeTrue(OS.isLinux() || OS.isMacOSX());
-
         GcControls.requestGcCycle();
         Thread.sleep(100);
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
-            file = queue.file();
             final List<Future<Boolean>> futures = new LinkedList<>();
             final List<ExcerptTailer> gcGuard = new LinkedList<>();
 
@@ -176,15 +169,11 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
 
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws InterruptedException {
-        assumeTrue(OS.isLinux() || OS.isMacOSX());
-
-        File file;
 
         System.gc();
         Thread.sleep(100);
         final int messagesPerThread = 10;
         try (ChronicleQueue queue = createQueue(currentTime::get)) {
-            file = queue.file();
 
             for (int j = 0; j < messagesPerThread; j++) {
                 writeMessage(j, queue);
@@ -234,8 +223,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     public void appenderShouldOnlyKeepCurrentRollCycleOpen() {
-        assumeTrue(OS.isLinux() || OS.isMacOSX());
-
         AtomicLong timeProvider = new AtomicLong(1661323015000L);
         try (ChronicleQueue queue = createQueue(timeProvider::get)) {
 
@@ -256,8 +243,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     public void tailerShouldOnlyKeepCurrentRollCycleOpen() {
-        assumeTrue(OS.isLinux() || OS.isMacOSX());
-
         final long startTime = 1661323015000L;
         AtomicLong timeProvider = new AtomicLong(startTime);
         final int messageCount = 10;
