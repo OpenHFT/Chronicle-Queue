@@ -88,6 +88,7 @@ public class PretoucherTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldHandleCycleRollByPretoucher() {
+        expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
         cycleRollByPretoucher(0);
     }
 

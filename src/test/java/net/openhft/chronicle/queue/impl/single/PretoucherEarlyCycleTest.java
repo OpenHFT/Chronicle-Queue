@@ -40,6 +40,7 @@ public class PretoucherEarlyCycleTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldHandleEarlyCycleRollByPretoucher() {
+        expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
         System.setProperty("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", "100");
         try {
             cycleRollByPretoucher(100);

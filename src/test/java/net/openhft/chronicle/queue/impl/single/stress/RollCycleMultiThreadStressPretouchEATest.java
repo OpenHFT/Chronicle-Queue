@@ -28,6 +28,7 @@ public class RollCycleMultiThreadStressPretouchEATest extends RollCycleMultiThre
 
     @Test
     public void stress() throws Exception {
+        expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
         super.stress();
     }
 
