@@ -72,8 +72,8 @@ public final class Pretoucher extends AbstractCloseable {
         this.queue = queue;
         this.chunkListener = chunkListener;
         this.cycleChangedListener = cycleChangedListener;
-        this.earlyAcquireNextCycle = earlyAcquireNextCycle;
-        this.canWrite = canWrite || earlyAcquireNextCycle;
+        this.earlyAcquireNextCycle = checkEA(earlyAcquireNextCycle);
+        this.canWrite = canWrite || this.earlyAcquireNextCycle;
         pretoucherState = new PretoucherState(this::getStoreWritePosition);
         if (PRETOUCHER_PREROLL_TIME_MS != PRETOUCHER_PREROLL_TIME_DEFAULT_MS && !earlyAcquireNextCycle)
             Jvm.warn().on(getClass(), "SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs has been set but not earlyAcquireNextCycle");
@@ -82,6 +82,13 @@ public final class Pretoucher extends AbstractCloseable {
         // always put references to "this" last.
         queue.addCloseListener(this);
     }
+
+    private boolean checkEA(boolean ea) {
+        if (ea)
+            Jvm.warn().on(getClass(), "SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
+        return false;
+    }
+
     public void execute() throws InvalidEventHandlerException {
         try {
             throwExceptionIfClosed();
