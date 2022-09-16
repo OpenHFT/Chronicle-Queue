@@ -250,7 +250,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return tailer
      * @deprecated call {@link #createTailer()} instead
      */
-    @Deprecated(/* to be removed in x.23 */)
+    @Deprecated(/* to be removed in x.24 */)
     @NotNull
     StoreTailer acquireTailer() {
         throwExceptionIfClosed();
