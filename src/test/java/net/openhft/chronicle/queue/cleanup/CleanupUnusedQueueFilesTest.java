@@ -63,8 +63,6 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
     }
 
     private void testTailing(Function<Pretoucher, Integer> createGap) {
-        expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
-
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
 
@@ -89,9 +87,10 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
             appender.writeText("2"); // to file ...000004
             assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
 
-            tp.advanceMillis(2000);
-            cyclesAdded += createGap.apply(pretoucher);
-            assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
+            // Will only advance one segment in the future.
+            //tp.advanceMillis(2000);
+            //cyclesAdded += createGap.apply(pretoucher);
+            //assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
 
             // now tail them all back
             int count = 0;
