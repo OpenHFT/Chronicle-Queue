@@ -413,8 +413,9 @@ public class ChronicleReader implements Reader {
     private void seekBinarySearch(ExcerptTailer tailer) {
         TailerDirection originalDirection = tailer.direction();
         try {
+            tailer.direction(FORWARD);
             final Wire key = binarySearch.wireKey();
-            long rv = BinarySearch.search((SingleChronicleQueue) tailer.queue(), key, binarySearch);
+            long rv = BinarySearch.search(tailer, key, binarySearch);
             if (rv == -1) {
                 tailer.toStart();
             } else if (rv < 0) {

@@ -100,19 +100,20 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
                 }
             };
 
-            try (final ExcerptTailer tailer = queue.createTailer()) {
+            try (final ExcerptTailer tailer = queue.createTailer();
+                final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
                         Wire key = toWire(j);
-                        long index = BinarySearch.search(queue, key, comparator);
+                        long index = BinarySearch.search(binarySearchTailer, key, comparator);
                         Assert.assertEquals(tailer.index(), index);
                         key.bytes().releaseLast();
                     }
                 }
-            }
 
-            Wire key = toWire(numberOfMessages);
-            Assert.assertTrue("Should not find non-existent", BinarySearch.search(queue, key, comparator) < 0);
+                Wire key = toWire(numberOfMessages);
+                Assert.assertTrue("Should not find non-existent", BinarySearch.search(tailer, key, comparator) < 0);
+            }
         }
     }
 

@@ -724,6 +724,9 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public final ExcerptTailer toStart() {
+        if (context.isPresent())
+            throw new IllegalStateException("Cannot move tailer to end during document reading");
+
         try {
             return doToStart();
         } catch (MissingStoreFileException e) {
@@ -857,6 +860,9 @@ class StoreTailer extends AbstractCloseable
     @Override
     public ExcerptTailer toEnd() {
         throwExceptionIfClosed();
+
+        if (context.isPresent())
+            throw new IllegalStateException("Cannot move tailer to end during document reading");
 
         if (direction.equals(TailerDirection.BACKWARD)) {
             return callOriginalToEnd();
@@ -1165,6 +1171,30 @@ class StoreTailer extends AbstractCloseable
         throwExceptionIfClosed();
 
         return readAfterReplicaAcknowledged;
+    }
+
+    @Override
+    public long approximateExcerptsInCycle(int cycle) {
+        throwExceptionIfClosed();
+        try {
+            return moveToCycle(cycle) ? store.approximateLastSequenceNumber(this) + 1 : -1;
+        } catch (StreamCorruptedException e) {
+            throw new IllegalStateException(e);
+        } finally {
+            releaseStore();
+        }
+    }
+
+    @Override
+    public long exactExcerptsInCycle(int cycle) {
+        throwExceptionIfClosed();
+        try {
+            return moveToCycle(cycle) ? store.exactLastSequenceNumber(this) + 1 : -1;
+        } catch (StreamCorruptedException e) {
+            throw new IllegalStateException(e);
+        } finally {
+            releaseStore();
+        }
     }
 
     @NotNull
