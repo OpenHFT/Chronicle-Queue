@@ -46,6 +46,7 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     @Test
     public void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         Assume.assumeFalse(OS.isWindows());
+        System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");
         expectException("Forced unlock for the lock");
 
@@ -106,6 +107,8 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
                 assertEquals(1, recordCount);
                 assertEquals(7, lastItem);
             }
+        } finally {
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 }

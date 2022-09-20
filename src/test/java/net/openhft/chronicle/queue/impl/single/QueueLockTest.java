@@ -43,11 +43,14 @@ public class QueueLockTest extends ChronicleQueueTestBase {
 
     @Test
     public void testRecover() throws InterruptedException {
+        System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try {
             check(false);
             fail();
         } catch (IllegalStateException e) {
             assertTrue(e.getMessage().contains("overwritten? Expected:"));
+        } finally {
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 

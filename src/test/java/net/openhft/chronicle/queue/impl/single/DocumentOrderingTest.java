@@ -140,6 +140,7 @@ public final class DocumentOrderingTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
+        System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");
         expectException("Forced unlock for the lock");
         // as below, but don't actually close the initial context
@@ -162,6 +163,8 @@ public final class DocumentOrderingTest extends ChronicleQueueTestBase {
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(1, tailer);
             assertFalse(tailer.readingDocument().isPresent());
+        } finally {
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 

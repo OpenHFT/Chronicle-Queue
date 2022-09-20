@@ -65,8 +65,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             Jvm.warn().on(getClass(), "queue.dont.recover.lock.timeout property is deprecated and will be removed in a future version. " +
                     "Use queue.force.unlock.mode=NEVER instead");
         } else {
-            // TODO: x.24 change default to UnlockMode.LOCKING_PROCESS_DEAD
-            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.ALWAYS.name()));
+            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.LOCKING_PROCESS_DEAD.name()));
         }
 
         singleThreadedCheckDisabled(true);

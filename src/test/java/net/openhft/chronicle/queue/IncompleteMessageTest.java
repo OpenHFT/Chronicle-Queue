@@ -37,6 +37,7 @@ public class IncompleteMessageTest extends QueueTestCommon {
 
     @Test
     public void incompleteMessageShouldBeSkipped() throws Exception {
+        System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock after ");
         expectException("Forced unlock for the lock ");
         ignoreException("Unable to release the lock");
@@ -61,6 +62,8 @@ public class IncompleteMessageTest extends QueueTestCommon {
                 assertEquals("world", tailer.readText());
                 assertFalse(tailer.readingDocument().isPresent());
             }
+        } finally {
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 
