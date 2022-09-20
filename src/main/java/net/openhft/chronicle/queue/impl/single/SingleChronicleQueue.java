@@ -88,7 +88,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     // Uses this.closers as a lock. concurrent read, locking for write.
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
     private final StoreSupplier storeSupplier;
-    private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
     private final long epoch;
     private final boolean isBuffered;
     @NotNull
@@ -244,24 +243,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     protected CycleCalculator cycleCalculator(ZoneId zoneId) {
         return DefaultCycleCalculator.INSTANCE;
-    }
-
-    /**
-     * @return tailer
-     * @deprecated call {@link #createTailer()} instead
-     */
-    @Deprecated(/* to be removed in x.24 */)
-    @NotNull
-    StoreTailer acquireTailer() {
-        throwExceptionIfClosed();
-        StoreTailer tl = ThreadLocalHelper.getTL(tlTailer, this, q -> new StoreTailer(q, q.pool));
-
-        if (tl.isClosing()) {
-            tl = new StoreTailer(this, pool);
-            tlTailer.set(new WeakReference<>(tl));
-        }
-
-        return tl;
     }
 
     @NotNull
@@ -601,34 +582,30 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
      * which is updated last during append operation so may be possible that a single entry is available for reading
      * but not acknowledged by this method yet.
+     *
+     * @deprecated
+     * @see ExcerptTailer#approximateExcerptsInCycle(int)
      */
+    @Deprecated(/* To be removed in x.25 */)
     public long approximateExcerptsInCycle(int cycle) {
         throwExceptionIfClosed();
-        // TODO: this function may require some re-work now that acquireTailer has been deprecated
-        StoreTailer tailer = acquireTailer();
-        try {
-            return tailer.moveToCycle(cycle) ? tailer.store.approximateLastSequenceNumber(tailer) + 1 : -1;
-        } catch (StreamCorruptedException e) {
-            throw new IllegalStateException(e);
-        } finally {
-            tailer.releaseStore();
+        try (ExcerptTailer tailer = createTailer()) {
+            return tailer.approximateExcerptsInCycle(cycle);
         }
     }
 
     /**
      * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
      * expensive operation.
+     *
+     * @deprecated
+     * @see ExcerptTailer#exactExcerptsInCycle(int)
      */
+    @Deprecated(/* To be removed in x.25 */)
     public long exactExcerptsInCycle(int cycle) {
         throwExceptionIfClosed();
-        // TODO: this function may require some re-work now that acquireTailer has been deprecated
-        StoreTailer tailer = acquireTailer();
-        try {
-            return tailer.moveToCycle(cycle) ? tailer.store.exactLastSequenceNumber(tailer) + 1 : -1;
-        } catch (StreamCorruptedException e) {
-            throw new IllegalStateException(e);
-        } finally {
-            tailer.releaseStore();
+        try (ExcerptTailer tailer = createTailer()) {
+            return tailer.exactExcerptsInCycle(cycle);
         }
     }
 

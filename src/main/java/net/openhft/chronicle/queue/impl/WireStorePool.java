@@ -42,16 +42,6 @@ public class WireStorePool extends SimpleCloseable {
         return new WireStorePool(supplier, storeFileListener);
     }
 
-    @Deprecated(/*"removal in x.24 - @param epoch was removed - use WireStorePool.acquire(int, long, boolean, SingleChronicleQueueStore)"*/)
-    @Nullable
-    public SingleChronicleQueueStore acquire(
-            final int cycle,
-            final long epoch,
-            boolean createIfAbsent,
-            SingleChronicleQueueStore oldStore) {
-       return  acquire(cycle,createIfAbsent,oldStore);
-    }
-
     @Nullable
     public SingleChronicleQueueStore acquire(
             final int cycle,

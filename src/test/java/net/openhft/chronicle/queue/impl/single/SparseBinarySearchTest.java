@@ -101,11 +101,12 @@ public class SparseBinarySearchTest extends ChronicleQueueTestBase {
                 }
             }
 
-            try (final ExcerptTailer tailer = queue.createTailer()) {
+            try (final ExcerptTailer tailer = queue.createTailer();
+                final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
                         Wire key = toWire(j);
-                        long index = BinarySearch.search(queue, key, GAP_TOLERANT_COMPARATOR);
+                        long index = BinarySearch.search(binarySearchTailer, key, GAP_TOLERANT_COMPARATOR);
                         if (entriesWithValues.contains(j)) {
                             Assert.assertEquals(tailer.index(), index);
                         } else {
@@ -114,10 +115,10 @@ public class SparseBinarySearchTest extends ChronicleQueueTestBase {
                         key.bytes().releaseLast();
                     }
                 }
-            }
 
-            Wire key = toWire(numberOfMessages);
-            assertTrue("Should not find non-existent", BinarySearch.search(queue, key, GAP_TOLERANT_COMPARATOR) < 0);
+                Wire key = toWire(numberOfMessages);
+                assertTrue("Should not find non-existent", BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0);
+            }
         }
     }
 
