@@ -59,6 +59,7 @@ public final class Pretoucher extends AbstractCloseable {
         if (PRETOUCHER_PREROLL_TIME_MS != PRETOUCHER_PREROLL_TIME_DEFAULT_MS && !earlyAcquireNextCycle)
             Jvm.warn().on(getClass(), "SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs has been set but not earlyAcquireNextCycle");
         pretouchTimeProvider = () -> queue.time().currentTimeMillis() + (this.earlyAcquireNextCycle ? PRETOUCHER_PREROLL_TIME_MS : 0);
+//        Jvm.warn().on(getClass(), "This functionality has been temporarily disabled");
 
         // always put references to "this" last.
         queue.addCloseListener(this);
@@ -80,8 +81,9 @@ public final class Pretoucher extends AbstractCloseable {
         try {
             assignCurrentCycle();
 
-            if (currentCycleMappedBytes != null)
-                pretoucherState.pretouch(currentCycleMappedBytes);
+            // do nothing. TODO: FIX occasional instability
+//            if (currentCycleMappedBytes != null)
+//                pretoucherState.pretouch(currentCycleMappedBytes);
 
         } catch (ClassCastException cce) {
             Jvm.warn().on(getClass(), cce);
