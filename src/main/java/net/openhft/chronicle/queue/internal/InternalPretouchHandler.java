@@ -31,8 +31,4 @@ public final class InternalPretouchHandler implements EventHandler {
     public HandlerPriority priority() {
         return HandlerPriority.MONITOR;
     }
-
-    public void shutdown() {
-        pretoucher.shutdown();
-    }
 }
