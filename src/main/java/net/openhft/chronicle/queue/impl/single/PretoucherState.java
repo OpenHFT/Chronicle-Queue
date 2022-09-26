@@ -4,15 +4,17 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.function.LongSupplier;
 
 class PretoucherState {
     public static final int FACTOR = 4;
-    private static final int HEAD_ROOM = Integer.getInteger("PretoucherState.headRoom", 1 << 20);
+    static final int HEAD_ROOM = Integer.getInteger("PretoucherState.headRoom", 1 << 20);
     @NotNull
     private final LongSupplier posSupplier;
+    private final LongSupplier cycleSupplier;
     private int minHeadRoom;
     private long lastTouchedPage = 0;
     private long lastTouchedPos = 0;
@@ -25,8 +27,13 @@ class PretoucherState {
     }
 
     public PretoucherState(@NotNull LongSupplier posSupplier, int minHeadRoom) {
+        this(posSupplier, minHeadRoom, null);
+    }
+
+    public PretoucherState(@NotNull LongSupplier posSupplier, int minHeadRoom, @Nullable LongSupplier cycleSupplier) {
         this.posSupplier = posSupplier;
         this.minHeadRoom = minHeadRoom;
+        this.cycleSupplier = cycleSupplier;
     }
 
     static File getFile(MappedBytes bytes) {
@@ -36,8 +43,12 @@ class PretoucherState {
         return bytes.mappedFile().file();
     }
 
-    // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null
     public void pretouch(MappedBytes bytes) {
+        pretouch(bytes, -1);
+    }
+
+    // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null
+    public void pretouch(MappedBytes bytes, long currentCycle) {
         Compiler.enable();
         final long pos;
         try {
@@ -103,7 +114,7 @@ class PretoucherState {
                         }
                         try {
                             // in case shrinkage has happened
-                            if (lastTouchedPage > bytes.realCapacity())
+                            if (cycleChanged(currentCycle))
                                 break;
                             if (touchPage(bytes, lastTouchedPage)) {
                                 Compiler.enable();
@@ -156,6 +167,10 @@ class PretoucherState {
             lastPos = pos;
             Compiler.enable();
         }
+    }
+
+    private boolean cycleChanged(long currentCycle) {
+        return currentCycle != -1 && cycleSupplier != null && cycleSupplier.getAsLong() != currentCycle;
     }
 
     protected void debug(String message) {
