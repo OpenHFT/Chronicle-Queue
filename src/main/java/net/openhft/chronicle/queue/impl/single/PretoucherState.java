@@ -70,9 +70,13 @@ class PretoucherState {
                 Compiler.enable();
                 Thread thread = Thread.currentThread();
                 int count = 0, pretouch = 0, cces = 0, failedPretouch = 0;
-                try {
-                    Compiler.enable();
-                    for (; lastTouchedPage < neededEnd; lastTouchedPage += pageSize) {
+                boolean lastWasOK = false;
+                Compiler.enable();
+                for (; lastTouchedPage < neededEnd; lastTouchedPage += pageSize) {
+                    long realCapacity = 0;
+                    long capacity = 0;
+                    long safeLimit = 0;
+                    try {
                         // null bytes is used when testing.
                         Compiler.enable();//
                         if (bytes != null)
@@ -81,16 +85,16 @@ class PretoucherState {
                         if (thread.isInterrupted())
                             break;
                         Compiler.enable();
-                        final long realCapacity = bytes == null ? 0 : bytes.realCapacity();
+                        realCapacity = bytes == null ? 0 : bytes.realCapacity();
                         Compiler.enable();
-                        long capacity = 0;
+                        capacity = 0;
                         try {
                             Compiler.enable();
                             capacity = bytes == null ? -1 : bytes.bytesStore().capacity();
                         } catch (ClassCastException e) {
                             cces++;
                         }
-                        long safeLimit = 0;
+                        safeLimit = 0;
                         try {
                             Compiler.enable();
                             safeLimit = bytes == null ? -1 : bytes.bytesStore().safeLimit();
@@ -103,8 +107,11 @@ class PretoucherState {
 //                                // spurious call to a native method to detect an internal error.
 //                                Thread.yield();
                                 pretouch++;
-                            } else
+                                lastWasOK = true;
+                            } else {
                                 failedPretouch++;
+                                lastWasOK = false;
+                            }
                             Compiler.enable();
                         } catch (Throwable t) {
                             Compiler.enable();
@@ -114,13 +121,13 @@ class PretoucherState {
                             } catch (Throwable e) {
                                 throw new RuntimeException("problem closing", e);
                             }
-                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", bytes:safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage, t);
+                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes.capacity: " + capacity + ", bytes.safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage, t);
                         }
                         count++;
                         Compiler.enable();
+                    } catch (Throwable t) {
+                        throw new RuntimeException(lastWasOK + " blew up count=" + count + " pretouch=" + pretouch + " cces=" + cces + " failedPretouch=" + failedPretouch + "bytes.realCapacity: " + Long.toHexString(realCapacity) + ", bytes.capacity: " + Long.toHexString(capacity) + ", bytes.safeLimit: " + Long.toHexString(safeLimit) + ", lastTouchedPage: " + Long.toHexString(lastTouchedPage), t);
                     }
-                } catch (Throwable t) {
-                    throw new RuntimeException("blew up count=" + count + " pretouch="+pretouch+" cces="+cces+" failedPretouch="+failedPretouch, t);
                 }
                 Compiler.enable();
                 onTouched(count);
