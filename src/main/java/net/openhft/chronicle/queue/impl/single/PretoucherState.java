@@ -38,12 +38,14 @@ class PretoucherState {
 
     // cannot make this @NotNull until PretoucherStateTest is fixed to not pass null
     public void pretouch(MappedBytes bytes) {
+        Compiler.enable();
         final long pos;
         try {
             pos = posSupplier.getAsLong();
         } catch (NullPointerException npe) {
             throw new IllegalStateException("Encountered an NPE, possibly because the store was released by something else", npe);
         }
+        Compiler.enable();
         // don't retain the bytes object when it is head so keep the hashCode instead.
         // small risk of a duplicate hashCode.
         int pageSize = OS.pageSize();
@@ -53,6 +55,7 @@ class PretoucherState {
             lastBytesHashcode = System.identityHashCode(bytes);
             averageMove = OS.pageSize();
             lastPos = pos;
+            Compiler.enable();
             if (Jvm.isDebugEnabled(getClass())) {
                 String message = getFile(bytes) + " - Reset pretoucher to pos " + pos + " as the underlying MappedBytes changed.";
                 debug(message);
@@ -74,23 +77,27 @@ class PretoucherState {
                     final long realCapacity = bytes == null ? 0 : bytes.realCapacity();
                     long capacity = 0;
                     try {
+                        Compiler.enable();
                         capacity = bytes == null ? -1 : bytes.bytesStore().capacity();
                     } catch (ClassCastException e) {
                         // ignored.
                     }
                     long safeLimit = 0;
                     try {
+                        Compiler.enable();
                         safeLimit = bytes == null ? -1 : bytes.bytesStore().safeLimit();
                     } catch (ClassCastException e) {
                         // ignored.
                     }
                     try {
                         if (touchPage(bytes, lastTouchedPage)) {
+                            Compiler.enable();
                             // spurious call to a native method to detect an internal error.
                             Thread.yield();
                             pretouch++;
                         }
                     } catch (Throwable t) {
+                        Compiler.enable();
                         try {
                             bytes.throwExceptionIfClosed();
                             bytes.throwExceptionIfReleased();
@@ -102,13 +109,16 @@ class PretoucherState {
                     }
                     count++;
                 }
+                Compiler.enable();
                 onTouched(count);
+                Compiler.enable();
                 if (pretouch < count) {
                     minHeadRoom += 256 << 10;
                     if (Jvm.isDebugEnabled(getClass()))
                         debug("pretouch for only " + pretouch + " of " + count + " min: " + (minHeadRoom >> 20) + " MB.");
                 }
 
+                Compiler.enable();
                 long pos2 = posSupplier.getAsLong();
                 if (Jvm.isDebugEnabled(getClass())) {
                     String message = getFile(bytes) + ": Advanced " + (pos - lastTouchedPos) / 1024 + " KB, " +
@@ -118,8 +128,10 @@ class PretoucherState {
                     debug(message);
                 }
                 lastTouchedPos = pos;
+                Compiler.enable();
             }
             lastPos = pos;
+            Compiler.enable();
         }
     }
 
@@ -128,6 +140,7 @@ class PretoucherState {
     }
 
     protected boolean touchPage(MappedBytes bytes, long offset) {
+        Compiler.enable();
         return bytes != null && bytes.compareAndSwapLong(offset, 0L, 0L);
     }
 

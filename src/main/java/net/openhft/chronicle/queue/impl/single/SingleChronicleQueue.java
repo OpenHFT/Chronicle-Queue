@@ -1029,76 +1029,108 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         public SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent) {
             throwExceptionIfClosed();
 
+            Compiler.enable();
             SingleChronicleQueue that = SingleChronicleQueue.this;
             @NotNull final RollingResourcesCache.Resource dateValue = that
                     .dateCache.resourceFor(cycle);
+            Compiler.enable();
             MappedBytes mappedBytes = null;
             try {
                 File path = dateValue.path;
 
+                Compiler.enable();
                 directoryListing.refresh(false);
+                Compiler.enable();
                 if (!createIfAbsent &&
                         (cycle > directoryListing.getMaxCreatedCycle()
                                 || cycle < directoryListing.getMinCreatedCycle()
                                 || !path.exists())) {
+                    Compiler.enable();
                     return null;
                 }
 
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
+                Compiler.enable();
 
                 throwExceptionIfClosed();
                 if (createIfAbsent && !path.exists() && !dateValue.pathExists)
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
 
+                Compiler.enable();
                 dateValue.pathExists = true;
 
                 try {
+                    Compiler.enable();
                     mappedBytes = mappedFileCache.get(path);
+                    Compiler.enable();
                 } catch (FileNotFoundException e) {
+                    Compiler.enable();
                     createFile(path);
+                    Compiler.enable();
                     mappedBytes = mappedFileCache.get(path);
+                    Compiler.enable();
                 }
+                Compiler.enable();
                 mappedBytes.disableThreadSafetyCheck(true);
                 mappedBytes.chunkCount(chunkCount);
 
-//                pauseUnderload();
+                Compiler.enable();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
                     Jvm.warn().on(getClass(), new Exception("Creating cycle which is not the current cycle"));
                 }
+                Compiler.enable();
                 queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
+                Compiler.enable();
                 assert wire.startUse();
+                Compiler.enable();
                 wire.pauser(pauserSupplier.get());
+                Compiler.enable();
                 wire.headerNumber(rollCycle.toIndex(cycle, 0));
+                Compiler.enable();
 
                 SingleChronicleQueueStore wireStore;
                 try {
+                    Compiler.enable();
                     if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
+                        Compiler.enable();
                         wireStore = storeFactory.apply(that, wire);
+                        Compiler.enable();
                         wire.updateFirstHeader();
+                        Compiler.enable();
                         wire.usePadding(wireStore.dataVersion() > 0);
+                        Compiler.enable();
 
                         wireStore.initIndex(wire);
+                        Compiler.enable();
                         // do not allow tailer to see the file until it's header is written
                         directoryListing.onFileCreated(path, cycle);
+                        Compiler.enable();
                         // allow directoryListing to pick up the file immediately
                     } else {
                         try {
+                            Compiler.enable();
                             wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+                            Compiler.enable();
                         } catch (TimeoutException e) {
+                            Compiler.enable();
 
                             headerRecovery(that, mappedBytes, wire, mappedBytes, cycle);
+                            Compiler.enable();
                             return acquire(cycle, createIfAbsent);
                         }
 
+                        Compiler.enable();
                         StringBuilder name = acquireStringBuilder();
                         ValueIn valueIn = wire.readEventName(name);
                         if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
                             try {
+                                Compiler.enable();
                                 wireStore = valueIn.typedMarshallable();
+                                Compiler.enable();
                             } catch (Throwable t) {
                                 mappedBytes.close();
                                 throw t;
@@ -1121,9 +1153,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 //                        System.err.println("wire.bytes.byteStore.refCount="+wire.bytes().bytesStore().refCount());
                     throw e;
                 }
+                Compiler.enable();
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {
+                Compiler.enable();
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
             }

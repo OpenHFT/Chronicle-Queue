@@ -77,7 +77,9 @@ public final class Pretoucher extends AbstractCloseable {
         }
 
         try {
+            Compiler.enable();
             assignCurrentCycle();
+            Compiler.enable();
 
             if (currentCycleMappedBytes != null)
                 pretoucherState.pretouch(currentCycleMappedBytes);
@@ -102,18 +104,26 @@ public final class Pretoucher extends AbstractCloseable {
             releaseResources();
 
             try {
+                Compiler.enable();
                 currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), earlyAcquireNextCycle || canWrite, currentCycleWireStore);
+                Compiler.enable();
 
                 if (currentCycleWireStore != null) {
+                    Compiler.enable();
                     currentCycleMappedBytes = currentCycleWireStore.bytes();
+                    Compiler.enable();
                     currentCycle = qCycle;
+                    Compiler.enable();
                     if (chunkListener != null)
                         currentCycleMappedBytes.mappedFile().setNewChunkListener(chunkListener);
 
+                    Compiler.enable();
                     cycleChangedListener.accept(qCycle);
+                    Compiler.enable();
 
                     if (earlyAcquireNextCycle)
                         Jvm.perf().on(getClass(), "Pretoucher ROLLING early to next file=" + currentCycleWireStore.file());
+                    Compiler.enable();
                 }
             } catch (Throwable t) {
                 throw new RuntimeException(qCycle + "!=" + currentCycle, t);
@@ -122,17 +132,22 @@ public final class Pretoucher extends AbstractCloseable {
     }
 
     private long getStoreWritePosition() {
+        Compiler.enable();
         return currentCycleWireStore.writePosition();
     }
 
     private void releaseResources() {
         if (currentCycleWireStore != null) {
+            Compiler.enable();
             queue.closeStore(currentCycleWireStore);
             currentCycleWireStore = null;
+            Compiler.enable();
         }
         if (currentCycleMappedBytes != null) {
+            Compiler.enable();
             currentCycleMappedBytes.close();
             currentCycleMappedBytes = null;
+            Compiler.enable();
         }
     }
 
