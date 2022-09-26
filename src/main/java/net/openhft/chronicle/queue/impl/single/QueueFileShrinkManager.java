@@ -33,13 +33,13 @@ public enum QueueFileShrinkManager {
     public static final String THREAD_NAME = "queue~file~shrink~daemon";
     // don't use this with a Pretoucher enabled!
     public static final boolean RUN_SYNCHRONOUSLY = Jvm.getBoolean("chronicle.queue.synchronousFileShrinking");
-    public static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Jvm.getBoolean("chronicle.queue.disableFileShrinking");
+    public static final boolean DISABLE_QUEUE_FILE_SHRINKING = OS.isWindows() || Jvm.getBoolean("chronicle.queue.disableFileShrinking", true);
 
     private static final ScheduledExecutorService EXECUTOR = Threads.acquireScheduledExecutorService(THREAD_NAME, true);
     private static final long DELAY_S = 10;
 
     public static void scheduleShrinking(@NotNull final File queueFile, final long writePos) {
-        if (DISABLE_QUEUE_FILE_SHRINKING)
+        if (DISABLE_QUEUE_FILE_SHRINKING || true)
             return;
         if (RUN_SYNCHRONOUSLY)
             task(queueFile, writePos);

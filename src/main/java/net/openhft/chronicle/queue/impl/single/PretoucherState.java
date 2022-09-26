@@ -78,7 +78,7 @@ class PretoucherState {
                     long safeLimit = 0;
                     try {
                         // null bytes is used when testing.
-                        Compiler.enable();//
+                        Compiler.enable();
                         if (bytes != null)
                             bytes.throwExceptionIfClosed();
                         Compiler.enable();
@@ -126,7 +126,7 @@ class PretoucherState {
                         count++;
                         Compiler.enable();
                     } catch (Throwable t) {
-                        throw new RuntimeException(lastWasOK + " blew up count=" + count + " pretouch=" + pretouch + " cces=" + cces + " failedPretouch=" + failedPretouch + "bytes.realCapacity: " + Long.toHexString(realCapacity) + ", bytes.capacity: " + Long.toHexString(capacity) + ", bytes.safeLimit: " + Long.toHexString(safeLimit) + ", lastTouchedPage: " + Long.toHexString(lastTouchedPage), t);
+                        throw new RuntimeException(lastWasOK + " blew up count=" + count + " pretouch=" + pretouch + " cces=" + cces + " failedPretouch=" + failedPretouch + " bytes.realCapacity: " + Long.toHexString(realCapacity) + ", bytes.capacity: " + Long.toHexString(capacity) + ", bytes.safeLimit: " + Long.toHexString(safeLimit) + ", lastTouchedPage: " + Long.toHexString(lastTouchedPage), t);
                     }
                 }
                 Compiler.enable();
