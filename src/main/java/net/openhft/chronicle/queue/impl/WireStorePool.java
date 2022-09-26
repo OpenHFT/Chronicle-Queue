@@ -48,21 +48,15 @@ public class WireStorePool extends SimpleCloseable {
             final long epoch,
             boolean createIfAbsent,
             SingleChronicleQueueStore oldStore) {
-        Compiler.enable();
         throwExceptionIfClosed();
 
         SingleChronicleQueueStore store = this.supplier.acquire(cycle, createIfAbsent);
-        Compiler.enable();
         if (store != null) {
             if (store != oldStore) {
-                Compiler.enable();
                 BackgroundResourceReleaser.run(() -> storeFileListener.onAcquired(cycle, store.file()));
-                Compiler.enable();
                 store.cycle(cycle);
-                Compiler.enable();
             }
         }
-        Compiler.enable();
         return store;
     }
 
