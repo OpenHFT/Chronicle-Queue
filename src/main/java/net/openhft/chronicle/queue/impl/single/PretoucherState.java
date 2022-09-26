@@ -69,7 +69,7 @@ class PretoucherState {
             if (lastTouchedPage < neededEnd) {
                 Compiler.enable();
                 Thread thread = Thread.currentThread();
-                int count = 0, pretouch = 0;
+                int count = 0, pretouch = 0, cces = 0, failedPretouch = 0;
                 try {
                     Compiler.enable();
                     for (; lastTouchedPage < neededEnd; lastTouchedPage += pageSize) {
@@ -88,22 +88,24 @@ class PretoucherState {
                             Compiler.enable();
                             capacity = bytes == null ? -1 : bytes.bytesStore().capacity();
                         } catch (ClassCastException e) {
-                            // ignored.
+                            cces++;
                         }
                         long safeLimit = 0;
                         try {
                             Compiler.enable();
                             safeLimit = bytes == null ? -1 : bytes.bytesStore().safeLimit();
                         } catch (ClassCastException e) {
-                            // ignored.
+                            cces++;
                         }
                         try {
                             if (touchPage(bytes, lastTouchedPage)) {
                                 Compiler.enable();
-                                // spurious call to a native method to detect an internal error.
-                                Thread.yield();
+//                                // spurious call to a native method to detect an internal error.
+//                                Thread.yield();
                                 pretouch++;
-                            }
+                            } else
+                                failedPretouch++;
+                            Compiler.enable();
                         } catch (Throwable t) {
                             Compiler.enable();
                             try {
@@ -118,7 +120,7 @@ class PretoucherState {
                         Compiler.enable();
                     }
                 } catch (Throwable t) {
-                    throw new RuntimeException("blew up count=" + count, t);
+                    throw new RuntimeException("blew up count=" + count + " pretouch="+pretouch+" cces="+cces+" failedPretouch="+failedPretouch, t);
                 }
                 Compiler.enable();
                 onTouched(count);
