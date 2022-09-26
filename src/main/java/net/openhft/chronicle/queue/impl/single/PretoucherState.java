@@ -70,51 +70,56 @@ class PretoucherState {
                 Compiler.enable();
                 Thread thread = Thread.currentThread();
                 int count = 0, pretouch = 0;
-                Compiler.enable();
-                for (; lastTouchedPage < neededEnd; lastTouchedPage += pageSize) {
-                    // null bytes is used when testing.
+                try {
                     Compiler.enable();
-                    if (bytes != null)
-                        bytes.throwExceptionIfClosed();
-                    Compiler.enable();
-                    if (thread.isInterrupted())
-                        break;
-                    Compiler.enable();
-                    final long realCapacity = bytes == null ? 0 : bytes.realCapacity();
-                    Compiler.enable();
-                    long capacity = 0;
-                    try {
-                        Compiler.enable();
-                        capacity = bytes == null ? -1 : bytes.bytesStore().capacity();
-                    } catch (ClassCastException e) {
-                        // ignored.
-                    }
-                    long safeLimit = 0;
-                    try {
-                        Compiler.enable();
-                        safeLimit = bytes == null ? -1 : bytes.bytesStore().safeLimit();
-                    } catch (ClassCastException e) {
-                        // ignored.
-                    }
-                    try {
-                        if (touchPage(bytes, lastTouchedPage)) {
-                            Compiler.enable();
-                            // spurious call to a native method to detect an internal error.
-                            Thread.yield();
-                            pretouch++;
-                        }
-                    } catch (Throwable t) {
-                        Compiler.enable();
-                        try {
+                    for (; lastTouchedPage < neededEnd; lastTouchedPage += pageSize) {
+                        // null bytes is used when testing.
+                        Compiler.enable();//
+                        if (bytes != null)
                             bytes.throwExceptionIfClosed();
-                            bytes.throwExceptionIfReleased();
-                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", bytes:safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage);
-                        } catch (Exception e) {
-                            e.initCause(t);
-                            throw e;
+                        Compiler.enable();
+                        if (thread.isInterrupted())
+                            break;
+                        Compiler.enable();
+                        final long realCapacity = bytes == null ? 0 : bytes.realCapacity();
+                        Compiler.enable();
+                        long capacity = 0;
+                        try {
+                            Compiler.enable();
+                            capacity = bytes == null ? -1 : bytes.bytesStore().capacity();
+                        } catch (ClassCastException e) {
+                            // ignored.
                         }
+                        long safeLimit = 0;
+                        try {
+                            Compiler.enable();
+                            safeLimit = bytes == null ? -1 : bytes.bytesStore().safeLimit();
+                        } catch (ClassCastException e) {
+                            // ignored.
+                        }
+                        try {
+                            if (touchPage(bytes, lastTouchedPage)) {
+                                Compiler.enable();
+                                // spurious call to a native method to detect an internal error.
+                                Thread.yield();
+                                pretouch++;
+                            }
+                        } catch (Throwable t) {
+                            Compiler.enable();
+                            try {
+                                bytes.throwExceptionIfClosed();
+                                bytes.throwExceptionIfReleased();
+                                throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", bytes:safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage);
+                            } catch (Exception e) {
+                                e.initCause(t);
+                                throw e;
+                            }
+                        }
+                        count++;
+                        Compiler.enable();
                     }
-                    count++;
+                } catch (Throwable t) {
+                    throw new RuntimeException("blew up count="+count, t);
                 }
                 Compiler.enable();
                 onTouched(count);
