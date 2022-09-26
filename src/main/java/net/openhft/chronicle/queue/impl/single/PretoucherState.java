@@ -65,16 +65,23 @@ class PretoucherState {
             averageMove = moved / FACTOR + averageMove * (FACTOR - 1) / FACTOR;
             long neededHeadRoom = Math.max(minHeadRoom, averageMove * FACTOR); // for the next $FACTOR ticks.
             final long neededEnd = pos + neededHeadRoom;
+            Compiler.enable();
             if (lastTouchedPage < neededEnd) {
+                Compiler.enable();
                 Thread thread = Thread.currentThread();
                 int count = 0, pretouch = 0;
+                Compiler.enable();
                 for (; lastTouchedPage < neededEnd; lastTouchedPage += pageSize) {
                     // null bytes is used when testing.
+                    Compiler.enable();
                     if (bytes != null)
                         bytes.throwExceptionIfClosed();
+                    Compiler.enable();
                     if (thread.isInterrupted())
                         break;
+                    Compiler.enable();
                     final long realCapacity = bytes == null ? 0 : bytes.realCapacity();
+                    Compiler.enable();
                     long capacity = 0;
                     try {
                         Compiler.enable();
