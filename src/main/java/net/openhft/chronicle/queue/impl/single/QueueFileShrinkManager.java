@@ -39,7 +39,7 @@ public enum QueueFileShrinkManager {
     private static final long DELAY_S = 10;
 
     public static void scheduleShrinking(@NotNull final File queueFile, final long writePos) {
-        if (DISABLE_QUEUE_FILE_SHRINKING || true)
+        if (DISABLE_QUEUE_FILE_SHRINKING)
             return;
         if (RUN_SYNCHRONOUSLY)
             task(queueFile, writePos);

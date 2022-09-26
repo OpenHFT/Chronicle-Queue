@@ -102,6 +102,9 @@ class PretoucherState {
                             cces++;
                         }
                         try {
+                            // in case shrinkage has happened
+                            if (lastTouchedPage > bytes.realCapacity())
+                                break;
                             if (touchPage(bytes, lastTouchedPage)) {
                                 Compiler.enable();
 //                                // spurious call to a native method to detect an internal error.
