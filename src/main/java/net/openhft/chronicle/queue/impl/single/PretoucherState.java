@@ -109,17 +109,16 @@ class PretoucherState {
                             try {
                                 bytes.throwExceptionIfClosed();
                                 bytes.throwExceptionIfReleased();
-                                throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", bytes:safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage);
-                            } catch (Exception e) {
-                                e.initCause(t);
-                                throw e;
+                            } catch (Throwable e) {
+                                throw new RuntimeException("problem closing", e);
                             }
+                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", bytes:safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage, t);
                         }
                         count++;
                         Compiler.enable();
                     }
                 } catch (Throwable t) {
-                    throw new RuntimeException("blew up count="+count, t);
+                    throw new RuntimeException("blew up count=" + count, t);
                 }
                 Compiler.enable();
                 onTouched(count);
