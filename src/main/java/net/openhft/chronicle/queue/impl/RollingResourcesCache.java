@@ -84,14 +84,23 @@ public class RollingResourcesCache {
      */
     @NotNull
     public Resource resourceFor(long cycle) {
+        Compiler.enable();
         long millisSinceBeginningOfEpoch = (cycle * length);
+        Compiler.enable();
         int hash = Maths.hash32(millisSinceBeginningOfEpoch) & (CACHE_SIZE - 1);
+        Compiler.enable();
         Resource dv = values[hash];
+        Compiler.enable();
         if (dv == null || dv.millis != millisSinceBeginningOfEpoch) {
+            Compiler.enable();
             final Instant instant = Instant.ofEpochMilli(millisSinceBeginningOfEpoch + epoch);
+            Compiler.enable();
             @NotNull String text = formatter.format(instant);
+            Compiler.enable();
             values[hash] = dv = new Resource(millisSinceBeginningOfEpoch, text, fileFactory.apply(text));
+            Compiler.enable();
         }
+        Compiler.enable();
         return dv;
     }
 

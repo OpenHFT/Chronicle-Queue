@@ -1033,14 +1033,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             SingleChronicleQueue that = SingleChronicleQueue.this;
             @NotNull final RollingResourcesCache.Resource dateValue = that
                     .dateCache.resourceFor(cycle);
-            Compiler.enable();
+            File path = dateValue.path;
+            path.exists();
             MappedBytes mappedBytes = null;
             try {
-                File path = dateValue.path;
 
-                Compiler.enable();
+                path.exists();
                 directoryListing.refresh(false);
-                Compiler.enable();
+                path.exists();
                 if (!createIfAbsent &&
                         (cycle > directoryListing.getMaxCreatedCycle()
                                 || cycle < directoryListing.getMinCreatedCycle()
@@ -1051,7 +1051,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                 if (createIfAbsent)
                     checkDiskSpace(that.path);
-                Compiler.enable();
+                path.exists();
 
                 throwExceptionIfClosed();
                 if (createIfAbsent && !path.exists() && !dateValue.pathExists)
