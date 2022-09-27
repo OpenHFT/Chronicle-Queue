@@ -165,6 +165,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         if (PRETOUCH) {
             pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);
+            expectException("touchPage failed");
         }
 
         for (int i = 0; i < numReaders; i++) {
