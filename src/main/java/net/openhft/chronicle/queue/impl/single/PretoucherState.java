@@ -85,16 +85,23 @@ class PretoucherState {
                         // ignored.
                     }
                     try {
+                        if (bytes != null && lastTouchedPage >= realCapacity) {
+                            Jvm.warn().on(getClass(), "lastTouchedPage >= realCapacity " + debugMsg(realCapacity, capacity, safeLimit));
+                            break;
+                        }
                         if (touchPage(bytes, lastTouchedPage)) {
-                            // spurious call to a native method to detect an internal error.
-                            Thread.yield();
                             pretouch++;
+                        } else {
+                            if (bytes != null && capacity > 0) {
+                                long realCapacity2 = bytes.realCapacity();
+                                Jvm.warn().on(getClass(), "touchPage failed realCapacity2: " + realCapacity2 + " " + debugMsg(realCapacity, capacity, safeLimit));
+                            }
                         }
                     } catch (Throwable t) {
                         try {
                             bytes.throwExceptionIfClosed();
                             bytes.throwExceptionIfReleased();
-                            throw new IllegalStateException("bytes.realCapacity: " + realCapacity + ", bytes:capacity: " + capacity + ", bytes:safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage);
+                            throw new IllegalStateException(debugMsg(realCapacity, capacity, safeLimit));
                         } catch (Exception e) {
                             e.initCause(t);
                             throw e;
@@ -121,6 +128,11 @@ class PretoucherState {
             }
             lastPos = pos;
         }
+    }
+
+    @NotNull
+    private String debugMsg(long realCapacity, long capacity, long safeLimit) {
+        return "bytes.realCapacity: " + realCapacity + ", bytes.capacity: " + capacity + ", bytes.safeLimit: " + safeLimit + ", lastTouchedPage: " + lastTouchedPage;
     }
 
     protected void debug(String message) {
