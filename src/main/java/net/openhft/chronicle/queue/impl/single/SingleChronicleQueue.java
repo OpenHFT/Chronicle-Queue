@@ -1059,7 +1059,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
                 queuePathExists = true;
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
-                assert wire.startUse();
                 wire.pauser(pauserSupplier.get());
                 wire.headerNumber(rollCycle.toIndex(cycle, 0));
 

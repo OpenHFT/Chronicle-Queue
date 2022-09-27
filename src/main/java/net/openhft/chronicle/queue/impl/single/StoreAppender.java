@@ -286,7 +286,6 @@ class StoreAppender extends AbstractCloseable
         if (this.store == null)
             return;
 
-        assert wire.startUse();
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
         resetPosition();
