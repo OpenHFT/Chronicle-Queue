@@ -86,6 +86,7 @@ public class IndexForIDTest extends QueueTestCommon {
     }
 
     private void copy(String fromID, TimeSetter setTime, String toID) {
+        ignoreException("touchPage failed");
         Facade datum = Values.newNativeReference(Facade.class);
         long datumSize = datum.maxSize();
         long end = System.currentTimeMillis() + (Jvm.isCodeCoverage() ? 90_000 : 60_000);
