@@ -528,8 +528,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                 // TODO use a binary rather than linear search
 
                 // check the first one to see if any in the index is appropriate.
-                int used = Maths.toUInt31(getUsedAsInt(indexValues));
-                assert used >= 0;
+                int used = getUsedAsInt(indexValues);
                 if (used == 0)
                     continue;
 
