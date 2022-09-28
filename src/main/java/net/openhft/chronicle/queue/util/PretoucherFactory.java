@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue.impl.single.pretoucher;
+package net.openhft.chronicle.queue.util;
 
-public interface Validatable {
+import net.openhft.chronicle.core.threads.EventHandler;
+import net.openhft.chronicle.queue.impl.single.Pretoucher;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import org.jetbrains.annotations.NotNull;
 
-    /**
-     * Method which can be called when writing DTOs via the method writer.
-     * <p>
-     * This can be generated using ValidField.main {classname}
-     *
-     * @throws IllegalStateException if a value is out of range.
-     */
-    default void validate() throws IllegalStateException {
+public interface PretoucherFactory {
+    EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue);
 
-    }
+    Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue);
 }

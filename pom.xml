@@ -554,6 +554,7 @@
                                 </systemProperty>
                             </systemProperties>
                             <classpathScope>test</classpathScope>
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
                         </configuration>
                         <executions>
                             <execution>
@@ -605,18 +606,6 @@
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>QueueMultiThreadedJLBHBenchmark</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>java</goal>
-                                </goals>
-                                <configuration>
-                                    <mainClass>
-                                        net.openhft.chronicle.queue.bench.QueueMultiThreadedJLBHBenchmark
-                                    </mainClass>
-                                </configuration>
-                            </execution>
-                            <execution>
                                 <id>QueueSingleThreadedJLBHBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
@@ -627,9 +616,6 @@
                                         net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
                                     </mainClass>
                                 </configuration>
-                            </execution>
-                            <execution>
-
                             </execution>
 
                         </executions>

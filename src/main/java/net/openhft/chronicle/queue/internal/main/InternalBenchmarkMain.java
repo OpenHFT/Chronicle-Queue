@@ -70,6 +70,7 @@ public class InternalBenchmarkMain {
 
         ChronicleQueue queue = createQueue(path);
 
+        // Pretoucher will only work with Queue Enterprise in the path
         Thread pretoucher = new Thread(() -> {
             ExcerptAppender appender = queue.acquireAppender();
             Thread thread = Thread.currentThread();

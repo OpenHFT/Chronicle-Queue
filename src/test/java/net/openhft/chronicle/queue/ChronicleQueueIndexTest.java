@@ -19,8 +19,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -28,14 +26,12 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -116,68 +112,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test
-    public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
-        Assume.assumeTrue(!OS.isWindows());
-        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
-        SetTimeProvider tp = new SetTimeProvider(1);
-
-        File file1 = getTmpDir();
-        RollCycles rollCycle = RollCycles.DEFAULT;
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .testBlockSize()
-                .build()) {
-            ExcerptAppender appender = queue.acquireAppender();
-
-            appender.writeText("Hello World 1");
-
-            Assert.assertFalse(hasEOFAtEndOfFile(file1));
-        }
-
-        tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .testBlockSize()
-                .build()) {
-
-            queue.acquireAppender().pretouch();
-        }
-
-        tp.advanceMillis(rollCycle.lengthInMillis());
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .build()) {
-
-            ExcerptAppender appender = queue.acquireAppender();
-
-            appender.writeText("Hello World 2");
-
-            // Simulate the end of the day i.e the queue closes the day rolls
-            // (note the change of index from 18264 to 18265)
-
-            assertTrue(hasEOFAtEndOfFile(file1));
-            try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
-                    .path(file1)
-                    .rollCycle(rollCycle)
-                    .timeProvider(tp)
-                    .build()) {
-                final ExcerptTailer tailer = queue123.createTailer();
-                assertEquals("Hello World 1", tailer.readText());
-                assertEquals("Hello World 2", tailer.readText());
-            }
-        }
-    }
-
-    private boolean hasEOFAtEndOfFile(final File file) {
+    protected boolean hasEOFAtEndOfFile(final File file) {
 
         try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                 .path(file).build()) {

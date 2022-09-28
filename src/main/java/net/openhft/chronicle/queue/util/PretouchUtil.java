@@ -19,15 +19,46 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.threads.EventHandler;
+import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
+import net.openhft.chronicle.core.util.ObjectUtils;
+import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.internal.InternalPretouchHandler;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 
-public final class PretouchUtil {
+public final class PretouchUtil implements PretoucherFactory {
+    public static final PretoucherFactory INSTANCE;
 
-    private PretouchUtil() {}
+    static {
+        PretoucherFactory instance;
+        try {
+            final Class<?> clazz = Class.forName("software.chronicle.enterprise.queue.pretoucher.EnterprisePretouchUtil");
+            instance = (PretoucherFactory) ObjectUtils.newInstance(clazz);
+            assert SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable();
+        } catch (Exception e) {
+            instance = new PretouchUtil();
+            SingleChronicleQueueBuilder.onlyAvailableInEnterprise("Pretoucher");
+        }
+        INSTANCE = instance;
+    }
 
-    public static EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
-        return new InternalPretouchHandler(queue);
+    @Override
+    public EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
+        return () -> false;
+    }
+
+    @Override
+    public Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
+        return new EmptyPretoucher();
+    }
+
+    private static class EmptyPretoucher implements Pretoucher {
+        @Override
+        public void execute() throws InvalidEventHandlerException {
+        }
+
+        @Override
+        public void close() {
+        }
     }
 }
