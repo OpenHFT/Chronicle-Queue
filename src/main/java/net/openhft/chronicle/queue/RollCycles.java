@@ -163,7 +163,7 @@ public enum RollCycles implements RollCycle {
         this.indexCount = Maths.nextPower2(indexCount, 8);
         assert this.indexCount <= MAX_INDEX_COUNT : "indexCount: " + indexCount;
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
-        cycleShift = Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing);
+        cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
         assert cycleShift < Long.SIZE : "cycleShift: " + cycleShift;
         sequenceMask = (1L << cycleShift) - 1;
     }
