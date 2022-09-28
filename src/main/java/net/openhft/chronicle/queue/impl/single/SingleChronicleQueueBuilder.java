@@ -96,7 +96,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     private Boolean useSparseFiles;
     private Long sparseCapacity;
     private File path;
@@ -676,7 +676,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
         if (useSparseFiles && OS.isLinux() && OS.is64Bit())
             this.useSparseFiles = useSparseFiles;
@@ -685,7 +685,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     public SingleChronicleQueueBuilder sparseCapacity(long sparseCapacity) {
         this.sparseCapacity = sparseCapacity;
         return this;
@@ -699,7 +699,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     public boolean useSparseFiles() {
         return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
     }

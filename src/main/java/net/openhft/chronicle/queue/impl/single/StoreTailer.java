@@ -1272,7 +1272,7 @@ class StoreTailer extends AbstractCloseable
         return moveToState.indexMoveCount;
     }
 
-    @Deprecated // Should not be providing accessors to reference-counted objects
+    @Deprecated(/* To be removed in 5.25 */) // Should not be providing accessors to reference-counted objects
     @NotNull
     WireStore store() {
         if (store == null)

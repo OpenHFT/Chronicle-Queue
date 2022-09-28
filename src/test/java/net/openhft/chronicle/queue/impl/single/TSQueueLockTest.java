@@ -21,13 +21,12 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
-import net.openhft.chronicle.testframework.process.ProcessRunner;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.Threads;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -268,9 +267,9 @@ public class TSQueueLockTest extends QueueTestCommon {
         return new TSQueueLock(tableStore, Pauser::balanced, timeoutMilliseconds);
     }
 
-    private Process runLockingProcess(boolean releaseAfterInterrupt) throws IOException {
-        return ProcessRunner.runClass(LockAndHoldUntilInterrupted.class,
-                tableStore.file().getAbsolutePath(), String.valueOf(releaseAfterInterrupt));
+    private Process runLockingProcess(boolean releaseAfterInterrupt) {
+        return JavaProcessBuilder.create(LockAndHoldUntilInterrupted.class)
+                .withProgramArguments(tableStore.file().getAbsolutePath(), String.valueOf(releaseAfterInterrupt)).start();
     }
 
     private static void lockAndHoldUntilInterrupted(String tableStorePath, boolean releaseWhenInterrupted) {
