@@ -119,7 +119,7 @@ public enum RollCycles implements RollCycle {
     /**
      * 0xffffffff entries - Only good for testing
      */
-    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, 1 << 15, 4),
+    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, MAX_INDEX_COUNT, 4),
     /**
      * 0x1000 entries - Only good for testing
      */
