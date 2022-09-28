@@ -121,6 +121,6 @@ public interface RollCycle {
      */
     long maxMessagesPerCycle();
 
-    // allow sanity checking of index maximums and counts
-    int MAX_INDEX_COUNT = 64 << 10;
+    // sanity checking of index maximums and counts
+    int MAX_INDEX_COUNT = 32 << 10;
 }
