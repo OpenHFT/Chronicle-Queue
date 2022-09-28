@@ -29,7 +29,6 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -55,11 +54,6 @@ public class RollingCycleTest extends QueueTestCommon {
                 new Object[]{true},
                 new Object[]{false}
         );
-    }
-
-    @BeforeClass
-    public static void sync() {
-        System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
     }
 
     @Test
