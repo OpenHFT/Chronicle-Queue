@@ -10,6 +10,7 @@ import static net.openhft.chronicle.queue.channel.PubSubHandlerTest.createTarget
 public class PipeHandlerYamlTest extends QueueTestCommon {
     @Test
     public void yamlTest() {
+        ignoreException("Timeout on ");
         String tmpDir = createTargetDir("yamlTest");
 
         final String qname = "test-q-yaml";

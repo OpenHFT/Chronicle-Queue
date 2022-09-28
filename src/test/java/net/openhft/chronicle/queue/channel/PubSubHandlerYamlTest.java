@@ -12,6 +12,7 @@ import static org.junit.Assert.assertEquals;
 public class PubSubHandlerYamlTest extends QueueTestCommon {
     @Test
     public void yamlTest() {
+        ignoreException("Timeout on ");
         String tmpDir = createTargetDir("yamlTest");
 
         final YamlTester yamlTester = ChannelHandlerYamlTester.runChannelTest(
