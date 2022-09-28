@@ -77,27 +77,22 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @SuppressWarnings("unused")
     @UsedViaReflection
     private SingleTableStore(@NotNull final WireIn wire) {
-        assert wire.startUse();
-        try {
-            this.wireType = Objects.requireNonNull(wire.read(MetaDataField.wireType).object(WireType.class));
-            this.mappedBytes = (MappedBytes) (wire.bytes());
-            this.mappedFile = mappedBytes.mappedFile();
+        this.wireType = Objects.requireNonNull(wire.read(MetaDataField.wireType).object(WireType.class));
+        this.mappedBytes = (MappedBytes) (wire.bytes());
+        this.mappedFile = mappedBytes.mappedFile();
 
-            wire.consumePadding();
-            if (wire.bytes().readRemaining() > 0) {
-                this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
-            } else {
-                //noinspection unchecked
-                this.metadata = (T) Metadata.NoMeta.INSTANCE;
-            }
-
-            mappedWire = wireType.apply(mappedBytes);
-            mappedWire.usePadding(true);
-
-            singleThreadedCheckDisabled(true);
-        } finally {
-            assert wire.endUse();
+        wire.consumePadding();
+        if (wire.bytes().readRemaining() > 0) {
+            this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
+        } else {
+            //noinspection unchecked
+            this.metadata = (T) Metadata.NoMeta.INSTANCE;
         }
+
+        mappedWire = wireType.apply(mappedBytes);
+        mappedWire.usePadding(true);
+
+        singleThreadedCheckDisabled(true);
     }
 
     /**

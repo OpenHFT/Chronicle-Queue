@@ -101,6 +101,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void lockWillBeAcquiredAfterTimeoutWithAWarning() throws InterruptedException {
+        System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
             Thread t = new Thread(testLock::lock);
             t.start();
@@ -108,6 +109,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             testLock.lock();
             expectException("Unlocking forcibly");
             expectException("Forced unlock");
+        } finally {
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 

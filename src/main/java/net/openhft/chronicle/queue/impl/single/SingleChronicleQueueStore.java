@@ -69,7 +69,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @UsedViaReflection
     private SingleChronicleQueueStore(@NotNull WireIn wire) {
         boolean failed = true;
-        assert wire.startUse();
+
         try {
             writePosition = loadWritePosition(wire);
             this.mappedBytes = (MappedBytes) wire.bytes();
@@ -93,7 +93,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         } finally {
             if (failed)
                 close();
-            assert wire.endUse();
         }
     }
 

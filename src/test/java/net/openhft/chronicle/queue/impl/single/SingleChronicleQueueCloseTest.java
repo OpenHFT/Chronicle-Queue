@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
@@ -66,30 +65,5 @@ public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
             Assert.assertEquals("hello3", tailer.readText());
             Assert.assertEquals("hello4", tailer.readText());
         }
-    }
-
-    @Test
-    public void reacquireTailerAfterClose() {
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
-            appender.writeText("hello1");
-
-            final ExcerptTailer tailer = queue.acquireTailer();
-            Assert.assertEquals("hello1", tailer.readText());
-            tailer.close();
-
-            final ExcerptTailer tailer2 = queue.acquireTailer();
-            Assert.assertEquals("hello1", tailer2.readText());
-        }
-    }
-
-    @Test(expected = ClosedIllegalStateException.class)
-    public void acquireTailerAfterQueueIsClosed() {
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build();
-        // If we create the Tailer after the queue is closed the
-        // ClosedIllegalStateException is thrown by the StoreTailer constructor
-        queue.acquireTailer();
-        queue.close();
-        queue.acquireTailer();
     }
 }
