@@ -298,6 +298,8 @@ For more information see <<docs/replication.adoc#, Replication>>, the queue repl
 For more information see <<docs/timezone_rollover.adoc#, Timezone support>>.
 - Async mode support to give improved performance at high throughput on slower filesystems.
 For more information see <<docs/ring_buffer.adoc#,async mode>> and also <<docs/performance.adoc#,performance>>.
+- Pretoucher
+For improved outliers, see <<Pretoucher and its configuration>>
 
 In addition, you will be fully supported by our technical experts.
 
@@ -1536,10 +1538,6 @@ exist. As opposed to the default behaviour where if the Pretoucher runs inside a
 have been written, it will create the "current" cycle file. Obviously enabling this will prevent
 `earlyAcquireNextCycle` from working.
 
-The Pretoucher's constructor takes the following parameter:
-
-*-* `queue`: The queue that this Pretoucher is assigned to.
-
 ** *Pretoucher usage example*
 
 The configuration parameters of Pretoucher that were described above should be set via system properties. For example, in the following excerpt `earlyAcquireNextCycle` is set to `true` and `pretoucherPrerollTimeMs` to 100ms.
@@ -1554,10 +1552,8 @@ The constructor of Pretoucher takes the name of the queue that this Pretoucher i
 // Creates the queue q1 (or q1 is a queue that already exists)
 try(final SingleChronicleQueue q1 = SingleChronicleQueueBuilder.binary("queue-storage-path").build();
 
-    // Creates Pretoucher pretouch for q1
-    final Pretoucher pretouch = new Pretoucher(q1)){
+    final Pretoucher pretouch = PretouchUtil.INSTANCE.createPretoucher(q1)){
     try {
-        // Start the Pretoucher
         pretouch.execute();
 
     } catch (InvalidEventHandlerException e) {
@@ -1566,12 +1562,13 @@ try(final SingleChronicleQueue q1 = SingleChronicleQueueBuilder.binary("queue-st
 }
 ----
 
-The method shutdown(), closes the queue and releases any other resources.
+The method `close()`, closes the Pretoucher and releases its resources.
 [source,java]
 ----
-// Calls q1.close() and releases the resources
-pretouch.shutdown();
+pretouch.close();
 ----
+
+NOTE: The Pretoucher is an Enterprise feature
 
 == Performance and Benchmarking
 Chronicle Queue can be monitored to obtain latency, throughput, and activity metrics, in real time (that is, within microseconds of the event triggering it).

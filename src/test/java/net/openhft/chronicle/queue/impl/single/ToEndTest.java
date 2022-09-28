@@ -294,24 +294,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForEmptyPretouchedQueue() {
-        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            pretouchQueue(queue);
-
-            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
-            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
-
-            timeProvider.advanceMicros(FIVE_SECONDS);
-            pretouchQueue(queue);
-
-            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
-            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
-        }
-    }
-
-    @Test
     public void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
@@ -394,24 +376,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByPretouch() {
-        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        timeProvider.advanceMicros(FIVE_SECONDS);
-        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            writeExcerptToQueue(queue);
-            String lastWriteIndexBefore = lastWriteIndex(queue);
-            String tailerToEndIndexBefore = tailerToEndIndex(queue);
-
-            timeProvider.advanceMicros(FIVE_SECONDS);
-            pretouchQueue(queue);
-
-            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
-            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
-        }
-    }
-
-    @Test
     public void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
@@ -470,12 +434,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
             try (final DocumentContext documentContext = excerptAppender.writingDocument(true)) {
                 documentContext.wire().write().text("hello!");
             }
-        }
-    }
-
-    private void pretouchQueue(SingleChronicleQueue queue) {
-        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
-            excerptAppender.pretouch();
         }
     }
 

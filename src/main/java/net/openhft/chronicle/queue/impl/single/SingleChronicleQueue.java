@@ -42,7 +42,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.lang.ref.WeakReference;
 import java.nio.channels.FileLock;
 import java.nio.channels.NonWritableChannelException;
 import java.security.SecureRandom;
@@ -61,7 +60,7 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.isQueueReplicationAvailable;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable;
 import static net.openhft.chronicle.wire.Wires.*;
 
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
@@ -190,7 +189,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
 
             this.directoryListing.refresh(true);
-            this.queueLock = isQueueReplicationAvailable() && !builder.readOnly()
+            this.queueLock = areEnterpriseFeaturesAvailable() && !builder.readOnly()
                     ? new TSQueueLock(metaStore, builder.pauserSupplier(), builder.timeoutMS() * 3 / 2)
                     : new NoopQueueLock();
             this.writeLock = builder.writeLock();

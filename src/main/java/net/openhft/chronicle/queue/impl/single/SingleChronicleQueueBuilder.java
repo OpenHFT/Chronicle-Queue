@@ -269,7 +269,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return wireStore;
     }
 
-    static boolean isQueueReplicationAvailable() {
+    public static boolean areEnterpriseFeaturesAvailable() {
         return ENTERPRISE_QUEUE_CONSTRUCTOR != null;
     }
 
@@ -374,9 +374,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return result;
     }
 
-    private boolean onlyAvailableInEnterprise(final String feature) {
+    public static boolean onlyAvailableInEnterprise(final String feature) {
         if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
-            Jvm.warn().on(getClass(), feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
+            Jvm.warn().on(SingleChronicleQueueBuilder.class, feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
         return true;
     }
 

@@ -18,6 +18,8 @@
 
 package net.openhft.chronicle.queue.impl.single.stress;
 
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThreadStressTest {
@@ -28,7 +30,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
 
     @Test
     public void stress() throws Exception {
-        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
+        Assume.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
         super.stress();
     }
 

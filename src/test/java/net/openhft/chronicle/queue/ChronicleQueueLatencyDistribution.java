@@ -139,6 +139,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Histogram histogramIn = new Histogram();
         Histogram histogramWr = new Histogram();
         if (PRETOUCH) {
+            // Pretoucher will only work with Queue Enterprise in the path
             Thread pretoucher = new Thread(() -> {
                 ExcerptAppender appender = queue.acquireAppender();
                 while (!Thread.currentThread().isInterrupted()) {

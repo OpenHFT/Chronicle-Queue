@@ -30,10 +30,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
-import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.queue.util.MicroTouched;
+import net.openhft.chronicle.queue.util.PretouchUtil;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -199,7 +199,7 @@ class StoreAppender extends AbstractCloseable
 
         try {
             if (pretoucher == null)
-                pretoucher = new Pretoucher(queue());
+                pretoucher = PretouchUtil.INSTANCE.createPretoucher(queue());
 
             pretoucher.execute();
 

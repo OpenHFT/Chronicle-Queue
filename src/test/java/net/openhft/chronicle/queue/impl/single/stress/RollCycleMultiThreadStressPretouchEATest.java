@@ -18,6 +18,8 @@
 
 package net.openhft.chronicle.queue.impl.single.stress;
 
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class RollCycleMultiThreadStressPretouchEATest extends RollCycleMultiThreadStressTest {
@@ -28,8 +30,8 @@ public class RollCycleMultiThreadStressPretouchEATest extends RollCycleMultiThre
 
     @Test
     public void stress() throws Exception {
+        Assume.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
         expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");
-        expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         super.stress();
     }
 
