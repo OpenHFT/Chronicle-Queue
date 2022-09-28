@@ -40,7 +40,7 @@ import java.util.function.IntConsumer;
  * execute()} method after {@code shutdown()} has been called will cause an {@code IllegalStateException} to be thrown.
  */
 @Deprecated(/* Move to Queue Enterprise in x.24 */)
-public final class Pretoucher extends AbstractCloseable {
+public class Pretoucher extends AbstractCloseable {
     static final long PRETOUCHER_PREROLL_TIME_DEFAULT_MS = 2_000L;
     private final long PRETOUCHER_PREROLL_TIME_MS = Jvm.getLong("SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs", PRETOUCHER_PREROLL_TIME_DEFAULT_MS);
     private final SingleChronicleQueue queue;
