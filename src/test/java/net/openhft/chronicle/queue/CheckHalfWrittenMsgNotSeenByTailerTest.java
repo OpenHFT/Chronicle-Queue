@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.testframework.process.ProcessRunner;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -124,7 +124,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
         Assume.assumeTrue(!OS.isMacOSX());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
-        runCommand(ProcessRunner.runClass(HalfWriteAMessage.class, queueDirectory.getAbsolutePath()));
+        runCommand(JavaProcessBuilder.create(HalfWriteAMessage.class).withProgramArguments(queueDirectory.getAbsolutePath()).start());
 
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
