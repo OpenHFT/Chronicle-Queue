@@ -94,7 +94,8 @@ class PretoucherState {
                         } else {
                             if (bytes != null && capacity > 0) {
                                 long realCapacity2 = bytes.realCapacity();
-                                Jvm.warn().on(getClass(), "touchPage failed realCapacity2: " + realCapacity2 + " " + debugMsg(realCapacity, capacity, safeLimit));
+                                if (Jvm.isDebugEnabled(getClass()))
+                                    Jvm.debug().on(getClass(), "touchPage failed realCapacity2: " + realCapacity2 + " " + debugMsg(realCapacity, capacity, safeLimit));
                             }
                         }
                     } catch (Throwable t) {
