@@ -87,15 +87,15 @@ public enum RollCycles implements RollCycle {
     /**
      * 0x1fffffffff entries per day, indexing every 128th entry
      */
-    LARGE_DAILY(/*-----*/"yyyyMMdd'L'", 24 * 60 * 60 * 1000, 32 << 10, 128),
+    LARGE_DAILY(/*-----*/"yyyyMMdd'L'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 128),
     /**
      * 0x3ffffffffff entries per day, indexing every 256th entry
      */
-    XLARGE_DAILY(/*----*/"yyyyMMdd'X'", 24 * 60 * 60 * 1000, 128 << 10, 256),
+    XLARGE_DAILY(/*----*/"yyyyMMdd'X'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 256),
     /**
      * 0xffffffffffff entries per day with sparse indexing (every 1024th entry)
      */
-    HUGE_DAILY(/*------*/"yyyyMMdd'H'", 24 * 60 * 60 * 1000, 512 << 10, 1024),
+    HUGE_DAILY(/*------*/"yyyyMMdd'H'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 1024),
 
     // these are largely used for testing and benchmarks to almost turn off indexing.
     /**
@@ -119,7 +119,7 @@ public enum RollCycles implements RollCycle {
     /**
      * 0xffffffff entries - Only good for testing
      */
-    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, 1 << 15, 4),
+    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, MAX_INDEX_COUNT, 4),
     /**
      * 0x1000 entries - Only good for testing
      */
@@ -143,7 +143,8 @@ public enum RollCycles implements RollCycle {
     /**
      * 0x20000 entries per day - Only good for testing
      */
-    TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8),;
+    TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8),
+    ;
     public static final RollCycles DEFAULT = FAST_DAILY;
 
     // don't alter this or you will confuse yourself.
@@ -160,17 +161,33 @@ public enum RollCycles implements RollCycle {
         this.format = format;
         this.lengthInMillis = lengthInMillis;
         this.indexCount = Maths.nextPower2(indexCount, 8);
+        assert this.indexCount <= MAX_INDEX_COUNT : "indexCount: " + indexCount;
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
         cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
+        assert cycleShift < Long.SIZE : "cycleShift: " + cycleShift;
         sequenceMask = (1L << cycleShift) - 1;
-    }
-
-    public long maxMessagesPerCycle() {
-        return maxMessagesPerCycle(indexCount, indexSpacing);
     }
 
     public static Iterable<RollCycles> all() {
         return VALUES;
+    }
+
+    public static long maxMessagesPerCycle(final long indexCount0, final int indexSpacing0) {
+
+        // these are inline with the SQ Indexing code
+        long indexCount = Maths.nextPower2(indexCount0, 8);
+
+        // these are inline with the SQ Indexing code
+        int indexSpacing = Maths.nextPower2(indexSpacing0, 1);
+
+        int cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
+        long sequenceMask0 = (1L << cycleShift) - 1L;
+
+        return Math.min(sequenceMask0, indexCount * indexCount * indexSpacing);
+    }
+
+    public long maxMessagesPerCycle() {
+        return maxMessagesPerCycle(indexCount, indexSpacing);
     }
 
     @Override
@@ -214,19 +231,5 @@ public enum RollCycles implements RollCycle {
     @Override
     public int toCycle(long index) {
         return Maths.toUInt31(index >> cycleShift);
-    }
-
-    public static long maxMessagesPerCycle(final long indexCount0, final int indexSpacing0) {
-
-        // these are inline with the SQ Indexing code
-        long indexCount = Maths.nextPower2(indexCount0, 8);
-
-        // these are inline with the SQ Indexing code
-        int indexSpacing = Maths.nextPower2(indexSpacing0, 1);
-
-        int cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
-        long sequenceMask0 = (1L << cycleShift) - 1L;
-
-        return Math.min(sequenceMask0, indexCount * indexCount * indexSpacing);
     }
 }

@@ -44,6 +44,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.RollCycle.MAX_INDEX_COUNT;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMarshallable, Closeable {
@@ -508,9 +509,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         @NotNull Wire wire = ec.wireForIndex();
         try {
             final LongArrayValues index2indexArr = getIndex2index(wire);
-
-            int used2 = Maths.toUInt31(index2indexArr.getUsed());
-            assert used2 > 0;
+            int used2 = getUsedAsInt(index2indexArr);
             Outer:
             for (int index2 = used2 - 1; index2 >= 0; index2--) {
                 long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
@@ -521,8 +520,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                 // TODO use a binary rather than linear search
 
                 // check the first one to see if any in the index is appropriate.
-                int used = Maths.toUInt31(indexValues.getUsed());
-                assert used >= 0;
+                int used = getUsedAsInt(indexValues);
                 if (used == 0)
                     continue;
 
@@ -555,6 +553,13 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         } catch (EOFException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    static int getUsedAsInt(LongArrayValues index2indexArr) {
+        final long used = index2indexArr.getUsed();
+        if (used < 0 || used > MAX_INDEX_COUNT)
+            throw new IllegalStateException("Used: " + used);
+        return (int) used;
     }
 
     void initIndex(@NotNull Wire wire) throws StreamCorruptedException {
