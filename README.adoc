@@ -13,6 +13,8 @@ COULD THE BRACKETS MAKE A DIFFERENCE?
 
 SPECIFIC PATTERN
 
+REMOVE BRANCH FILTER
+
 MORE SPECIFIC
 
 image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[caption="",link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
