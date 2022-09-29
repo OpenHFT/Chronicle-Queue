@@ -97,6 +97,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         }
     }
 
+
+
+
     /**
      * @param rollCycle    the current rollCycle
      * @param wireType     the wire type that is being used
