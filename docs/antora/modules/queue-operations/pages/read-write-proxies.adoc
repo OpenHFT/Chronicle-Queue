@@ -5,93 +5,139 @@ author: Julia Gustafsson
 :navtitle: Read/write proxies
 :source-highlighter: highlight.js
 
-Chronicle v4.4+ supports the use of proxies to write and read messages. You start by defining an asynchronous `interface`, where all methods have:
+Reads and writes can be completely abstracted away using proxies. Such proxies are respectively referred to as `MethodWriters` and `MethodReaders`. A method writer and method reader are simply 
+asynchronous interfaces with methods fulfils the following criteria: 
 
 - Arguments which are only inputs
-- No return value or exceptions expected.
+- No return value or exceptions expected
 
-.A simple asynchronous interface
-[source, java]
+More details and examples follow in the below sections. 
+
+NOTE: Read/write proxies are only supported in Chronicle v4.4 and later. 
+
+[#_methodwriter]
+== MethodWriter
+A `MethodWriter` is used to hide the fact that data is written at all. This comes with the benefit that you can swap calls to the interface with a real component, or an interface to a different protocol. 
+
+Method writers can for example be used to append objects such as `TradeDetails` below. In this case, the interface has a single `void` method `trade()` that accepts an object containing the data:
+
+[source, Java]
 ----
-import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-interface MessageListener {
-    void method1(Message1 message);
-
-    void method2(Message2 message);
-}
-
-static class Message1 extends SelfDescribingMarshallable {
-    String text;
-
-    public Message1(String text) {
-        this.text = text;
+static class TradeDetails extends SelfDescribingMarshallable {
+    LocalDateTime date;
+    String symbol;
+    double price; 
+    long quantity; 
+    Side side; 
+    String trader;
+    
+    public TradeDetails(LocalDateTime date, String symbol, double price, long quantity, Side side, String trader) {
+        this.date = date;
+        this.symbol = symbol; 
+        this.price = price; 
+        this.quantity = quantity; 
+        this.side = side; 
+        this.trader = trader; 
     }
 }
+----
 
-static class Message2 extends SelfDescribingMarshallable {
-    long number;
+[source,Java]
+----
+interface RiskMonitor {
+    void trade(TradeDatails tradeDetails); 
+} 
+----
 
-    public Message2(long number) {
-        this.number = number;
+You create a writer proxy that implements this interface by calling `appender.methodWriter()` as below. Any objects passed to `trade` via the proxy are then automatically appended to the queue. Like any Java class the method writer can implement more than one write interface. 
+
+[source, Java]
+----
+RiskMonitor riskMonitor = queue.acquireAppender().methodWriter(RiskMonitor.class); <1>
+
+final LocalDateTime now = LocalDateTime.now(Clock.systemUTC()); 
+riskMonitor.trade(new TradeDetails(now, "GBPUSD", 1.3095, 10e6, Side.Buy, "Peter")); <2>
+----
+<1> Creates a method writer for the referenced appender.
+<2> Appends the `TradeDetails` object to the queue. 
+
+WARNING: `MethodWriters` are NOT thread-safe. Sharing a `MethodWriter` across threads will lead to errors and unpredictable behaviour.
+
+[#_method_reader]
+== MethodReader
+To read the messages appended by the write proxy, you can provide a reader that calls your implementation with the same calls that you made. In this case we override the 
+
+[source, java]
+----
+ExcerptTailer tailer = queue.createTailer(); 
+
+MethodReader reader = tailer.methodReader(new RiskMonitor() { <1>
+    
+    @Override
+    public void trade(TradeDetails trade) { <2>
+        System.out.println(trade); 
     }
-}
+    
+}); 
+
+reader.readOne(); <3>
 ----
-
-To write to the queue you can call a proxy which implements this interface.
-
-[source, java]
-----
-SingleChronicleQueue queue1 = ChronicleQueue.singleBuilder(path).build();
-
-MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
-
-// call method on the interface to send messages
-writer1.method1(new Message1("hello"));
-writer1.method2(new Message2(234));
-----
-
-These calls produce messages which can be dumped as follows.
-
-[source, yaml]
-----
-# position: 262568, header: 0
---- !!data #binary
-method1: {
-  text: hello
-}
-# position: 262597, header: 1
---- !!data #binary
-method2: {
-  number: !int 234
-}
-----
-
-To read the messages, you can provide a reader which calls your implementation with the same calls that you made.
-
-[source, java]
-----
-// a proxy which print each method called on it
-MessageListener processor = ObjectUtils.printAll(MessageListener.class)
-// a queue reader which turns messages into method calls.
-MethodReader reader1 = queue1.createTailer().methodReader(processor);
-
-assertTrue(reader1.readOne());
-assertTrue(reader1.readOne());
-assertFalse(reader1.readOne());
-----
-
-Running this example prints:
-
-[source, json]
-----
-method1 [!Message1 {
-  text: hello
-}
-]
-method2 [!Message2 {
-  number: 234
-}
-]
-----
+<1> Creates a new `MethodReader` that implements `RiskMonitor` 
+<2> Overrides the interface to describe how to handle messages that matches the signature of `trade`
+<3> Reads a message from the queue that matches the method reader.
 
 NOTE: For more details, read the article https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and view the https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest].
+
+== Writing to a Queue Using `ChronicleWriter`
+
+If using `MethodReader` and `MethodWriter` then you can write single-argument method calls to a queue
+using `net.openhft.chronicle.queue.ChronicleWriterMain` or the shell script `queue_writer.sh` e.g.
+
+[source,bash]
+usage: ChronicleWriterMain files.. -d <directory> [-i <interface>] -m <method>
+Missing required options: m, d
+ -d <directory>   Directory containing chronicle queue to write to
+ -i <interface>   Interface to write via
+ -m <method>      Method name
+
+If you want to write to the below "doit" method
+
+[source,java]
+public interface MyInterface {
+    void doit(DTO dto);
+}
+public class DTO extends SelfDescribingMarshallable {
+    private int age;
+    private String name;
+}
+
+Then you can call `ChronicleWriterMain -d queue doit x.yaml` with either (or both) of the below Yamls:
+
+[source,yaml]
+{
+  age: 19,
+  name: Henry
+}
+
+or
+[source,yaml]
+!x.y.z.DTO {
+  age: 42,
+  name: Percy
+}
+
+If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
+
+You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments. Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
+
+[source, java]
+----
+// reading using method calls
+RiskMonitor monitor = System.out::println;
+MethodReader reader = tailer.methodReader(monitor);
+// read one message
+assertTrue(reader.readOne());
+----
+
+== Video Tutorial
+video::749577200[vimeo, width=750, height=480]
