@@ -18,7 +18,7 @@ public enum MappedFileUtil {
     private static final Path PROC_SELF_MAPS = Paths.get("/proc/self/maps");
 
     // See https://man7.org/linux/man-pages/man5/proc.5.html
-    private static final Pattern LINE_PATTERN = Pattern.compile("([\\p{XDigit}\\-]+)\\s+([rwxsp\\-]+)\\s+(\\p{XDigit}+)\\s+(\\p{XDigit}{2}:\\p{XDigit}{2})\\s+(\\d+)\\s*(.*)?");
+    private static final Pattern LINE_PATTERN = Pattern.compile("([\\p{XDigit}\\-]+)\\s+([rwxsp\\-]+)\\s+(\\p{XDigit}+)\\s+(\\p{XDigit}+:\\p{XDigit}+)\\s+(\\d+)\\s*(.*)?");
     private static final int ADDRESS_INDEX = 1;
     private static final int PERMS_INDEX = 2;
     private static final int OFFSET_INDEX = 3;
@@ -40,9 +40,9 @@ public enum MappedFileUtil {
             try (final BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(PROC_SELF_MAPS)))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    final Matcher matcher = LINE_PATTERN.matcher(line);
+                    final Matcher matcher = parseMapsLine(line);
                     if (matcher.matches()) {
-                        String filename = matcher.group(PATH_INDEX);
+                        String filename = getPath(matcher);
                         if (filename.startsWith("/")) {
                             fileList.add(filename);
                         } else {
@@ -62,5 +62,17 @@ public enum MappedFileUtil {
             throw new UnsupportedOperationException("This only works on systems that have a /proc/self/maps (exists="
                     + Files.exists(PROC_SELF_MAPS) + ", isReadable=" + Files.isReadable(PROC_SELF_MAPS) + ")");
         }
+    }
+
+    public static Matcher parseMapsLine(String line) {
+        return LINE_PATTERN.matcher(line);
+    }
+
+    public static String getPath(Matcher matcher) {
+        return matcher.group(PATH_INDEX);
+    }
+
+    public static String getAddress(Matcher matcher) {
+        return matcher.group(ADDRESS_INDEX);
     }
 }
