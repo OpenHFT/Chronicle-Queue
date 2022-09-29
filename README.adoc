@@ -9,6 +9,8 @@ DOES IT IGNORE WHITESPACE?
 
 OK it's not whitespace, perhaps having two branches the same
 
+COULD THE BRACKETS MAKE A DIFFERENCE?
+
 image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[caption="",link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
 image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
 //image:https://javadoc-badge.appspot.com/net.openhft/chronicle-queue.svg?label=javadoc[JavaDoc, link=https://www.javadoc.io/doc/net.openhft/chronicle-queue]
