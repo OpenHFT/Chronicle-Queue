@@ -66,15 +66,16 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     private final WriteMarshallable index2IndexTemplate;
     @NotNull
     private final WriteMarshallable indexTemplate;
+    /**
+     * Extracted as field to prevent lambda creation on every method reference pass.
+     */
+    private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
+
     LongValue writePosition;
     Sequence sequence;
     // visible for testing
     int linearScanCount;
     Collection<Closeable> closeables = new ArrayList<>();
-    /**
-     * Extracted as field to prevent lambda creation on every method reference pass.
-     */
-    private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
 
     /**
      * used by {@link Demarshallable}
@@ -113,16 +114,6 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         singleThreadedCheckDisabled(true);
     }
 
-    static int getUsedAsInt(LongArrayValues index2indexArr) {
-        if (((Byteable) index2indexArr).bytesStore() != null)
-            return 0;
-
-        final long used = index2indexArr.getUsed();
-        if (used < 0 || used > MAX_INDEX_COUNT)
-            throw new IllegalStateException("Used: " + used);
-        return (int) used;
-    }
-
     private LongArrayValuesHolder newLogArrayValuesHolder(Supplier<LongArrayValues> las) {
         LongArrayValues values = las.get();
         LongArrayValuesHolder longArrayValuesHolder = new LongArrayValuesHolder(values);
@@ -149,17 +140,17 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         return mask & siftedIndex;
     }
 
-/*    @Override
-    protected boolean performCloseInBackground() {
-        return true;
-    }*/
-
     long toAddress1(long index) {
         long siftedIndex = index >> indexSpacingBits;
         long mask = indexCount - 1L;
         // convert to an offset
         return mask & siftedIndex;
     }
+
+/*    @Override
+    protected boolean performCloseInBackground() {
+        return true;
+    }*/
 
     @Override
     protected void performClose() {
@@ -570,6 +561,16 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         } catch (EOFException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    static int getUsedAsInt(LongArrayValues index2indexArr) {
+        if (((Byteable) index2indexArr).bytesStore() != null)
+            return 0;
+
+        final long used = index2indexArr.getUsed();
+        if (used < 0 || used > MAX_INDEX_COUNT)
+            throw new IllegalStateException("Used: " + used);
+        return (int) used;
     }
 
     void initIndex(@NotNull Wire wire) throws StreamCorruptedException {
