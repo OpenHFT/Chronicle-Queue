@@ -128,7 +128,14 @@ public final class Pretoucher extends AbstractCloseable {
         if (qCycle != currentCycle) {
             releaseResources();
 
-            currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), earlyAcquireNextCycle || canWrite, currentCycleWireStore);
+            if (canWrite)
+                queue.writeLock().lock();
+            try {
+                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), canWrite, currentCycleWireStore);
+            } finally {
+                if (canWrite)
+                    queue.writeLock().unlock();
+            }
 
             if (currentCycleWireStore != null) {
                 currentCycleMappedBytes = currentCycleWireStore.bytes();
