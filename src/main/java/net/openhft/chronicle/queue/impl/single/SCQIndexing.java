@@ -564,6 +564,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     static int getUsedAsInt(LongArrayValues index2indexArr) {
+        if (((Byteable) index2indexArr).bytesStore() != null)
+            return 0;
+
         final long used = index2indexArr.getUsed();
         if (used < 0 || used > MAX_INDEX_COUNT)
             throw new IllegalStateException("Used: " + used);
