@@ -199,7 +199,7 @@ class StoreAppender extends AbstractCloseable
 
         try {
             if (pretoucher == null)
-                pretoucher = PretouchUtil.INSTANCE.createPretoucher(queue());
+                pretoucher = PretouchUtil.createPretoucher(queue());
 
             pretoucher.execute();
 

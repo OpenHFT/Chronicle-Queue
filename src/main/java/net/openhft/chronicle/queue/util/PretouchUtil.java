@@ -26,8 +26,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 
-public final class PretouchUtil implements PretoucherFactory {
-    public static final PretoucherFactory INSTANCE;
+public final class PretouchUtil {
+    private static final PretoucherFactory INSTANCE;
 
     static {
         PretoucherFactory instance;
@@ -36,29 +36,39 @@ public final class PretouchUtil implements PretoucherFactory {
             instance = (PretoucherFactory) ObjectUtils.newInstance(clazz);
             assert SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable();
         } catch (Exception e) {
-            instance = new PretouchUtil();
+            instance = new PretouchFactoryEmpty();
             SingleChronicleQueueBuilder.onlyAvailableInEnterprise("Pretoucher");
         }
         INSTANCE = instance;
     }
 
-    @Override
-    public EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
-        return () -> false;
+    public static EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
+        return INSTANCE.createEventHandler(queue);
     }
 
-    @Override
-    public Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
-        return new EmptyPretoucher();
+    public static Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
+        return INSTANCE.createPretoucher(queue);
     }
 
-    private static class EmptyPretoucher implements Pretoucher {
-        @Override
-        public void execute() throws InvalidEventHandlerException {
+    private static class PretouchFactoryEmpty implements PretoucherFactory {
+        private static class EmptyPretoucher implements Pretoucher {
+            @Override
+            public void execute() throws InvalidEventHandlerException {
+            }
+
+            @Override
+            public void close() {
+            }
         }
 
         @Override
-        public void close() {
+        public EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
+            return () -> false;
+        }
+
+        @Override
+        public Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
+            return new EmptyPretoucher();
         }
     }
 }
