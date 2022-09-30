@@ -53,7 +53,7 @@ public final class Pretoucher extends AbstractCloseable {
         this.chunkListener = chunkListener;
         this.cycleChangedListener = cycleChangedListener;
         this.earlyAcquireNextCycle = checkEA(earlyAcquireNextCycle);
-        this.canWrite = canWrite;
+        this.canWrite = canWrite || this.earlyAcquireNextCycle;
         pretoucherState = new PretoucherState(this::getStoreWritePosition);
         if (PRETOUCHER_PREROLL_TIME_MS != PRETOUCHER_PREROLL_TIME_DEFAULT_MS && !earlyAcquireNextCycle)
             Jvm.warn().on(getClass(), "SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs has been set but not earlyAcquireNextCycle");
@@ -106,7 +106,14 @@ public final class Pretoucher extends AbstractCloseable {
         if (qCycle != currentCycle) {
             releaseResources();
 
-            currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), earlyAcquireNextCycle || canWrite, currentCycleWireStore);
+            if (canWrite)
+                queue.writeLock().lock();
+            try {
+                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), canWrite, currentCycleWireStore);
+            } finally {
+                if (canWrite)
+                    queue.writeLock().unlock();
+            }
 
             if (currentCycleWireStore != null) {
                 currentCycleMappedBytes = currentCycleWireStore.bytes();
