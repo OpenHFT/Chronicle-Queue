@@ -132,7 +132,7 @@ public class QueueTestCommon {
 
     @Before
     public void recordExceptions() {
-        exceptionTracker = JvmExceptionTracker.create();
+        exceptionTracker = JvmExceptionTracker.create(false);
         if (OS.isWindows())
             ignoreException("Read-only mode is not supported on Windows® platforms, defaulting to read/write");
         for (String msg : "Shrinking ,Allocation of , ms to add mapping for ,jar to the classpath, ms to pollDiskSpace for , us to linearScan by position from ,File released ,Overriding roll length from existing metadata, was 3600000, overriding to 86400000   ".split(",")) {

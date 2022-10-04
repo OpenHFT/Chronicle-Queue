@@ -81,7 +81,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             ExcerptAppender appender = q.acquireAppender();
             appender.writeBytes(test);
 
-            expectException("Trying to overwrite index 0 which is before the end of the queue");
             // try to overwrite - will not overwrite
             ((InternalAppender) appender).writeBytes(0, Bytes.from("HELLO WORLD"));
 
@@ -94,8 +93,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
     @Test
     public void dontOverwriteExistingDifferentQueueInstance() {
-        expectException("Trying to overwrite index 0 which is before the end of the queue");
-        expectException("Trying to overwrite index 1 which is before the end of the queue");
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -221,7 +218,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             appender.writeBytes(test);
 
             ExcerptTailer tailer = q.createTailer();
-            expectException("Trying to overwrite index 0 which is before the end of the queue");
             ((InternalAppender) appender).writeBytes(0, test);
 
             try (DocumentContext documentContext = tailer.readingDocument()) {
