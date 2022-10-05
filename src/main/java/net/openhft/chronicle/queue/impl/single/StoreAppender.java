@@ -445,8 +445,11 @@ class StoreAppender extends AbstractCloseable
         int last = queue.lastCycle();
         int first = queue.firstCycle();
 
-        for (int cycle = first; cycle < last; ++cycle) {
-            setCycle2(cycle, false);
+        if (first == Integer.MAX_VALUE)
+            return;
+
+        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), last); ++eofCycle) {
+            setCycle2(eofCycle, false);
             if (wire != null) {
                 assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
@@ -455,24 +458,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void setWireIfNull(final int cycle) {
-        int lastCycle = queue.lastCycle();
-        if (lastCycle == Integer.MIN_VALUE)
-            lastCycle = cycle;
-        else {
-            int cur = lastCycle - 1;
-            int firstCycle = queue.firstCycle();
-            while (cur >= firstCycle) {
-                setCycle2(cur, false);
-                if (wire != null) {
-                    assert queue.writeLock().locked();
-                    if (!store.writeEOF(wire, timeoutMS()))
-                        break;
-                }
-                cur--;
-            }
-        }
+        normaliseEOFs0();
 
-        setCycle2(lastCycle, true);
+        setCycle2(cycle, true);
     }
 
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
@@ -716,8 +704,8 @@ class StoreAppender extends AbstractCloseable
      */
     // throws UnrecoverableTimeoutException
 
-    private void rollCycleTo(final int cycle) {
-        rollCycleTo(cycle, false);
+    private void rollCycleTo(final int toCycle) {
+        rollCycleTo(toCycle, this.cycle > toCycle);
     }
 
     private void rollCycleTo(final int cycle, boolean suppressEOF) {
