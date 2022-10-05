@@ -396,7 +396,7 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
             int cycle = queue.cycle();
             if (wire == null)
-                setWireIfNull(cycle);
+                setCycle2(cycle, true);
 
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
@@ -442,37 +442,15 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void normaliseEOFs0() {
-        int last = queue.lastCycle();
         int first = queue.firstCycle();
 
-        for (int cycle = first; cycle < last; ++cycle) {
+        for (int cycle = first; cycle < queue.cycle(); ++cycle) {
             setCycle2(cycle, false);
             if (wire != null) {
                 assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
             }
         }
-    }
-
-    private void setWireIfNull(final int cycle) {
-        int lastCycle = queue.lastCycle();
-        if (lastCycle == Integer.MIN_VALUE)
-            lastCycle = cycle;
-        else {
-            int cur = lastCycle - 1;
-            int firstCycle = queue.firstCycle();
-            while (cur >= firstCycle) {
-                setCycle2(cur, false);
-                if (wire != null) {
-                    assert queue.writeLock().locked();
-                    if (!store.writeEOF(wire, timeoutMS()))
-                        break;
-                }
-                cur--;
-            }
-        }
-
-        setCycle2(lastCycle, true);
     }
 
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
@@ -545,7 +523,7 @@ class StoreAppender extends AbstractCloseable
         try {
             int cycle = queue.cycle();
             if (wire == null)
-                setWireIfNull(cycle);
+                setCycle2(cycle, true);
 
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
@@ -606,7 +584,7 @@ class StoreAppender extends AbstractCloseable
         final int cycle = queue.rollCycle().toCycle(index);
 
         if (wire == null)
-            setWireIfNull(cycle);
+            setCycle2(cycle, true);
 
         // in case our cached headerNumber is incorrect.
         resetPosition();
@@ -716,8 +694,8 @@ class StoreAppender extends AbstractCloseable
      */
     // throws UnrecoverableTimeoutException
 
-    private void rollCycleTo(final int cycle) {
-        rollCycleTo(cycle, false);
+    private void rollCycleTo(final int toCycle) {
+        rollCycleTo(toCycle, this.cycle > toCycle);
     }
 
     private void rollCycleTo(final int cycle, boolean suppressEOF) {
