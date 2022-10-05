@@ -30,7 +30,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
-import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.queue.util.MicroTouched;
@@ -73,6 +72,7 @@ class StoreAppender extends AbstractCloseable
     private long lastIndex = Long.MIN_VALUE;
     private int lastCycle;
     @Nullable
+    @SuppressWarnings("deprecation")
     private Pretoucher pretoucher = null;
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
@@ -271,7 +271,7 @@ class StoreAppender extends AbstractCloseable
 
         SingleChronicleQueueStore oldStore = this.store;
 
-        SingleChronicleQueueStore newStore = storePool.acquire(cycle,  createIfAbsent, oldStore);
+        SingleChronicleQueueStore newStore = storePool.acquire(cycle, createIfAbsent, oldStore);
 
         if (newStore != oldStore) {
             this.store = newStore;
@@ -446,8 +446,11 @@ class StoreAppender extends AbstractCloseable
         int last = queue.lastCycle();
         int first = queue.firstCycle();
 
-        for (int cycle = first; cycle < last; ++cycle) {
-            setCycle2(cycle, false);
+        if (first == Integer.MAX_VALUE)
+            return;
+
+        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), last); ++eofCycle) {
+            setCycle2(eofCycle, false);
             if (wire != null) {
                 assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
@@ -456,24 +459,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void setWireIfNull(final int cycle) {
-        int lastCycle = queue.lastCycle();
-        if (lastCycle == Integer.MIN_VALUE)
-            lastCycle = cycle;
-        else {
-            int cur = lastCycle - 1;
-            int firstCycle = queue.firstCycle();
-            while (cur >= firstCycle) {
-                setCycle2(cur, false);
-                if (wire != null) {
-                    assert queue.writeLock().locked();
-                    if (!store.writeEOF(wire, timeoutMS()))
-                        break;
-                }
-                cur--;
-            }
-        }
+        normaliseEOFs0();
 
-        setCycle2(lastCycle, true);
+        setCycle2(cycle, true);
     }
 
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
@@ -717,8 +705,8 @@ class StoreAppender extends AbstractCloseable
      */
     // throws UnrecoverableTimeoutException
 
-    private void rollCycleTo(final int cycle) {
-        rollCycleTo(cycle, false);
+    private void rollCycleTo(final int toCycle) {
+        rollCycleTo(toCycle, this.cycle > toCycle);
     }
 
     private void rollCycleTo(final int cycle, boolean suppressEOF) {
