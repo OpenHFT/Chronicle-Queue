@@ -396,7 +396,7 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
             int cycle = queue.cycle();
             if (wire == null)
-                setCycle2(cycle, true);
+                setWireIfNull(cycle);
 
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
@@ -442,15 +442,25 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void normaliseEOFs0() {
+        int last = queue.lastCycle();
         int first = queue.firstCycle();
 
-        for (int cycle = first; cycle < queue.cycle(); ++cycle) {
-            setCycle2(cycle, false);
+        if (first == Integer.MAX_VALUE)
+            return;
+
+        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), last); ++eofCycle) {
+            setCycle2(eofCycle, false);
             if (wire != null) {
                 assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
             }
         }
+    }
+
+    private void setWireIfNull(final int cycle) {
+        normaliseEOFs0();
+
+        setCycle2(cycle, true);
     }
 
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
@@ -523,7 +533,7 @@ class StoreAppender extends AbstractCloseable
         try {
             int cycle = queue.cycle();
             if (wire == null)
-                setCycle2(cycle, true);
+                setWireIfNull(cycle);
 
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
@@ -584,7 +594,7 @@ class StoreAppender extends AbstractCloseable
         final int cycle = queue.rollCycle().toCycle(index);
 
         if (wire == null)
-            setCycle2(cycle, true);
+            setWireIfNull(cycle);
 
         // in case our cached headerNumber is incorrect.
         resetPosition();
