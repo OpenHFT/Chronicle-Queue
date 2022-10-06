@@ -124,14 +124,22 @@ public final class Pretoucher extends AbstractCloseable {
      * used by the pretoucher to acquire the next cycle file, but does NOT do the roll. If configured, we acquire the cycle file early
      */
     private void assignCurrentCycle() {
-        final int qCycle = queue.cycle(pretouchTimeProvider);
+        int qCycle;
+
+        if (currentCycle < 0 || !canWrite) {
+            qCycle = queue.cycle(); // strictly follow current cycle when not creating new cycles
+        } else {
+            // avoid gaps and not running further than one cycle in the future when creating new cycles
+            qCycle = Math.min(currentCycle + 1, Math.min(queue.cycle() + 1, queue.cycle(pretouchTimeProvider)));
+        }
+
         if (qCycle != currentCycle) {
             releaseResources();
 
             if (canWrite)
                 queue.writeLock().lock();
             try {
-                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), canWrite, currentCycleWireStore);
+                currentCycleWireStore = queue.storeForCycle(qCycle, queue.epoch(), canWrite, null);
             } finally {
                 if (canWrite)
                     queue.writeLock().unlock();
@@ -145,8 +153,10 @@ public final class Pretoucher extends AbstractCloseable {
 
                 cycleChangedListener.accept(qCycle);
 
-                if (earlyAcquireNextCycle)
-                    Jvm.perf().on(getClass(), "Pretoucher ROLLING early to next file=" + currentCycleWireStore.file());
+                if (qCycle > queue.cycle()) {
+                    if (Jvm.isPerfEnabled(getClass()))
+                        Jvm.perf().on(getClass(), "Pretoucher ROLLING early to next file=" + currentCycleWireStore.file());
+                }
             }
         }
     }

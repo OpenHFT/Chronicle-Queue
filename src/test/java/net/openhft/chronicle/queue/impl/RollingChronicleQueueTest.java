@@ -277,6 +277,7 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
 
             tp.advanceMillis(1000);
             appender.writeText("2"); // to file ...000004
+            createGap.apply(pretoucher);
             assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
 
             tp.advanceMillis(2000);
