@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
+    public static final String SEPARATOR = "_";
     protected Path basePath;
     protected Consumer<String> messageSink;
     protected boolean progress = false;
@@ -157,7 +158,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
         // we have to create MR every time so that it refers to our MessageHistory
         final WireParselet parselet = parselet();
-        final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(Long.toString(methodId), wire.read());
+        final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(methodIdToName(methodId), wire.read());
         final MessageHistory prev = MessageHistory.get();
         MessageHistory.set(new VanillaMessageHistory());
         try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, fieldNumberParselet, null, parselet)) {
@@ -172,6 +173,11 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         }
 
         return histos;
+    }
+
+    @NotNull
+    protected String methodIdToName(long methodId) {
+        return Long.toString(methodId);
     }
 
     @Override
@@ -271,7 +277,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     }
 
     protected void processMessage(CharSequence methodName, MessageHistory history) {
-        CharSequence extraHistoId = histosByMethod ? ("_" + methodName) : "";
+        CharSequence extraHistoId = histosByMethod ? (SEPARATOR + methodName) : "";
         long lastTime = 0;
         // if the tailer has recordHistory (sourceId != 0) then the MessageHistory will be
         // written with a single timing and nothing else. This is then carried through
