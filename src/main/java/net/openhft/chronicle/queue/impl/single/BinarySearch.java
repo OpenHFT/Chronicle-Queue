@@ -32,6 +32,13 @@ import java.util.NavigableSet;
 public enum BinarySearch {
     INSTANCE;
 
+    @Deprecated(/* Remove in x.26. Instead please use search(net.openhft.chronicle.queue.ExcerptTailer, net.openhft.chronicle.wire.Wire, java.util.Comparator<net.openhft.chronicle.wire.Wire>) */)
+    public static long search(@NotNull SingleChronicleQueue q,
+                              @NotNull Wire key,
+                              @NotNull Comparator<Wire> c) throws ParseException {
+        return search(q.createTailer(), key, c);
+    }
+
     /**
      * returns the index or -1 if not found or the index if an exact match is found, an approximation in the form of -approximateIndex
      * or -1 if there was no searching to be done.
