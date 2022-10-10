@@ -110,6 +110,7 @@ public class PipeHandlerTest extends QueueTestCommon {
 
         StringBuilder eventType = new StringBuilder();
         String text = channel.readOne(eventType, String.class);
+        System.out.println(">>>>>> " + eventType);
         assertEquals("say: Hello World",
                 eventType + ": " + text);
         try (DocumentContext dc = channel.readingDocument()) {
