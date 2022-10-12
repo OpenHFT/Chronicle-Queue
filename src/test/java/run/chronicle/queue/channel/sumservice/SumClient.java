@@ -39,7 +39,7 @@ public class SumClient {
              * Collect result and print
              */
             StringBuilder eventType = new StringBuilder();
-            String result = channel.readOne(eventType, String.class);
+            double result = channel.readOne(eventType, double.class);
             Jvm.startup().on(SumClient.class, ">>>>> " + eventType + ": " + result);
         }
     }
