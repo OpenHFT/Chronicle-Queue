@@ -1138,6 +1138,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         throw new StreamCorruptedException("failed to recover.˚");
                     }
 
+                    Jvm.warn().on(getClass(), "Recovering header");
                     try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
                         wire.updateFirstHeader();
                         wire.usePadding(wireStore.dataVersion() > 0);
