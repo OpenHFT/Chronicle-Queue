@@ -97,6 +97,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testNoHeader() throws IOException {
+        expectException("Recovering header");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         dir.mkdir();
 
@@ -125,6 +126,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testDeadHeader() throws IOException {
+        expectException("Recovering header");
         final File dir = getTmpDir();
 
         dir.mkdirs();
