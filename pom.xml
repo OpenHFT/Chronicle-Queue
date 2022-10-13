@@ -234,10 +234,10 @@
                             <goal>enforcer</goal>
                         </goals>
                         <configuration>
-                            <referenceVersion>5.23ea0</referenceVersion>
+                            <referenceVersion>5.24ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                             <!-- Reduce the API surface of ChronicleReader -->
-                            <binaryCompatibilityPercentageRequired>94</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>100</binaryCompatibilityPercentageRequired>
                             <extraOptions>
                                 <!--This skips "internal" but checks "impl"-->
                                 <extraOption>
