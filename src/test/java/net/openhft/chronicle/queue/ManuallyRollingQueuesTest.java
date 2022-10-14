@@ -26,7 +26,7 @@ public class ManuallyRollingQueuesTest {
 
     /**
      * This first test checks what happened if you were to create two threads to the same queue directory for each queue
-     * you set it up with a time provider, where those time providers who are not totally in sync.
+     * you set it up with a time provider, and where those time providers are not in sync.
      *
      * @throws IOException
      */
