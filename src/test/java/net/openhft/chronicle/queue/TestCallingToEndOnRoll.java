@@ -28,8 +28,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 
-public class TestCallingToEndOnRoll extends ChronicleQueueTestBase implements TimeProvider {
+public class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvider {
 
     private long currentTime = 0;
     private ExcerptAppender appender;
@@ -38,7 +39,7 @@ public class TestCallingToEndOnRoll extends ChronicleQueueTestBase implements Ti
     @Ignore("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
     @Test
     public void test() {
-        SingleChronicleQueue build = binary(getTmpDir()).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(this).build();
+        SingleChronicleQueue build = binary(getTmpDir()).rollCycle(TEST_SECONDLY).timeProvider(this).build();
         appender = build.acquireAppender();
 
         tailer = build.createTailer();

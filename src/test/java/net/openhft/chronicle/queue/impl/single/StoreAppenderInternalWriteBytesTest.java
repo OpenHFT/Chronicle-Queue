@@ -23,7 +23,10 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
@@ -39,11 +42,12 @@ import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.util.concurrent.Executors.newFixedThreadPool;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
-public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase {
+public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
     private static final int MESSAGES_TO_WRITE = 200;
 
@@ -220,7 +224,7 @@ public class StoreAppenderInternalWriteBytesTest extends ChronicleQueueTestBase 
     private SingleChronicleQueue createQueue(Path queueDir, TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build();
     }

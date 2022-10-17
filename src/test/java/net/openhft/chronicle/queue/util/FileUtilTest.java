@@ -23,10 +23,9 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
@@ -44,11 +43,13 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-public class FileUtilTest extends ChronicleQueueTestBase {
+public class FileUtilTest extends QueueTestCommon {
 
     @Test
     public void assertLsofPresent() throws IOException {
@@ -127,7 +128,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
 
-        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build()) {
+        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(TEST_SECONDLY).timeProvider(tp).build()) {
             final ExcerptAppender appender = queue.acquireAppender();
             final ExcerptTailer tailer = queue.createTailer();
             for (int i = 0; i < rolls; i++) {
@@ -193,6 +194,6 @@ public class FileUtilTest extends ChronicleQueueTestBase {
 
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
-        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
+        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 }

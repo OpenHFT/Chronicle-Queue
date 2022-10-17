@@ -21,7 +21,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryTwoLongReference;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.Sequence;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,6 +31,9 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 
+import static net.openhft.chronicle.queue.RollCycles.DEFAULT;
+import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.HUGE_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
@@ -39,7 +42,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     private final RollCycleEncodeSequence rollCycleEncodeSequence;
     private final Bytes<ByteBuffer> bytes;
 
-    public RollCycleEncodeSequenceTest(final RollCycles cycle) {
+    public RollCycleEncodeSequenceTest(final RollCycle cycle) {
         longValue = new BinaryTwoLongReference();
         bytes = Bytes.elasticByteBuffer();
         longValue.bytesStore(bytes, 0, 16);
@@ -49,11 +52,11 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {RollCycles.DAILY},
-                {RollCycles.DEFAULT},
-                {RollCycles.HOURLY},
-                {RollCycles.MINUTELY},
-                {RollCycles.HUGE_DAILY}
+                {DAILY},
+                {DEFAULT},
+                {HOURLY},
+                {MINUTELY},
+                {HUGE_DAILY}
         });
     }
 

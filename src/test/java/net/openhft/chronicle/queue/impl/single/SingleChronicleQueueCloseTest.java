@@ -22,7 +22,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class SingleChronicleQueueCloseTest extends ChronicleQueueTestBase {
+public class SingleChronicleQueueCloseTest extends QueueTestCommon {
 
     @Test
     public void testTailAfterClose() {

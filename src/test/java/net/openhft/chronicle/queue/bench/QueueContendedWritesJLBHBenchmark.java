@@ -26,7 +26,6 @@ import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
@@ -35,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
+import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     public static final int ITERATIONS = 100_000;
@@ -70,7 +70,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         this.jlbh = jlbh;
         concurrent = jlbh.addProbe("Concurrent");
         concurrent2 = jlbh.addProbe("Concurrent2");
-        queue = single("replica").rollCycle(RollCycles.LARGE_DAILY).doubleBuffer(false).build();
+        queue = single("replica").rollCycle(LARGE_DAILY).doubleBuffer(false).build();
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();

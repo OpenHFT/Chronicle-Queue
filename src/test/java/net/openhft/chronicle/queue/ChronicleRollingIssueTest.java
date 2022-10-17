@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+
 /*
 java.lang.AssertionError: Closeables still open
 
@@ -133,7 +135,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                     .singleBuilder(path)
                     .testBlockSize()
                     .storeFileListener(storeFileListener)
-                    .rollCycle(RollCycles.TEST_SECONDLY).build()) {
+                    .rollCycle(TEST_SECONDLY).build()) {
                 for (int i = 0; i < messages; i++) {
                     long millis = System.currentTimeMillis() % 100;
                     if (millis > 1 && millis < 99) {
@@ -160,7 +162,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                 .singleBuilder(path)
                 .testBlockSize()
                 .storeFileListener(storeFileListener)
-                .rollCycle(RollCycles.TEST_SECONDLY).build()) {
+                .rollCycle(TEST_SECONDLY).build()) {
             ExcerptTailer tailer = queue.createTailer();
             int count2 = 0;
             while (count2 < threads * messages) {
@@ -169,7 +171,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                 if (map != null) {
                     count2++;
                 } else if (index >= 0) {
-                    if (RollCycles.TEST_SECONDLY.toCycle(lastIndex) != RollCycles.TEST_SECONDLY.toCycle(index)) {
+                    if (TEST_SECONDLY.toCycle(lastIndex) != TEST_SECONDLY.toCycle(index)) {
 /*
                        // System.out.println("Wrote: " + count
                                 + " read: " + count2

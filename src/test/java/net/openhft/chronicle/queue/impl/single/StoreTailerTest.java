@@ -38,10 +38,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public class StoreTailerTest extends ChronicleQueueTestBase {
+public class StoreTailerTest extends QueueTestCommon {
     private final Path dataDirectory = getTmpDir().toPath();
 
     @Test
@@ -64,7 +67,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
         assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
 
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
-        try (ChronicleQueue queue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", false).
+        try (ChronicleQueue queue = build(createQueue(dataDirectory, MINUTELY, 0, "cycleRoll", false).
                 timeProvider(timeProvider))) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -75,7 +78,7 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
             events.onEvent("secondEvent");
             appender.sync();
 
-            try (final ChronicleQueue readerQueue = build(createQueue(dataDirectory, RollCycles.MINUTELY, 0, "cycleRoll", true).
+            try (final ChronicleQueue readerQueue = build(createQueue(dataDirectory, MINUTELY, 0, "cycleRoll", true).
                     timeProvider(timeProvider))) {
 
                 final ExcerptTailer tailer = readerQueue.createTailer();
@@ -99,12 +102,12 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
     @Test
     public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
         try (ChronicleQueue firstInputQueue =
-                     createQueue(dataDirectory, RollCycles.TEST_DAILY, 1, "firstInputQueue");
+                     createQueue(dataDirectory, TEST_DAILY, 1, "firstInputQueue");
              // different RollCycle means that indicies are not identical to firstInputQueue
              ChronicleQueue secondInputQueue =
-                     createQueue(dataDirectory, RollCycles.TEST_SECONDLY, 2, "secondInputQueue");
+                     createQueue(dataDirectory, TEST_SECONDLY, 2, "secondInputQueue");
              ChronicleQueue outputQueue =
-                     createQueue(dataDirectory, RollCycles.TEST_DAILY, 0, "outputQueue")) {
+                     createQueue(dataDirectory, TEST_DAILY, 0, "outputQueue")) {
 
             final OnEvents firstWriter = firstInputQueue.acquireAppender()
                     .methodWriterBuilder(OnEvents.class)
@@ -166,18 +169,18 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
     }
 
     private SingleChronicleQueueBuilder minutely(@NotNull File file, TimeProvider timeProvider) {
-        return SingleChronicleQueueBuilder.builder(file, WireType.BINARY).rollCycle(RollCycles.MINUTELY).testBlockSize().timeProvider(timeProvider);
+        return SingleChronicleQueueBuilder.builder(file, WireType.BINARY).rollCycle(MINUTELY).testBlockSize().timeProvider(timeProvider);
     }
 
     @NotNull
-    private ChronicleQueue createQueue(final Path dataDirectory, final RollCycles rollCycle,
+    private ChronicleQueue createQueue(final Path dataDirectory, final RollCycle rollCycle,
                                        final int sourceId, final String subdirectory) {
         return build(createQueue(dataDirectory, rollCycle, sourceId,
                 subdirectory, false));
     }
 
     @NotNull
-    private SingleChronicleQueueBuilder createQueue(final Path dataDirectory, final RollCycles rollCycle,
+    private SingleChronicleQueueBuilder createQueue(final Path dataDirectory, final RollCycle rollCycle,
                                                     final int sourceId, final String subdirectory, final boolean readOnly) {
         return SingleChronicleQueueBuilder
                 .binary(dataDirectory.resolve(Paths.get(subdirectory)))

@@ -36,11 +36,13 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static org.junit.Assert.assertEquals;
 
-public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
+public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
     @Before
     public void before() {

@@ -48,14 +48,15 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
-public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
+public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
-    private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
+    private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
@@ -325,7 +326,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private ChronicleQueue createQueue(final TimeProvider timeProvider) {
         return SingleChronicleQueueBuilder.
                 binary(queuePath).
-                rollCycle(RollCycles.TEST_SECONDLY).
+                rollCycle(TEST_SECONDLY).
                 wireType(WireType.BINARY_LIGHT).
                 storeFileListener(storeFileListener).
                 timeProvider(timeProvider).

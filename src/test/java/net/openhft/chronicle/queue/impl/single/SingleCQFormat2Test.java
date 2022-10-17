@@ -36,9 +36,10 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
-public class SingleCQFormat2Test extends ChronicleQueueTestBase {
+public class SingleCQFormat2Test extends QueueTestCommon {
 
     static {
         // init class
@@ -58,7 +59,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         ClassAliasPool.CLASS_ALIASES.addAlias(MyData.class);
 
         try (@NotNull ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .blockSize(QueueUtil.testBlockSize()).build()) {
             @NotNull ExcerptAppender appender = queue.acquireAppender();
             try (DocumentContext dc = appender.writingDocument()) {
@@ -590,7 +591,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .blockSize(QueueUtil.testBlockSize())
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
@@ -680,7 +681,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         ClassAliasPool.CLASS_ALIASES.addAlias(Order.class);
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .blockSize(QueueUtil.testBlockSize())
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {
@@ -764,7 +765,7 @@ public class SingleCQFormat2Test extends ChronicleQueueTestBase {
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = SingleChronicleQueueBuilder.single(dir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .blockSize(QueueUtil.testBlockSize())
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build()) {

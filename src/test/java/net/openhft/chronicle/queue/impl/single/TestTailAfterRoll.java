@@ -19,11 +19,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
@@ -32,7 +31,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-public class TestTailAfterRoll extends ChronicleQueueTestBase {
+public class TestTailAfterRoll extends QueueTestCommon {
 
     private static final String EXPECTED = "hello world  3";
 

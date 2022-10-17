@@ -30,11 +30,11 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class CycleNotFoundTest extends ChronicleQueueTestBase {
+public class CycleNotFoundTest extends QueueTestCommon {
 
     private static final int NUMBER_OF_TAILERS = 20;
     private static final long INTERVAL_US = 50;
@@ -54,7 +54,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
             try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                     .binary(path)
                     .testBlockSize()
-                    .rollCycle(RollCycles.TEST_SECONDLY)
+                    .rollCycle(TEST_SECONDLY)
                     .build()) {
 
                 final ExcerptTailer tailer = rqueue.createTailer();

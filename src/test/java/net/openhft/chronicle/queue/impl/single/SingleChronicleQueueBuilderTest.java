@@ -21,8 +21,8 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
@@ -35,11 +35,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static net.openhft.chronicle.queue.RollCycles.HOURLY;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
+public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
 
     @Test

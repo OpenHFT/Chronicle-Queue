@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.io.File;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
@@ -185,7 +186,7 @@ public class OrderManagerTest extends QueueTestCommon {
 
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
-                    .rollCycle(RollCycles.TEST_DAILY)
+                    .rollCycle(TEST_DAILY)
                     .sourceId(1)
                     .build()) {
                 SidedMarketDataListener combiner = out.acquireAppender()
@@ -212,7 +213,7 @@ public class OrderManagerTest extends QueueTestCommon {
                      ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2)
                              .testBlockSize()
                              .sourceId(1)
-                             .rollCycle(RollCycles.TEST_DAILY)
+                             .rollCycle(TEST_DAILY)
                              .build()) {
 
                     ExcerptAppender excerptAppender = out.acquireAppender();

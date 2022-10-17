@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.channel;
 
 import net.openhft.chronicle.bytes.BytesIn;
 import net.openhft.chronicle.bytes.BytesOut;
-import net.openhft.chronicle.bytes.util.BinaryLengthLength;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import net.openhft.chronicle.wire.converter.NanoTime;

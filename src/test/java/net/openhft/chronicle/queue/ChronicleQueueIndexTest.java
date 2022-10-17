@@ -39,9 +39,11 @@ import java.util.stream.IntStream;
 
 import static net.openhft.chronicle.bytes.Bytes.from;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
-public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
+public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFile() {
@@ -182,7 +184,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         stp.currentTimeMillis(CLOCK.currentTimeMillis());
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
 
@@ -238,7 +240,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void writeReadMetadata() {
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .testBlockSize()
                 .build()) {
 
@@ -261,7 +263,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(stp)
                 .testBlockSize()
                 .build()) {

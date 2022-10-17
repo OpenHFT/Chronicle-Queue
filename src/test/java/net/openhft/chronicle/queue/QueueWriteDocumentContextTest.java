@@ -28,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -221,7 +222,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
     @NotNull
     protected SingleChronicleQueue createQueue(String s) {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(tempDir(s))
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .testBlockSize();
         final SingleChronicleQueue queue = builder.build();

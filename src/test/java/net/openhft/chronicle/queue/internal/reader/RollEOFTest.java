@@ -26,9 +26,8 @@ import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -53,10 +52,11 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public class RollEOFTest extends ChronicleQueueTestBase {
+public class RollEOFTest extends QueueTestCommon {
 
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
@@ -221,7 +221,7 @@ public class RollEOFTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(timeProvider)
                 .build()) {
 

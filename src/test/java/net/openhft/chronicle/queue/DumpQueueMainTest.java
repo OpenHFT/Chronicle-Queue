@@ -29,10 +29,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
-public class DumpQueueMainTest extends ChronicleQueueTestBase {
+public class DumpQueueMainTest extends QueueTestCommon {
 
     @Test
     public void shouldBeAbleToDumpReadOnlyQueueFile() throws IOException {

@@ -22,8 +22,8 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.main.DumpMain;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
@@ -43,15 +43,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 import static junit.framework.TestCase.fail;
-import static net.openhft.chronicle.queue.RollCycles.HOURLY;
-import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assume.assumeTrue;
 
 /**
  * check that method writes are thread safe when used with queue.methodWriter
  */
 @RunWith(Parameterized.class)
-public class TestMethodWriterWithThreads extends ChronicleQueueTestBase {
+public class TestMethodWriterWithThreads extends QueueTestCommon {
 
     private static final int AMEND = 1;
     private static final int CREATE = 2;

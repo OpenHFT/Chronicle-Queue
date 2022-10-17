@@ -36,8 +36,8 @@ import java.util.Collection;
 import java.util.concurrent.*;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static net.openhft.chronicle.queue.RollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)

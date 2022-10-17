@@ -30,7 +30,7 @@ import org.junit.Test;
 import java.io.File;
 
 @RequiredForClient
-public class DtoBytesMarshallableTest extends ChronicleQueueTestBase {
+public class DtoBytesMarshallableTest extends QueueTestCommon {
 
     @Test
     public void testDtoBytesMarshallable() {

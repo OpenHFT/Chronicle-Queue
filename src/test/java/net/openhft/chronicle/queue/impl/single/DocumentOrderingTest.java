@@ -33,10 +33,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
-public final class DocumentOrderingTest extends ChronicleQueueTestBase {
-    private static final RollCycles ROLL_CYCLE = RollCycles.TEST_SECONDLY;
+public final class DocumentOrderingTest extends QueueTestCommon {
+    private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private final ExecutorService executorService = Executors.newCachedThreadPool(
             new NamedThreadFactory("test"));
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());

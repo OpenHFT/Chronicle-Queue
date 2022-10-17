@@ -26,7 +26,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class AppenderListenerTest {
+public class AppenderListenerTest extends QueueTestCommon {
 
     @Test
     public void appenderListenerTest() {

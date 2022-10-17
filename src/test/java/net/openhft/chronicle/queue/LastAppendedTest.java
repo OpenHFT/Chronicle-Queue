@@ -29,13 +29,14 @@ import java.io.File;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
-public class LastAppendedTest extends ChronicleQueueTestBase {
+public class LastAppendedTest extends QueueTestCommon {
 
-    public static final RollCycles ROLL_CYCLE = RollCycles.TEST4_SECONDLY;
+    public static final RollCycle ROLL_CYCLE = TEST4_SECONDLY;
 
     @Test
     public void testLastWritten() {

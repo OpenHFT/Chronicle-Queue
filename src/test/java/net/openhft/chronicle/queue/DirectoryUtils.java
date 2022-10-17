@@ -11,8 +11,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.shutdown.PriorityHook;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
-import net.openhft.chronicle.core.time.UniqueMicroTimeProvider;
-import net.openhft.chronicle.core.util.Time;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;

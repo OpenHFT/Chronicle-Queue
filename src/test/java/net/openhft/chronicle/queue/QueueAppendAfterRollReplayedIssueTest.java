@@ -29,6 +29,7 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertNotNull;
 
 /*
@@ -48,7 +49,7 @@ public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
                 .singleBuilder(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)
-                .rollCycle(RollCycles.TEST_SECONDLY).build()) {
+                .rollCycle(TEST_SECONDLY).build()) {
             for (int i = 0; i < messages; i++) {
                 timeProvider.advanceMillis(i * 100);
                 ExcerptAppender appender = writeQueue.acquireAppender();
@@ -64,7 +65,7 @@ public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
                 .singleBuilder(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)
-                .rollCycle(RollCycles.TEST_SECONDLY).build()) {
+                .rollCycle(TEST_SECONDLY).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             try(final DocumentContext documentContext = excerptAppender.acquireWritingDocument(false)){
                 assertNotNull(documentContext.wire());

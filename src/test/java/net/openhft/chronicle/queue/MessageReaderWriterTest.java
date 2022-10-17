@@ -33,7 +33,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
-public class MessageReaderWriterTest extends ChronicleQueueTestBase {
+public class MessageReaderWriterTest extends QueueTestCommon {
 
     @Test
     public void testWriteWhileReading() {

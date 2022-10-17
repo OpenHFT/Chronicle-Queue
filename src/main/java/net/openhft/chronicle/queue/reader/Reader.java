@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;

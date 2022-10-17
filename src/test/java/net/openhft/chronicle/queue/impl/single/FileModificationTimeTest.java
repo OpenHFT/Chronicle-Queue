@@ -19,7 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import java.io.File;
@@ -31,7 +31,7 @@ import java.util.function.LongSupplier;
 
 import static org.junit.Assert.fail;
 
-public final class FileModificationTimeTest extends ChronicleQueueTestBase {
+public final class FileModificationTimeTest extends QueueTestCommon {
     private final AtomicInteger fileCount = new AtomicInteger();
 
     private static void waitForDiff(final long a, final LongSupplier b) {

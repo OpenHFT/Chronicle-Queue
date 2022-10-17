@@ -19,9 +19,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 
-public class CheckIndicesTest extends ChronicleQueueTestBase {
+public class CheckIndicesTest extends QueueTestCommon {
 
     private static final int BATCH_SIZE = 10;
     private ChronicleQueue queue0;

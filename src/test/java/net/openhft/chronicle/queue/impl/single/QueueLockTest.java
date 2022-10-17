@@ -19,8 +19,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
-public class QueueLockTest extends ChronicleQueueTestBase {
+public class QueueLockTest extends QueueTestCommon {
 
     @Test
     public void testTimeout() throws InterruptedException {

@@ -21,7 +21,10 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ReferenceOwner;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -36,7 +39,9 @@ import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.*;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
@@ -53,7 +58,7 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         try (final RollingChronicleQueue queue =
                      ChronicleQueue.singleBuilder(tmpFolder.newFolder()).
-                             rollCycle(RollCycles.TEST_SECONDLY).
+                             rollCycle(TEST_SECONDLY).
                              timeProvider(clock::get).
                              timeoutMS(1_000).
                              testBlockSize().build()) {

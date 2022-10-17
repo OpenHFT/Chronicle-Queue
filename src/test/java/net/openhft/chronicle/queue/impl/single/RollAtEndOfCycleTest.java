@@ -19,10 +19,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -33,10 +32,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public final class RollAtEndOfCycleTest extends ChronicleQueueTestBase {
+public final class RollAtEndOfCycleTest extends QueueTestCommon {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
     private static void assertQueueFileCount(final Path path, final long expectedCount) throws IOException {
@@ -126,7 +126,7 @@ public final class RollAtEndOfCycleTest extends ChronicleQueueTestBase {
     private SingleChronicleQueue createQueue() {
         return SingleChronicleQueueBuilder.
                 binary(getTmpDir()).
-                rollCycle(RollCycles.TEST_SECONDLY).testBlockSize().
+                rollCycle(TEST_SECONDLY).testBlockSize().
                 timeProvider(clock::get).
                 build();
     }

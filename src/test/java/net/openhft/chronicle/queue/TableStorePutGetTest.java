@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -31,7 +32,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     public void indexEntry() {
         SetTimeProvider stp = new SetTimeProvider("2020/10/15T01:01:01");
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("indexEntry"))
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(stp)
                 .testBlockSize()
                 .build()) {
@@ -116,7 +117,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     @Test
     public void manyEntries() {
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("manyEntries"))
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .blockSize(64 << 10)
                 .build()) {
             for (int j = 0; j < 2280; j++) {
@@ -133,7 +134,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     @Test
     public void testCanGrowBeyondInitialSize() {
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("canGrow"))
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .testBlockSize()
                 .build()) {
             for (int j = 0; j < 4_000; j++) {

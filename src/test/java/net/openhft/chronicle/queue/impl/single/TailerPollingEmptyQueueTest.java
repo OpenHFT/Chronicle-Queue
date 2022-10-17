@@ -19,14 +19,14 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public final class TailerPollingEmptyQueueTest extends ChronicleQueueTestBase {
+public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
     @Test
     public void shouldNotGenerateExcessGarbage() {

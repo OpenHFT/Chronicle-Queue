@@ -21,7 +21,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.RollCycles;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -30,6 +29,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.fail;
 
 public final class MappedMemoryUnmappingTest extends QueueTestCommon {
@@ -42,7 +42,7 @@ public final class MappedMemoryUnmappingTest extends QueueTestCommon {
         long initialQueueMappedMemory = 0L;
 
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
-                binary(tmp.newFolder()).testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).
+                binary(tmp.newFolder()).testBlockSize().rollCycle(TEST_SECONDLY).
                 timeProvider(clock::get).build()) {
             for (int i = 0; i < 100; i++) {
                 queue.acquireAppender().writeDocument(System.nanoTime(), (d, t) -> d.int64(t));

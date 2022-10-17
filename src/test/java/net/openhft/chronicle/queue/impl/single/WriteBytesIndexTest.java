@@ -20,11 +20,15 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import java.io.File;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.Assert.*;
 
 public class WriteBytesIndexTest extends QueueTestCommon {
@@ -76,7 +80,7 @@ public class WriteBytesIndexTest extends QueueTestCommon {
     static ChronicleQueue createQueue(File path) {
         return SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .build();
     }
 }

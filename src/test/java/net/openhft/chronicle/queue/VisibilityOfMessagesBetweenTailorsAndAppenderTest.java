@@ -28,9 +28,10 @@ import org.junit.Test;
 import java.util.concurrent.*;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 
 @RequiredForClient
-public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends ChronicleQueueTestBase {
+public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
 
     volatile long lastWrittenIndex = Long.MIN_VALUE;
 
@@ -43,7 +44,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends Chronicle
 
         try (ChronicleQueue x = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
-                .rollCycle(RollCycles.MINUTELY)
+                .rollCycle(MINUTELY)
                 .build()) {
 
             ExecutorService e1 = newSingleThreadExecutor(new NamedThreadFactory("e1"));
