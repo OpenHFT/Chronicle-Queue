@@ -36,10 +36,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import static java.util.stream.IntStream.range;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public final class TailerIndexingQueueTest extends ChronicleQueueTestBase {
+public final class TailerIndexingQueueTest extends QueueTestCommon {
     private final File path = getTmpDir();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
@@ -55,7 +56,7 @@ public final class TailerIndexingQueueTest extends ChronicleQueueTestBase {
         return SingleChronicleQueueBuilder.
                 binary(path).
                 timeProvider(timeProvider).
-                rollCycle(RollCycles.TEST_SECONDLY).
+                rollCycle(TEST_SECONDLY).
                 testBlockSize().
                 wireType(WireType.BINARY).
                 build();

@@ -78,7 +78,9 @@ public interface RollCycle {
      * @param epoch an EPOCH offset, to all the user to define their own epoch
      * @return the current cycle
      */
-    int current(TimeProvider time, long epoch);
+    default int current(@NotNull TimeProvider time, long epoch) {
+        return (int) ((time.currentTimeMillis() - epoch) / lengthInMillis());
+    }
 
     /**
      * Returns the index for the provided {@code cycle} and {@code sequenceNumber}.
