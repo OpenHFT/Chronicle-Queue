@@ -28,10 +28,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
-public class ThreadedQueueTest extends ChronicleQueueTestBase {
+public class ThreadedQueueTest extends QueueTestCommon {
 
     public static final int REQUIRED_COUNT = 10;
 

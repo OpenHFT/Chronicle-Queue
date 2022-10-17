@@ -9,8 +9,6 @@ import net.openhft.chronicle.wire.channel.ChannelHeader;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
 
-import java.util.function.Function;
-
 public class QueuesChannel implements ChronicleChannel {
     private final PublishQueueChannel publishQueueChannel;
     private final SubscribeQueueChannel subscribeQueueChannel;

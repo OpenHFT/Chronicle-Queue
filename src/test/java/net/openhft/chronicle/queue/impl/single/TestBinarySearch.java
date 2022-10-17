@@ -20,7 +20,10 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
@@ -36,8 +39,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+
 @RunWith(Parameterized.class)
-public class TestBinarySearch extends ChronicleQueueTestBase {
+public class TestBinarySearch extends QueueTestCommon {
 
     private final int numberOfMessages;
 
@@ -62,7 +67,7 @@ public class TestBinarySearch extends ChronicleQueueTestBase {
         stp.currentTimeMillis(time);
 
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
 

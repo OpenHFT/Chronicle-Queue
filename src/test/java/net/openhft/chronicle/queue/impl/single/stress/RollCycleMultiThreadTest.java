@@ -31,12 +31,12 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.*;
 
-import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
-public class RollCycleMultiThreadTest extends ChronicleQueueTestBase {
+public class RollCycleMultiThreadTest extends QueueTestCommon {
 
-    public static final RollCycles ROLL_CYCLE = TEST_DAILY;
+    public static final RollCycle ROLL_CYCLE = TEST_DAILY;
 
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {

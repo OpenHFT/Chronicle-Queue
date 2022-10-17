@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -39,7 +38,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.*;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.function.ToLongFunction;
 
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
     static {

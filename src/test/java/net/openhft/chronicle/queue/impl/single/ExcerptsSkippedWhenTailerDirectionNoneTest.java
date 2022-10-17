@@ -25,10 +25,10 @@ import org.junit.Test;
 
 import java.io.File;
 
-import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
-public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends ChronicleQueueTestBase {
+public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
     @Test
     public void shouldNotSkipMessageAtStartOfQueue() {
         final File tmpDir = getTmpDir();

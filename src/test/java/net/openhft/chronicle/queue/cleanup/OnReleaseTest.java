@@ -22,13 +22,17 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -45,7 +49,7 @@ public class OnReleaseTest extends QueueTestCommon {
         AtomicInteger readRoll = new AtomicInteger();
         try (ChronicleQueue writeQ = SingleChronicleQueueBuilder
                 .binary(path)
-                .rollCycle(RollCycles.MINUTELY)
+                .rollCycle(MINUTELY)
                 .timeProvider(stp)
                 .storeFileListener((c, f) -> {
                     System.out.println("write released " + f);
@@ -54,7 +58,7 @@ public class OnReleaseTest extends QueueTestCommon {
                 .build();
              ChronicleQueue readQ = SingleChronicleQueueBuilder
                      .binary(path)
-                     .rollCycle(RollCycles.MINUTELY)
+                     .rollCycle(MINUTELY)
                      .timeProvider(stp)
                      .storeFileListener((c, f) -> {
                          System.out.println("read released " + f);

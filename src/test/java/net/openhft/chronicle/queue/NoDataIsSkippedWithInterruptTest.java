@@ -25,6 +25,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
+
 public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
 
     private static final String EXPECTED = "Hello World";
@@ -38,7 +40,7 @@ public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
     public void test() {
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(DirectoryUtils.tempDir("."))
-                .rollCycle(RollCycles.MINUTELY)
+                .rollCycle(MINUTELY)
                 .timeProvider(timeProvider)
                 .testBlockSize()
                 .build();

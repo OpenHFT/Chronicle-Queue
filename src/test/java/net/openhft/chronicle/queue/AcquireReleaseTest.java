@@ -35,10 +35,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class AcquireReleaseTest extends ChronicleQueueTestBase {
+public class AcquireReleaseTest extends QueueTestCommon {
     @Test
     public void testAcquireAndRelease() {
         File dir = IOTools.createTempDirectory("testAcquireAndRelease").toFile();
@@ -62,7 +63,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         TimeProvider tp = () -> time.getAndAccumulate(1000, (x, y) -> x + y);
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .storeFileListener(sfl)
                 .timeProvider(tp)
                 .build()) {
@@ -93,7 +94,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         stp.currentTimeMillis(1000);
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
             queue.acquireAppender().writeText("Hello World");
@@ -128,7 +129,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .storeFileListener(storeFileListener)
                 .timeProvider(stp)
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .build();) {
             // new appender created
             final ExcerptAppender appender = queue.acquireAppender();

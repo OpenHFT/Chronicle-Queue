@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
 /**
@@ -47,7 +48,7 @@ import static org.junit.Assert.*;
  * We want to ensure that messages are completely written or not written - no half measures.
  */
 @RequiredForClient
-public class NotCompleteTest extends ChronicleQueueTestBase {
+public class NotCompleteTest extends QueueTestCommon {
 
     @Test
     public void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
@@ -153,7 +154,7 @@ public class NotCompleteTest extends ChronicleQueueTestBase {
     private SingleChronicleQueue createQueue(File tmpDir) {
         return binary(tmpDir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeoutMS(500)
                 .checkInterrupts(true)
                 .build();

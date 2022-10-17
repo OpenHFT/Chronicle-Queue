@@ -32,7 +32,7 @@ import java.io.File;
  * <p>
  * Created by Rob Austin
  */
-public class ProxyTest extends ChronicleQueueTestBase {
+public class ProxyTest extends QueueTestCommon {
 
     @Test
     public void testReadWrite() {

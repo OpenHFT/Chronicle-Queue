@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import java.io.File;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -33,7 +34,7 @@ public class MultipleNamedTailersTest extends QueueTestCommon {
     public void multipleTailers() {
         File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
 
-        try (ChronicleQueue q1 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_SECONDLY).build();
+        try (ChronicleQueue q1 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().rollCycle(TEST_SECONDLY).build();
              ExcerptAppender appender = q1.acquireAppender();
              ExcerptTailer tailer1 = q1.createTailer();
              ExcerptTailer namedTailer1 = q1.createTailer("named1");

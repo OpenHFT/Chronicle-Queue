@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 @Ignore("long running")
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RequiredForClient
-public class ContendedWriterTest extends ChronicleQueueTestBase {
+public class ContendedWriterTest extends QueueTestCommon {
     private static final long NUMBER_OF_LONGS = 3;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private ThreadDump threadDump;

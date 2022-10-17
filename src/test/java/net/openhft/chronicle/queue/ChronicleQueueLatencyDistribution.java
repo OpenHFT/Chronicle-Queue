@@ -99,7 +99,7 @@ import java.util.Map;
  * I ran with
  * mvn -DenableAffinity=true exec:java -Dexec.classpathScope="test" -Dexec.mainClass=net.openhft.chronicle.queue.ChronicleQueueLatencyDistribution
  */
-public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
+public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
     private static final boolean PRETOUCH = !Jvm.getBoolean("no_pretouch");
     private static final boolean SAMPLING = Jvm.getBoolean("sampling");
     private static final long SAMPLE_THRESHOLD_NS = Long.getLong("sampling_ns", 1_000);

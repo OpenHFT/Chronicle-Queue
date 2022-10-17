@@ -20,8 +20,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
-public final class MessageHistoryTest extends ChronicleQueueTestBase {
+public final class MessageHistoryTest extends QueueTestCommon {
     @Rule
     public final TestName testName = new TestName();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());

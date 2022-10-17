@@ -58,12 +58,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static net.openhft.chronicle.queue.impl.single.GcControls.waitForGcCycle;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public class ChronicleReaderTest extends ChronicleQueueTestBase {
+public class ChronicleReaderTest extends QueueTestCommon {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
     private static final long TOTAL_EXCERPTS_IN_QUEUE = 24;
 
@@ -194,7 +196,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 //        expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
@@ -215,7 +217,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
@@ -823,7 +825,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir)
                 .timeProvider(timeProvider)
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .build()) {
 
             for (int i = 0; i < 5; i++) {

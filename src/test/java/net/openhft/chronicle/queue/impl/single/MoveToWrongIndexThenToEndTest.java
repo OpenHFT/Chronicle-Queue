@@ -19,9 +19,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -46,7 +46,7 @@ import static org.junit.Assert.assertTrue;
  * The ChronicleQueueIT class implements a test that causes Chronicle Queue to
  * fail with a BufferUnderflowException whilst executing a tailer.toEnd() call.
  */
-public class MoveToWrongIndexThenToEndTest extends ChronicleQueueTestBase {
+public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
     private static final int msgSize = 64;
 

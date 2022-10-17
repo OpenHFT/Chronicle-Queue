@@ -24,11 +24,11 @@ import org.junit.Test;
 
 import java.io.File;
 
-import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class ChronicleQueueMethodsWithoutParametersTest extends ChronicleQueueTestBase {
+public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon {
 
     @Test
     public void test() {

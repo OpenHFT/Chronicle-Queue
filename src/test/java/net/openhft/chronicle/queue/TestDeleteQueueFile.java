@@ -47,7 +47,7 @@ import java.util.stream.IntStream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
-public class TestDeleteQueueFile extends ChronicleQueueTestBase {
+public class TestDeleteQueueFile extends QueueTestCommon {
 
     private static final int NUM_REPEATS = 10;
     private final Path tempQueueDir = getTmpDir().toPath();

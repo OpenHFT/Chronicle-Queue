@@ -24,12 +24,12 @@ import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
 import java.util.function.Consumer;
 
+import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.HUGE_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
@@ -38,7 +38,7 @@ public class MicroToucherTest extends QueueTestCommon {
     @Test
     public void touchPageSparse() {
         assumeTrue(OS.isLinux());
-        touchPage(b -> b.useSparseFiles(true).rollCycle(RollCycles.HUGE_DAILY), 66561);
+        touchPage(b -> b.useSparseFiles(true).rollCycle(HUGE_DAILY), 66561);
     }
 
     @Test

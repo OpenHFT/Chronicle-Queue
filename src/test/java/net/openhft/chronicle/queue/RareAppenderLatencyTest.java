@@ -35,6 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static junit.framework.TestCase.assertFalse;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 
 /*
  * Created by skidder on 8/2/16.
@@ -80,7 +81,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
 
         // Shared queue between two threads appending. One appends very rarely, another heavily.
         ChronicleQueue queue = SingleChronicleQueueBuilder.binary(pathname)
-                .rollCycle(RollCycles.HOURLY)
+                .rollCycle(HOURLY)
                 .build();
 
         String text = getText();

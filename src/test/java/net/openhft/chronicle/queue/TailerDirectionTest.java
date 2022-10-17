@@ -33,10 +33,12 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
 @RequiredForClient
-public class TailerDirectionTest extends ChronicleQueueTestBase {
+public class TailerDirectionTest extends QueueTestCommon {
 
     private static final String TEST_MESSAGE_PREFIX = "Test entry: ";
 
@@ -96,7 +98,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
 
         ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
                 .testBlockSize()
-                .rollCycle(RollCycles.HOURLY)
+                .rollCycle(HOURLY)
                 .build();
         ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
@@ -147,7 +149,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY).build()) {
+                .rollCycle(TEST_SECONDLY).build()) {
 
             final ExcerptTailer tailer = queue.createTailer();
             tailer.direction(TailerDirection.NONE);

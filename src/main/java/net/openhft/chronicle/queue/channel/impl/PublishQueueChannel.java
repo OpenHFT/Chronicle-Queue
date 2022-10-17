@@ -12,8 +12,6 @@ import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
 import net.openhft.chronicle.wire.converter.NanoTime;
 
-import java.util.function.Function;
-
 public class PublishQueueChannel implements ChronicleChannel {
     private final ChronicleChannelCfg channelCfg;
     private final AbstractHandler publishHandler;

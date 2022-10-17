@@ -18,9 +18,8 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -30,11 +29,12 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.queue.RollCycles.TEST2_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST2_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.assertEquals;
 
-public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
+public class RollingChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void testCountExcerptsWhenTheCycleIsRolled() {
@@ -225,6 +225,6 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
 
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
-        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
+        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 }

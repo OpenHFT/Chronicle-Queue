@@ -22,13 +22,14 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST8_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class ToEndPaddingTest extends ChronicleQueueTestBase {
+public class ToEndPaddingTest extends QueueTestCommon {
     @Test
     public void toEndWorksWithDifferentlyPaddedMessages() {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().rollCycle(RollCycles.TEST8_DAILY).build()) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().rollCycle(TEST8_DAILY).build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
             final ExcerptTailer tailer = queue.createTailer();

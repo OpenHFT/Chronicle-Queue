@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.Test;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.Assert.assertEquals;
 
 public class LatinCharTest extends QueueTestCommon {
@@ -45,7 +46,7 @@ public class LatinCharTest extends QueueTestCommon {
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(DirectoryUtils.tempDir("temp"))
-                .rollCycle(RollCycles.MINUTELY)
+                .rollCycle(MINUTELY)
                 .build();
              ExcerptAppender appender = queue.acquireAppender();
              ExcerptTailer tailer = queue.createTailer("test-tailer")) {

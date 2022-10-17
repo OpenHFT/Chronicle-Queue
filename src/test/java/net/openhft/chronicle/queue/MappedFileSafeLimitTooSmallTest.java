@@ -30,7 +30,7 @@ import java.util.Arrays;
  * see https://github.com/OpenHFT/Chronicle-Queue/issues/535
  * Created by Rob Austin
  */
-public class MappedFileSafeLimitTooSmallTest extends ChronicleQueueTestBase {
+public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
 
     @org.junit.Test
     public void testMappedFileSafeLimitTooSmall() {

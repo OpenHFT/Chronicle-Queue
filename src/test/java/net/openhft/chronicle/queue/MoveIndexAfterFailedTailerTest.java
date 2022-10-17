@@ -30,7 +30,7 @@ import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 
 import static java.lang.System.currentTimeMillis;
-import static net.openhft.chronicle.queue.RollCycles.HOURLY;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 
 @RequiredForClient
 public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {

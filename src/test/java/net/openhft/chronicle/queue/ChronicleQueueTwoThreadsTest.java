@@ -30,11 +30,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.queue.RollCycles.SMALL_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class ChronicleQueueTwoThreadsTest extends ChronicleQueueTestBase {
+public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
     private static final int BYTES_LENGTH = 256;
     private static final long INTERVAL_US = 10;

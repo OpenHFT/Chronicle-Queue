@@ -35,11 +35,13 @@ import org.junit.runners.Parameterized;
 import java.text.ParseException;
 import java.util.*;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
 @RunWith(Parameterized.class)
-public class SparseBinarySearchTest extends ChronicleQueueTestBase {
+public class SparseBinarySearchTest extends QueueTestCommon {
 
     private static final GapTolerantComparator GAP_TOLERANT_COMPARATOR = new GapTolerantComparator();
 
@@ -67,12 +69,12 @@ public class SparseBinarySearchTest extends ChronicleQueueTestBase {
 
     @Test
     public void testBinarySearchWithManyGapsAndManyRollCycles() throws ParseException {
-        runWithTimeParameters(RollCycles.TEST_SECONDLY, 300);
+        runWithTimeParameters(TEST_SECONDLY, 300);
     }
 
     @Test
     public void testBinarySearchWithManyGaps() throws ParseException {
-        runWithTimeParameters(RollCycles.DAILY, 1);
+        runWithTimeParameters(DAILY, 1);
     }
 
     public void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) throws ParseException {

@@ -28,8 +28,9 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+
+import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.LARGE_HOURLY_XSPARSE;
 
 /*
 Ryzen 9 5950X with Corsair MP600 PRO XT
@@ -73,7 +74,7 @@ public class ThroughputPerfMain {
         nbs = BytesStore.nativeStoreWithFixedCapacity(SIZE);
         AffinityLock lock = AffinityLock.acquireCore();
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
-                .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
+                .rollCycle(LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSizeMB << 20)
                 .build()) {
 
@@ -92,7 +93,7 @@ public class ThroughputPerfMain {
 
         Bytes<?> bytes = Bytes.allocateElasticDirect(SIZE);
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
-                .rollCycle(RollCycles.LARGE_HOURLY_XSPARSE)
+                .rollCycle(LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSizeMB << 20)
                 .build()) {
             ExcerptTailer tailer = q.createTailer();

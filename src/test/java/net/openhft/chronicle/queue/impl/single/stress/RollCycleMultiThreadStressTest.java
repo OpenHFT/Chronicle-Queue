@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.Thread.currentThread;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
@@ -309,7 +310,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .doubleBuffer(DOUBLE_BUFFER)
-                .rollCycle(RollCycles.TEST_SECONDLY);
+                .rollCycle(TEST_SECONDLY);
     }
 
     @NotNull
