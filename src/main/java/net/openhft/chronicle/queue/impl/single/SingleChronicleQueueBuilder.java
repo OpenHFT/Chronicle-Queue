@@ -292,7 +292,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
-                            return (RollCycle) instance;
+                            return RollCycles.warnIfDeprecated((RollCycle) instance);
                         } else {
                             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                     "Configured default rollcycle is not a subclass of RollCycle");
@@ -483,7 +483,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
             if (list != null && list.length > 0) {
                 String filename = list[0];
-                for (RollCycles cycle : RollCycles.all()) {
+                for (RollCycle cycle : RollCycles.all()) {
                     try {
                         DateTimeFormatter.ofPattern(cycle.format())
                                 .parse(filename.substring(0, filename.length() - 4));
@@ -497,7 +497,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private void overrideRollCycleForFileName(String pattern) {
-        for (RollCycles cycle : RollCycles.all()) {
+        for (RollCycle cycle : RollCycles.all()) {
             if (cycle.format().equals(pattern)) {
                 overrideRollCycle(cycle);
                 return;
@@ -506,7 +506,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         throw new IllegalStateException("Can't find an appropriate RollCycles to override to of length " + pattern);
     }
 
-    private void overrideRollCycle(RollCycles cycle) {
+    private void overrideRollCycle(RollCycle cycle) {
         if (rollCycle != cycle && rollCycle != null)
             Jvm.warn().on(getClass(), "Overriding roll cycle from " + rollCycle + " to " + cycle);
         rollCycle = cycle;
@@ -743,7 +743,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
         assert rollCycle != null;
-        this.rollCycle = rollCycle;
+        this.rollCycle = RollCycles.warnIfDeprecated(rollCycle);
         return this;
     }
 

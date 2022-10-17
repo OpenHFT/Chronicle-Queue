@@ -17,11 +17,12 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
-import net.openhft.chronicle.core.time.TimeProvider;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.chronicle.queue.rollcycles.*;
 
-import java.util.Arrays;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Roll cycles to use with the queue. Sparse indexing roll cycles are useful for improving write performance but they slightly slow random access
@@ -68,110 +69,173 @@ public enum RollCycles implements RollCycle {
     // these are kept for historical reasons
     /**
      * 0x4000000 entries per minute, indexing every 16th entry
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.LegacyRollCycles#MINUTELY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     MINUTELY(/*--------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16),
     /**
      * 0x10000000 entries per hour, indexing every 16th entry, leave as 4K and 16 for historical reasons.
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.LegacyRollCycles#HOURLY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     HOURLY(/*----------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16),
     /**
      * 0xffffffff entries per day, indexing every 64th entry, leave as 8K and 64 for historical reasons.
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.LegacyRollCycles#DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     DAILY(/*-----------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64),
 
     // these are used to minimise rolls but do create very large files, possibly too large.
     /**
      * 0xffffffff entries per hour, indexing every 64th entry
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.LargeRollCycles#LARGE_HOURLY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     LARGE_HOURLY(/*----*/"yyyyMMdd-HH'L'", 60 * 60 * 1000, 8 << 10, 64),
     /**
      * 0x1fffffffff entries per day, indexing every 128th entry
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.LargeRollCycles#LARGE_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     LARGE_DAILY(/*-----*/"yyyyMMdd'L'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 128),
     /**
      * 0x3ffffffffff entries per day, indexing every 256th entry
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.LargeRollCycles#XLARGE_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     XLARGE_DAILY(/*----*/"yyyyMMdd'X'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 256),
     /**
      * 0xffffffffffff entries per day with sparse indexing (every 1024th entry)
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.LargeRollCycles#HUGE_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     HUGE_DAILY(/*------*/"yyyyMMdd'H'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 1024),
 
     // these are largely used for testing and benchmarks to almost turn off indexing.
     /**
      * 0x20000000 entries per day, indexing every 8th entry
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.SparseRollCycles#SMALL_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     SMALL_DAILY(/*-----*/"yyyyMMdd'S'", 24 * 60 * 60 * 1000, 8 << 10, 8),
     /**
      * 0x3ffffffff entries per hour with sparse indexing (every 1024th entry)
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.SparseRollCycles#LARGE_HOURLY_SPARSE} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     LARGE_HOURLY_SPARSE("yyyyMMdd-HH'LS'", 60 * 60 * 1000, 4 << 10, 1024),
     /**
      * 0x3ffffffffff entries per hour with super-sparse indexing (every (2^20)th entry)
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.SparseRollCycles#LARGE_HOURLY_XSPARSE} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     LARGE_HOURLY_XSPARSE("yyyyMMdd-HH'LX'", 60 * 60 * 1000, 2 << 10, 1 << 20),
     /**
      * 0xffffffffffff entries per day with super-sparse indexing (every (2^20)th entry)
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.SparseRollCycles#HUGE_DAILY_XSPARSE} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     HUGE_DAILY_XSPARSE("yyyyMMdd'HX'", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20),
 
     // these are used for test to reduce the size of a queue dump when doing a small test.
     /**
      * 0xffffffff entries - Only good for testing
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST_SECONDLY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, MAX_INDEX_COUNT, 4),
     /**
      * 0x1000 entries - Only good for testing
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST4_SECONDLY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     TEST4_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T4'", 1000, 32, 4),
     /**
      * 0x400 entries per hour - Only good for testing
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST_HOURLY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     TEST_HOURLY(/*-----*/"yyyyMMdd-HH'T'", 60 * 60 * 1000, 16, 4),
     /**
      * 0x40 entries per day - Only good for testing
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     TEST_DAILY(/*------*/"yyyyMMdd'T1'", 24 * 60 * 60 * 1000, 8, 1),
     /**
      * 0x200 entries per day - Only good for testing
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST2_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     TEST2_DAILY(/*-----*/"yyyyMMdd'T2'", 24 * 60 * 60 * 1000, 16, 2),
     /**
      * 0x1000 entries per day - Only good for testing
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST4_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     TEST4_DAILY(/*-----*/"yyyyMMdd'T4'", 24 * 60 * 60 * 1000, 32, 4),
     /**
      * 0x20000 entries per day - Only good for testing
+     *
+     * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST8_DAILY} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8),
     ;
     public static final RollCycles DEFAULT = FAST_DAILY;
+    private static final Map<RollCycle, Enum<?>> DEPRECATED_MAPPINGS;
 
     // don't alter this or you will confuse yourself.
-    private static final Iterable<RollCycles> VALUES = Arrays.asList(values());
+    private static final Iterable<RollCycle> VALUES;
+
+    static {
+        DEPRECATED_MAPPINGS = initialiseDeprecatedMappings();
+        List<RollCycle> allCycles = new ArrayList<>();
+        // We can add #values() again once the deprecated ones are gone
+        allCycles.addAll(Arrays.stream(RollCycles.values()).filter(rc -> !isDeprecated(rc)).collect(Collectors.toList()));
+        allCycles.addAll(Arrays.asList(LegacyRollCycles.values()));
+        allCycles.addAll(Arrays.asList(LargeRollCycles.values()));
+        allCycles.addAll(Arrays.asList(SparseRollCycles.values()));
+        allCycles.addAll(Arrays.asList(TestRollCycles.values()));
+        VALUES = Collections.unmodifiableList(allCycles);
+    }
 
     private final String format;
     private final int lengthInMillis;
-    private final int cycleShift;
-    private final int indexCount;
-    private final int indexSpacing;
-    private final long sequenceMask;
+    private final RollCycleArithmetic arithmetic;
 
     RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this.format = format;
         this.lengthInMillis = lengthInMillis;
-        this.indexCount = Maths.nextPower2(indexCount, 8);
-        assert this.indexCount <= MAX_INDEX_COUNT : "indexCount: " + indexCount;
-        this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
-        cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
-        assert cycleShift < Long.SIZE : "cycleShift: " + cycleShift;
-        sequenceMask = (1L << cycleShift) - 1;
+        this.arithmetic = RollCycleArithmetic.of(indexCount, indexSpacing);
     }
 
-    public static Iterable<RollCycles> all() {
+    public static Iterable<RollCycle> all() {
         return VALUES;
     }
 
+    /**
+     * @deprecated use {@link RollCycleArithmetic#maxMessagesPerCycle()} instead
+     */
+    @Deprecated(/* For removal in x.26 */)
     public static long maxMessagesPerCycle(final long indexCount0, final int indexSpacing0) {
 
         // these are inline with the SQ Indexing code
@@ -187,7 +251,7 @@ public enum RollCycles implements RollCycle {
     }
 
     public long maxMessagesPerCycle() {
-        return maxMessagesPerCycle(indexCount, indexSpacing);
+        return arithmetic.maxMessagesPerCycle();
     }
 
     @Override
@@ -205,31 +269,95 @@ public enum RollCycles implements RollCycle {
      */
     @Override
     public int defaultIndexCount() {
-        return indexCount;
+        return arithmetic.indexCount();
     }
 
     @Override
     public int defaultIndexSpacing() {
-        return indexSpacing;
-    }
-
-    @Override
-    public int current(@NotNull TimeProvider time, long epoch) {
-        return (int) ((time.currentTimeMillis() - epoch) / lengthInMillis());
+        return arithmetic.indexSpacing();
     }
 
     @Override
     public long toIndex(int cycle, long sequenceNumber) {
-        return ((long) cycle << cycleShift) + (sequenceNumber & sequenceMask);
+        return arithmetic.toIndex(cycle, sequenceNumber);
     }
 
     @Override
     public long toSequenceNumber(long index) {
-        return index & sequenceMask;
+        return arithmetic.toSequenceNumber(index);
     }
 
     @Override
     public int toCycle(long index) {
-        return Maths.toUInt31(index >> cycleShift);
+        return arithmetic.toCycle(index);
+    }
+
+    /**
+     * Check if the provided roll cycle is deprecated, log a warning if it is
+     * <p>
+     * NOTE: This will be removed when the deprecated RollCycles are removed in x.26
+     *
+     * @param rollCycle The RollCycle to check
+     * @return The RollCycle passed in
+     */
+    public static RollCycle warnIfDeprecated(RollCycle rollCycle) {
+        final Enum<?> replacementEnum = DEPRECATED_MAPPINGS.get(rollCycle);
+        if (replacementEnum != null) {
+            Jvm.warn().on(RollCycles.class,
+                    "You've configured your queue to use a deprecated RollCycle ("
+                            + renderEnum((Enum<?>) rollCycle)
+                            + ") please consider switching to " +
+                            renderEnum(replacementEnum)
+                            + ", as the RollCycle constant you've nominated will be removed in a future release!");
+        }
+        return rollCycle;
+    }
+
+    /**
+     * Is a particular roll cycle deprecated
+     * <p>
+     * NOTE: This will be removed when the deprecated RollCycles are removed in x.26
+     *
+     * @param rollCycle The roll cycle to check
+     * @return true if it's deprecated, false otherwise
+     */
+    static boolean isDeprecated(RollCycle rollCycle) {
+        return DEPRECATED_MAPPINGS.containsKey(rollCycle);
+    }
+
+    private static String renderEnum(Enum<?> enumVal) {
+        return enumVal.getClass().getName() + "." + enumVal.name();
+    }
+
+    private static Map<RollCycle, Enum<?>> initialiseDeprecatedMappings() {
+        Map<RollCycle, Enum<?>> mappings = new HashMap<>();
+
+        // Test RCs
+        mappings.put(RollCycles.TEST_SECONDLY, TestRollCycles.TEST_SECONDLY);
+        mappings.put(RollCycles.TEST4_SECONDLY, TestRollCycles.TEST4_SECONDLY);
+        mappings.put(RollCycles.TEST_HOURLY, TestRollCycles.TEST_HOURLY);
+        mappings.put(RollCycles.TEST_DAILY, TestRollCycles.TEST_DAILY);
+        mappings.put(RollCycles.TEST2_DAILY, TestRollCycles.TEST2_DAILY);
+        mappings.put(RollCycles.TEST4_DAILY, TestRollCycles.TEST4_DAILY);
+        mappings.put(RollCycles.TEST8_DAILY, TestRollCycles.TEST8_DAILY);
+
+        // Sparse RCs
+        mappings.put(RollCycles.SMALL_DAILY, SparseRollCycles.SMALL_DAILY);
+        mappings.put(RollCycles.LARGE_HOURLY_SPARSE, SparseRollCycles.LARGE_HOURLY_SPARSE);
+        mappings.put(RollCycles.LARGE_HOURLY_XSPARSE, SparseRollCycles.LARGE_HOURLY_XSPARSE);
+        mappings.put(RollCycles.HUGE_DAILY_XSPARSE, SparseRollCycles.HUGE_DAILY_XSPARSE);
+
+        // Legacy RCs
+        mappings.put(RollCycles.MINUTELY, LegacyRollCycles.MINUTELY);
+        mappings.put(RollCycles.HOURLY, LegacyRollCycles.HOURLY);
+        mappings.put(RollCycles.DAILY, LegacyRollCycles.DAILY);
+
+        // Large RCs
+        mappings.put(RollCycles.LARGE_HOURLY, LargeRollCycles.LARGE_HOURLY);
+        mappings.put(RollCycles.LARGE_DAILY, LargeRollCycles.LARGE_DAILY);
+        mappings.put(RollCycles.XLARGE_DAILY, LargeRollCycles.XLARGE_DAILY);
+        mappings.put(RollCycles.HUGE_DAILY, LargeRollCycles.HUGE_DAILY);
+
+        return Collections.unmodifiableMap(mappings);
     }
 }

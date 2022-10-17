@@ -25,9 +25,8 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.wire.*;
@@ -40,9 +39,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.*;
 
-public class SingleCQFormatTest extends ChronicleQueueTestBase {
+public class SingleCQFormatTest extends QueueTestCommon {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
@@ -72,7 +74,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
             bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
             try (RollingChronicleQueue queue = binary(dir)
-                    .rollCycle(RollCycles.TEST4_DAILY)
+                    .rollCycle(TEST4_DAILY)
                     .testBlockSize()
                     .build()) {
                 assertEquals(1, queue.firstCycle());
@@ -110,7 +112,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.DAILY)
+                .rollCycle(DAILY)
                 .timeoutMS(500L)
                 .testBlockSize()
                 .build()) {
@@ -180,7 +182,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.TEST4_DAILY)
+                .rollCycle(TEST4_DAILY)
                 .testBlockSize()
                 .build()) {
             testQueue(queue);
@@ -201,7 +203,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
                 dc.wire().writeEventName("header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
                     w.write("wireType").object(WireType.BINARY);
                     w.write("writePosition").int64forBinding(0);
-                    w.write("roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0, null, null));
+                    w.write("roll").typedMarshallable(new SCQRoll(TEST4_DAILY, 0, null, null));
                     w.write("indexing").typedMarshallable(marshallable);
                     w.write("lastAcknowledgedIndexReplicated").int64forBinding(0);
                 });
@@ -300,7 +302,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         final Wire wire = new BinaryWire(bytes);
         wire.usePadding(true);
-        try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
+        try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().write("header").typedMarshallable(store);
             }
@@ -322,7 +324,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         try (RollingChronicleQueue queue = binary(dir)
                 .testBlockSize()
-                .rollCycle(RollCycles.HOURLY)
+                .rollCycle(HOURLY)
                 .build()) {
             testQueue(queue);
             assertEquals(2, queue.firstCycle());
@@ -351,7 +353,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.TEST4_DAILY)
+                .rollCycle(TEST4_DAILY)
                 .blockSize(QueueUtil.testBlockSize())
                 .build()) {
             testQueue(queue);

@@ -236,8 +236,7 @@
                         <configuration>
                             <referenceVersion>5.24ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
-                            <!-- Reduce the API surface of ChronicleReader -->
-                            <binaryCompatibilityPercentageRequired>100</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>99.9</binaryCompatibilityPercentageRequired>
                             <extraOptions>
                                 <!--This skips "internal" but checks "impl"-->
                                 <extraOption>
