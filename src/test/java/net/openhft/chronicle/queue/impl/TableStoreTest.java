@@ -19,13 +19,21 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -87,6 +95,38 @@ public class TableStoreTest extends QueueTestCommon {
                     "...\n" +
                     "# 130956 bytes remaining\n", table.dump());
            // System.out.println(table.dump());
+        }
+    }
+
+    @Test
+    public void preCreateQueueMeta() throws IOException {
+        File basePath = Files.createTempDirectory("queueMeta").toFile();
+        basePath.deleteOnExit();
+
+        try (TableStore<Metadata.NoMeta> queue = SingleTableBuilder.builder(
+                new File(basePath, "metadata.cq4t"), WireType.BINARY, Metadata.NoMeta.INSTANCE).build()) {
+            // No-op.
+        }
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath).build();
+             ExcerptAppender appender = queue.acquireAppender()) {
+            appender.writeText("foo");
+            appender.writeText("bar");
+            appender.writeText("baz");
+        }
+
+        File metaFile = new File(basePath, "metadata.cq4t");
+        assert metaFile.delete();
+        new FileOutputStream(metaFile).close();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath).build();
+             ExcerptTailer tailer = queue.createTailer()) {
+            tailer.toStart();
+            assert "foo".equals(tailer.readText());
+            assert "bar".equals(tailer.readText());
+            assert "baz".equals(tailer.readText());
+
+            System.err.println(queue.metaStore().metadata());
         }
     }
 }
