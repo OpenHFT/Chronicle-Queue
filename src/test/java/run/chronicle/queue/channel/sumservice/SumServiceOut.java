@@ -1,5 +1,5 @@
 package run.chronicle.queue.channel.sumservice;
 
 public interface SumServiceOut {
-    void result( double res );
+    void sumResult(double res );
 }

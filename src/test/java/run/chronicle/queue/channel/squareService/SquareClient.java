@@ -1,19 +1,21 @@
-package run.chronicle.queue.channel.sumservice;
+package run.chronicle.queue.channel.squareService;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.channel.PipeHandler;
-import net.openhft.chronicle.queue.channel.PublishHandler;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
+import run.chronicle.queue.channel.sumservice.SumClient;
+import run.chronicle.queue.channel.sumservice.SumService;
+import run.chronicle.queue.channel.sumservice.SumServiceMain;
 
-public class SumClient {
+public class SquareClient {
 
-    final static String serviceURL = "tcp://localhost:" + SumServiceMain.PORT;
+    final static String serviceURL = "tcp://localhost:" + SquareServiceMain.PORT;
 
     public static void main(String[] args) {
 
-        final String serviceInputQ = "target/sumInputQ";
-        final String serviceOutputQ = "target/sumOutputQ";
+        final String serviceInputQ = "target/squareInputQ";
+        final String serviceOutputQ = "target/squareOutputQ";
 
         try (ChronicleContext context = ChronicleContext.newContext(serviceURL)) {
 
@@ -21,20 +23,20 @@ public class SumClient {
              * Set up channel and PipeHandler to connect to service input and output queues.
              */
             final ChronicleChannel channel = context.newChannelSupplier(
-                                                        new PipeHandler()
-                                                            .publish(serviceInputQ)
-                                                            .subscribe(serviceOutputQ)
-                                                    ).get();
+                new PipeHandler()
+                    .publish(serviceInputQ)
+                    .subscribe(serviceOutputQ)
+            ).get();
 
 
             /*
              * Send request through the channel to the service
              */
-            double a1 = 2.0, a2 = 4.0;
-            Jvm.startup().on(SumClient.class,">>>>> Sending sum(" + a1 + "," + a2 + ")");
+            double a1 = 2;
+            Jvm.startup().on(SumClient.class, ">>>>> Sending square(" + a1 + ")");
 
-            final SumService adder = channel.methodWriter(SumService.class);
-            adder.sum(a1,a2);
+            final SquareService squarer = channel.methodWriter(SquareService.class);
+            squarer.toSquare(a1);
 
             /*
              * Collect result and print
@@ -43,6 +45,6 @@ public class SumClient {
             double result = channel.readOne(eventType, double.class);
             Jvm.startup().on(SumClient.class, ">>>>> " + eventType + ": " + result);
         }
-    }
 
+    }
 }

@@ -19,7 +19,7 @@ public class UCClient {
             /*
              * Set up channel and PipeHandler to connect to service input and output queues.
              */
-            final ChannelHandler handler = new PipeHandler().publish(serviceOutput).subscribe(serviceInput);
+            final ChannelHandler handler = new PipeHandler().publish(serviceInput).subscribe(serviceOutput);
             final ChronicleChannel channel = context.newChannelSupplier(handler).get();
 
             Jvm.startup().on(UCClient.class, ">>>>> Sending " + srcMsg);

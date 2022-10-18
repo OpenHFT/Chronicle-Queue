@@ -9,16 +9,16 @@ public class SumServiceImpl extends SelfDescribingMarshallable
     implements Closeable,  SumService {
 
     transient boolean closed;
-    private SumServiceOut output;
+    private SumServiceOut outputQ;
 
     public SumServiceImpl( SumServiceOut out ) {
-        this.output = out;
+        this.outputQ = out;
     }
 
     @Override
     public void sum(double x, double y) {
         Jvm.startup().on(SumServiceImpl.class, "Processing sum("+x+","+y+")");
-        output.result(x+y);
+        outputQ.sumResult(x+y);
     }
 
     public void close() {

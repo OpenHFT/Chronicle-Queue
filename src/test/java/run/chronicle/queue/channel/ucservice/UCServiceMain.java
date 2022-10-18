@@ -6,6 +6,8 @@ import net.openhft.chronicle.queue.channel.PipeHandler;
 import net.openhft.chronicle.wire.channel.ChannelHandler;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
+import net.openhft.chronicle.wire.channel.ChronicleGatewayMain;
+import run.chronicle.queue.channel.util.ServiceRunner;
 
 import java.io.IOException;
 
@@ -19,28 +21,14 @@ public class UCServiceMain {
 
         IOTools.deleteDirWithFiles(serviceInput, serviceOutput);
 
-        try ( ChronicleContext context = ChronicleContext.newContext("tcp://:5556") ) {
+        /*
+         * Create an instance of the service and start it, so it is set up for the Gateway.
+         */
+        Runnable serviceRunnable = ServiceRunner.serviceRunnable(serviceInput, serviceOutput, UCServiceOut.class, UCServiceImpl::new);
+        new Thread(serviceRunnable).start();
 
-            /*
-             * Set up a channel with a PipeHandler that publishes from the channel to the service input queue
-             * and subscribes to the service output queue and sends back through the channel
-             */
-            final ChannelHandler handler = new PipeHandler()
-                                                .publish(serviceInput)
-                                                .subscribe(serviceOutput);
-            ChronicleChannel channel = context.newChannelSupplier(handler).get();
+        System.setProperty("port", "" + PORT);
+        ChronicleGatewayMain.main(args);
 
-            /*
-             * Run the service with input and output queues as set up above.
-             */
-            Runnable handlerRunnable = channel.eventHandlerAsRunnable(
-                new UCServiceImpl(
-                    channel.methodWriter(UCServiceOut.class)
-                )
-            );
-            new Thread(handlerRunnable).start();
-
-            Jvm.park();
-        }
     }
 }
