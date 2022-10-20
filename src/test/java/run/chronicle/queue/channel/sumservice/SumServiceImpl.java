@@ -16,9 +16,9 @@ public class SumServiceImpl extends SelfDescribingMarshallable
     }
 
     @Override
-    public void sum(double x, double y) {
-        Jvm.startup().on(SumServiceImpl.class, "Processing sum("+x+","+y+")");
-        outputQ.sumResult(x+y);
+    public void pair(double x, double y) {
+        Jvm.startup().on(SumServiceImpl.class, "Processing pair("+x+","+y+")");
+        outputQ.value(x+y);
     }
 
     public void close() {

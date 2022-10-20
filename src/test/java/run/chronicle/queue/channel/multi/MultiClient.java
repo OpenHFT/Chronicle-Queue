@@ -1,18 +1,19 @@
-package run.chronicle.queue.channel.squareService;
+package run.chronicle.queue.channel.multi;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.channel.PipeHandler;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
-import run.chronicle.queue.channel.sumservice.SumClient;
+import run.chronicle.queue.channel.sumservice.SumService;
 
-public class SquareClient {
+public class MultiClient {
 
-    final static String serviceURL = "tcp://localhost:" + SquareServiceMain.PORT;
+
+    final static String serviceURL = "tcp://localhost:" + MultiServiceMain.PORT;
 
     public static void main(String[] args) {
 
-        final String serviceInputQ = "target/squareInputQ";
+        final String serviceInputQ = "target/sumInputQ";
         final String serviceOutputQ = "target/squareOutputQ";
 
         try (ChronicleContext context = ChronicleContext.newContext(serviceURL)) {
@@ -30,18 +31,18 @@ public class SquareClient {
             /*
              * Send request through the channel to the service
              */
-            double a1 = 2;
-            Jvm.startup().on(SumClient.class, ">>>>> Sending square(" + a1 + ")");
+            double a1 = 2, a2 = 3;
+            Jvm.startup().on(MultiClient.class, ">>>>> Sending pair(" + a1 + "," + a2 + ")");
 
-            final SquareService squarer = channel.methodWriter(SquareService.class);
-            squarer.value(a1);
+            final SumService sumService = channel.methodWriter(SumService.class);
+            sumService.pair(a1, a2);
 
             /*
              * Collect result and print
              */
             StringBuilder eventType = new StringBuilder();
             double result = channel.readOne(eventType, double.class);
-            Jvm.startup().on(SumClient.class, ">>>>> " + eventType + ": " + result);
+            Jvm.startup().on(MultiClient.class, ">>>>> " + eventType + ": " + result);
         }
 
     }

@@ -20,7 +20,7 @@ public class ServiceRunner<T> {
      *     of a MethodWriter for output
      * By creating a Runnable we allow the service to be run "in thread" or in a separate thread context.
      */
-    public static <T> Runnable serviceRunnable(String inputQueue, String outputQueue, Class<T> outClass, Function<T, Object> serviceProvider) {
+    public static <S, T> Runnable serviceRunnable(String inputQueue, String outputQueue, Class<T> outClass, Function<T, S> serviceProvider) {
         return  () -> {
             /*
              * Set up the input and output queues.
@@ -38,7 +38,7 @@ public class ServiceRunner<T> {
                  * Use the provided method (normally constructor_) to create an instance of the service, injecting the
                  * MethodWriter created above for output.
                  */
-                Object service = serviceProvider.apply(outputWriter);
+                S service = serviceProvider.apply(outputWriter);
 
                 /*
                  * Create a method reader to read events from the input queue, then dispatch these to the appropriate

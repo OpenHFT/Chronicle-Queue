@@ -2,7 +2,6 @@ package run.chronicle.queue.channel.sumservice;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.channel.PipeHandler;
-import net.openhft.chronicle.queue.channel.PublishHandler;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
 
@@ -31,10 +30,10 @@ public class SumClient {
              * Send request through the channel to the service
              */
             double a1 = 2.0, a2 = 4.0;
-            Jvm.startup().on(SumClient.class,">>>>> Sending sum(" + a1 + "," + a2 + ")");
+            Jvm.startup().on(SumClient.class,">>>>> Sending pair(" + a1 + "," + a2 + ")");
 
             final SumService adder = channel.methodWriter(SumService.class);
-            adder.sum(a1,a2);
+            adder.pair(a1,a2);
 
             /*
              * Collect result and print

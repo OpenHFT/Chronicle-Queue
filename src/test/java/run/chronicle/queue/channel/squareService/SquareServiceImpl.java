@@ -16,9 +16,9 @@ public class SquareServiceImpl extends SelfDescribingMarshallable
     }
 
     @Override
-    public void toSquare(double x) {
-        Jvm.startup().on(SquareServiceImpl.class, "Processing square("+x+")");
-        output.squareResult(x*x);
+    public void value(double x) {
+        Jvm.startup().on(SquareServiceImpl.class, "Processing value("+x+")");
+        output.value(x*x);
     }
 
     public void close() {

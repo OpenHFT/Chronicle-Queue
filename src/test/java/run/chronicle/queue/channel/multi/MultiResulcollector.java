@@ -1,18 +1,18 @@
-package run.chronicle.queue.channel.squareService;
+package run.chronicle.queue.channel.multi;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.channel.PipeHandler;
+import net.openhft.chronicle.queue.channel.SubscribeHandler;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
-import run.chronicle.queue.channel.sumservice.SumClient;
+import run.chronicle.queue.channel.sumservice.SumService;
 
-public class SquareClient {
+public class MultiResulcollector {
 
-    final static String serviceURL = "tcp://localhost:" + SquareServiceMain.PORT;
+    final static String serviceURL = "tcp://localhost:" + MultiServiceMain.PORT;
 
-    public static void main(String[] args) {
+    public static void main(String... args) {
 
-        final String serviceInputQ = "target/squareInputQ";
         final String serviceOutputQ = "target/squareOutputQ";
 
         try (ChronicleContext context = ChronicleContext.newContext(serviceURL)) {
@@ -21,28 +21,18 @@ public class SquareClient {
              * Set up channel and PipeHandler to connect to service input and output queues.
              */
             final ChronicleChannel channel = context.newChannelSupplier(
-                new PipeHandler()
-                    .publish(serviceInputQ)
+                new SubscribeHandler()
                     .subscribe(serviceOutputQ)
             ).get();
-
-
-            /*
-             * Send request through the channel to the service
-             */
-            double a1 = 2;
-            Jvm.startup().on(SumClient.class, ">>>>> Sending square(" + a1 + ")");
-
-            final SquareService squarer = channel.methodWriter(SquareService.class);
-            squarer.value(a1);
 
             /*
              * Collect result and print
              */
             StringBuilder eventType = new StringBuilder();
             double result = channel.readOne(eventType, double.class);
-            Jvm.startup().on(SumClient.class, ">>>>> " + eventType + ": " + result);
-        }
+            Jvm.startup().on(MultiResulcollector.class, ">>>>> " + eventType + ": " + result);
 
+        }
     }
+
 }
