@@ -69,7 +69,10 @@ public class SCQMeta implements Metadata {
 
     @Override
     public <T extends Metadata> void overrideFrom(T metadata) {
-        if (!(metadata instanceof SCQMeta))
+        if (metadata == NoMeta.INSTANCE)
+            // Table was created by some external process, need to repopulate meta
+            return;
+        else if (!(metadata instanceof SCQMeta))
             throw new IllegalStateException("Expected SCQMeta, got " + metadata.getClass());
 
         SCQMeta other = (SCQMeta) metadata;

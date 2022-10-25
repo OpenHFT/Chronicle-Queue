@@ -45,6 +45,7 @@ import static org.junit.Assert.assertTrue;
 public class TableStoreTest extends QueueTestCommon {
     @Test
     public void acquireValueFor() throws IOException {
+        expectException("Overwriting absent queue metadata");
 
         final File file = tempDir("table");
         file.mkdir();
@@ -100,6 +101,8 @@ public class TableStoreTest extends QueueTestCommon {
 
     @Test
     public void preCreateQueueMeta() throws IOException {
+        expectException("Overwriting absent queue metadata");
+
         File basePath = Files.createTempDirectory("queueMeta").toFile();
         basePath.deleteOnExit();
 

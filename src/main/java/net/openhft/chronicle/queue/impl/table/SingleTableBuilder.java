@@ -139,7 +139,13 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                         if (wire.writeFirstHeader()) {
                             return writeTableStore(finalBytes, wire);
                         } else {
-                            return readTableStore(wire);
+                            TableStore<T> tableStore = readTableStore(wire);
+                            if (tableStore.metadata() == Metadata.NoMeta.INSTANCE) {
+                                Jvm.warn().on(SingleTableBuilder.class, "Overwriting absent queue metadata in " + file);
+                                return writeTableStore(finalBytes, wire);
+                            } else {
+                                return tableStore;
+                            }
                         }
                     } catch (IOException ex) {
                         throw Jvm.rethrow(ex);
