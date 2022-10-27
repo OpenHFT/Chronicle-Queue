@@ -38,16 +38,14 @@ All available roll-cycles can be shown under <<Available roll-cycles>>.
 
 NOTE: The default roll-cycle is `RollCycle.HOURLY`.
 
-[IMPORTANT]
-.Overriding the roll cycle
-====
-Once a queue’s roll-cycle has been set, it cannot be changed at a later time.More formally, after the first append has been made to a Chronicle Queue, any further instances of `SingleChronicleQueue` configured to use the same path must be configured to use the same roll-cycle.Trying to set this option twice will throw an exception.
+=== Overriding the roll cycle
+Once a queue’s roll-cycle has been set, it cannot be changed at a later time. More formally, after the first append has been made to a Chronicle Queue, any further instances of `SingleChronicleQueue` configured to use the same path must be configured to use the same roll-cycle. Trying to set this option twice will throw an exception.
 
 In the case where another Chronicle Queue instance is created before any appends have been made, and there is a subsequent append operation with a different roll-cycle, then the roll-cycle will be updated to match the persisted roll-cycle. In this case, a warning log message will be printed in order to notify the library user of the situation:
+
 ----
 [main] WARN SingleChronicleQueue - Queue created with roll-cycle MINUTELY, but files on disk use roll-cycle HOURLY. Overriding this queue to use HOURLY
 ----
-====
 
 [#epoch]
 == Controlling the Exact Roll Time
@@ -73,7 +71,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
     .build();
 ----
 
-IMPORTANT: We do not recommend that you change the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
+IMPORTANT: We do not recommend changing the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
 
 == Available Roll-Cycles
 As described earlier, the roll-cycle determines how often a new queue is created. However, each roll-cycle also leverages queues with a varying message capacity. This results in different roll-cycles having a maximum capacity in terms of throughput.
@@ -112,6 +110,14 @@ The available roll-cycles and their capacities are summarized in the table below
 |===
 
 IMPORTANT: Roll-cycles named _TEST*_ should only be used in test environments.
+
+To understand how the limitations above were derived we can look at an example. Chronicle Queue uses a xref:queue-operations:indexing.adoc#_index[64 bit index] composed of the cycle number, and the sequence number.
+For a daily roll-cycle Chronicle Queue the index is split in half reserving:
+
+* 32-bits for the message sequence number - allowing *4 billion messages per day*
+* 31-bits for the cycle number (reserving the high bit for the sign ) - allowing us to store messages up to the year *5,881,421*.
+
+If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle, though reducing the number of cycles. For example, you may have up to 1 trillion messages per day and you need 23-bit cycles to allow for up to the year 24,936. If we had rolled every second with 32-bit 4 bn messages per second, we would be running out in about a decade. With hourly and daily-rolling it's pretty limitless. Also, by changing the `epoch`, you can extend the dates further, shifting the limit between the first and last cycle to 31-bits or 23-bits.
 
 == Timezone Rollover ★
 Chronicle Queue bases its roll times on the UTC time zone. However, Chronicle Queue Enterprise supports time zone rollover. This allows specifying a time and periodicity of queue rollovers which takes account of the user's local timezone, rather than UTC.
