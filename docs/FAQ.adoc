@@ -533,22 +533,17 @@ The following table shows the maximum number of messages per roll cycle.
 
 === Does Chronicle Queue support replication?
 
-Replication features are available in Chronicle Queue Enterprise.  Replication supports:
-
-- replication of a single master to multiple slave nodes.
-- writers can wait for replication to be acknowledged.
-- readers can wait to only read acknowledged messages.
-- throttling and traffic shaping.
+See <<replication.adoc#,Replication>>
 
 === Does Chronicle Queue support UDP replication?
 
-No. Chronicle Queue is designed to be both reliable and deterministic.  UDP is not designed for this.  A hybrid UDP/TCP system is possible in the future.
+See <<replication.adoc#,Replication>>
 
 === How does the byte order work with replication?
 
 The byte order does not change with replication.  This means that it will work best in byte-endian homogeneous systems such as Windows/Linux x86/x64/ARM. Chronicle may support changing the byte order in future.
 
-== Exeptions and Faults
+== Exceptions and Faults
 
 === I get an exception writing an excerpt. What does this mean?
 
@@ -647,7 +642,7 @@ Where `XML` is needed downstream, we suggest writing in binary format, and have 
 The byte[] methods on StringUtils are designed to work only on those Java 9+ VMs that have the compact strings feature enabled, but not on ones that have non-compact strings.
 This is not specific to OpenJ9, and HotSpot should fail with Java9 (but it doesn't because compact strings are enabled by default).
 Conversely, OpenJ9 should be able to run Chronicle Queue with compact strings.
-We can confirm ( with limited testing ) that Chronicle Queue is able to work on OpenJ9 VM with the -XX:+CompactStrings option enabled.
+We can confirm (with limited testing) that Chronicle Queue is able to work on OpenJ9 VM with the -XX:+CompactStrings option enabled.
 
 In summary, Chronicle Queue can be considered compatible with OpenJ9, provided the -XX:+CompactStrings option is used.
 OpenJ9 version 0.12.1 and earlier requires the file descriptor limit to be manually adjusted to a higher value - for example, using the command `ulimit -Sn 500`.

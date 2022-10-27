@@ -292,7 +292,7 @@ These are:
 
 - Encryption of message queues and messages.
 For more information see <<docs/encryption.adoc#, Encryption>>.
-- TCP/IP Replication between hosts to ensure real-time backup of all your queue data.
+- TCP/IP (and optionally UDP) Replication between hosts to ensure real-time backup of all your queue data.
 For more information see <<docs/replication.adoc#, Replication>>, the queue replication protocol is covered in <<docs/queue-replication-message-protocol-overview.adoc#, TCP/IP Replication Protocol>>.
 - Timezone support for daily queue rollover scheduling.
 For more information see <<docs/timezone_rollover.adoc#, Timezone support>>.
@@ -309,15 +309,15 @@ For more information on Chronicle Queue Enterprise Edition, please contact mailt
 
 A Chronicle Queue is defined by `SingleChronicleQueue.class` that is designed to support:
 
-*-* rolling files on a daily, weekly or hourly basis,
+* rolling files on a daily, weekly or hourly basis,
 
-*-* concurrent writers on the same machine,
+* concurrent writers on the same machine,
 
-*-* concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise),
+* concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise),
 
-*-* zero copy serialization and deserialization,
+* zero copy serialization and deserialization,
 
-*-* millions of writes/reads per second on commodity hardware.
+* millions of writes/reads per second on commodity hardware.
 
 Approximately 5 million messages/second for 96-byte messages on a i7-4790 processor.
 A queue directory structure is as follows:
@@ -360,12 +360,12 @@ You add data appending the current Chronicle Queue. It can perform sequential wr
 A tailer is an excerpt reader optimized for sequential reads. It can perform sequential and random reads, both forwards and backwards.
 Tailers read the next available message each time they are called. The followings are guaranteed in Chronicle Queue:
 
-*-* for each *appender*, messages are written in the order the appender wrote them.
+* for each *appender*, messages are written in the order the appender wrote them.
 Messages by different appenders are interleaved,
 
-*-* for each *tailer*, it will see every message for a topic in the same order as every other tailer,
+* for each *tailer*, it will see every message for a topic in the same order as every other tailer,
 
-*-* when replicated, every replica has a copy of every message.
+* when replicated, every replica has a copy of every message.
 
 Chronicle Queue is broker-less by default. You can use link:https://chronicle.software/products/datagrid/[*Chronicle Datagrid*] to act as a broker for remote access.
 By using *Chronicle Datagrid*, a Java or C# client can publish to a queue to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
@@ -401,15 +401,15 @@ Messages can be any serializable data.
 
 Chronicle Queue supports:
 
-*-* `Serializable` objects, though this is to be avoided as it is not efficient
+* `Serializable` objects, though this is to be avoided as it is not efficient
 
-*-* `Externalizable` objects is preferred if you wish to use standard Java APIs.
+* `Externalizable` objects is preferred if you wish to use standard Java APIs.
 
-*-* `byte[]` and `String`
+* `byte[]` and `String`
 
-*-* `Marshallable`; a self describing message which can be written as YAML, Binary YAML, or JSON.
+* `Marshallable`; a self describing message which can be written as YAML, Binary YAML, or JSON.
 
-*-* `BytesMarshallable` which is low-level binary, or text encoding.
+* `BytesMarshallable` which is low-level binary, or text encoding.
 
 === Quick start
 This section provides a quick reference for using Chronicle Queue to briefly show how to create, write/read into/from a queue.
@@ -497,24 +497,6 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").buil
 }
 ----
 
-//TODO: for now this section has been commented out as needs clarification
-//==== Replaying from the output, not the input
-//
-//It is common practice to replay a state machine from its inputs.
-//To do this, there are two assumptions that you have to make; these are difficult to implement;
-//
-//*-* you have either just one input, or you can always determine the order the inputs were consumed,
-//
-//*-* you have not changed the software (or all the software is stored in the queue).
-//
-//You can see from this that if you want to be able to upgrade your system, then you'll want to replay from the output.
-//
-//Replaying from the output means that;
-//
-//*-* you have a record of the order of the inputs that you processed.
-//
-//*-* you have a record of all the decisions your new system is committed to; even if the new code would have made different decisions.
-
 === Detailed Guide
 You can configure a Chronicle Queue using its configuration parameters or system properties. In addition, there are different ways of writing/reading into/from a queue such as the use of proxies and using `MethodReader` and `MethodWriter`.
 
@@ -598,11 +580,11 @@ SingleChronicleQueueBuilder.deltaBinary(queuePath)
 Although it's possible to explicitly provide WireType when creating a builder, it is discouraged as not all wire types are supported by Chronicle Queue yet.
 In particular, the following wire types are not supported:
 
-*-* TEXT (and essentially all based on text, including JSON and CSV)
+* TEXT (and essentially all based on text, including JSON and CSV)
 
-*-* RAW
+* RAW
 
-*-* READ_ANY
+* READ_ANY
 
 * *blockSize*
 
@@ -626,9 +608,9 @@ A higher number means higher sequential write performance but slower random acce
 The sequential read performance is not affected by this property.
 For example, the following default index spacing can be returned:
 
-*-* 16 (MINUTELY)
+* 16 (MINUTELY)
 
-*-* 64 (DAILY)
+* 64 (DAILY)
 
 You can change this parameter using the method `SingleChronicleQueueBuilder.indexSpacing(int indexSpacing)`.
 
@@ -645,11 +627,11 @@ NOTE: See Section link:#excerpt-indexing-in-chronicle-queue[Excerpt indexing in 
 
 These parameters define BufferMode for reads or writes that have the following options:
 
-*-* `None` - The default (and the only one available for open source users), no buffering;
+* `None` - The default (and the only one available for open source users), no buffering;
 
-*-* `Copy` - used in conjunction with encryption;
+* `Copy` - used in conjunction with encryption;
 
-*-* `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
+* `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
 
 * *bufferCapacity*
 
@@ -1463,10 +1445,10 @@ Our largest users have over 100 TB of data stored in queues.
 Appenders and tailers are cheap as they don't even require a TCP connection; they are just a few Java objects.
 The only thing each tailer retains is an index which is composed from:
 
-*-* a cycle number.
+* a cycle number.
 For example, days since epoch, and
 
-*-* a sequence number within that cycle.
+* a sequence number within that cycle.
 
 In the case of a `DAILY` cycle, the sequence number is 32 bits, and the `index = ((long) cycle << 32) | sequenceNumber` providing up to 4 billion entries per day.
 if more messages per day are anticipated, the `XLARGE_DAILY` cycle, for example, provides up 4 trillion entries per day using a 48-bit sequence number.
@@ -1627,7 +1609,6 @@ Percentile   run1         run2         run3      % Variation
 90:           179.52       180.29        97.50        36.14
 99:           187.33       186.69       186.82         0.05
 99.7:         213.57       198.72       217.28         5.86
-worst:      82345.98     73039.87     55820.29        17.06
 ------------------------------------------------------------------------------------------------------------------
 -------------------------------- SUMMARY (Concurrent2) -----------------------------------------------------------
 Percentile   run1         run2         run3      % Variation
@@ -1635,7 +1616,6 @@ Percentile   run1         run2         run3      % Variation
 90:           183.49       183.36       185.92         0.92
 99:           192.19       190.02       215.49         8.20
 99.7:         240.70       228.16       258.88         8.24
-worst:      82477.06     45891.58     28172.29        29.54
 ------------------------------------------------------------------------------------------------------------------
 ----
 
@@ -1648,7 +1628,6 @@ Percentile   run1         run2         run3      % Variation
 90:           170.18       169.79       170.30         0.20
 99:           176.83       176.58       177.09         0.19
 99.7:         183.36       185.92       183.49         0.88
-worst:      68911.10     28368.90     28860.42         1.14
 ------------------------------------------------------------------------------------------------------------------
 -------------------------------- SUMMARY (Concurrent2) -----------------------------------------------------------
 Percentile   run1         run2         run3      % Variation
@@ -1656,7 +1635,6 @@ Percentile   run1         run2         run3      % Variation
 90:            89.89        89.44        89.63         0.14
 99:           169.66       169.79       170.05         0.10
 99.7:         175.42       176.32       176.45         0.05
-worst:      69042.18     28368.90     28876.80         1.18
 ------------------------------------------------------------------------------------------------------------------
 ----
 
@@ -1670,7 +1648,6 @@ Percentile   run1         run2         run3      % Variation
 90:           717.57       722.69       721.15         0.14
 99:           752.90       748.29       748.29         0.00
 99.7:        1872.38      1743.36      1780.22         1.39
-worst:      39731.20     43171.84     88834.05        41.35
 ------------------------------------------------------------------------------------------------------------------
 -------------------------------- SUMMARY (Concurrent2) -----------------------------------------------------------
 Percentile   run1         run2         run3      % Variation
@@ -1678,7 +1655,6 @@ Percentile   run1         run2         run3      % Variation
 90:           691.46       701.18       697.60         0.34
 99:           732.42       733.95       729.34         0.42
 99.7:        1377.79      1279.49      1302.02         1.16
-worst:      35504.13     42778.62     87130.11        40.87
 ------------------------------------------------------------------------------------------------------------------
 ----
 
@@ -1691,7 +1667,6 @@ Percentile   run1         run2         run3      % Variation
 90:           357.25       360.32       359.04         0.24
 99:           688.38       691.97       691.46         0.05
 99.7:        1376.77      1480.19      1383.94         4.43
-worst:      71532.54      2391.04      2491.39         2.72
 ------------------------------------------------------------------------------------------------------------------
 -------------------------------- SUMMARY (Concurrent2) -----------------------------------------------------------
 Percentile   run1         run2         run3      % Variation
@@ -1699,7 +1674,6 @@ Percentile   run1         run2         run3      % Variation
 90:           360.06       362.11       363.14         0.19
 99:           694.02       698.62       699.14         0.05
 99.7:        1400.32      1510.91      1435.14         3.40
-worst:      71925.76     80314.37     62537.73        15.93
 ------------------------------------------------------------------------------------------------------------------
 ----
 
@@ -1788,32 +1762,15 @@ Kafka uses an intermediate broker to use the operating system's file system and 
 For comparison see http://kafka.apache.org/documentation.html[Kafka Documentation]
 
 == More Information and Support
-==== Queue replication
 
-Chronicle Queue Enterprise supports TCP and UDP replication.
-Replication has three modes of operation;
+=== Links
 
-*-* replicate as soon as possible; < 1 millisecond in as many as 99.9% of cases,
-
-*-* a tailer will only see messages which have been replicated,
-
-*-* an appender doesn't return until a replica has acknowledged it has been received.
-
-Replication between hosts ensures real-time backup of all your queue data.
-For more information see <<docs/replication.adoc#, Queue Replication>> and <<docs/queue-replication-message-protocol-overview.adoc#, TCP/IP Replication Protocol>>.
-
-.Queue Replication
-image::./docs/images/chronicle-queue.png[750,600]
-
-==== Further information
-
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some techniques utilised by Chronicle Queue
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/encryption.adoc[Encryption] - describes how to encrypt the contents of a Queue
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/FAQ.adoc[FAQ] - questions asked by customers
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
-//* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/replication.adoc[Replication] - an overview of the replication mechanism
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/timezone_rollover.adoc[Timezone rollover] - describes how to configure file-rolling at a specific time in a given time-zone
-* https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some techniques utilised by Chronicle Queue
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/encryption.adoc[Encryption] - describes how to encrypt the contents of a Queue
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/FAQ.adoc[FAQ] - questions asked by customers
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/timezone_rollover.adoc[Timezone rollover] - describes how to configure file-rolling at a specific time in a given time-zone
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
 
 ==== Online support
 
