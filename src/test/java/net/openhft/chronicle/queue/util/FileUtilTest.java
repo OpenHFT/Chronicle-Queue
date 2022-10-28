@@ -51,7 +51,7 @@ import static org.junit.Assume.assumeTrue;
 
 public class FileUtilTest extends QueueTestCommon {
 
-    @Test
+    @Test(timeout = 30_000)
     public void assertLsofPresent() throws IOException {
         assumeFalse(OS.isWindows());
         final Process process = new ProcessBuilder("which", "lsof").start();
@@ -62,13 +62,13 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void stateNonExisting() {
         assumeFalse(OS.isWindows());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void state() throws IOException {
         assumeFalse(OS.isWindows());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
@@ -96,7 +96,7 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
     public void stateWindows() {
         assumeTrue(OS.isWindows());
 
@@ -106,19 +106,19 @@ public class FileUtilTest extends QueueTestCommon {
         FileUtil.state(new File("foo"));
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void hasQueueSuffixFalse() {
         final File file = new File("foo");
         assertFalse(FileUtil.hasQueueSuffix(file));
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
         assertTrue(FileUtil.hasQueueSuffix(file));
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void removableQueueFileCandidates() {
         assumeFalse(OS.isWindows());
         final int rolls = 4;
@@ -180,7 +180,7 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
     public void removableQueueFileCandidatesWindows() {
         assumeTrue(OS.isWindows());
         expectException("closable tracing disabled");
