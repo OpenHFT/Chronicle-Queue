@@ -77,13 +77,19 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             this.indexing.writePosition = writePosition;
             this.sequence = new RollCycleEncodeSequence(writePosition, indexing.indexCount(), indexing.indexSpacing());
             this.indexing.sequence = sequence;
-            final String fieldName = wire.readEvent(String.class);
+
             int version = 0;
-            if (fieldName != null)
-                if (MetaDataField.dataFormat.name().equals(fieldName))
-                    version = wire.getValueIn().int32();
-                else
-                    Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
+            if (wire.isBinary() && ((BinaryWire)wire).fieldLess()) {
+                if (wire.bytes().readRemaining() > 0)
+                    version = wire.read(MetaDataField.dataFormat).int32();
+            } else {
+                final String fieldName = wire.readEvent(String.class);
+                if (fieldName != null)
+                    if (MetaDataField.dataFormat.name().equals(fieldName))
+                        version = wire.getValueIn().int32();
+                    else
+                        Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
+            }
             this.dataVersion = version > 1 ? 0 : version;
 
             singleThreadedCheckDisabled(true);
