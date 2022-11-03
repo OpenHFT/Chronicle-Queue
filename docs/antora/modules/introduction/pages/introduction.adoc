@@ -35,7 +35,22 @@ If this is your first time getting to know Chronicle Queue, you may want to fami
 In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You find our demonstrations [here].
 
 == Chronicle Queue Enterprise
-Chronicle Queue Enterprise is a commercially supported version of Chronicle Queue OSS. This documentation covers the open source functionality but is also extended by a few chapters describing enterprise specific features. These sections are clearly marked with a star-symbol (★) and include:
+link:https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise[Chronicle Queue Enterprise] is a commercially supported version of Chronicle Queue OSS.
+The following features are implemented by Chronicle Queue Enterprise:
+
+* Low latency, brokerless, distributed unbounded persisted queue.
+* Ultra-low garbage generation.
+* Total ordering of events.
+* Multiple writers, multiple readers.
+* Each machine is a single node with one copy of the data in shared memory, regardless of the number of processes accessing the data.
+* Data is recorded to disk asynchronously, even if every process dies.
+* Configuration using a YAML configuration file or programmatically.
+* Replication from a single producer at a time, to multiple consumers, supporting failover and failback.
+* Consumers are automatically synchronized with the most recent cluster member when they are restarted.
+* The producer or reader of a queue can wait for a message to have acknowledged replication before continuing.
+* Multi-master queues which are ordered for events in a node, but not between nodes.
+
+This documentation covers the open source functionality but is also extended by a few chapters describing enterprise specific features. These sections are clearly marked with a star-symbol (★) and include:
 
 * Encryption of message queues and messages.
 
