@@ -32,7 +32,10 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -50,17 +53,6 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 public class FileUtilTest extends QueueTestCommon {
-
-    @Test(timeout = 30_000)
-    public void assertLsofPresent() throws IOException {
-        assumeFalse(OS.isWindows());
-        final Process process = new ProcessBuilder("which", "lsof").start();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            assertTrue("make sure \"lsof\" is installed on your target machine", reader.lines().anyMatch(l -> l.contains("lsof")));
-        } finally {
-            process.destroyForcibly();
-        }
-    }
 
     @Test(timeout = 30_000)
     public void stateNonExisting() {
