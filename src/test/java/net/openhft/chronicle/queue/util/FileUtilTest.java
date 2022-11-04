@@ -30,21 +30,21 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
+import static net.openhft.chronicle.queue.internal.util.InternalFileUtil.getAllOpenFilesIsSupportedOnOS;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 public class FileUtilTest extends ChronicleQueueTestBase {
 
     @Test
     public void stateNonExisting() {
-        assumeFalse(OS.isWindows());
+        assumeTrue(getAllOpenFilesIsSupportedOnOS());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
 
     @Test
     public void state() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
         dir.toFile().mkdir();
         try {
@@ -95,7 +95,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
     @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
     @Test
     public void removableQueueFileCandidates() {
-        assumeFalse(OS.isWindows());
+        assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;
         final int intermediateRolls = rolls / 2;
         final Comparator<File> earliestFirst = comparing(File::getName);
