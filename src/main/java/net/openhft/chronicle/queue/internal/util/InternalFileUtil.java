@@ -19,7 +19,6 @@
 package net.openhft.chronicle.queue.internal.util;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.util.FileState;
 import org.jetbrains.annotations.NotNull;
@@ -191,9 +190,18 @@ public final class InternalFileUtil {
     }
 
     private static void assertOsSupported() {
-        if (OS.isWindows()) {
-            throw new UnsupportedOperationException("This operation is not supported under Windows.");
+        if (!getAllOpenFilesIsSupportedOnOS()) {
+            throw new UnsupportedOperationException("This operation is not supported on your operating system");
         }
+    }
+
+    /**
+     * Will {@link #getAllOpenFiles()} work on the current OS?
+     *
+     * @return true if getting all open files is supported, false otherwise
+     */
+    public static boolean getAllOpenFilesIsSupportedOnOS() {
+        return Files.exists(Paths.get("/proc/self/fd"));
     }
 
     /**
