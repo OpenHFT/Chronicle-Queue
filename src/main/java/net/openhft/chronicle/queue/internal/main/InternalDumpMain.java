@@ -66,8 +66,10 @@ public class InternalDumpMain {
             }
 
             Arrays.sort(files);
-            for (File file : files)
+            for (File file : files) {
+                out.println("## " + file);
                 dumpFile(file, out, upperLimit);
+            }
 
         } else if (path.getName().endsWith(SingleChronicleQueue.SUFFIX) || path.getName().endsWith(SingleTableStore.SUFFIX)) {
             dumpFile(path, out, upperLimit);
