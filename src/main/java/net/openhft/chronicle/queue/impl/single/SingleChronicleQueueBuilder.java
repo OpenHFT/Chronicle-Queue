@@ -333,7 +333,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         SingleChronicleQueue chronicleQueue;
 
-        // It's important to check enterprise features after preBuild()
+        // It is important to check enterprise features after preBuild()
         // Enterprise-only config options can be loaded from the metadata
         if (checkEnterpriseFeaturesRequested())
             chronicleQueue = buildEnterprise();
