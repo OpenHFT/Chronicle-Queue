@@ -322,7 +322,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     @NotNull
     public SingleChronicleQueue build() {
-        boolean needEnterprise = checkEnterpriseFeaturesRequested();
         preBuild();
         if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null &&
                 (rollCycle == null || rollCycle.lengthInMillis() > 60_000)) {
@@ -333,7 +332,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         }
 
         SingleChronicleQueue chronicleQueue;
-        if (needEnterprise)
+
+        // It is important to check enterprise features after preBuild()
+        // Enterprise-only config options can be loaded from the metadata
+        if (checkEnterpriseFeaturesRequested())
             chronicleQueue = buildEnterprise();
         else
             chronicleQueue = new SingleChronicleQueue(this);
