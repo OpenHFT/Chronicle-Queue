@@ -94,16 +94,13 @@ class StoreAppender extends AbstractCloseable
             cycle = queue.cycle();
             normaliseEOFs();
 
-            int lastCycle = queue.lastCycle();
-            if (lastCycle != cycle && lastCycle >= 0) {
-                final WriteLock writeLock = queue.writeLock();
-                writeLock.lock();
-                try {
-                    // ensure that the EOF is written on the current cycle later on
-                    setCycle2(cycle, false);
-                } finally {
-                    writeLock.unlock();
-                }
+            final WriteLock writeLock = queue.writeLock();
+            writeLock.lock();
+            try {
+                // ensure that the EOF is written on the current cycle later on
+                setCycle2(cycle, false);
+            } finally {
+                writeLock.unlock();
             }
         } catch (RuntimeException ex) {
             // Perhaps initialization code needs to be moved away from constructor

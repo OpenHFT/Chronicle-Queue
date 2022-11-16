@@ -288,8 +288,11 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
             Assert.assertFalse(hasEOF(q, firstCycle));
 
+            // existing appender would not EOF an active cycle
+            appender.close();
+
             // we have to manually fix. This is done by CQE at the end of backfilling
-            appender.normaliseEOFs();
+            q.acquireAppender().normaliseEOFs();
 
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
