@@ -442,7 +442,6 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void normaliseEOFs0(int cycle) {
-        int last = queue.lastCycle();
         int first = queue.firstCycle();
 
         if (first == Integer.MAX_VALUE)
