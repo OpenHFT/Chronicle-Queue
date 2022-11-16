@@ -91,16 +91,16 @@ class StoreAppender extends AbstractCloseable
 
         try {
             queue.cleanupStoreFilesWithNoData();
+            cycle = queue.cycle();
             normaliseEOFs();
 
-            int cycle = queue.cycle();
             int lastCycle = queue.lastCycle();
             if (lastCycle != cycle && lastCycle >= 0) {
                 final WriteLock writeLock = queue.writeLock();
                 writeLock.lock();
                 try {
-                    // ensure that the EOF is written on the last cycle
-                    setCycle2(lastCycle, false);
+                    // ensure that the EOF is written on the current cycle later on
+                    setCycle2(cycle, false);
                 } finally {
                     writeLock.unlock();
                 }
@@ -303,7 +303,7 @@ class StoreAppender extends AbstractCloseable
         {
             Wire old = this.wireForIndex;
             this.wireForIndex = store == null ? null : createWire(wireType);
-            assert wire != old || wire == null;
+            assert wireForIndex != old || wireForIndex == null;
             releaseBytesFor(old);
         }
     }
@@ -432,7 +432,7 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            normaliseEOFs0();
+            normaliseEOFs0(cycle);
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -441,14 +441,14 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void normaliseEOFs0() {
+    private void normaliseEOFs0(int cycle) {
         int last = queue.lastCycle();
         int first = queue.firstCycle();
 
         if (first == Integer.MAX_VALUE)
             return;
 
-        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), last); ++eofCycle) {
+        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
             setCycle2(eofCycle, false);
             if (wire != null) {
                 assert queue.writeLock().locked();
@@ -458,7 +458,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void setWireIfNull(final int cycle) {
-        normaliseEOFs0();
+        normaliseEOFs0(cycle);
 
         setCycle2(cycle, true);
     }

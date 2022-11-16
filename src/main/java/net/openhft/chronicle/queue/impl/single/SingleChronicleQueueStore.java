@@ -395,7 +395,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         // just in case we are about to release this
         if (wire.bytes().tryReserve(this)) {
             try {
-                return writeEOFAndShrink(wire, timeoutMS);
+                boolean retval = writeEOFAndShrink(wire, timeoutMS);
+                return retval;
 
             } finally {
                 wire.bytes().release(this);
@@ -404,7 +405,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
             Wire wire0 = WireType.valueOf(wire).apply(bytes);
-            return writeEOFAndShrink(wire0, timeoutMS);
+            boolean retval = writeEOFAndShrink(wire0, timeoutMS);
+            return retval;
 
         } catch (Exception e) {
             Jvm.warn().on(getClass(), "unable to write the EOF file=" + fileName, e);

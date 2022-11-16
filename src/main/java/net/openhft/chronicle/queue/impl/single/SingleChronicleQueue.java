@@ -810,9 +810,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private void setFirstAndLastCycle() {
         long now = System.currentTimeMillis();
-        if (now <= directoryListing.lastRefreshTimeMS()) {
-            return;
-        }
+        //if (now <= directoryListing.lastRefreshTimeMS()) {
+        //    return;
+        //}
 
         boolean force = now - directoryListing.lastRefreshTimeMS() > forceDirectoryListingRefreshIntervalMs;
         directoryListing.refresh(force);
