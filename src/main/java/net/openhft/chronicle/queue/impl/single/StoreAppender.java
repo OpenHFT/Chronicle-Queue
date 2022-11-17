@@ -91,16 +91,21 @@ class StoreAppender extends AbstractCloseable
 
         try {
             queue.cleanupStoreFilesWithNoData();
-            cycle = queue.cycle();
+            // Avoid normalizing last existing segment which may be appended later on via queue replication
+            //  even if it is in the past
+            int lastCycle = queue.lastCycle();
+            cycle = Math.min(queue.cycle(), lastCycle >= 0 ? lastCycle : queue.cycle());
             normaliseEOFs();
 
-            final WriteLock writeLock = queue.writeLock();
-            writeLock.lock();
-            try {
-                // ensure that the EOF is written on the current cycle later on
-                setCycle2(cycle, false);
-            } finally {
-                writeLock.unlock();
+            if (cycle >= this.lastCycle) {
+                final WriteLock writeLock = queue.writeLock();
+                writeLock.lock();
+                try {
+                    // ensure that the EOF is written on the last actual cycle later on
+                    setCycle2(cycle, false);
+                } finally {
+                    writeLock.unlock();
+                }
             }
         } catch (RuntimeException ex) {
             // Perhaps initialization code needs to be moved away from constructor
