@@ -71,7 +71,6 @@ class StoreAppender extends AbstractCloseable
     private Wire wireForIndex;
     private long positionOfHeader = 0;
     private long lastIndex = Long.MIN_VALUE;
-    private int lastCycle;
     @Nullable
     private Pretoucher pretoucher = null;
     private MicroToucher microtoucher = null;
@@ -99,12 +98,12 @@ class StoreAppender extends AbstractCloseable
 
             normaliseEOFs();
 
-            if (cycle >= lastExistingCycle) {
+            if (lastExistingCycle >= 0) {
                 final WriteLock writeLock = queue.writeLock();
                 writeLock.lock();
                 try {
                     // ensure that the EOF is written on the last actual cycle later on
-                    setCycle2(lastExistingCycle, false);
+                    setCycle2(cycle, false);
                 } finally {
                     writeLock.unlock();
                 }
