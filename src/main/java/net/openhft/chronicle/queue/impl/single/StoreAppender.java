@@ -104,7 +104,7 @@ class StoreAppender extends AbstractCloseable
                 writeLock.lock();
                 try {
                     // ensure that the EOF is written on the last actual cycle later on
-                    setCycle2(cycle, false);
+                    setCycle2(lastExistingCycle, false);
                 } finally {
                     writeLock.unlock();
                 }
