@@ -91,10 +91,12 @@ class StoreAppender extends AbstractCloseable
 
         try {
             queue.cleanupStoreFilesWithNoData();
-            // Avoid normalizing last existing segment which may be appended later on via queue replication
-            //  even if it is in the past
             int lastExistingCycle = queue.lastCycle();
+            // lastCycle() can be negative (no files on disk) or a cycle number of last existing cycle file
+            // Initial cycle should be assigned to last existing cycle file unless it is in the future
+            // If last existing file is in the past, it's still possible it will be replicated/backfilled so no EOF
             cycle = Math.min(queue.cycle(), lastExistingCycle >= 0 ? lastExistingCycle : queue.cycle());
+
             normaliseEOFs();
 
             if (cycle >= lastExistingCycle) {
