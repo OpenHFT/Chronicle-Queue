@@ -93,11 +93,11 @@ class StoreAppender extends AbstractCloseable
             queue.cleanupStoreFilesWithNoData();
             // Avoid normalizing last existing segment which may be appended later on via queue replication
             //  even if it is in the past
-            int lastCycle = queue.lastCycle();
-            cycle = Math.min(queue.cycle(), lastCycle >= 0 ? lastCycle : queue.cycle());
+            int lastExistingCycle = queue.lastCycle();
+            cycle = Math.min(queue.cycle(), lastExistingCycle >= 0 ? lastExistingCycle : queue.cycle());
             normaliseEOFs();
 
-            if (cycle >= this.lastCycle) {
+            if (cycle >= lastExistingCycle) {
                 final WriteLock writeLock = queue.writeLock();
                 writeLock.lock();
                 try {
@@ -548,7 +548,6 @@ class StoreAppender extends AbstractCloseable
             wire.updateHeader(positionOfHeader, false, 0);
             lastIndex(wire.headerNumber());
             lastPosition = positionOfHeader;
-            lastCycle = cycle;
             store.writePosition(positionOfHeader);
             writeIndexForPosition(lastIndex, positionOfHeader);
         } catch (StreamCorruptedException e) {
@@ -667,7 +666,7 @@ class StoreAppender extends AbstractCloseable
 
         try {
             long sequenceNumber = store.sequenceForPosition(this, lastPosition, true);
-            long index = queue.rollCycle().toIndex(lastCycle, sequenceNumber);
+            long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
             lastIndex(index);
             return index;
         } catch (Exception e) {
@@ -720,10 +719,10 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
         }
 
-        int lastCycle = queue.lastCycle();
+        int lastExistingCycle = queue.lastCycle();
 
-        if (lastCycle < cycle && lastCycle != this.cycle && lastCycle >= 0) {
-            setCycle2(lastCycle, false);
+        if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
+            setCycle2(lastExistingCycle, false);
             rollCycleTo(cycle);
         } else {
             setCycle2(cycle, true);
@@ -771,7 +770,6 @@ class StoreAppender extends AbstractCloseable
                 ", position=" + positionOfHeader +
                 ", lastIndex=" + lastIndex +
                 ", lastPosition=" + lastPosition +
-                ", lastCycle=" + lastCycle +
                 '}';
     }
 
@@ -910,7 +908,6 @@ class StoreAppender extends AbstractCloseable
 //                        throw new AssertionError("header had to rewind to be written");
 
                     lastPosition = positionOfHeader;
-                    lastCycle = cycle;
 
                     if (!metaData) {
                         lastIndex(wire.headerNumber());
