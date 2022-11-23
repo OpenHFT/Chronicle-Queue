@@ -46,13 +46,6 @@ import static org.junit.Assert.*;
 public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test
-    public void checkTheEOFisWrittenToPreQueueFile() {
-        checkTheEOFisWrittenToPreQueueFileInner(appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(1, 0L), from("Hello World 1")),
-                (tp, rc) -> { /* not required as we are increasing cycle in next write */ },
-                appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(3, 0L), from("Hello World 2")));
-    }
-
-    @Test
     public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
 
         final Consumer<InternalAppender> writer = appender -> {
