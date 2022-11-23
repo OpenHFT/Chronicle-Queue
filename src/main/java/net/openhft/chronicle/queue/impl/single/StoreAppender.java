@@ -70,7 +70,6 @@ class StoreAppender extends AbstractCloseable
     private Wire wireForIndex;
     private long positionOfHeader = 0;
     private long lastIndex = Long.MIN_VALUE;
-    private int lastCycle;
     @Nullable
     @SuppressWarnings("deprecation")
     private Pretoucher pretoucher = null;
@@ -91,16 +90,20 @@ class StoreAppender extends AbstractCloseable
 
         try {
             queue.cleanupStoreFilesWithNoData();
+            int lastExistingCycle = queue.lastCycle();
+            // lastCycle() can be negative (no files on disk) or a cycle number of last existing cycle file
+            // Initial cycle should be assigned to last existing cycle file unless it is in the future
+            // If last existing file is in the past, it's still possible it will be replicated/backfilled so no EOF
+            cycle = lastExistingCycle < 0 || queue.cycle() < lastExistingCycle ? queue.cycle() : lastExistingCycle;
+
             normaliseEOFs();
 
-            int cycle = queue.cycle();
-            int lastCycle = queue.lastCycle();
-            if (lastCycle != cycle && lastCycle >= 0) {
+            if (lastExistingCycle >= 0) {
                 final WriteLock writeLock = queue.writeLock();
                 writeLock.lock();
                 try {
-                    // ensure that the EOF is written on the last cycle
-                    setCycle2(lastCycle, false);
+                    // ensure that the EOF is written on the last actual cycle later on
+                    setCycle2(cycle, false);
                 } finally {
                     writeLock.unlock();
                 }
@@ -304,7 +307,7 @@ class StoreAppender extends AbstractCloseable
         {
             Wire old = this.wireForIndex;
             this.wireForIndex = store == null ? null : createWire(wireType);
-            assert wire != old || wire == null;
+            assert wireForIndex != old || wireForIndex == null;
             releaseBytesFor(old);
         }
     }
@@ -434,7 +437,7 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            normaliseEOFs0();
+            normaliseEOFs0(cycle);
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -443,14 +446,13 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void normaliseEOFs0() {
-        int last = queue.lastCycle();
+    private void normaliseEOFs0(int cycle) {
         int first = queue.firstCycle();
 
         if (first == Integer.MAX_VALUE)
             return;
 
-        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), last); ++eofCycle) {
+        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
             setCycle2(eofCycle, false);
             if (wire != null) {
                 assert queue.writeLock().locked();
@@ -460,7 +462,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void setWireIfNull(final int cycle) {
-        normaliseEOFs0();
+        normaliseEOFs0(cycle);
 
         setCycle2(cycle, true);
     }
@@ -549,7 +551,6 @@ class StoreAppender extends AbstractCloseable
             wire.updateHeader(positionOfHeader, false, 0);
             lastIndex(wire.headerNumber());
             lastPosition = positionOfHeader;
-            lastCycle = cycle;
             store.writePosition(positionOfHeader);
             writeIndexForPosition(lastIndex, positionOfHeader);
         } catch (StreamCorruptedException e) {
@@ -668,7 +669,7 @@ class StoreAppender extends AbstractCloseable
 
         try {
             long sequenceNumber = store.sequenceForPosition(this, lastPosition, true);
-            long index = queue.rollCycle().toIndex(lastCycle, sequenceNumber);
+            long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
             lastIndex(index);
             return index;
         } catch (Exception e) {
@@ -721,10 +722,10 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
         }
 
-        int lastCycle = queue.lastCycle();
+        int lastExistingCycle = queue.lastCycle();
 
-        if (lastCycle < cycle && lastCycle != this.cycle && lastCycle >= 0) {
-            setCycle2(lastCycle, false);
+        if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
+            setCycle2(lastExistingCycle, false);
             rollCycleTo(cycle);
         } else {
             setCycle2(cycle, true);
@@ -772,7 +773,6 @@ class StoreAppender extends AbstractCloseable
                 ", position=" + positionOfHeader +
                 ", lastIndex=" + lastIndex +
                 ", lastPosition=" + lastPosition +
-                ", lastCycle=" + lastCycle +
                 '}';
     }
 
@@ -911,7 +911,6 @@ class StoreAppender extends AbstractCloseable
 //                        throw new AssertionError("header had to rewind to be written");
 
                     lastPosition = positionOfHeader;
-                    lastCycle = cycle;
 
                     if (!metaData) {
                         lastIndex(wire.headerNumber());
