@@ -103,7 +103,7 @@ public class ChannelHandlerYamlTester implements YamlTester {
                 AtomicLong activeTime = new AtomicLong(System.currentTimeMillis());
                 final Thread thread = new Thread(() -> {
                     long timeout = Jvm.isDebug() ? 60_000 : 500;
-                    for (int i = 0; i < 500; i++) {
+                    for (int i = 0; i < timeout; i++) {
                         Jvm.pause(1);
                         if (activeTime.get() + timeout < System.currentTimeMillis())
                             break;
@@ -135,7 +135,6 @@ public class ChannelHandlerYamlTester implements YamlTester {
                         if (wire0.bytes().startsWith(Bytes.from("...\n")))
                             wire0.bytes().readSkip(4);
                         copyComments(wire0, wire);
-                        wire.bytes().append("---\n");
                     }
 
                     while (wire.bytes().readRemaining() < expectedBytes.length) {
