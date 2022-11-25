@@ -43,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.lang.ref.WeakReference;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileLock;
 import java.nio.channels.NonWritableChannelException;
 import java.security.SecureRandom;
@@ -1137,7 +1138,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         directoryListing.onFileCreated(path, cycle);
                     }
                 } finally {
-                    fileLock.release();
+                    try {
+                        fileLock.release();
+                    } catch (ClosedChannelException ex) {
+                        Jvm.warn().on(SingleChronicleQueue.class,
+                                "Channel closed while unlocking " + mappedBytes.mappedFile().file(), ex);
+                    }
                 }
 
             } catch (NonWritableChannelException e) {

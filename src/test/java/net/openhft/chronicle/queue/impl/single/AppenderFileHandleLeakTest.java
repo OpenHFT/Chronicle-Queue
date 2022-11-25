@@ -57,6 +57,7 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = RollCycles.TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
+    private static final int TRIES = 5;
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
             new NamedThreadFactory("test"));
@@ -128,8 +129,6 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
             gcGuard.clear();
 
         }
-        GcControls.waitForGcCycle();
-        GcControls.waitForGcCycle();
 
         Assert.assertTrue(queueFilesAreAllClosed());
     }
@@ -314,12 +313,20 @@ public final class AppenderFileHandleLeakTest extends ChronicleQueueTestBase {
     }
 
     private boolean queueFilesAreAllClosed() {
-        GcControls.waitForGcCycle();
-        final List<String> openQueueFiles = MappedFileUtil.getAllMappedFiles().stream()
-                .filter(str -> str.contains(queuePath.getAbsolutePath()))
-                .collect(Collectors.toList());
-        openQueueFiles.forEach(qf -> Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open queue file: " + qf));
-        return openQueueFiles.isEmpty();
+        List<String> openQueueFiles = null;
+        for (int i = 0; i < TRIES; i++) {
+            GcControls.waitForGcCycle();
+            openQueueFiles = MappedFileUtil.getAllMappedFiles().stream()
+                    .filter(str -> str.contains(queuePath.getAbsolutePath()))
+                    .collect(Collectors.toList());
+            if (openQueueFiles.isEmpty())
+                return true;
+            Jvm.pause(10);
+        }
+
+        openQueueFiles.forEach(qf ->
+                Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open queue file: " + qf));
+        return false;
     }
 
     private ChronicleQueue createQueue(final TimeProvider timeProvider) {
