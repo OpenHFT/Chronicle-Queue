@@ -100,6 +100,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     @Test
     public void testNoHeader() throws IOException {
         expectException("Recovering header");
+        ignoreException("Channel closed while unlocking");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         dir.mkdir();
 
@@ -129,6 +130,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     @Test
     public void testDeadHeader() throws IOException {
         expectException("Recovering header");
+        ignoreException("Channel closed while unlocking");
         final File dir = getTmpDir();
 
         dir.mkdirs();
