@@ -290,19 +290,21 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
             // existing appender would not EOF an active cycle
             appender.close();
+            Assert.assertFalse(hasEOF(q, firstCycle));
 
-            // we have to manually fix. This is done by CQE at the end of backfilling
-            q.acquireAppender().normaliseEOFs();
-
-            ExcerptTailer tailer = q.createTailer();
-            tailer.readBytes(result);
-            assertEquals(test, result);
-            result.clear();
-            tailer.readBytes(result);
-            assertEquals(test1, result);
-            result.clear();
-            tailer.readBytes(result);
-            assertEquals(test2, result);
+            // acquiring appender will position it on first cycle without EOF
+            // we have to manually fix. This is done by CQE during backfill or by starting new document.
+            try (DocumentContext doc = q.acquireAppender().writingDocument(true)) {
+                ExcerptTailer tailer = q.createTailer();
+                tailer.readBytes(result);
+                assertEquals(test, result);
+                result.clear();
+                tailer.readBytes(result);
+                assertEquals(test1, result);
+                result.clear();
+                tailer.readBytes(result);
+                assertEquals(test2, result);
+            }
         }
     }
 

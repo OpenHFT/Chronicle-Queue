@@ -106,10 +106,12 @@ class StoreAppender extends AbstractCloseable
                                 normaliseEOFs0(eofCycle - 1);
 
                             // If first non-EOF file is in the past, it's possible it will be replicated/backfilled to
-                            setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, false);
+                            if (eofCycle < lastExistingCycle)
+                                setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, false);
                             break;
                         }
                     }
+                    resetPosition();
                 }
             } finally {
                 writeLock.unlock();
