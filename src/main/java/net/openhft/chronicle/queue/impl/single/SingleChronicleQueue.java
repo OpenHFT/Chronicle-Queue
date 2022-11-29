@@ -911,47 +911,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return metaStore;
     }
 
-    void cleanupStoreFilesWithNoData() {
-
-        long start = System.nanoTime();
-        writeLock.lock();
-
-        Runnable fireOnReleasedEvent = null;
-        try {
-            int cycle = cycle();
-            for (int lastCycle = lastCycle(); lastCycle < cycle && lastCycle >= 0; lastCycle--) {
-                try (final SingleChronicleQueueStore store = this.pool.acquire(lastCycle, false, null)) {
-                    // file not found.
-                    if (store == null)
-                        break;
-                    if (store.writePosition() == 0 && store.file().exists()) {
-                        // try writing EOF
-                        // if this blows up we should blow up too so don't catch anything
-                        MappedBytes bytes = store.bytes();
-                        try {
-                            final Wire wire = wireType.apply(bytes);
-                            wire.usePadding(true);
-                            store.writeEOFAndShrink(wire, timeoutMS);
-                        } finally {
-                            bytes.releaseLast();
-                        }
-                        continue;
-                    }
-                    fireOnReleasedEvent = () -> storeFileListener.onReleased(store.cycle(), store.file());
-                    break;
-                }
-            }
-            directoryListing.refresh(true);
-        } finally {
-            writeLock.unlock();
-            if (fireOnReleasedEvent != null)
-                BackgroundResourceReleaser.run(fireOnReleasedEvent);
-            long tookMillis = (System.nanoTime() - start) / 1_000_000;
-            if (tookMillis > WARN_SLOW_APPENDER_MS)
-                Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to cleanupStoreFilesWithNoData");
-        }
-    }
-
     public void tableStorePut(CharSequence key, long index) {
         LongValue longValue = tableStoreAcquire(key, index);
         if (longValue == null) return;
