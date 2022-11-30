@@ -111,7 +111,8 @@ class StoreAppender extends AbstractCloseable
                             break;
                         }
                     }
-                    resetPosition();
+                    if (wire != null)
+                        resetPosition();
                 }
             } finally {
                 writeLock.unlock();
