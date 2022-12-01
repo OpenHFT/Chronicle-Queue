@@ -138,7 +138,8 @@ class StoreAppender extends AbstractCloseable
 
             if (wire.bytes().tryReserve(this)) {
                 try {
-                    return !wire.noEndOfWire(false, timeoutMS(), TimeUnit.MILLISECONDS, store.writePosition());
+                    return WireOut.EndOfWire.PRESENT ==
+                            wire.endOfWire(false, timeoutMS(), TimeUnit.MILLISECONDS, store.writePosition());
                 } finally {
                     wire.bytes().release(this);
                 }
