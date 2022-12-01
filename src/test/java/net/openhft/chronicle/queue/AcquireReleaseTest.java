@@ -144,9 +144,8 @@ public class AcquireReleaseTest extends QueueTestCommon {
         }
         BackgroundResourceReleaser.releasePendingResources();
 
-        // Once is called when creating first appender, and twice when creating second appender ( extra time in cleanupStoreFilesWithNoData())
-        assertEquals(3, acount.get());
+        assertEquals(2, acount.get());
 
-        assertEquals(3, qcount.get());
+        assertEquals(2, qcount.get());
     }
 }

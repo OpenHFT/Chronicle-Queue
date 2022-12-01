@@ -43,6 +43,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
 import static net.openhft.chronicle.wire.Wires.*;
@@ -89,24 +90,35 @@ class StoreAppender extends AbstractCloseable
         this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
 
         try {
-            queue.cleanupStoreFilesWithNoData();
             int lastExistingCycle = queue.lastCycle();
-            // lastCycle() can be negative (no files on disk) or a cycle number of last existing cycle file
-            // Initial cycle should be assigned to last existing cycle file unless it is in the future
-            // If last existing file is in the past, it's still possible it will be replicated/backfilled so no EOF
-            cycle = lastExistingCycle < 0 || queue.cycle() < lastExistingCycle ? queue.cycle() : lastExistingCycle;
+            int firstCycle = queue.firstCycle();
+            long start = System.nanoTime();
+            final WriteLock writeLock = this.queue.writeLock();
+            writeLock.lock();
+            try {
+                if (firstCycle != Integer.MAX_VALUE) {
+                    // Backing down until EOF-ed cycle is encountered
+                    for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
+                        setCycle2(eofCycle, false);
+                        if (cycleHasEOF()) {
+                            // Make sure all older cycles have EOF marker
+                            if (eofCycle > firstCycle)
+                                normaliseEOFs0(eofCycle - 1);
 
-            normaliseEOFs();
-
-            if (lastExistingCycle >= 0) {
-                final WriteLock writeLock = queue.writeLock();
-                writeLock.lock();
-                try {
-                    // ensure that the EOF is written on the last actual cycle later on
-                    setCycle2(cycle, false);
-                } finally {
-                    writeLock.unlock();
+                            // If first non-EOF file is in the past, it's possible it will be replicated/backfilled to
+                            if (eofCycle < lastExistingCycle)
+                                setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, false);
+                            break;
+                        }
+                    }
+                    if (wire != null)
+                        resetPosition();
                 }
+            } finally {
+                writeLock.unlock();
+                long tookMillis = (System.nanoTime() - start) / 1_000_000;
+                if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && cycle != lastExistingCycle))
+                    Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + cycle);
             }
         } catch (RuntimeException ex) {
             // Perhaps initialization code needs to be moved away from constructor
@@ -117,6 +129,24 @@ class StoreAppender extends AbstractCloseable
 
         // always put references to "this" last.
         queue.addCloseListener(this);
+    }
+
+    private boolean cycleHasEOF() {
+        if (wire != null) {
+            assert this.queue.writeLock().locked();
+            assert this.store != null;
+
+            if (wire.bytes().tryReserve(this)) {
+                try {
+                    return WireOut.EndOfWire.PRESENT ==
+                            wire.endOfWire(false, timeoutMS(), TimeUnit.MILLISECONDS, store.writePosition());
+                } finally {
+                    wire.bytes().release(this);
+                }
+            }
+        }
+
+        return false;
     }
 
     private static void releaseBytesFor(Wire w) {
