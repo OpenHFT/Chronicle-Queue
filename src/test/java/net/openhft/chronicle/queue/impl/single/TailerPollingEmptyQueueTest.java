@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.testframework.GcControls;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
