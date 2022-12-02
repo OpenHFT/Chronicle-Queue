@@ -27,7 +27,9 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
+import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.Waiters;
+import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -49,6 +51,7 @@ import java.util.stream.IntStream;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static net.openhft.chronicle.testframework.GcControls.requestGcCycle;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
@@ -140,7 +143,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     public void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
-        GcControls.requestGcCycle();
+        requestGcCycle();
         Thread.sleep(100);
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
             final List<Future<Boolean>> futures = new LinkedList<>();

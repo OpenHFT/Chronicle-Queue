@@ -29,6 +29,8 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
+import net.openhft.chronicle.testframework.GcControls;
+import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.*;
