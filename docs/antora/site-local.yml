@@ -22,4 +22,4 @@ asciidoc:
     extensions:
       - highlightjs
 output:
-  dir: build-local/site
+  dir: build/site
