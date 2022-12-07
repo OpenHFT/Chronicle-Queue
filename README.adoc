@@ -366,7 +366,7 @@ A tailer is an excerpt reader optimized for sequential reads. It can perform seq
 Tailers read the next available message each time they are called. The followings are guaranteed in Chronicle Queue:
 
 *-* for each *appender*, messages are written in the order the appender wrote them.
-Messages by different appenders are interleaved,
+Messages by different appenders are interleaved.
 
 *-* for each *tailer*, it will see every message for a topic in the same order as every other tailer,
 

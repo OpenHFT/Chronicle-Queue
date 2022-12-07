@@ -5,29 +5,49 @@ author: Julia Gustafsson
 :navtitle: Tailing
 :source-highlighter: highlight.js
 
-Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
+Reading data from a queue resembles the act of writing to great extent, however there may not exist any messages to be read.Further, we will be using a _tailer_ rather than an _appender_ to read the queue content. A tailer is optimized for sequential reads, but can perform both sequential and random reads, and traverse the queue forwards and backwards.It reads the next available message each time it is called. Tailers that are associated with the same queue will all see the messages in the same order.
 
-Unlike other Java queuing solutions, messages are not lost when they are read with a tailer. This is covered in more detail in the section below on "Reading from a queue using a tailer".
+NOTE: From Chronicle Queue v5 and onwards, tailers are read-only. In Chronicle Queue v4 and prior there was the option of performing lazy indexing. That made it possible for the first tailer to perform the indexing at read-time rather than the appender when writing. Laxy indexing was dropped in v5 to make tailers read-only to allow for optimisations elsewhere in the code.
 
-.Start Reading
+A _tailer_ is acquired from the queue instance as follows:
+
 [source, java]
 ----
-try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder("queue").build()) {
    final ExcerptTailer tailer = queue.createTailer();
 }
 ----
 
-You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments. Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
+The simplest way to read a message from the queue is calling `readText()`. By default, it fetches the first entry in the queue as a `String`. Repeated calls return the succeeding messages. When there are no messages to be read, `null` is returned.
 
-[source, java]
+[source, Java]
 ----
-// reading using method calls
-RiskMonitor monitor = System.out::println;
-MethodReader reader = tailer.methodReader(monitor);
-// read one message
-assertTrue(reader.readOne());
+String data = tailer.readText();
 ----
 
+NOTE: Unlike other Java queuing solutions, messages are not lost when they are read with a tailer. This is covered in more detail in the section below on "Reading from a queue using a tailer".
+
+Just as there are several means of xref:appending.adoc[appending] data to a queue, there are various different usages of the tailer. The available options are covered in the following sections. We will also describe how the queue contents can be dumped to the terminal via the command line.
+
+== Reading Text
+
+
+[#_reading_an_object]
+== Reading an Object
+If you have written an object to the queue, it can be read by passing the tailer an instance of that object class. This will automatically deserialise the data assuming that the appended data is of the same type. Again, we recommend that the objects that are written/read to a queue extends `net.openhft.chronicle.wire.Marshallable` for more efficient serialisation/deserialisation. 
+
+[source, Java]
+----
+Person person = new Person();
+tailer.readDocument(person);
+----
+
+NOTE: Learn how to write an object to the queue in xref:appending.adoc#_writing_an_object[Writing an Object]. 
+
+== Reading Raw Data 
+
+
+=== Not Self-Describing Data
 You can decode the message yourself.
 
 NOTE: The names, type, and order of the fields doesn't have to match.
@@ -46,6 +66,7 @@ assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
         })));
 ----
 
+=== Self-Describing Data 
 You can read self-describing data values. This will check the types are correct, and convert as required.
 
 [source, java]
@@ -59,6 +80,7 @@ assertTrue(tailer.readDocument(w -> {
 }));
 ----
 
+=== Reading Raw Data 
 You can read raw data as primitives and strings.
 
 [source, java]
@@ -73,6 +95,7 @@ assertTrue(tailer.readBytes(in -> {
 }));
 ----
 
+=== Reading from Raw Memory 
 or, you can get the underlying memory address and access the native memory.
 
 [source, java]
@@ -112,10 +135,10 @@ If you are writing your code not have GC pauses and you explicitly want to clean
 ((StoreTailer)tailer).releaseResources()
 ----
 
-=== Using `ExcerptTailer.toEnd()`
-
+=== Reading From the End of the Queue 
 In some applications, it may be necessary to start reading from the end of the queue (e.g. in a restart scenario).
 For this use-case, `ExcerptTailer` provides the `toEnd()` method.
+
 When the tailer direction is `FORWARD` (by default, or as set by the `ExcerptTailer.direction`
 method), then calling `toEnd()` will place the tailer just *after* the last existing record in the queue.
 In this case, the tailer is now ready for reading any new records appended to the queue.
@@ -146,9 +169,7 @@ boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
         readingDocument().isPresent();
 ----
 
-== Restartable Tailers
-
-AKA named tailers.
+== Restartable Tailers (Named Tailers)
 
 It can be useful to have a tailer which continues from where it was up to on restart of the application.
 
@@ -359,4 +380,3 @@ Lastly, there is a script for running the reader named `queue_reader.sh` which a
 ----
 $ ./bin/queue_reader.sh <options>
 ----
-

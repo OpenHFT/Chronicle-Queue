@@ -143,8 +143,8 @@ appender.writeBytes(b -> b
         .writeUtf8("Hello World"));
 ----
 
-== Writing to Raw Memory 
-At the lowest abstraction level you get an address to raw memory where you can write whatever you want.
+== Writing to Raw Memory
+At the lowest abstraction level you get an address to raw memory where you can write whatever you want. 
 
 [source,Java]
 ----

@@ -5,24 +5,38 @@ author: Julia Gustafsson
 :navtitle: Appending
 :source-highlighter: highlight.js
 
-Chronicle refers to the act of appending (writing) data to a Chronicle Queue, as storing an excerpt. This data could contain any data types, including text, numbers, or serialised blobs. Ultimately, regardless of what it is, all data is stored as a series of bytes.
-
-Prior to storing your excerpt, a 4-byte header is reserved by the queue. This header contains, among other things, the length of the data in order for readers to know the size of the blob. Onwards, we refer to this 4-byte header, along with your excerpt, as a link:../../getting-started/pages/glossary.adoc#d[document]. Strictly speaking, Chronicle Queue is used to read and write such documents.
-
-NOTE: A few bits in the header are reserved for a number of internal operations, such as locking, to ensure thread-safety across both processors and threads. For this reason, converting the header to an integer does *not* yield the length of the data blob.
-
-Chronicle Queue uses an link:../../getting-started/pages/glossary.adoc#a[appender] to write to the queue, and a link:../../getting-started/pages/glossary.adoc#t[tailer] to read from the queue.
-
-To write data to a Chronicle Queue, you must first create an appender:
+Data is appended (written) to the end of a Chronicle Queue using an _appender_. It can be acquired from the queue instance as follows: 
 
 [source,Java]
 ----
-try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
-   final ExcerptAppender appender = queue.acquireAppender();
+try (ChronicleQueue queue = ChronicleQueue.singleBuilder("trades").build()) { 
+   final ExcerptAppender appender = queue.acquireAppender(); 
 }
 ----
 
-Chronicle Queue uses the following low-level interface to write the data:
+A simple text message can then be appended using the method `writeText(CharSequence text)`. 
+
+[source, Java]
+----
+String message = "Hello World!";
+appender.writeText(message);
+----
+
+There are however various ways of appending data, ranging from high-level abstractions such as `writeText` and xref:queue-operations:read-write-proxies.adoc#_methodwriter[write proxies] down to a low-level API, or even writing directly to raw memory. These alternatives are presented in more detail in the following sections.
+
+== Low-level API  
+The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially achieve the same thing. The implementation of `writeText(CharSequence text)` looks like this:
+
+[source,Java]
+----
+void writeText(CharSequence text) {
+    try (DocumentContext dc = writingDocument()) {
+        dc.wire().bytes().append8bit(text);
+    }
+}
+----
+
+As shown here, the document context can be used to append data directly:  
 
 [source,Java]
 ----
@@ -31,7 +45,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The close on the try-with-resources, is the point when the length of the data is written to the header. You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below). You can later use this index to move-to/look up this excerpt. Each Chronicle Queue excerpt has a unique index.
+The length of the data is written to the header when the try-with-resources block reaches _close_. You can also use the `DocumentContext` to find out the index that the data has just been assigned (see below). The index can later be used to move-to/look up this excerpt. 
 
 [source,Java]
 ----
@@ -41,32 +55,9 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing. The actual code of `writeText(CharSequence text)` looks like this:
+NOTE: Each Chronicle Queue excerpt has a unique index.
 
-[source,Java]
-----
-/**
- * @param text the message to write
- */
-void writeText(CharSequence text) {
-    try (DocumentContext dc = writingDocument()) {
-        dc.wire().bytes().append8bit(text);
-    }
-}
-----
-
-So you have a choice of a number of high-level interfaces, down to a low-level API, to raw memory.
-
-This is the highest-level API which hides the fact you are writing to messaging at all. The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
-
-[source,Java]
-----
-// using the method writer interface.
-RiskMonitor riskMonitor = appender.methodWriter(RiskMonitor.class);
-final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
-riskMonitor.trade(new TradeDetails(now, "GBPUSD", 1.3095, 10e6, Side.Buy, "peter"));
-----
-
+== Self-describing Message
 You can write a "self-describing message". Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
 
 [source,Java]
@@ -93,7 +84,7 @@ appender.writeDocument(w -> w
         .getValueOut().text("Hello World"));
 ----
 
-You can write "raw data" which is not self-describing. Your reader must know what this data means, and the types that were used.
+You can write "raw data" which is not self-describing. In such case your reader must know what this data means, and the types that were used.
 
 [source,Java]
 ----
@@ -303,3 +294,9 @@ method2 [!Message2 {
 ----
 
 NOTE: For more details, read the article https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and view the https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest].
+
+
+== Data Header
+Prior to storing your data, a 4-byte header is reserved by the queue. This header contains, among other things, the length of the data in order for readers to know the size of the blob. Onwards, we refer to this 4-byte header, along with your excerpt, as a link:../../getting-started/pages/glossary.adoc#d[document]. Strictly speaking, Chronicle Queue is used to read and write such documents.
+
+NOTE: A few bits in the header are reserved for a number of internal operations, such as locking, to ensure thread-safety across both processors and threads. For this reason, converting the header to an integer does *not* yield the length of the data blob.
