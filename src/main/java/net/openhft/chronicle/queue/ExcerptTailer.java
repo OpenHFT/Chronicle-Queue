@@ -223,6 +223,35 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
+     * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
+     * which is updated last during append operation so may be possible that a single entry is available for reading
+     * but not acknowledged by this method yet.
+     * <p>
+     * Calling this method may move ExcerptTailer to the specified cycle and release its store.
+     *
+     * @return the approximate number of excerpts in a cycle.
+     */
+    default long approximateExcerptsInCycle(int cycle) {
+        try (ExcerptTailer tailer = queue().createTailer()) {
+            return tailer.approximateExcerptsInCycle(cycle);
+        }
+    }
+
+    /**
+     * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
+     * expensive operation.
+     * <p>
+     * Calling this method may move ExcerptTailer to the specified cycle and release its store.
+     *
+     * @return the exact number of excerpts in a cycle.
+     */
+    default long exactExcerptsInCycle(int cycle) {
+        try (ExcerptTailer tailer = queue().createTailer()) {
+            return tailer.exactExcerptsInCycle(cycle);
+        }
+    }
+
+    /**
      * Returns the {@link TailerState} of this Tailer.
      *
      * @return the {@link TailerState} of this Tailer
