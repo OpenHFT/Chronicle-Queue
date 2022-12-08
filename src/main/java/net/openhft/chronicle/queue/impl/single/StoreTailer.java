@@ -725,7 +725,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public final ExcerptTailer toStart() {
         if (context.isPresent())
-            throw new IllegalStateException("Cannot move tailer to end during document reading");
+            throw new IllegalStateException("Cannot move tailer to start during document reading");
 
         try {
             return doToStart();
@@ -1089,7 +1089,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean tryWindBack(final int cycle) {
-        final long count = queue.exactExcerptsInCycle(cycle);
+        final long count = exactExcerptsInCycle(cycle);
         if (count <= 0)
             return false;
         final RollCycle rollCycle = queue.rollCycle();
