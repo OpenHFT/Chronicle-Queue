@@ -601,7 +601,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
      * which is updated last during append operation so may be possible that a single entry is available for reading
      * but not acknowledged by this method yet.
+     *
+     * @deprecated
+     * @see ExcerptTailer#approximateExcerptsInCycle(int)
      */
+    @Deprecated(/* To be removed in x.25 */)
     public long approximateExcerptsInCycle(int cycle) {
         throwExceptionIfClosed();
         // TODO: this function may require some re-work now that acquireTailer has been deprecated
@@ -618,7 +622,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     /**
      * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
      * expensive operation.
+     *
+     * @deprecated
+     * @see ExcerptTailer#exactExcerptsInCycle(int)
      */
+    @Deprecated(/* To be removed in x.25 */)
     public long exactExcerptsInCycle(int cycle) {
         throwExceptionIfClosed();
         // TODO: this function may require some re-work now that acquireTailer has been deprecated

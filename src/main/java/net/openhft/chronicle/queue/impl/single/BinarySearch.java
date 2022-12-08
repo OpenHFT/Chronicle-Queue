@@ -56,14 +56,14 @@ public enum BinarySearch {
             final int endCycle = rollCycle.toCycle(end);
 
             if (startCycle == endCycle)
-                return findWithinCycle(key, c, startCycle, tailer, q, rollCycle);
+                return findWithinCycle(key, c, startCycle, tailer, rollCycle);
 
             final NavigableSet<Long> cycles = q.listCyclesBetween(startCycle, endCycle);
             final int cycle = (int) findCycleLinearSearch(cycles, key, c, tailer, q);
 
             if (cycle == -1)
                 return -1;
-            return findWithinCycle(key, c, cycle, tailer, q, rollCycle);
+            return findWithinCycle(key, c, cycle, tailer, rollCycle);
         } finally {
             key.bytes().readPosition(readPosition);
         }
@@ -126,18 +126,39 @@ public enum BinarySearch {
      * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
      * bit not being set ( in other words set to zero ).
+     *
+     * @deprecated use {@link #findWithinCycle(Wire, Comparator, int, ExcerptTailer, RollCycle)}
      */
+    @Deprecated(/* To be removed in x.24 */)
     public static long findWithinCycle(@NotNull Wire key,
                                        @NotNull Comparator<Wire> c,
                                        int cycle,
                                        @NotNull ExcerptTailer tailer,
                                        @NotNull SingleChronicleQueue q,
                                        @NotNull final RollCycle rollCycle) {
+        return findWithinCycle(key, c, cycle, tailer, rollCycle);
+    }
+
+    /**
+     * @return The index if an exact match is found, an approximation in the form of -approximateIndex
+     * or a negative number (- the approx index) if there was no searching to be done.
+     * <p>
+     * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
+     * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
+     * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the
+     * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
+     * bit not being set ( in other words set to zero ).
+     */
+    public static long findWithinCycle(@NotNull Wire key,
+                                       @NotNull Comparator<Wire> c,
+                                       int cycle,
+                                       @NotNull ExcerptTailer tailer,
+                                       @NotNull final RollCycle rollCycle) {
         final long readPosition = key.bytes().readPosition();
         try {
             long lowSeqNum = 0;
 
-            long highSeqNum = q.approximateExcerptsInCycle(cycle) - 1;
+            long highSeqNum = tailer.approximateExcerptsInCycle(cycle) - 1;
 
             // nothing to search
             if (highSeqNum < lowSeqNum)
