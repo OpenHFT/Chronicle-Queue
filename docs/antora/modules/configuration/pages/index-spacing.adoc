@@ -17,7 +17,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
     .build();
 ----
 
-The default index spacing varies depending on the link:roll-cycle.adoc[roll cycle], per the table below.
+The default index spacing varies depending on the xref:roll-cycle.adoc[roll cycle], per the table below.
 |===
 | Roll-cycle | Default index spacing
 | `SMALL_DAILY` | 8
@@ -29,4 +29,4 @@ The default index spacing varies depending on the link:roll-cycle.adoc[roll cycl
 | `LARGE_HOURLY_XSPARSE`, `HUGE_DAILY_XSPARSE` | 1048576
 |===
 
-TIP: For more information about queue indexing, see link:../../queue-operations/pages/indexing.adoc[Indexing].
+TIP: For more information about queue indexing, see xref:queue-operations:indexing.adoc[Indexing].

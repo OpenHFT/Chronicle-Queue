@@ -28,4 +28,4 @@ The default index count varies depending on the xref:configuration:roll-cycle.ad
 | `HUGE_DAILY` | 524288
 |===
 
-TIP: For more information about queue indexing, see link:../../queue-operations/pages/indexing.adoc[Indexing].
+TIP: For more information about queue indexing, see xref:queue-operations:indexing.adoc[Indexing].
