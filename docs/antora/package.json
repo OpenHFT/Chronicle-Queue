@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "Documentation for Chronicle FIX built with Antora",
   "scripts": {
-    "build-local": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site-local.yml",
-    "build-portal": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site-portal.yml",
+    "build-local": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site-local.yml && NODE_PATH=\"$(npm -g root)\" antora --generator @antora/xref-validator  site-local.yml",
+    "build-portal": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site-local.yml && NODE_PATH=\"$(npm -g root)\" antora --generator @antora/xref-validator  site-local.yml",
     "build": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site.yml"
   },
   "author": "Chronicle Software",
   "license": "UNLICENSED",
   "devDependencies": {
-    "antora": "^3.0.1",
+    "antora": "^3.1.2",
     "antora-site-generator-lunr": "^0.6.1",
     "cross-env": "^7.0.3"
   }
