@@ -21,7 +21,7 @@ To run the Chronicle Reader utility using Maven:
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"
 ....
 
-You can specify arguments that tailor the way that the Chronicle Reader utility behaves. For example:
+You can specify arguments that tailer the way that the Chronicle Reader utility behaves. For example:
 
 === Command-line arguments
 The following table lists the available command line option arguments:

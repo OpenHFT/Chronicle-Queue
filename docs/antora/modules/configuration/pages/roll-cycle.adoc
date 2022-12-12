@@ -112,6 +112,7 @@ The available roll-cycles and their capacities are summarized in the table below
 IMPORTANT: Roll-cycles named _TEST*_ should only be used in test environments.
 
 To understand how the limitations above were derived we can look at an example. Chronicle Queue uses a xref:queue-operations:indexing.adoc#_index[64 bit index] composed of the cycle number, and the sequence number.
+
 For a daily roll-cycle Chronicle Queue the index is split in half reserving:
 
 * 32-bits for the message sequence number - allowing *4 billion messages per day*

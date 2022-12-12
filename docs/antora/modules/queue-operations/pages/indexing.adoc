@@ -10,11 +10,10 @@ At times, we may not wish to read a queue from start to finish, but are rather i
 NOTE: Queue onfigurations related to indexing is detailed in xref:configuration:index-count.adoc[Index Count] and xref:configuration:index-spacing.adoc[Index Spacing].
 
 [#_index]
-== The 8 Byte Index 
-Every Chronicle Queue index is a byte string of length 8 bytes (`long`). It references a specific data entry as a combination of the cycle (high bits) and sequence number (low bits). Recalling from the chapter on xref:configuration:roll-cycle.adoc[Roll Cycles], a new cycle begins whenever the queue is rolled (a new queue file is created). In turn, the sequence number simply refers to the n:th entry within that queue file (cycle). Both the cycle and sequence number are incremented by 1, and the count begins at 0.
+== The 8 Byte Index
+Every Chronicle Queue index is a byte string of length 8 bytes (`long`). It references a specific data entry as a combination of the cycle (high bits) and sequence number (low bits). Recalling from the chapter on xref:configuration:roll-cycle.adoc[Roll Cycles], a new cycle begins whenever the queue is rolled (a new queue file is created). In turn, the sequence number simply refers to the n:th entry within that queue file (cycle). Both the cycle and sequence number are incremented by 1, and the count begins at 0. 
 
-
-//image::../../../../images/queue-index.png[Queue Indexes]
+image::../../../../images/queue-index.png[Queue Indexes]
 
 Different roll-cycles have a difference balance between how many bits are allocated to the message sequence number, and how many of the remaining bits are allocated to the cycle number. In other words, different roll-cycles allow us to trade off the maximum number of cycles, for the maximum number of messages within the cycle. Learn more about this in xref:configuration:roll-cycle.adoc[Roll Cycle]
 
@@ -26,7 +25,7 @@ long index = queue.rollCycle().toIndex(int cycle, long sequenceNumber);
 ----
 
 == End Of Queue Index
-You can retrieve the last index written by the appender by calling `lastIndexAppended`.
+You can retrieve the last index written by the appender by calling `lastIndexAppended`. 
 
 [source, Java]
 ----
@@ -40,21 +39,21 @@ It should again be noted that Chronicle Queue appenders are thread-local, meanin
 queue.lastIndex()
 ----
 
-This will return the index of the last data present in the queue (or -1 for an empty queue).
+This will return the index of the last data present in the queue (or -1 for an empty queue). 
 
 WARNING: If the queue is being written to concurrently it’s possible the value may be an under-estimate, as subsequent entries may have been written even before it was returned.
 
 [#_tail_from_index]
 == Tail from Index
-As described in the chapter on xref:tailing.adoc[Tailing], the tailer performs sequential reads either forwards or backwards. We can move the tailer's current position using:
+As described in the chapter on xref:tailing.adoc[Tailing], the tailer performs sequential reads either forwards or backwards. We can move the tailer's current position using: 
 
 [source, Java]
 ----
 tailer.moveToIndex(long index);
 ----
-This means the next message read will be the one positioned at the given index, and messages will then sequentially by read from this point in the queue unless the tailer is moved again.
+This means the next message read will be the one positioned at the given index, and messages will then sequentially by read from this point in the queue unless the tailer is moved again. 
 
-The following example shows how to write 10 messages and then reading the 5th. Note how the index is formed as a combination of the queue and sequence number to properly reference from the current queue. Learn more about how the index is composed in the section xref:#_index[The 8 Byte Index].
+The following example shows how to write 10 messages and then reading the 5th. Note how the index is formed as a combination of the queue and sequence number to properly reference from the current queue. Learn more about how the index is composed in the section xref:#_index[The 8 Byte Index]. 
 
 [source,java]
 ----
