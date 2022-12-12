@@ -14,24 +14,38 @@
 }
 
 #search-input {
+  font-size: 16px;
+  border: 1px solid lightgray;
+  border-radius: 3px;
+  background-color: #F7F8F9;
+  padding: 5px 15px;
+  width: 100%;
+  margin-bottom: 15px;
   color: black;
-  font-family: inherit;
-  font-size: 0.95rem;
-  background: #f2f2f2;
-  border: 1px solid white;
-  border-radius: 0.1em;
-  line-height: 1.5;
-  padding: 0.25em 0.5em;
+  font-weight: 400;
 }
 
 #search-input::placeholder {
-  color: lightgray;
+  color: gray;
+}
+
+#search-icon {
+  background-image: url(../images/magnifying-glass.png);
+  background-size: cover;
+  height: 18px;
+  padding: 3px;
+  margin-left: 10px;
+  width: 20px;
+  display: block;
+  margin-bottom: 20px;
 }
 
 @media screen and (min-width: 769px) {
   #search-input {
-    width: 200px;
+    width: 100%;
   }
+  
+  
 }
 
 .search-result-dropdown-menu {
@@ -59,9 +73,30 @@
     padding-right: 0;
   }
 
-  .search-result-dropdown-menu {
-    min-width: calc(100vh);
+  #search-icon {
+    display: none;
   }
+
+  body .search-result-dropdown-menu {
+    max-width: 85vw;
+  }
+
+  body .search-result-document-title {
+    border: none;
+    color: #4d4e51;
+    padding: 0.25rem 0.5rem 0.25rem 0.5rem;
+    text-align: left;
+  }
+
+  body .search-result-document-hit {
+    width: 100vw;
+    padding-right: 30px;
+  }
+
+  body .search-result-item {
+    flex-direction: column;
+  }
+  
 }
 
 .search-result-dataset {
@@ -140,4 +175,23 @@ body {
 
 .nav-panel-menu {
   overflow-y: unset;
+}
+
+@media screen and (max-width: 1023px) {
+  .toolbar {
+    top: 0;
+  }
+  
+  body {
+    padding-top: 0;
+  }
+  
+  .nav-container {
+    top: 2.5em;
+  }
+  
+  .nav {
+    top: 0;
+  }
+  
 }
