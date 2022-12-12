@@ -14,7 +14,7 @@ The AES key length is determined based on the length of the `keyBytes` argument 
 The following example creates a queue encrypted with AES-128.
 
 .Creating encrypted queue
-[source,yaml]
+[source,java]
 ----
 // A 128-bit key for AES-128, use 192 or 256 bits key for AES-192 and AES-256 respectively.
 private static final byte[] SECURE_KEY = {(byte) 0x45, (byte) 0x83, (byte) 0x78, (byte) 0x33, (byte) 0x21, (byte) 0x95,        (byte) 0xA5, (byte) 0xCA, (byte) 0x12, (byte) 0x44, (byte) 0xFF, (byte) 0xD3, (byte) 0x04, (byte) 0x9A,                (byte) 0xB2, (byte) 0x77};
