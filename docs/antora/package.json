@@ -4,6 +4,7 @@
   "description": "Documentation for Chronicle FIX built with Antora",
   "scripts": {
     "build-local": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site-local.yml && NODE_PATH=\"$(npm -g root)\" antora --generator @antora/xref-validator  site-local.yml",
+    "build-portal": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site-local.yml && NODE_PATH=\"$(npm -g root)\" antora --generator @antora/xref-validator  site-portal.yml",
     "build": "cross-env DOCSEARCH_ENABLED=true DOCSEARCH_ENGINE=lunr antora --generator antora-site-generator-lunr site.yml"
   },
   "author": "Chronicle Software",
