@@ -236,7 +236,7 @@ total 9920
 -rw-r--r--  1 robaustin  staff  4198400 28 Jul 15:06 19700101-02.cq4
 ----
 
-TIP: To find out which version of jars to include please, refer to the link:https://github.com/OpenHFT/OpenHFT/blob/74808dc7f0b55094d4fd6fce1817842baab5b87b/chronicle-bom/pom.xml[`chronicle-bom`].
+TIP: To find out which version of jars to include please, refer to the link:https://github.com/OpenHFT/OpenHFT/blob/74808dc7f0b55094d4fd6fce1817842baab5b87b/chronicle-bom/pom.xml[`chronicle-bom`^].
 
 Once the dependencies are present on the class path, you can run:
 

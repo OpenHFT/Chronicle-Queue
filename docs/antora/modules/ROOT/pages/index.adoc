@@ -65,4 +65,4 @@ For more information on Chronicle Queue Enterprise, please contact link:mailto:s
 == Phone Home
 Chronicle Queue sends usage data and platform information via a secure connection to Google Analytics, a web analytics service provided by Google, Inc.("Google"). This data is collected to learn how Chronicle's products are used, which in turn helps us focus our resources more efficiently in our effort to improve our libraries and provide better and more widely adopted solutions for the community.
 
-Learn more about what data is collected and why link:https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc[here.]
+Learn more about what data is collected and why link:https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc[here.^]
