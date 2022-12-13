@@ -154,18 +154,21 @@
 }
 
 .toc.sidebar .toc-menu {
-  top: 0; 
+  top: 2.5rem; 
 }
 
 @media screen and (min-width: 1024px) {
   .nav {
     top: 0;
-    height: 100vh; 
+    height: calc(100vh - 70px);
   }
 }
 
 .navbar-item {
-  padding: 0;
+  padding: 2.5rem 0 0 0;
+  background: #181f4c;
+  position: sticky;
+  top: 0;
 }
 
 .body,
@@ -173,8 +176,8 @@ body {
   padding-top: 0;
 }
 
-.nav-panel-menu {
-  overflow-y: unset;
+body .nav-menu {
+  padding: 0 1.25rem;
 }
 
 @media screen and (max-width: 1023px) {
@@ -195,3 +198,4 @@ body {
   }
   
 }
+
