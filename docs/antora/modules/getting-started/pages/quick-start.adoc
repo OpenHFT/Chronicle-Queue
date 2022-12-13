@@ -36,7 +36,7 @@ Install Chronicle Queue with Maven by adding the following code in the project's
   <version><!--Latest version--></version> #<1>
 </dependency>
 ----
-<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central].
+<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central^].
 
 === Gradle
 Install Chronicle Queue with Gradle by adding the following code in the project's build.gradle-file:
@@ -47,7 +47,7 @@ dependencies {
   implementation 'net.openhft:chronicle-queue:<Latest version>' #<1>
 }
 ----
-<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central].
+<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central^].
 
 == Hello World with Chronicle Queue
 Now that the installation is complete it is time to create a first queue and try appending and reading messages from it.
