@@ -30,4 +30,4 @@ The default index spacing varies depending on the xref:roll-cycle.adoc[roll cycl
 | `LARGE_HOURLY_XSPARSE`, `HUGE_DAILY_XSPARSE` | 1048576
 |===
 
-TIP: For more information about queue indexing, see link:../../queue-operations/pages/indexing.adoc[Indexing^].
+TIP: For more information about queue indexing, see xref:chronicle-queue:queue-operations:indexing.adoc[Indexing, window=_blank].
