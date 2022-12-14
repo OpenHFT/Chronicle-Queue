@@ -32,7 +32,7 @@ NOTE: The documentation primarily covers usage of Chronicle Queue with Java. If 
 == Where to Begin
 If this is your first time getting to know Chronicle Queue, you may want to familiarize yourself with the overall capabilities of Queue by reading xref:what-is-chronicle-queue:what-is-chronicle-queue.adoc[What is Chronicle Queue?]. Thereafter, follow the xref:getting-started:quick-start.adoc[Quick-start Guide] to get set up in minutes. Then you are ready to explore the rest of the chapters that explores
 
-In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You find our demonstrations [here^].
+In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You find our demonstrations link:https://github.com/OpenHFT/Chronicle-Queue-Demo[here^].
 
 == Chronicle Queue Enterprise
 link:https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise[Chronicle Queue Enterprise] is a commercially supported version of Chronicle Queue OSS.
