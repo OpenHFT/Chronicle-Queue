@@ -981,23 +981,28 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                if (direction == FORWARD) {
+                LoopForward: while (true) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
                             throw new NotReachedException("NOT_REACHED after FOUND");
                         case FOUND:
                             // the end moved!!
+                            continue;
                         case NOT_FOUND:
                             state = FOUND_IN_CYCLE;
-                            break;
+                            break LoopForward;
                         case END_OF_FILE:
                             state = END_OF_CYCLE;
-                            break;
+                            break LoopForward;
                         default:
                             throw new IllegalStateException("Unknown ScanResult: " + result);
                     }
                 }
+
+                if (direction == BACKWARD)
+                    moveToIndexResult(--index);
+
                 break;
             case NOT_REACHED:
                 throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(index));
