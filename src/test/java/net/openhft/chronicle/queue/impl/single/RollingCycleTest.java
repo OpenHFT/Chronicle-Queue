@@ -293,7 +293,7 @@ public class RollingCycleTest extends QueueTestCommon {
             }
             assertFalse(currentPosTailer.readBytes(reusableData));
 
-            // System.out.println("Wrote " + numWritten + " Read " + numRead);
+            System.out.println("Queue file shrinking is disabled: " + QueueFileShrinkManager.DISABLE_QUEUE_FILE_SHRINKING);
 
             String dump = queue.dump();
             assertEquals(expected, dump);
