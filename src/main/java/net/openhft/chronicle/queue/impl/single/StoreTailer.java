@@ -825,7 +825,7 @@ class StoreTailer extends AbstractCloseable
         if (s == null) return;
 
         final MappedBytes bytes = s.bytes();
-        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck());
+        bytes.singleThreadedCheckDisabled(singleThreadedCheckDisabled());
 
         final Wire wire2 = wireType.apply(bytes);
         wire2.usePadding(s.dataVersion() > 0);

@@ -78,6 +78,7 @@ public class ChronicleReader implements Reader {
     private long matchLimit = 0;
     private ContentBasedLimiter contentBasedLimiter;
     private String limiterArg;
+    private String tailerId = null;
 
     static {
         ToolsUtil.warnIfResourceTracing();
@@ -87,10 +88,9 @@ public class ChronicleReader implements Reader {
         return configValue != UNSET_VALUE;
     }
 
-    private ThreadLocal<ExcerptTailer> tlTailer;
-
     public void execute() {
         configureContentBasedLimiter();
+        validateArgs();
         long lastObservedTailIndex;
         long highestReachedIndex = 0L;
         boolean isFirstIteration = true;
@@ -98,10 +98,9 @@ public class ChronicleReader implements Reader {
         boolean queueHasBeenModified;
         do {
             try (final ChronicleQueue queue = createQueue();
-                 final ExcerptTailer tailer = queue.createTailer()) {
+                 final ExcerptTailer tailer = queue.createTailer(tailerId);
+                 final ExcerptTailer toEndTailer = queue.createTailer()) {
                 MessageHistory.set(new VanillaMessageHistory());
-
-                tlTailer = ThreadLocal.withInitial(queue::createTailer);
 
                 MessageCountingMessageConsumer messageConsumer = new MessageCountingMessageConsumer(matchLimit, createMessageConsumers());
                 QueueEntryReader queueEntryReader = createQueueEntryReader(tailer, messageConsumer);
@@ -136,7 +135,7 @@ public class ChronicleReader implements Reader {
                         highestReachedIndex = tailer.index();
                         isFirstIteration = false;
                     }
-                    queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex);
+                    queueHasBeenModified = queueHasBeenModifiedSinceLastCheck(lastObservedTailIndex, toEndTailer);
                     retryLastOperation = false;
                     if (!running || messageConsumer.matchLimitReached())
                         return;
@@ -155,6 +154,11 @@ public class ChronicleReader implements Reader {
             }
         } while (retryLastOperation);
 
+    }
+
+    private void validateArgs() {
+        if (tailerId != null && readOnly)
+            throw new IllegalArgumentException("Named tailers only work on writable queues");
     }
 
     /**
@@ -360,8 +364,13 @@ public class ChronicleReader implements Reader {
         return this;
     }
 
-    private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex) {
-        long currentTailIndex = indexOfEnd();
+    public ChronicleReader withTailerId(String tailerId) {
+        this.tailerId = tailerId;
+        return this;
+    }
+
+    private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex, ExcerptTailer tailer) {
+        long currentTailIndex = indexOfEnd(tailer);
         return currentTailIndex > lastObservedTailIndex;
     }
 
@@ -500,14 +509,8 @@ public class ChronicleReader implements Reader {
         tailer.direction(FORWARD);
     }
 
-    private long indexOfEnd() {
-        final ExcerptTailer excerptTailer = tlTailer.get();
-        long index = excerptTailer.index();
-        try {
-            return excerptTailer.toEnd().index();
-        } finally {
-            excerptTailer.moveToIndex(index);
-        }
+    private long indexOfEnd(ExcerptTailer excerptTailer) {
+        return excerptTailer.toEnd().index();
     }
 
     @NotNull

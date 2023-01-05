@@ -173,6 +173,9 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption("cblArg")) {
             chronicleReader.withLimiterArg(commandLine.getOptionValue("cblArg"));
         }
+        if (commandLine.hasOption("named")) {
+            chronicleReader.withTailerId(commandLine.getOptionValue("named"));
+        }
     }
 
     @NotNull
@@ -198,6 +201,7 @@ public class ChronicleReaderMain {
         addOption(options, "x", "max-results", true, "Limit the number of results to output", false);
         addOption(options, "cbl", "content-based-limiter", true, "Specify a content-based limiter", false);
         addOption(options, "cblArg", "content-based-limiter-argument", true, "Specify an argument for use by the content-based limiter", false);
+        addOption(options, "named", "named", true, "Named tailer ID", false);
         return options;
     }
 }
