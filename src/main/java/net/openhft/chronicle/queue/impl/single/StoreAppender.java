@@ -812,7 +812,7 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public @NotNull StoreAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        super.disableThreadSafetyCheck(disableThreadSafetyCheck);
+        super.singleThreadedCheckDisabled(disableThreadSafetyCheck);
         return this;
     }
 

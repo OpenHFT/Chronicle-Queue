@@ -92,7 +92,9 @@ public class ChronicleReaderTest extends QueueTestCommon {
         if (OS.isWindows())
             if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") ||
                     testName.getMethodName().equals("shouldBeAbleToReadFromReadOnlyFile") ||
-                    testName.getMethodName().equals("shouldPrintTimestampsToLocalTime")))
+                    testName.getMethodName().equals("shouldPrintTimestampsToLocalTime") ||
+                    testName.getMethodName().equals("namedTailerRequiresReadWrite") ||
+                    testName.getMethodName().equals("matchLimitThenNamedTailer")))
                 expectException("Read-only mode is not supported on Windows");
 
         dataDir = getTmpDir().toPath();
@@ -478,6 +480,27 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 .collect(Collectors.toList());
         assertEquals(3, matchedMessages.size());
         assertTrue(matchedMessages.stream().allMatch(s -> s.contains("goodbye")));
+    }
+
+    @Test
+    public void matchLimitThenNamedTailer() {
+        final long maxRecords = 5;
+        final String tailerId = "myTailer";
+        basicReader().withMatchLimit(maxRecords).withReadOnly(false).withTailerId(tailerId).execute();
+
+        assertEquals(maxRecords, capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count());
+
+        capturedOutput.clear();
+        basicReader().withReadOnly(false).withTailerId(tailerId).execute();
+        assertEquals(TOTAL_EXCERPTS_IN_QUEUE - maxRecords, capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void namedTailerRequiresReadWrite() {
+        assumeFalse(OS.isWindows());
+        basicReader().withTailerId("tailerId").withReadOnly(true).execute();
     }
 
     @Test
