@@ -94,18 +94,23 @@ window.antoraLunr = (function (lunr) {
   }
 
   function createSearchResult(result, store, searchResultDataset) {
-    result.forEach(function (item) {
-      var url = item.ref
-      var hash
-      if (url.includes('#')) {
-        hash = url.substring(url.indexOf('#') + 1)
-        url = url.replace('#' + hash, '')
-      }
-      var doc = store[url]
-      var metadata = item.matchData.metadata
-      var hits = highlightHit(metadata, hash, doc)
-      searchResultDataset.appendChild(createSearchResultItem(doc, item, hits))
-    })
+      let currentVersion = document.getElementsByClassName('version is-current')[0].firstElementChild.innerHTML;
+      currentVersion = currentVersion === 'ea' ? '' : currentVersion;
+  
+      result.forEach(function (item) {
+        var url = item.ref
+        var hash
+        if (url.includes('#')) {
+          hash = url.substring(url.indexOf('#') + 1)
+          url = url.replace('#' + hash, '')
+        }
+        var doc = store[url]
+        if (doc.version === currentVersion) {
+          var metadata = item.matchData.metadata
+          var hits = highlightHit(metadata, hash, doc)
+          searchResultDataset.appendChild(createSearchResultItem(doc, item, hits));
+        }
+      })
   }
 
   function createSearchResultItem (doc, item, hits) {
