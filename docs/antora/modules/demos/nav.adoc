@@ -1,2 +1,0 @@
-* xref:demos.adoc[Demos]
-** xref:message-history.adoc[Message History]
