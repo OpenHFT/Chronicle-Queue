@@ -13,6 +13,26 @@
   }
 }
 
+.panels {
+  overflow: visible;
+}
+
+.nav-panel-menu {
+  overflow: visible;
+}
+
+.nav-panel-explore {
+  position: unset;
+}
+
+.search-result-dataset {
+  max-height: inherit;
+}
+
+.search-result-dropdown-menu {
+  max-height: 400px;
+}
+
 #search-input {
   font-size: 16px;
   border: 1px solid lightgray;
@@ -165,7 +185,7 @@
 }
 
 .navbar-item {
-  padding: 2.5rem 0 0 0;
+  padding: 2rem 1.4em 0 1.4em;
   background: #181f4c;
   position: sticky;
   top: 0;
@@ -178,6 +198,7 @@ body {
 
 body .nav-menu {
   padding: 0 1.25rem;
+  overflow-y: scroll;
 }
 
 @media screen and (max-width: 1023px) {

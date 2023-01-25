@@ -1,10 +1,10 @@
 {{#with page.navigation}}
     <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item">
+            <input id="search-input" type="text" placeholder="Search docs">
+            <div id="search-icon"></div>
+        </div>
         <nav class="nav-menu">
-            <div class="navbar-item">
-                <input id="search-input" type="text" placeholder="Search docs">
-                <div id="search-icon"></div>
-            </div>
             {{#with @root.page.componentVersion}}
             {{/with}}
             {{> nav-tree navigation=this}}
