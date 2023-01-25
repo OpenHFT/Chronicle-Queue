@@ -189,6 +189,7 @@
   background: #181f4c;
   position: sticky;
   top: 0;
+  z-index: 9999; 
 }
 
 .body,
