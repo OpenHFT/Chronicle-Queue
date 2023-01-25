@@ -94,6 +94,9 @@ window.antoraLunr = (function (lunr) {
   }
 
   function createSearchResult(result, store, searchResultDataset) {
+    let currentVersion = document.getElementsByClassName('version is-current')[0].firstElementChild.innerHTML;
+    currentVersion = currentVersion === 'ea' ? '' : currentVersion;
+
     result.forEach(function (item) {
       var url = item.ref
       var hash
@@ -102,9 +105,11 @@ window.antoraLunr = (function (lunr) {
         url = url.replace('#' + hash, '')
       }
       var doc = store[url]
-      var metadata = item.matchData.metadata
-      var hits = highlightHit(metadata, hash, doc)
-      searchResultDataset.appendChild(createSearchResultItem(doc, item, hits))
+      if (doc.version === currentVersion) {
+        var metadata = item.matchData.metadata
+        var hits = highlightHit(metadata, hash, doc)
+        searchResultDataset.appendChild(createSearchResultItem(doc, item, hits))
+      }
     })
   }
 
