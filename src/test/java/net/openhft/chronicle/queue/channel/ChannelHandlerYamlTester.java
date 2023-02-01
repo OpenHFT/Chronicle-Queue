@@ -27,10 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+// TODO move the chronicle-wire
 public class ChannelHandlerYamlTester implements YamlTester {
 
     static final TesterControl testerControl = Jvm::pause;
-    private static final AtomicInteger ai = new AtomicInteger();
     private final String expected;
     private final String actual;
 
