@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,6 +42,7 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
@@ -270,7 +272,6 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
-        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build()) {
             ExcerptAppender appender = q.acquireAppender();
@@ -280,31 +281,10 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
             timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
             appender.writeBytes(test2);
-//            System.out.println(q.dump());
 
             Assert.assertTrue(hasEOF(q, firstCycle));
-            // here we try and write to previous cycle file. We will overwrite the EOF in doing so
-            ignoreException("Incomplete header found at pos: 33048: c0000000, overwriting");
-            ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
-            Assert.assertFalse(hasEOF(q, firstCycle));
-
-            // existing appender would not EOF an active cycle
-            appender.close();
-            Assert.assertFalse(hasEOF(q, firstCycle));
-
-            // acquiring appender will position it on first cycle without EOF
-            // we have to manually fix. This is done by CQE during backfill or by starting new document.
-            try (DocumentContext doc = q.acquireAppender().writingDocument(true)) {
-                ExcerptTailer tailer = q.createTailer();
-                tailer.readBytes(result);
-                assertEquals(test, result);
-                result.clear();
-                tailer.readBytes(result);
-                assertEquals(test1, result);
-                result.clear();
-                tailer.readBytes(result);
-                assertEquals(test2, result);
-            }
+            // here we try and write to previous cycle file
+            assertThrows(WriteAfterEOFException.class, () -> ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1));
         }
     }
 
