@@ -150,9 +150,8 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         builder.build().close();
         String val = Marshallable.$toString(builder);
 
-        System.err.println(val);
-
         SingleChronicleQueueBuilder builder2 = Marshallable.fromString(val);
+        assertEquals(builder, builder2);
         builder2.build().close();
     }
 
