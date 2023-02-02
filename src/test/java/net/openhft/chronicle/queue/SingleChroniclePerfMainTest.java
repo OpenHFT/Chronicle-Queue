@@ -127,6 +127,8 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         long capacity = byteable.maxSize();
         BytesStore<?, Void> bytesStore = BytesStore.nativeStore(capacity);
         byteable.bytesStore(bytesStore, 0, capacity);
+        assertEquals(bytesStore, byteable.bytesStore());
+        assertEquals(0, byteable.offset());
         bytesStore.releaseLast();
     }
 
