@@ -67,33 +67,34 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();
 
-        ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode);
-        final ExcerptTailer tailer;
+        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode)) {
+            final ExcerptTailer tailer;
 
-        if (channel instanceof BufferedChronicleChannel) {
-            BufferedChronicleChannel bc = (BufferedChronicleChannel) channel;
-            tailer = subscribeQ.createTailer();
-            bc.eventPoller(new PHEventPoller(tailer));
-        } else {
-            tailerThread = new Thread(() -> {
-                try (AffinityLock lock = context.affinityLock()) {
-                    SubscribeHandler.queueTailer(pauser, channel, subscribeQ);
-                } catch (ClosedIORuntimeException e) {
-                    Jvm.warn().on(PipeHandler.class, e.toString());
-                } catch (Throwable t) {
-                    Jvm.warn().on(PipeHandler.class, t);
-                }
-            }, "pipe~tailer");
-            tailerThread.setDaemon(true);
-            tailerThread.start();
-        }
+            if (channel instanceof BufferedChronicleChannel) {
+                BufferedChronicleChannel bc = (BufferedChronicleChannel) channel;
+                tailer = subscribeQ.createTailer();
+                bc.eventPoller(new PHEventPoller(tailer));
+            } else {
+                tailerThread = new Thread(() -> {
+                    try (AffinityLock lock = context.affinityLock()) {
+                        SubscribeHandler.queueTailer(pauser, channel, subscribeQ);
+                    } catch (ClosedIORuntimeException e) {
+                        Jvm.warn().on(PipeHandler.class, e.toString());
+                    } catch (Throwable t) {
+                        Jvm.warn().on(PipeHandler.class, t);
+                    }
+                }, "pipe~tailer");
+                tailerThread.setDaemon(true);
+                tailerThread.start();
+            }
 
-        Thread.currentThread().setName("pipe~reader");
-        try (AffinityLock lock = context.affinityLock()) {
-            copyFromChannelToQueue(channel, pauser, newQueue(context, publish, syncMode), syncMode);
-        } finally {
-            if (tailerThread != null)
-                tailerThread.interrupt();
+            Thread.currentThread().setName("pipe~reader");
+            try (AffinityLock lock = context.affinityLock()) {
+                copyFromChannelToQueue(channel, pauser, newQueue(context, publish, syncMode), syncMode);
+            } finally {
+                if (tailerThread != null)
+                    tailerThread.interrupt();
+            }
         }
     }
 

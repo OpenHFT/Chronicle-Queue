@@ -81,17 +81,18 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
         final ExcerptTailer tailer;
 
-        ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode);
-        InternalChronicleChannel icc = (InternalChronicleChannel) channel;
-        if (icc.supportsEventPoller()) {
-            tailer = subscribeQ.createTailer();
-            icc.eventPoller(new SHEventHandler(tailer));
-            closeWhenRunEnds = false;
-        } else {
-            try (AffinityLock lock = context.affinityLock()) {
-                queueTailer(pauser, channel, newQueue(context, subscribe, syncMode));
+        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode)) {
+            InternalChronicleChannel icc = (InternalChronicleChannel) channel;
+            if (icc.supportsEventPoller()) {
+                tailer = subscribeQ.createTailer();
+                icc.eventPoller(new SHEventHandler(tailer));
+                closeWhenRunEnds = false;
+            } else {
+                try (AffinityLock lock = context.affinityLock()) {
+                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode));
+                }
+                closeWhenRunEnds = true;
             }
-            closeWhenRunEnds = true;
         }
     }
 
