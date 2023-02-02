@@ -138,9 +138,8 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         wire.usePadding(true);
         wire.write().typedMarshallable(builder);
 
-        System.err.println(wire.bytes().toHexString());
-
         SingleChronicleQueueBuilder builder2 = wire.read().typedMarshallable();
+        assertEquals(builder, builder2);
         builder2.build().close();
     }
 
