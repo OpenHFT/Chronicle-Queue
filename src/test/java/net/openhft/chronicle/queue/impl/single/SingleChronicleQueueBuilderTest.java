@@ -180,7 +180,8 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
 
         try (SingleChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir)
                 .createAppenderConditionCreator(q -> {
-                    throw new AssertionError("This should never be called");
+                    fail("This should never be called");
+                    return null;
                 })
                 .readOnly(true)
                 .build()) {
