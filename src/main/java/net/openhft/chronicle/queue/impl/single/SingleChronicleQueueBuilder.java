@@ -1123,6 +1123,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
+    @Deprecated(/* to be removed in x.26*/)
     public SingleChronicleQueueBuilder clone() {
         try {
             return (SingleChronicleQueueBuilder) super.clone();
