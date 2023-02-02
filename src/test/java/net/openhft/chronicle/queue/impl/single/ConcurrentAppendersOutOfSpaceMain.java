@@ -44,7 +44,7 @@ import java.util.concurrent.locks.LockSupport;
  * Check for clean behaviour, and in particular no dangling locks left by the 2nd thread as it fails to gain
  * access to the queue while the permissions are removed
  */
-public class ConcurrentAppendersOutOfSpaceTest extends QueueTestCommon {
+public class ConcurrentAppendersOutOfSpaceMain extends QueueTestCommon {
     private static final int BLOCK_SIZE = 512 * 1024;
     private static final int MSG_SIZE = 256;
     private static final long MSGS_PER_SECOND = 1_000L;
