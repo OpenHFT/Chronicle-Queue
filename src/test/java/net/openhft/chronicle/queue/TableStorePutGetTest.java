@@ -23,6 +23,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import java.io.File;
+
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -116,12 +118,18 @@ public class TableStorePutGetTest extends QueueTestCommon {
 
     @Test
     public void manyEntries() {
-        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("manyEntries"))
+        final File tempDir = DirectoryUtils.tempDir("manyEntries");
+        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(tempDir)
                 .rollCycle(TEST_DAILY)
                 .blockSize(64 << 10)
                 .build()) {
-            for (int j = 0; j < 2280; j++) {
+            final int count = 2280;
+            for (int j = 0; j < count; j++) {
                 cq.tableStorePut("=hello" + j, j);
+            }
+            for (int j = 0; j < count; j++) {
+                final long l = cq.tableStoreGet("=hello" + j);
+                assertEquals(j, l);
             }
         }
     }
