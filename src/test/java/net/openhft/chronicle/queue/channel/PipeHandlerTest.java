@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.channel;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -17,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 
 @RunWith(Parameterized.class)
 public class PipeHandlerTest extends QueueTestCommon {
@@ -78,7 +76,6 @@ public class PipeHandlerTest extends QueueTestCommon {
     @Test
     public void redirectedServer() throws IOException {
         IOTools.deleteDirWithFiles("target/zero", "target/one", "target/client");
-        assumeFalse(Jvm.isDebug()); // TODO FIX
         String urlZzz = "tcp://localhost:65329";
         String url0 = "tcp://localhost:65330";
         String url1 = "tcp://localhost:65331";
