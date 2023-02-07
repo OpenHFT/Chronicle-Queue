@@ -231,16 +231,17 @@ any sub-packages are not a part of the public API and *may become subject to cha
 
 === Changes from Version 4 to Version 5
 
-In Chronicle Queue v5 tailers are now read-only, in Chronicle Queue v4 we have the concept of lazy indexing, where the appenders would not write indexes but instead the indexing was done by the tailer, or to be more precise, when lazy indexing was turned on the indexing was done by the first tailer that read the data.
-Since in v4 tailers could do the indexing we could not rely on them to be read-only.
-We decided to drop lazy indexing in v5. Making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations elsewhere in the code.
+In Chronicle Queue v5 tailers are now read-only, in Chronicle Queue v4 we had the concept of lazy indexing, where appenders would not write indexes but instead the indexing could be done by the tailer. We decided to drop lazy indexing in v5; making tailers read-only not only simplifies Chronicle Queue but also allows us to add optimisations elsewhere in the code.
 
-The locking model of Chronicle Queue was changed in v5, in Chronicle Queue v4 a write lock (to prevent concurrent writes to the queue) exists in the .cq4 file.
+The locking model of Chronicle Queue was changed in v5, in Chronicle Queue v4 the write lock (to prevent concurrent writes to the queue) exists in the .cq4 file.
 In v5 this was moved to a single file called a table store (metadata.cq4t).
 This simplifies the locking code internally as only the table store file has to be inspected.
 
-You can use Chronicle Queue v5 to read messages written with Chronicle Queue v4, however you should not concurrently run Chronicle Queue v4 and Chronicle Queue v5 at the same time.
-In other words avoid running Chronicle Queue v4’s appenders and tailers on a queue which at the same time is also read and written to via Chronicle Queue v5.
+You can use Chronicle Queue v5 to read messages written with Chronicle Queue v4, but this is not guaranteed to always work - if, for example,
+you created your v4 queue with `wireType(WireType.FIELDLESS_BINARY)` then Chronicle Queue v5 will not be able to read the queue's header.
+We have some tests for v5 reading v4 queues but these are limited and all scenarios may not be supported.
+
+You cannot use Chronicle Queue v5 to write to Chronicle Queue v4 queues.
 
 === Changes from Version 3 to Version 4
 
