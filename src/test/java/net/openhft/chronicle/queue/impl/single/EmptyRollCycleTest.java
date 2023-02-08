@@ -7,7 +7,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -23,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1291")
 public class EmptyRollCycleTest extends QueueTestCommon {
 
     public static final String EMPTY_ROLL_CYCLE_NAME = "19700101-0020X.cq4";
@@ -63,6 +61,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         expectException("Recovering header");
         createQueueWithEmptyRollCycleAtEnd();
 
+        long indexWritten = -1;
         // append to the queue
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
                 .rollCycle(RollCycles.TEN_MINUTELY)
@@ -71,6 +70,18 @@ public class EmptyRollCycleTest extends QueueTestCommon {
              ExcerptAppender appender = queue.acquireAppender();
              DocumentContext dc = appender.writingDocument()) {
             dc.wire().write("test").text("appending");
+            indexWritten = dc.index();
+        }
+
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .rollCycle(RollCycles.TEN_MINUTELY)
+                .build();
+             ExcerptTailer tailer = queue.createTailer()) {
+            tailer.moveToIndex(indexWritten);
+            try (final DocumentContext readingDocument = tailer.readingDocument()) {
+                assertTrue(readingDocument.isPresent());
+                assertEquals("appending", readingDocument.wire().read("test").text());
+            }
         }
     }
 
