@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.domestic.ReentrantFileLock;
 import net.openhft.chronicle.bytes.internal.HeapBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -25,7 +26,6 @@ import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
@@ -586,8 +586,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * which is updated last during append operation so may be possible that a single entry is available for reading
      * but not acknowledged by this method yet.
      *
-     * @deprecated
      * @see ExcerptTailer#approximateExcerptsInCycle(int)
+     * @deprecated
      */
     @Deprecated(/* To be removed in x.25 */)
     public long approximateExcerptsInCycle(int cycle) {
@@ -601,8 +601,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
      * expensive operation.
      *
-     * @deprecated
      * @see ExcerptTailer#exactExcerptsInCycle(int)
+     * @deprecated
      */
     @Deprecated(/* To be removed in x.25 */)
     public long exactExcerptsInCycle(int cycle) {
@@ -1083,7 +1083,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             try {
                 final RandomAccessFile raf = mappedBytes.mappedFile().raf();
-                final FileLock fileLock = raf.getChannel().tryLock();
+                FileLock fileLock = ReentrantFileLock.tryLock(mappedBytes.mappedFile().file(), raf.getChannel());
+                // Throw if we couldn't get the lock
+                if (fileLock == null) {
+                    throw new IOException("Couldn't get lock to recover header file");
+                }
+
                 try {
 
                     final int header = bytes.readVolatileInt(0);
