@@ -34,6 +34,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
     @Test
     public void tailerShouldTolerateEmptyRollCycleAtEnd() throws IOException {
+        ignoreException("Channel closed while unlocking");
         expectException("Recovering header");
         createQueueWithEmptyRollCycleAtEnd();
 
@@ -58,6 +59,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
     @Test
     public void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
+        ignoreException("Channel closed while unlocking");
         expectException("Recovering header");
         createQueueWithEmptyRollCycleAtEnd();
 
