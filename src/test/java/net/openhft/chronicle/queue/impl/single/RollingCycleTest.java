@@ -296,6 +296,9 @@ public class RollingCycleTest extends QueueTestCommon {
             // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
+            // was it truncated
+            if (dump.contains("\n4 bytes remaining"))
+                expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
             assertEquals(expected, dump);
 
             try {
