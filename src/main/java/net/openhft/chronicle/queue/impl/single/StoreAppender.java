@@ -628,12 +628,12 @@ class StoreAppender extends AbstractCloseable
         if (wire == null)
             setWireIfNull(cycle);
 
-        // in case our cached headerNumber is incorrect.
-        resetPosition(true);
-
         /// if the header number has changed then we will have roll
         if (this.cycle != cycle)
             rollCycleTo(cycle, this.cycle > cycle);
+
+        // in case our cached headerNumber is incorrect.
+        resetPosition(true);
 
         long headerNumber = wire.headerNumber();
 
