@@ -240,6 +240,7 @@ This simplifies the locking code internally as only the table store file has to 
 You can use Chronicle Queue v5 to read messages written with Chronicle Queue v4, but this is not guaranteed to always work - if, for example,
 you created your v4 queue with `wireType(WireType.FIELDLESS_BINARY)` then Chronicle Queue v5 will not be able to read the queue's header.
 We have some tests for v5 reading v4 queues but these are limited and all scenarios may not be supported.
+In this situation, we recommend either reading from these queues using Chronicle Queue v4 and writing back to new queue files using Chronicle Queue v5, or just treating Chronicle Queue files as Chronicle Wire data streams and reading the data sequentially via Chronicle Wire.
 
 You cannot use Chronicle Queue v5 to write to Chronicle Queue v4 queues.
 
