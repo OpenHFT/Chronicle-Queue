@@ -36,7 +36,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
 
     boolean assert_from_cpp() {
         String env = System.getProperty("chronicle.test.env");
-        return env != null && env.equals("from-cpp");
+        return (env != null && env.equals("from-cpp"));
     }
 
     @Test
@@ -62,8 +62,8 @@ public class RawAccessJavaTest extends QueueTestCommon {
                     // document length, inc 4-byte length
                     int length = Wires.lengthOf(header);
 
-                    // actual length of data
-                    int data_length = bytes.readInt();
+//                    // actual length of data
+//                    int data_length = bytes.readInt();
 
                     assertEquals(bytes.readByte(), (byte) 0xab);
                     assertEquals(bytes.readShort(), (short) 12);
@@ -98,9 +98,9 @@ public class RawAccessJavaTest extends QueueTestCommon {
 
                     Bytes<?> bytes = dc.wire().bytes();
 
-                    // will contain the size of the blob
-                    long start = bytes.writePosition();
-                    bytes.writeSkip(RAW_SIZE_PREFIX);
+//                    // will contain the size of the blob
+//                    long start = bytes.writePosition();
+//                    bytes.writeSkip(RAW_SIZE_PREFIX);
 
                     {
                         bytes.writeByte((byte) 0xab);
@@ -113,8 +113,9 @@ public class RawAccessJavaTest extends QueueTestCommon {
                         bytes.write8bit("Hello World");
                     }
 
-                    long end = bytes.writePosition();
-                    bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
+//                    
+//                    long end = bytes.writePosition();
+//                    bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
                 }
             }
         }
