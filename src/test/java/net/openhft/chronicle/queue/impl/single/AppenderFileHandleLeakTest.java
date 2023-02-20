@@ -101,7 +101,6 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     public void setUp() {
         assumeTrue(OS.isLinux());
 
-        System.setProperty("chronicle.queue.disableFileShrinking", "true");
         queuePath = getTmpDir();
     }
 

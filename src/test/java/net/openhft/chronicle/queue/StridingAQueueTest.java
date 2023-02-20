@@ -20,11 +20,6 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECOND
 import static org.junit.Assert.assertEquals;
 
 public class StridingAQueueTest extends QueueTestCommon {
-    @Before
-    public void disableFileShrinking() {
-        System.setProperty("chronicle.queue.disableFileShrinking", "true");
-    }
-
     @Test
     public void testStriding() {
         SetTimeProvider timeProvider = new SetTimeProvider();

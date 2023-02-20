@@ -88,11 +88,6 @@ public class QueueTestCommon {
     // *************************************************************************
     static AtomicLong counter = new AtomicLong();
 
-    @BeforeClass
-    public static void synchronousFileTruncating() {
-        System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
-    }
-
     @NotNull
     protected File getTmpDir() {
         final String methodName = testName.getMethodName();
