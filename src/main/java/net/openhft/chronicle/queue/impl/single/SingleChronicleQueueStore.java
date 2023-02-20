@@ -413,12 +413,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     boolean writeEOFAndShrink(@NotNull Wire wire, long timeoutMS) {
-        if (wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition())) {
-            // only if we just written EOF
-            QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
-            return true;
-        }
-        return false;
+        return wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
     }
 
     @Override

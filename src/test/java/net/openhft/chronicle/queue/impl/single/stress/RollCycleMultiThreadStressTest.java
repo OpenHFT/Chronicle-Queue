@@ -167,7 +167,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);
             ignoreException("touchPage failed");
-            System.setProperty("chronicle.queue.disableFileShrinking", "true");
         }
 
         for (int i = 0; i < numReaders; i++) {
@@ -264,7 +263,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         } finally {
 
-            System.clearProperty("chronicle.queue.disableFileShrinking");
             System.clearProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
             Jvm.resetExceptionHandlers();
 
