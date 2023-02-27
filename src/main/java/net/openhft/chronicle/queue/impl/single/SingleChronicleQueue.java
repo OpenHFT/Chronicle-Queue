@@ -1026,13 +1026,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
                         wireStore = storeFactory.apply(that, wire);
-                        wire.updateFirstHeader();
-                        wire.usePadding(wireStore.dataVersion() > 0);
 
-                        wireStore.initIndex(wire);
-                        // do not allow tailer to see the file until it's header is written
-                        directoryListing.onFileCreated(path, cycle);
-                        // allow directoryListing to pick up the file immediately
+                        createIndexThenUpdateHeader(wire, cycle, wireStore);
                     } else {
                         try {
                             wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
@@ -1106,6 +1101,19 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     cycleFileDiscard.getAbsolutePath() + ": " + success);
 
             return success;
+        }
+
+        private void createIndexThenUpdateHeader(AbstractWire wire, int cycle, SingleChronicleQueueStore wireStore) {
+            // Should very carefully prepare all data structures before publishing initial header
+            wire.usePadding(wireStore.dataVersion() > 0);
+            wire.padToCacheAlign();
+            long headerEndPos = wire.bytes().writePosition();
+            wireStore.initIndex(wire);
+            wire.updateFirstHeader(headerEndPos);
+            wire.bytes().writePosition(SPB_HEADER_SIZE);
+
+            // allow directoryListing to pick up the file immediately
+            directoryListing.onFileCreated(path, cycle);
         }
 
         @Override
