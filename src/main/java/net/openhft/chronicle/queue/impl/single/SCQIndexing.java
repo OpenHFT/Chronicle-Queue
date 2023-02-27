@@ -579,11 +579,20 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         if (index2Index != NOT_INITIALIZED)
             throw new IllegalStateException("Who wrote the index2index?");
 
+        // Ensure new header position is found despite first header not being finalized
+        long oldPos = wire.bytes().writePosition();
+        if (!writePosition.compareAndSwapValue(0, oldPos))
+            throw new IllegalStateException("Who updated the position?");
+
         long index = newIndex(wire, true);
         this.index2Index.compareAndSwapValue(NOT_INITIALIZED, index);
 
         LongArrayValues index2index = getIndex2index(wire);
         newIndex(wire, index2index, 0);
+
+        // Reset position as it were
+        if (!writePosition.compareAndSwapValue(oldPos, 0))
+            throw new IllegalStateException("Who reset the position?");
     }
 
     private LongArrayValues getIndex2index(@NotNull Wire wire) {
