@@ -36,7 +36,7 @@ import java.util.function.Predicate;
 public class QueueTestCommon {
     protected ThreadDump threadDump;
     protected boolean finishedNormally;
-    private ExceptionTracker<ExceptionKey> exceptionTracker;
+    protected ExceptionTracker<ExceptionKey> exceptionTracker;
 
     @Before
     public void assumeFinishedNormally() {
