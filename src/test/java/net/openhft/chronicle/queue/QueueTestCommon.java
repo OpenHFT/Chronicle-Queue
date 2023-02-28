@@ -53,7 +53,7 @@ public class QueueTestCommon {
 
     protected ThreadDump threadDump;
     protected boolean finishedNormally;
-    private ExceptionTracker<ExceptionKey> exceptionTracker;
+    protected ExceptionTracker<ExceptionKey> exceptionTracker;
 
     static {
         System.setProperty("queue.check.index", "true");

@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueSystemProperties;
@@ -50,6 +51,11 @@ import static net.openhft.chronicle.wire.Wires.*;
 
 class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
+    /**
+     * Keep track of where we've normalised EOFs to, so we don't re-do immutable, older cycles every time.
+     * This is the key in the table-store where we store that information
+     */
+    private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
     @NotNull
     private final SingleChronicleQueue queue;
     @NotNull
@@ -481,11 +487,18 @@ class StoreAppender extends AbstractCloseable
         if (first == Integer.MAX_VALUE)
             return;
 
-        for (int eofCycle = first; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
+        final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
+        int eofCycle = Math.max(first, (int) normalisedEOFsTo.getVolatileValue());
+        if (Jvm.isDebugEnabled(StoreAppender.class)) {
+            Jvm.debug().on(StoreAppender.class, "Normalising from cycle " + eofCycle);
+        }
+
+        for (; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
             setCycle2(eofCycle, false);
             if (wire != null) {
                 assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
+                normalisedEOFsTo.setMaxValue(eofCycle);
             }
         }
     }
