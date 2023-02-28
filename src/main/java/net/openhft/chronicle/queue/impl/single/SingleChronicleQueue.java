@@ -921,7 +921,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     @Nullable
-    protected LongValue tableStoreAcquire(CharSequence key, long index) {
+    protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
 
         BytesStore keyBytes = asBytes(key);
         LongValue longValue = metaStoreMap.get(keyBytes);
@@ -929,12 +929,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             synchronized (closers) {
                 longValue = metaStoreMap.get(keyBytes);
                 if (longValue == null) {
-                    longValue = metaStore.acquireValueFor(key, index);
+                    longValue = metaStore.acquireValueFor(key, defaultValue);
                     int length = key.length();
                     HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
                     key2.write(0, keyBytes, 0, length);
                     metaStoreMap.put(key2, longValue);
-                    return null;
+                    return longValue;
                 }
             }
         }
