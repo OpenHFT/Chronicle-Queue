@@ -50,7 +50,7 @@ public class TestEmptyFile {
         DirectoryUtils.deleteDir(tmpDir.toFile());
     }
 
-    @Test(expected = TimeoutException.class)
+    @Test
     public void shouldHandleEmptyFile() {
         Assume.assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue =

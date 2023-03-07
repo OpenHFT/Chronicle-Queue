@@ -37,6 +37,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         extends AbstractCloseable {
 
     private final Map<K, T> cache = new LinkedHashMap<>();
+    private final List<T> retained = new ArrayList<>();
     private final Function<T, V> transformer;
     private final ThrowingFunction<K, T, E> creator;
     private final ReferenceChangeListener referenceChangeListener;
@@ -75,7 +76,6 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
 
     @Override
     protected void performClose() {
-        List<T> retained = new ArrayList<>();
         synchronized (cache) {
             for (T value : cache.values()) {
                 try {
@@ -113,6 +113,21 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         } finally {
             if (interrupted) {
                 Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    public void remove(K key) {
+        throwExceptionIfClosed();
+
+        synchronized (cache) {
+            @Nullable T value = cache.remove(key);
+
+            if (value != null) {
+                value.release(this);
+
+                if (value.refCount() > 0)
+                    retained.add(value);
             }
         }
     }
