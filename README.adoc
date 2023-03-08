@@ -368,8 +368,8 @@ Messages by different appenders are interleaved,
 
 * when replicated, every replica has a copy of every message.
 
-Chronicle Queue is broker-less by default. You can use link:https://chronicle.software/products/datagrid/[*Chronicle Datagrid*] to act as a broker for remote access.
-By using *Chronicle Datagrid*, a Java or C# client can publish to a queue to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*.
+Chronicle Queue is broker-less. If you need an architecture with a broker, please
+contact sales@chronicle.software.
 
 - *File rolling and queue files*
 
@@ -1756,8 +1756,6 @@ While Kafka is faster than many of the alternatives, it doesn't match Chronicle 
 
 Chronicle Queue handles more volume from a single thread to a single partition.
 This avoids the need for the complexity, and the downsides, of having partitions.
-
-NOTE: Chronicle Datagrid does support partitioning of queues across machines, though not the partitioning of a single queue.
 
 Kafka uses an intermediate broker to use the operating system's file system and cache, while Chronicle Queue directly uses the operating system's file system and cache.
 For comparison see http://kafka.apache.org/documentation.html[Kafka Documentation]
