@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -37,6 +38,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
@@ -99,7 +104,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
 
     @Test
     public void testNoHeader() throws IOException {
-        expectException("Recovering header");
         ignoreException("Channel closed while unlocking");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         dir.mkdir();
@@ -129,7 +133,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
 
     @Test
     public void testDeadHeader() throws IOException {
-        expectException("Recovering header");
         ignoreException("Channel closed while unlocking");
         final File dir = getTmpDir();
 
@@ -148,6 +151,43 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .blockSize(QueueUtil.testBlockSize())
                 .build()) {
             testQueue(queue);
+        } finally {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        }
+
+    }
+
+    @Test
+    public void testDeadHeaderAppend() throws IOException {
+        ignoreException("Channel closed while unlocking");
+        expectException("Renamed un-acquirable segment file to");
+        final File dir = getTmpDir();
+
+        dir.mkdirs();
+        final File file = new File(dir, LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + SingleChronicleQueue.SUFFIX);
+        file.createNewFile();
+        final MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize());
+        try {
+            bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
+        } finally {
+            bytes.releaseLast();
+        }
+
+        try (ChronicleQueue queue = binary(dir).timeoutMS(500L)
+                .testBlockSize()
+                .blockSize(QueueUtil.testBlockSize())
+                .build()) {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("foo");
+                }
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("bar");
+                }
+            }
+
+            assertEquals(1,
+                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }

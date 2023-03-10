@@ -367,6 +367,9 @@ class StoreTailer extends AbstractCloseable
         if (state == END_OF_CYCLE) {
             return true;
         }
+        if (state == CYCLE_NOT_FOUND) {
+            return false;
+        }
         if (cycle < queue.lastCycle()) {
             // we have encountered an empty file without an EOF marker
             state = END_OF_CYCLE;

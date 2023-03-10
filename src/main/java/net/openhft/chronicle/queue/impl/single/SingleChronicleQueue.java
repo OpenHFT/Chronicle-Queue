@@ -18,7 +18,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.bytes.domestic.ReentrantFileLock;
 import net.openhft.chronicle.bytes.internal.HeapBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -45,9 +44,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileLock;
-import java.nio.channels.NonWritableChannelException;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.ZoneId;
@@ -70,6 +66,7 @@ import static net.openhft.chronicle.wire.Wires.*;
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
+    public static final String DISCARD_FILE_SUFFIX = ".discard";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
 
@@ -134,6 +131,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final long sparseCapacity;
     final AppenderListener appenderListener;
     protected int sourceId;
+    private int cycleFileRenamed = -1;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::createNewAppenderOnceConditionIsMet);
@@ -1039,9 +1037,24 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         try {
                             wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
                         } catch (TimeoutException e) {
+                            File cycleFile = mappedBytes.mappedFile().file();
 
-                            headerRecovery(that, mappedBytes, wire, mappedBytes, cycle);
-                            return acquire(cycle, createIfAbsent);
+                            mappedBytes.close();
+                            mappedFileCache.remove(path);
+
+                            if (!readOnly && createIfAbsent && cycleFileRenamed != cycle) {
+                                SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycle, cycleFile));
+
+                                if (acquired == null)
+                                    throw e;
+
+                                return acquired;
+                            }
+
+                            if (Jvm.debug().isEnabled(SingleChronicleQueue.class)) {
+                                Jvm.debug().on(SingleChronicleQueue.class, "Cycle file not ready: " + cycleFile.getAbsolutePath());
+                            }
+                            return null;
                         }
 
                         StringBuilder name = acquireStringBuilder();
@@ -1079,54 +1092,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
         }
 
-        private synchronized void headerRecovery(final SingleChronicleQueue that, final MappedBytes mappedBytes, final AbstractWire wire, final Bytes<?> bytes, final int cycle) throws IOException, TimeoutException {
+        // Rename un-acquirable segment file to make sure no data is lost to try and recreate the segment
+        private boolean backupCycleFile(int cycle, File cycleFile) {
+            File cycleFileDiscard = new File(cycleFile.getParentFile(),
+                    String.format("%s-%d%s", cycleFile.getName(), System.currentTimeMillis(), DISCARD_FILE_SUFFIX));
+            boolean success = cycleFile.renameTo(cycleFileDiscard);
 
-            try {
-                final RandomAccessFile raf = mappedBytes.mappedFile().raf();
-                FileLock fileLock = ReentrantFileLock.tryLock(mappedBytes.mappedFile().file(), raf.getChannel());
-                // Throw if we couldn't get the lock
-                if (fileLock == null) {
-                    throw new IOException("Couldn't get lock to recover header file");
-                }
+            // Back-pressure against renaming same cycle multiple times from single queue
+            if (success)
+                cycleFileRenamed = cycle;
 
-                try {
+            Jvm.warn().on(SingleChronicleQueue.class, "Renamed un-acquirable segment file to " +
+                    cycleFileDiscard.getAbsolutePath() + ": " + success);
 
-                    final int header = bytes.readVolatileInt(0);
-                    if (isReady(header))
-                        return;
-
-                    // we hold the file lock so are going to force recovery
-                    if (!bytes.compareAndSwapInt(0, header, 0)) {
-                        Jvm.warn().on(getClass(), "failed to recover.");
-                        throw new StreamCorruptedException("failed to recover.˚");
-                    }
-
-                    if (!wire.writeFirstHeader()) {
-                        Jvm.warn().on(getClass(), "failed to recover.");
-                        throw new StreamCorruptedException("failed to recover.˚");
-                    }
-
-                    Jvm.warn().on(getClass(), "Recovering header");
-                    try (final SingleChronicleQueueStore wireStore = storeFactory.apply(that, wire)) {
-                        wire.updateFirstHeader();
-                        wire.usePadding(wireStore.dataVersion() > 0);
-                        wireStore.initIndex(wire);
-                        directoryListing.onFileCreated(path, cycle);
-                    }
-                } finally {
-                    try {
-                        fileLock.release();
-                    } catch (ClosedChannelException ex) {
-                        Jvm.warn().on(SingleChronicleQueue.class,
-                                "Channel closed while unlocking " + mappedBytes.mappedFile().file(), ex);
-                    }
-                }
-
-            } catch (NonWritableChannelException e) {
-                // this can occur if the queue is in a read only mode
-                throw new TimeoutException();
-            }
-
+            return success;
         }
 
         @Override

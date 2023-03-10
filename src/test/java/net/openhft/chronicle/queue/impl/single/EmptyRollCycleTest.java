@@ -35,7 +35,6 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     @Test
     public void tailerShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
-        expectException("Recovering header");
         createQueueWithEmptyRollCycleAtEnd();
 
         // read through the queue
@@ -60,7 +59,6 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     @Test
     public void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
-        expectException("Recovering header");
         createQueueWithEmptyRollCycleAtEnd();
 
         long indexWritten = -1;
@@ -108,7 +106,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
                         assertTrue(readingDocument.isPresent());
                     }
                 }
-                assertThrows(IOException.class, tailer::readingDocument);
+                assertEquals(false, tailer.readingDocument().isPresent());
             }
         } finally {
             start.destroy();
