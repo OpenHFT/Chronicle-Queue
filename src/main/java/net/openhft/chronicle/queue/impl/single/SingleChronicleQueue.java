@@ -26,7 +26,6 @@ import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
@@ -132,6 +131,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final long sparseCapacity;
     final AppenderListener appenderListener;
     protected int sourceId;
+    private int cycleFileRenamed = -1;
     @NotNull
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::createNewAppenderOnceConditionIsMet);
@@ -1042,8 +1042,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             mappedBytes.close();
                             mappedFileCache.remove(path);
 
-                            if (!readOnly && createIfAbsent) {
-                                SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycleFile));
+                            if (!readOnly && createIfAbsent && cycleFileRenamed != cycle) {
+                                SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycle, cycleFile));
 
                                 if (acquired == null)
                                     throw e;
@@ -1093,9 +1093,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
 
         // Rename un-acquirable segment file to make sure no data is lost to try and recreate the segment
-        private boolean backupCycleFile(File cycleFile) {
-            File cycleFileDiscard = new File(cycleFile.getParentFile(), cycleFile.getName() + DISCARD_FILE_SUFFIX);
+        private boolean backupCycleFile(int cycle, File cycleFile) {
+            File cycleFileDiscard = new File(cycleFile.getParentFile(),
+                    String.format("%s-%d%s", cycleFile.getName(), System.currentTimeMillis(), DISCARD_FILE_SUFFIX));
             boolean success = cycleFile.renameTo(cycleFileDiscard);
+
+            // Back-pressure against renaming same cycle multiple times from single queue
+            if (success)
+                cycleFileRenamed = cycle;
 
             Jvm.warn().on(SingleChronicleQueue.class, "Renamed un-acquirable segment file to " +
                     cycleFileDiscard.getAbsolutePath() + ": " + success);

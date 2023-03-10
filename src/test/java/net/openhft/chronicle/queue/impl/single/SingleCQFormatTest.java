@@ -185,6 +185,9 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     dc.wire().write("bar");
                 }
             }
+
+            assertEquals(1,
+                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
