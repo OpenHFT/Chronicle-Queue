@@ -776,11 +776,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public long lastIndex() {
         // This is a slow implementation that gets a Tailer/DocumentContext to find the last index
         try (final ExcerptTailer tailer = createTailer().direction(BACKWARD).toEnd()) {
-            try (final DocumentContext documentContext = tailer.readingDocument()) {
-                if (documentContext.isPresent()) {
-                    return documentContext.index();
-                } else {
-                    return -1;
+            while (true) {
+                try (final DocumentContext documentContext = tailer.readingDocument()) {
+                    if (documentContext.isPresent() && !documentContext.isMetaData()) {
+                        return documentContext.index();
+                    } else {
+                        return -1;
+                    }
                 }
             }
         }

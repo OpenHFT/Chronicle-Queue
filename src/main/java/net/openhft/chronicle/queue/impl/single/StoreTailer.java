@@ -764,24 +764,23 @@ class StoreTailer extends AbstractCloseable
         }
     }
 
-    private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException {
-        RollCycle rollCycle = queue.rollCycle();
-
+    private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException, MissingStoreFileException {
+        final RollCycle rollCycle = queue.rollCycle();
         final SingleChronicleQueueStore wireStore = (cycle == lastCycle) ? this.store : queue.storeForCycle(
                 lastCycle, queue.epoch(), false, this.store);
-        this.setCycle(lastCycle);
-        if (wireStore == null)
-            throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
 
-        if (this.store != wireStore) {
-            releaseStore();
-            this.store = wireStore;
-            resetWires();
+        long sequenceNumber = -1;
+        if (wireStore != null) {
+            if (this.store != wireStore) {
+                releaseStore();
+                this.store = wireStore;
+                resetWires();
+            }
+
+            sequenceNumber = this.store.lastSequenceNumber(this);
         }
         // give the position of the last entry and
         // flag we want to count it even though we don't know if it will be meta data or not.
-
-        final long sequenceNumber = this.store.lastSequenceNumber(this);
 
         // fixes #378
         if (sequenceNumber == -1L) {
@@ -795,8 +794,11 @@ class StoreTailer extends AbstractCloseable
                     // try again.
                 }
             }
+            this.setCycle(lastCycle);
             return rollCycle.toIndex(lastCycle, 0L);
         }
+
+        this.setCycle(lastCycle);
         return rollCycle.toIndex(lastCycle, sequenceNumber);
     }
 
@@ -879,7 +881,7 @@ class StoreTailer extends AbstractCloseable
             return optimizedToEnd();
         } catch (MissingStoreFileException e) {
             queue.refreshDirectoryListing();
-            return optimizedToEnd();
+            return originalToEnd();
         }
     }
 
@@ -925,12 +927,11 @@ class StoreTailer extends AbstractCloseable
                 return this;
             }
 
-            // TODO fix this so it doesn't replace the same store.
             final SingleChronicleQueueStore wireStore = queue.storeForCycle(
                     lastCycle, queue.epoch(), false, this.store);
-            this.setCycle(lastCycle);
             if (wireStore == null)
                 throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
+            this.setCycle(lastCycle);
 
             if (this.store != wireStore) {
                 releaseStore();
@@ -956,7 +957,7 @@ class StoreTailer extends AbstractCloseable
             final Bytes<?> bytes = w.bytes();
             state = isEndOfFile(bytes.readVolatileInt(bytes.readPosition())) ? END_OF_CYCLE : FOUND_IN_CYCLE;
 
-            index(rollCycle.toIndex(lastCycle, sequenceNumber));
+            index(rollCycle.toIndex(wireStore.cycle(), sequenceNumber));
 
         } catch (@NotNull UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
