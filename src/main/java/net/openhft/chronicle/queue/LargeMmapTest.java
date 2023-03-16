@@ -17,7 +17,7 @@ public class LargeMmapTest {
     private static final boolean FORCE_SAFEPOINTS = Boolean.getBoolean("force.safepoints");
     private static final boolean SCATTER_BLOCK_SIZE = Boolean.getBoolean("scatter.block.size");
     private static final boolean SHARE_READ_QUEUES = Boolean.getBoolean("share.read.queues");
-    public static final long BLOCK_SIZE = 4L * 1024 * 1024 * 1024;
+    public static final long BLOCK_SIZE = Long.getLong("block.size", 4L * 1024 * 1024 * 1024);
 
     public static void main(String[] args) {
         new Thread("writer") {
