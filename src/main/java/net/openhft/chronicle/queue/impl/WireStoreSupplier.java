@@ -26,8 +26,14 @@ import java.text.ParseException;
 import java.util.NavigableSet;
 
 public interface WireStoreSupplier {
+    enum CreateStrategy {
+        CREATE, // Always create file
+        REINITIALIZE_EXISTING, // Do not create new file but reinitialize file if header is not ready - for normalizeEOF
+        READ_ONLY
+    }
+
     @Nullable
-    SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent);
+    SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy);
 
     /**
      * the next available cycle, no cycle will be created by this method, typically used by a

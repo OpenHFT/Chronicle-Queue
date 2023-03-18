@@ -785,8 +785,8 @@ class StoreTailer extends AbstractCloseable
         // fixes #378
         if (sequenceNumber == -1L) {
             // nothing has been written yet, so point to start of cycle
-            long prevCycle = queue.firstCycle();
-            while (prevCycle < lastCycle) {
+            int firstCycle = queue.firstCycle();
+            while (firstCycle < lastCycle) {
                 lastCycle--;
                 try {
                     return approximateLastCycle2(lastCycle);
@@ -794,8 +794,8 @@ class StoreTailer extends AbstractCloseable
                     // try again.
                 }
             }
-            this.setCycle(lastCycle);
-            return rollCycle.toIndex(lastCycle, 0L);
+            this.setCycle(firstCycle);
+            return rollCycle.toIndex(firstCycle, 0L);
         }
 
         this.setCycle(lastCycle);

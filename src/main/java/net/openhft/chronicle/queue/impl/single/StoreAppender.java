@@ -32,6 +32,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.queue.util.MicroTouched;
 import net.openhft.chronicle.queue.util.PretouchUtil;
@@ -105,7 +106,7 @@ class StoreAppender extends AbstractCloseable
                 if (firstCycle != Integer.MAX_VALUE) {
                     // Backing down until EOF-ed cycle is encountered
                     for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
-                        setCycle2(eofCycle, false);
+                        setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
                         if (cycleHasEOF()) {
                             // Make sure all older cycles have EOF marker
                             if (eofCycle > firstCycle)
@@ -113,7 +114,7 @@ class StoreAppender extends AbstractCloseable
 
                             // If first non-EOF file is in the past, it's possible it will be replicated/backfilled to
                             if (eofCycle < lastExistingCycle)
-                                setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, false);
+                                setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, WireStoreSupplier.CreateStrategy.READ_ONLY);
                             break;
                         }
                     }
@@ -297,10 +298,10 @@ class StoreAppender extends AbstractCloseable
 
     void setCycle(int cycle) {
         if (cycle != this.cycle)
-            setCycle2(cycle, true);
+            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
     }
 
-    private void setCycle2(final int cycle, final boolean createIfAbsent) {
+    private void setCycle2(final int cycle, final WireStoreSupplier.CreateStrategy createStrategy) {
         queue.throwExceptionIfClosed();
         if (cycle < 0)
             throw new IllegalArgumentException("You can not have a cycle that starts " +
@@ -310,7 +311,7 @@ class StoreAppender extends AbstractCloseable
 
         SingleChronicleQueueStore oldStore = this.store;
 
-        SingleChronicleQueueStore newStore = storePool.acquire(cycle,  createIfAbsent, oldStore);
+        SingleChronicleQueueStore newStore = storePool.acquire(cycle,  createStrategy, oldStore);
 
         if (newStore != oldStore) {
             this.store = newStore;
@@ -494,7 +495,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         for (; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
-            setCycle2(eofCycle, false);
+            setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
             if (wire != null) {
                 assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
@@ -506,7 +507,7 @@ class StoreAppender extends AbstractCloseable
     private void setWireIfNull(final int cycle) {
         normaliseEOFs0(cycle);
 
-        setCycle2(cycle, true);
+        setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
     }
 
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
@@ -767,10 +768,10 @@ class StoreAppender extends AbstractCloseable
         int lastExistingCycle = queue.lastCycle();
 
         if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
-            setCycle2(lastExistingCycle, false);
+            setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
             rollCycleTo(cycle);
         } else {
-            setCycle2(cycle, true);
+            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
         }
     }
 

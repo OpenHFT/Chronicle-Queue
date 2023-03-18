@@ -39,6 +39,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -164,7 +165,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         final File dir = getTmpDir();
 
         dir.mkdirs();
-        final File file = new File(dir, LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + SingleChronicleQueue.SUFFIX);
+        final File file = new File(dir, LocalDate.now(Clock.systemUTC()).format(DateTimeFormatter.ofPattern("yyyyMMdd")) + SingleChronicleQueue.SUFFIX);
         file.createNewFile();
         final MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize());
         try {
