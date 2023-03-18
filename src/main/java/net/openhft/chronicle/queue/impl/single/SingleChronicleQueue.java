@@ -569,7 +569,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Nullable
     @Override
     public final SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore) {
-        return this.pool.acquire(cycle, createIfAbsent, oldStore);
+        return this.pool.acquire(cycle,
+                createIfAbsent ? WireStoreSupplier.CreateStrategy.CREATE : WireStoreSupplier.CreateStrategy.READ_ONLY,
+                oldStore);
     }
 
     @Override
@@ -778,8 +780,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try (final ExcerptTailer tailer = createTailer().direction(BACKWARD).toEnd()) {
             while (true) {
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
-                    if (documentContext.isPresent() && !documentContext.isMetaData()) {
-                        return documentContext.index();
+                    if (documentContext.isPresent()) {
+                        if (!documentContext.isMetaData())
+                            return documentContext.index();
                     } else {
                         return -1;
                     }
@@ -977,7 +980,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         @SuppressWarnings("resource")
         @Override
-        public SingleChronicleQueueStore acquire(int cycle, boolean createIfAbsent) {
+        public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
             throwExceptionIfClosed();
 
             SingleChronicleQueue that = SingleChronicleQueue.this;
@@ -988,18 +991,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 File path = dateValue.path;
 
                 directoryListing.refresh(false);
-                if (!createIfAbsent &&
+                if (createStrategy != CreateStrategy.CREATE &&
                         (cycle > directoryListing.getMaxCreatedCycle()
                                 || cycle < directoryListing.getMinCreatedCycle()
                                 || !path.exists())) {
                     return null;
                 }
 
-                if (createIfAbsent)
+                if (createStrategy != CreateStrategy.READ_ONLY)
                     checkDiskSpace(that.path);
 
                 throwExceptionIfClosed();
-                if (createIfAbsent && !path.exists() && !dateValue.pathExists)
+                if (createStrategy == CreateStrategy.CREATE && !path.exists() && !dateValue.pathExists)
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);
 
                 dateValue.pathExists = true;
@@ -1025,7 +1028,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                 SingleChronicleQueueStore wireStore;
                 try {
-                    if (!readOnly && createIfAbsent && wire.writeFirstHeader()) {
+                    if (!readOnly && createStrategy == CreateStrategy.CREATE && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
                         wireStore = storeFactory.apply(that, wire);
 
@@ -1039,7 +1042,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             mappedBytes.close();
                             mappedFileCache.remove(path);
 
-                            if (!readOnly && createIfAbsent && cycleFileRenamed != cycle) {
+                            if (!readOnly && createStrategy != CreateStrategy.READ_ONLY && cycleFileRenamed != cycle) {
                                 SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycle, cycleFile));
 
                                 if (acquired == null)
@@ -1090,7 +1093,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
 
         // Rename un-acquirable segment file to make sure no data is lost to try and recreate the segment
-        private boolean backupCycleFile(int cycle, File cycleFile) {
+        private CreateStrategy backupCycleFile(int cycle, File cycleFile) {
             File cycleFileDiscard = new File(cycleFile.getParentFile(),
                     String.format("%s-%d%s", cycleFile.getName(), System.currentTimeMillis(), DISCARD_FILE_SUFFIX));
             boolean success = cycleFile.renameTo(cycleFileDiscard);
@@ -1102,7 +1105,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             Jvm.warn().on(SingleChronicleQueue.class, "Renamed un-acquirable segment file to " +
                     cycleFileDiscard.getAbsolutePath() + ": " + success);
 
-            return success;
+            return success ? CreateStrategy.CREATE : CreateStrategy.READ_ONLY;
         }
 
         private void createIndexThenUpdateHeader(AbstractWire wire, int cycle, SingleChronicleQueueStore wireStore) {

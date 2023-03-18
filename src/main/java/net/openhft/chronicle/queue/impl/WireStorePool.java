@@ -45,7 +45,7 @@ public class WireStorePool extends SimpleCloseable {
     @Nullable
     public SingleChronicleQueueStore acquire(
             final int cycle,
-            boolean createIfAbsent,
+            WireStoreSupplier.CreateStrategy createStrategy,
             SingleChronicleQueueStore oldStore) {
         throwExceptionIfClosed();
 
@@ -53,7 +53,7 @@ public class WireStorePool extends SimpleCloseable {
         if (oldStore != null && oldStore.cycle() == cycle && !oldStore.isClosed())
             return oldStore;
 
-        SingleChronicleQueueStore store = this.supplier.acquire(cycle, createIfAbsent);
+        SingleChronicleQueueStore store = this.supplier.acquire(cycle, createStrategy);
         if (store != null) {
             store.cycle(cycle);
             if (store != oldStore && storeFileListener.isActive())

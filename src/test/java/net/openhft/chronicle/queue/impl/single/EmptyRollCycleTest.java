@@ -59,6 +59,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     @Test
     public void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
+        ignoreException("Renamed un-acquirable segment file");
         createQueueWithEmptyRollCycleAtEnd();
 
         long indexWritten = -1;
