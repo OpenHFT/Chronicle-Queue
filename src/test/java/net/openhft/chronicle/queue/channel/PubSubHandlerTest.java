@@ -24,7 +24,6 @@ import static org.junit.Assume.assumeFalse;
 @RunWith(Parameterized.class)
 public class PubSubHandlerTest extends QueueTestCommon {
 
-
     private final String url;
 
     public PubSubHandlerTest(String name, String url) {
@@ -33,10 +32,9 @@ public class PubSubHandlerTest extends QueueTestCommon {
 
     public static String createTargetDir(String s) {
         String name = OS.getTarget() + "/" + s + "-" + Time.uniqueId();
+        assertTrue(name, name.contains("/target/"));
         final File file = new File(name);
         file.mkdirs();
-        assert !name.contains(":");
-        assert !name.startsWith("/");
         return name;
     }
 
