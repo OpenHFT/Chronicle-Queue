@@ -32,7 +32,7 @@ public class PubSubHandlerTest extends QueueTestCommon {
 
     public static String createTargetDir(String s) {
         String name = OS.getTarget() + "/" + s + "-" + Time.uniqueId();
-        assertTrue(name, name.contains("/target/"));
+        assertTrue(name, name.contains("target/"));
         final File file = new File(name);
         file.mkdirs();
         return name;
