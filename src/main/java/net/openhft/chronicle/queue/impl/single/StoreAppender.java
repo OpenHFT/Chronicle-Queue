@@ -424,15 +424,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         if (queue.doubleBuffer && writeLock.locked() && !metaData) {
-            context.isClosed = false;
-            context.rollbackOnClose = false;
-            context.buffered = true;
-            if (bufferWire == null) {
-                Bytes<?> bufferBytes = Bytes.allocateElasticOnHeap();
-                bufferWire = queue().wireType().apply(bufferBytes);
-            }
-            context.wire = bufferWire;
-            context.metaData(false);
+            prepareDoubleBuffer();
         } else {
             writeLock.lock();
             int cycle = queue.cycle();
@@ -454,6 +446,18 @@ class StoreAppender extends AbstractCloseable
         }
 
         return context;
+    }
+
+    private void prepareDoubleBuffer() {
+        context.isClosed = false;
+        context.rollbackOnClose = false;
+        context.buffered = true;
+        if (bufferWire == null) {
+            Bytes<?> bufferBytes = Bytes.allocateElasticOnHeap();
+            bufferWire = queue().wireType().apply(bufferBytes);
+        }
+        context.wire = bufferWire;
+        context.metaData(false);
     }
 
     @Override

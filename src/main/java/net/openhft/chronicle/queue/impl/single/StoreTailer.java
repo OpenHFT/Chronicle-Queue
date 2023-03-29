@@ -210,7 +210,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
         DocumentContext documentContext = readingDocument0(includeMetaData);
-        // this check was added after a strange behaviour seen by one client. I should be impossible.
+        // this check was added after a strange behaviour seen by one client. It should be impossible.
         if (documentContext.wire() != null)
             if (documentContext.wire().bytes().readRemaining() >= 1 << 30)
                 throw new AssertionError("readRemaining " + documentContext.wire().bytes().readRemaining());
@@ -245,16 +245,7 @@ class StoreTailer extends AbstractCloseable
                 return context;
             }
 
-            RollCycle rollCycle = queue.rollCycle();
-            if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
-                int firstCycle = queue.firstCycle();
-                if (rollCycle.toCycle(index()) < firstCycle)
-                    toStart();
-            } else if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
-                // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
-                // since we can't find an entry at current index, indicate that we're at the end of a cycle
-                state = TailerState.END_OF_CYCLE;
-            }
+            readingDocumentCycleNotFound(next);
 
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
@@ -263,15 +254,32 @@ class StoreTailer extends AbstractCloseable
         } catch (DecoratedBufferUnderflowException e) {
             // read-only tailer view is fixed, a writer could continue past the end of the view
             // at the point this tailer was created. Log a warning and return no document.
-            if (queue.isReadOnly()) {
-                Jvm.warn().on(StoreTailer.class,
-                        "Tried to read past the end of a read-only view. " +
-                                "Underlying data store may have grown since this tailer was created.", e);
-            } else {
-                throw e;
-            }
+            readingDocumentDBUE(e);
         }
         return INSTANCE;
+    }
+
+    private void readingDocumentDBUE(DecoratedBufferUnderflowException e) {
+        if (queue.isReadOnly()) {
+            Jvm.warn().on(StoreTailer.class,
+                    "Tried to read past the end of a read-only view. " +
+                            "Underlying data store may have grown since this tailer was created.", e);
+        } else {
+            throw e;
+        }
+    }
+
+    private void readingDocumentCycleNotFound(boolean next) {
+        RollCycle rollCycle = queue.rollCycle();
+        if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
+            int firstCycle = queue.firstCycle();
+            if (rollCycle.toCycle(index()) < firstCycle)
+                toStart();
+        } else if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
+            // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
+            // since we can't find an entry at current index, indicate that we're at the end of a cycle
+            state = TailerState.END_OF_CYCLE;
+        }
     }
 
     // throws UnrecoverableTimeoutException
