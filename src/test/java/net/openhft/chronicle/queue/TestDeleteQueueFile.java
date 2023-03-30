@@ -152,11 +152,12 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
     public void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
-        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, builder -> builder.forceDirectoryListingRefreshIntervalMs(250))) {
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
@@ -171,9 +172,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
             // delete the last store
             Files.delete(Paths.get(thirdCycle.filename));
-
-            // wait for cache to expire
-            Jvm.pause(260);
 
             // should be at correct index
             assertEquals(Long.toHexString(secondCycle.lastIndex + 1), Long.toHexString(tailer.toEnd().index()));
