@@ -51,6 +51,11 @@ local.properties
 *.cq4t
 #*.cq4
 
+docs/antora/build
+docs/antora/build-local*
+docs/antora/.bundle
+docs/antora/package-lock.json
+
 benchmarks/dependency-reduced-pom.xml
 
 dependency-reduced-pom.xml

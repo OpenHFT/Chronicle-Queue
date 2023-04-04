@@ -1,0 +1,8 @@
+root_level: 0
+component_versions: '@*' # latest version 
+publish: false
+asciidoc:
+  attributes:
+    source-highlighter: rouge
+    pdf-theme: ./pdf-theme.yml
+    pdf-fontsdir: ./pdf-resources/fonts

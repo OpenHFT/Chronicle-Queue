@@ -1,0 +1,69 @@
+extends: base
+page:
+  layout: portrait
+  margin: [0.75in, 0.75in, 0.75in, 0.75in]
+  size: a4
+title-page: false
+cover:
+  front:
+    image: ./pdf-resources/images/chronicle-queue-docs-cover.png
+footer:
+  height: 0.75in
+  line-height: 1
+  recto:
+    right:
+      content: '{page-number} of {page-count} | *{section-or-chapter-title}* '
+    left: 
+      content: '(C) Chronicle Software 2023'
+  verso:
+    right:
+      content: $footer-recto-right-content
+    left:
+      content: $footer-recto-left-content
+font:
+  catalog:
+    Poppins:
+      normal: Poppins-Regular.ttf
+      bold: Poppins-SemiBold.ttf
+      italic: Poppins-Italic.ttf
+      bold_italic: Poppins-SemiBoldItalic.ttf      
+    fallbacks:
+      - Times New Roman 
+base:
+  font-family: Poppins
+  font-size: 12
+  line-height-length: 12
+  line-height: $base-line-height-length / $base-font-size
+heading:
+  font-color: #181F4C
+  font-size: 17
+  font-style: bold
+  line-height: 1.2
+  margin-bottom: 5
+link:
+  font-color: #3155A5
+table: 
+  font-size: 10 
+table-head:
+  background-color: #181F4C
+  font-color: #FFFFFF
+code: 
+  background-color: #FFFFFF
+# admonition icons
+admonition:
+  icon:
+    tip:
+      name: lightbulb
+      stroke-color: #00A79D
+    note: 
+      name: comment
+      stroke-color: #3155A5
+    important: 
+      name: exclamation-circle
+      stroke-color: #3155A5
+    warning: 
+      name: exclamation-triangle
+      stroke-color: #E29633
+    caution: 
+      name: exclamation-triangle
+      stroke-color: #E29633
