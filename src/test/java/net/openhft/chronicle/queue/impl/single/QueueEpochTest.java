@@ -1,7 +1,28 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.junit.Test;
@@ -12,9 +33,10 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static org.junit.Assert.assertEquals;
 
-public final class QueueEpochTest extends ChronicleQueueTestBase {
+public final class QueueEpochTest extends QueueTestCommon {
     private static final boolean DEBUG = false;
     private static final long MIDNIGHT_UTC_BASE_TIME = 1504569600000L;
     // 17:15 EDT, 21:15 UTC
@@ -26,7 +48,7 @@ public final class QueueEpochTest extends ChronicleQueueTestBase {
     private static final long ONE_SECOND_BEFORE_ROLL_TIME = ROLL_TIME - TimeUnit.SECONDS.toMillis(1L);
     private static final long ONE_SECOND_AFTER_ROLL_TIME = ROLL_TIME + TimeUnit.SECONDS.toMillis(1L);
     private static final long ONE_DAY = TimeUnit.DAYS.toMillis(1L);
-    private static final RollCycle DAILY_ROLL = RollCycles.DAILY;
+    private static final RollCycle DAILY_ROLL = DAILY;
 
     private long currentTime;
 

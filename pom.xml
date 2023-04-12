@@ -21,13 +21,13 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.35</version>
+        <version>1.1.36</version>
         <relativePath />
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
 
-    <version>5.23ea26-SNAPSHOT</version>
+    <version>5.24ea12-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -42,14 +42,14 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
-                <version>3.22.3</version>
+                <version>3.22.4</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>2.23ea-SNAPSHOT</version>
+                <version>2.24ea-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -122,6 +122,7 @@
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-core</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -169,7 +170,7 @@
         <dependency>
             <groupId>org.hsqldb</groupId>
             <artifactId>hsqldb</artifactId>
-            <version>2.6.1</version>
+            <version>2.7.1</version>
             <scope>test</scope>
         </dependency>
 
@@ -183,13 +184,6 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.hawt</groupId>
-            <artifactId>hawtio-embedded</artifactId>
-            <version>2.14.5</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -230,15 +224,44 @@
 
         <plugins>
             <plugin>
+                <groupId>net.openhft</groupId>
+                <artifactId>binary-compatibility-enforcer-plugin</artifactId>
+                <version>1.0.13</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>enforcer</goal>
+                        </goals>
+                        <configuration>
+                            <referenceVersion>5.24ea0</referenceVersion>
+                            <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
+                            <binaryCompatibilityPercentageRequired>98.7</binaryCompatibilityPercentageRequired>
+                            <extraOptions>
+                                <!--This skips "internal" but checks "impl"-->
+                                <extraOption>
+                                    <name>-keep-internal</name>
+                                </extraOption>
+                                <extraOption>
+                                    <name>skip-internal-packages</name>
+                                    <value>.*internal.*</value>
+                                </extraOption>
+                            </extraOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M7</version>
                 <configuration>
                     <forkCount>1</forkCount>
                     <!--                    <reuseForks>false</reuseForks>-->
                     <runOrder>hourly</runOrder>
                 </configuration>
             </plugin>
-
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -253,6 +276,16 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -279,6 +312,108 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- benchmark network latency with Wire -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+
+                <executions>
+                    <!-- run this first -->
+                    <execution>
+                        <id>Gateway</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <mainClass>net.openhft.chronicle.wire.channel.ChronicleGatewayMain</mainClass>
+                            <systemProperties>
+                                <property>
+                                    <key>system.properties</key>
+                                    <value>/dev/null</value>
+                                </property>
+                                <property>
+                                    <key>pauserMode</key>
+                                    <value>busy</value>
+                                </property>
+                            </systemProperties>
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
+
+                    <!-- PIPING MICROSERVICE LOW LATENCY TEST -->
+                    <!-- run this second with -Durl=tcp://localhost:1248 or the host of your choice -->
+                    <execution>
+                        <id>PipeClient</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <mainClass>net.openhft.chronicle.queue.channel.PerfLatencyMain</mainClass>
+                            <systemProperties>
+                                <property>
+                                    <key>system.properties</key>
+                                    <value>/dev/null</value>
+                                </property>
+                            </systemProperties>
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
+
+                    <!-- PIPING MICROSERVICE LATENCY WITH HIGH THROUGHPUT TEST -->
+                    <!-- run this second with -Durl=tcp://localhost:1248 or the host of your choice -->
+                    <execution>
+                        <id>PipeClient-Throughput</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <mainClass>net.openhft.chronicle.queue.channel.PerfLatencyMain</mainClass>
+                            <systemProperties>
+                                <property>
+                                    <key>system.properties</key>
+                                    <value>/dev/null</value>
+                                </property>
+                                <property>
+                                    <key>throughput</key>
+                                    <value>1000000</value>
+                                </property>
+                                <property>
+                                    <key>buffered</key>
+                                    <value>true</value>
+                                </property>
+                            </systemProperties>
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
+
+                    <!-- PIPING MICROSERVICE LOW LATENCY TEST -->
+                    <!-- run this second with -Durl=tcp://localhost:1248 or the host of your choice -->
+                    <execution>
+                        <id>PipeThroughput</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <mainClass>net.openhft.chronicle.queue.channel.PerfThroughputMain</mainClass>
+                            <systemProperties>
+                                <property>
+                                    <key>system.properties</key>
+                                    <value>/dev/null</value>
+                                </property>
+                            </systemProperties>
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -297,44 +432,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                </configuration>
-            </plugin>
 
-            <plugin>
-                <groupId>net.openhft</groupId>
-                <artifactId>binary-compatibility-enforcer-plugin</artifactId>
-                <version>1.0.13</version>
-                <executions>
-                    <execution>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>enforcer</goal>
-                        </goals>
-                        <configuration>
-                            <referenceVersion>5.23ea0</referenceVersion>
-                            <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
-                            <!-- Reduce the API surface of ChronicleReader -->
-                            <binaryCompatibilityPercentageRequired>94</binaryCompatibilityPercentageRequired>
-                            <extraOptions>
-                                <!--This skips "internal" but checks "impl"-->
-                                <extraOption>
-                                    <name>-keep-internal</name>
-                                </extraOption>
-                                <extraOption>
-                                    <name>skip-internal-packages</name>
-                                    <value>.*internal.*</value>
-                                </extraOption>
-                            </extraOptions>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -389,7 +487,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-shade-plugin</artifactId>
-                        <version>3.3.0</version>
                         <executions>
                             <execution>
                                 <phase>package</phase>
@@ -445,7 +542,8 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.0.0</version>
+                        <version>3.1.0</version>
+
                         <configuration>
                             <systemProperties>
                                 <systemProperty>
@@ -454,6 +552,7 @@
                                 </systemProperty>
                             </systemProperties>
                             <classpathScope>test</classpathScope>
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
                         </configuration>
                         <executions>
                             <execution>
@@ -505,18 +604,6 @@
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>QueueMultiThreadedJLBHBenchmark</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>java</goal>
-                                </goals>
-                                <configuration>
-                                    <mainClass>
-                                        net.openhft.chronicle.queue.bench.QueueMultiThreadedJLBHBenchmark
-                                    </mainClass>
-                                </configuration>
-                            </execution>
-                            <execution>
                                 <id>QueueSingleThreadedJLBHBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
@@ -527,9 +614,6 @@
                                         net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
                                     </mainClass>
                                 </configuration>
-                            </execution>
-                            <execution>
-
                             </execution>
 
                         </executions>

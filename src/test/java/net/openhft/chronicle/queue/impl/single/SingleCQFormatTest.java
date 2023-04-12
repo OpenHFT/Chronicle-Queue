@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.wire.*;
@@ -38,11 +38,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.*;
 
-public class SingleCQFormatTest extends ChronicleQueueTestBase {
+public class SingleCQFormatTest extends QueueTestCommon {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
@@ -72,7 +78,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
             bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
             try (RollingChronicleQueue queue = binary(dir)
-                    .rollCycle(RollCycles.TEST4_DAILY)
+                    .rollCycle(TEST4_DAILY)
                     .testBlockSize()
                     .build()) {
                 assertEquals(1, queue.firstCycle());
@@ -97,6 +103,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testNoHeader() throws IOException {
+        ignoreException("Channel closed while unlocking");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         dir.mkdir();
 
@@ -109,7 +116,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.DAILY)
+                .rollCycle(DAILY)
                 .timeoutMS(500L)
                 .testBlockSize()
                 .build()) {
@@ -125,6 +132,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testDeadHeader() throws IOException {
+        ignoreException("Channel closed while unlocking");
         final File dir = getTmpDir();
 
         dir.mkdirs();
@@ -142,6 +150,43 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
                 .blockSize(QueueUtil.testBlockSize())
                 .build()) {
             testQueue(queue);
+        } finally {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        }
+
+    }
+
+    @Test
+    public void testDeadHeaderAppend() throws IOException {
+        ignoreException("Channel closed while unlocking");
+        expectException("Renamed un-acquirable segment file to");
+        final File dir = getTmpDir();
+
+        dir.mkdirs();
+        final File file = new File(dir, LocalDate.now(Clock.systemUTC()).format(DateTimeFormatter.ofPattern("yyyyMMdd")) + SingleChronicleQueue.SUFFIX);
+        file.createNewFile();
+        final MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize());
+        try {
+            bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
+        } finally {
+            bytes.releaseLast();
+        }
+
+        try (ChronicleQueue queue = binary(dir).timeoutMS(500L)
+                .testBlockSize()
+                .blockSize(QueueUtil.testBlockSize())
+                .build()) {
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("foo");
+                }
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("bar");
+                }
+            }
+
+            assertEquals(1,
+                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
@@ -178,7 +223,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.TEST4_DAILY)
+                .rollCycle(TEST4_DAILY)
                 .testBlockSize()
                 .build()) {
             testQueue(queue);
@@ -199,7 +244,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
                 dc.wire().writeEventName("header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
                     w.write("wireType").object(WireType.BINARY);
                     w.write("writePosition").int64forBinding(0);
-                    w.write("roll").typedMarshallable(new SCQRoll(RollCycles.TEST4_DAILY, 0, null, null));
+                    w.write("roll").typedMarshallable(new SCQRoll(TEST4_DAILY, 0, null, null));
                     w.write("indexing").typedMarshallable(marshallable);
                     w.write("lastAcknowledgedIndexReplicated").int64forBinding(0);
                 });
@@ -298,7 +343,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         final Wire wire = new BinaryWire(bytes);
         wire.usePadding(true);
-        try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
+        try (final SingleChronicleQueueStore store = new SingleChronicleQueueStore(HOURLY, WireType.BINARY, bytes, 4 << 10, 4)) {
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().write("header").typedMarshallable(store);
             }
@@ -320,7 +365,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
 
         try (RollingChronicleQueue queue = binary(dir)
                 .testBlockSize()
-                .rollCycle(RollCycles.HOURLY)
+                .rollCycle(HOURLY)
                 .build()) {
             testQueue(queue);
             assertEquals(2, queue.firstCycle());
@@ -349,7 +394,7 @@ public class SingleCQFormatTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue queue = binary(dir)
-                .rollCycle(RollCycles.TEST4_DAILY)
+                .rollCycle(TEST4_DAILY)
                 .blockSize(QueueUtil.testBlockSize())
                 .build()) {
             testQueue(queue);

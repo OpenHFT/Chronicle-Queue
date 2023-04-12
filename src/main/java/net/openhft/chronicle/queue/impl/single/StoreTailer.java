@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -192,7 +210,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
         DocumentContext documentContext = readingDocument0(includeMetaData);
-        // this check was added after a strange behaviour seen by one client. I should be impossible.
+        // this check was added after a strange behaviour seen by one client. It should be impossible.
         if (documentContext.wire() != null)
             if (documentContext.wire().bytes().readRemaining() >= 1 << 30)
                 throw new AssertionError("readRemaining " + documentContext.wire().bytes().readRemaining());
@@ -227,16 +245,7 @@ class StoreTailer extends AbstractCloseable
                 return context;
             }
 
-            RollCycle rollCycle = queue.rollCycle();
-            if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
-                int firstCycle = queue.firstCycle();
-                if (rollCycle.toCycle(index()) < firstCycle)
-                    toStart();
-            } else if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
-                // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
-                // since we can't find an entry at current index, indicate that we're at the end of a cycle
-                state = TailerState.END_OF_CYCLE;
-            }
+            readingDocumentCycleNotFound(next);
 
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
@@ -245,15 +254,32 @@ class StoreTailer extends AbstractCloseable
         } catch (DecoratedBufferUnderflowException e) {
             // read-only tailer view is fixed, a writer could continue past the end of the view
             // at the point this tailer was created. Log a warning and return no document.
-            if (queue.isReadOnly()) {
-                Jvm.warn().on(StoreTailer.class,
-                        "Tried to read past the end of a read-only view. " +
-                                "Underlying data store may have grown since this tailer was created.", e);
-            } else {
-                throw e;
-            }
+            readingDocumentDBUE(e);
         }
         return INSTANCE;
+    }
+
+    private void readingDocumentDBUE(DecoratedBufferUnderflowException e) {
+        if (queue.isReadOnly()) {
+            Jvm.warn().on(StoreTailer.class,
+                    "Tried to read past the end of a read-only view. " +
+                            "Underlying data store may have grown since this tailer was created.", e);
+        } else {
+            throw e;
+        }
+    }
+
+    private void readingDocumentCycleNotFound(boolean next) {
+        RollCycle rollCycle = queue.rollCycle();
+        if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
+            int firstCycle = queue.firstCycle();
+            if (rollCycle.toCycle(index()) < firstCycle)
+                toStart();
+        } else if (!next && state == CYCLE_NOT_FOUND && cycle != queue.cycle()) {
+            // appenders have moved on, it's possible that linearScan is hitting EOF, which is ignored
+            // since we can't find an entry at current index, indicate that we're at the end of a cycle
+            state = TailerState.END_OF_CYCLE;
+        }
     }
 
     // throws UnrecoverableTimeoutException
@@ -348,6 +374,9 @@ class StoreTailer extends AbstractCloseable
         }
         if (state == END_OF_CYCLE) {
             return true;
+        }
+        if (state == CYCLE_NOT_FOUND) {
+            return false;
         }
         if (cycle < queue.lastCycle()) {
             // we have encountered an empty file without an EOF marker
@@ -706,6 +735,9 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     @Override
     public final ExcerptTailer toStart() {
+        if (context.isPresent())
+            throw new IllegalStateException("Cannot move tailer to start during document reading");
+
         try {
             return doToStart();
         } catch (MissingStoreFileException e) {
@@ -740,30 +772,29 @@ class StoreTailer extends AbstractCloseable
         }
     }
 
-    private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException {
-        RollCycle rollCycle = queue.rollCycle();
-
+    private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException, MissingStoreFileException {
+        final RollCycle rollCycle = queue.rollCycle();
         final SingleChronicleQueueStore wireStore = (cycle == lastCycle) ? this.store : queue.storeForCycle(
                 lastCycle, queue.epoch(), false, this.store);
-        this.setCycle(lastCycle);
-        if (wireStore == null)
-            throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
 
-        if (this.store != wireStore) {
-            releaseStore();
-            this.store = wireStore;
-            resetWires();
+        long sequenceNumber = -1;
+        if (wireStore != null) {
+            if (this.store != wireStore) {
+                releaseStore();
+                this.store = wireStore;
+                resetWires();
+            }
+
+            sequenceNumber = this.store.lastSequenceNumber(this);
         }
         // give the position of the last entry and
         // flag we want to count it even though we don't know if it will be meta data or not.
 
-        final long sequenceNumber = this.store.lastSequenceNumber(this);
-
         // fixes #378
         if (sequenceNumber == -1L) {
             // nothing has been written yet, so point to start of cycle
-            long prevCycle = queue.firstCycle();
-            while (prevCycle < lastCycle) {
+            int firstCycle = queue.firstCycle();
+            while (firstCycle < lastCycle) {
                 lastCycle--;
                 try {
                     return approximateLastCycle2(lastCycle);
@@ -771,8 +802,11 @@ class StoreTailer extends AbstractCloseable
                     // try again.
                 }
             }
-            return rollCycle.toIndex(lastCycle, 0L);
+            this.setCycle(firstCycle);
+            return rollCycle.toIndex(firstCycle, 0L);
         }
+
+        this.setCycle(lastCycle);
         return rollCycle.toIndex(lastCycle, sequenceNumber);
     }
 
@@ -804,7 +838,7 @@ class StoreTailer extends AbstractCloseable
         if (s == null) return;
 
         final MappedBytes bytes = s.bytes();
-        bytes.disableThreadSafetyCheck(disableThreadSafetyCheck());
+        bytes.singleThreadedCheckDisabled(singleThreadedCheckDisabled());
 
         final Wire wire2 = wireType.apply(bytes);
         wire2.usePadding(s.dataVersion() > 0);
@@ -818,8 +852,9 @@ class StoreTailer extends AbstractCloseable
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
         assert wire != wireForIndexOld;
 
-        if (wireForIndexOld != null)
+        if (wireForIndexOld != null) {
             wireForIndexOld.bytes().releaseLast();
+        }
     }
 
     @NotNull
@@ -839,6 +874,9 @@ class StoreTailer extends AbstractCloseable
     public ExcerptTailer toEnd() {
         throwExceptionIfClosed();
 
+        if (context.isPresent())
+            throw new IllegalStateException("Cannot move tailer to end during document reading");
+
         if (direction.equals(TailerDirection.BACKWARD)) {
             return callOriginalToEnd();
         }
@@ -851,7 +889,7 @@ class StoreTailer extends AbstractCloseable
             return optimizedToEnd();
         } catch (MissingStoreFileException e) {
             queue.refreshDirectoryListing();
-            return optimizedToEnd();
+            return originalToEnd();
         }
     }
 
@@ -897,12 +935,11 @@ class StoreTailer extends AbstractCloseable
                 return this;
             }
 
-            // TODO fix this so it doesn't replace the same store.
             final SingleChronicleQueueStore wireStore = queue.storeForCycle(
                     lastCycle, queue.epoch(), false, this.store);
-            this.setCycle(lastCycle);
             if (wireStore == null)
                 throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
+            this.setCycle(lastCycle);
 
             if (this.store != wireStore) {
                 releaseStore();
@@ -928,7 +965,7 @@ class StoreTailer extends AbstractCloseable
             final Bytes<?> bytes = w.bytes();
             state = isEndOfFile(bytes.readVolatileInt(bytes.readPosition())) ? END_OF_CYCLE : FOUND_IN_CYCLE;
 
-            index(rollCycle.toIndex(lastCycle, sequenceNumber));
+            index(rollCycle.toIndex(wireStore.cycle(), sequenceNumber));
 
         } catch (@NotNull UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
@@ -956,23 +993,28 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                if (direction == FORWARD) {
+                LoopForward: while (true) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
                             throw new NotReachedException("NOT_REACHED after FOUND");
                         case FOUND:
                             // the end moved!!
+                            continue;
                         case NOT_FOUND:
                             state = FOUND_IN_CYCLE;
-                            break;
+                            break LoopForward;
                         case END_OF_FILE:
                             state = END_OF_CYCLE;
-                            break;
+                            break LoopForward;
                         default:
                             throw new IllegalStateException("Unknown ScanResult: " + result);
                     }
                 }
+
+                if (direction == BACKWARD)
+                    moveToIndexResult(--index);
+
                 break;
             case NOT_REACHED:
                 throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(index));
@@ -1064,7 +1106,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean tryWindBack(final int cycle) {
-        final long count = queue.exactExcerptsInCycle(cycle);
+        final long count = exactExcerptsInCycle(cycle);
         if (count <= 0)
             return false;
         final RollCycle rollCycle = queue.rollCycle();
@@ -1148,6 +1190,30 @@ class StoreTailer extends AbstractCloseable
         return readAfterReplicaAcknowledged;
     }
 
+    @Override
+    public long approximateExcerptsInCycle(int cycle) {
+        throwExceptionIfClosed();
+        try {
+            return moveToCycle(cycle) ? store.approximateLastSequenceNumber(this) + 1 : -1;
+        } catch (StreamCorruptedException e) {
+            throw new IllegalStateException(e);
+        } finally {
+            releaseStore();
+        }
+    }
+
+    @Override
+    public long exactExcerptsInCycle(int cycle) {
+        throwExceptionIfClosed();
+        try {
+            return moveToCycle(cycle) ? store.exactLastSequenceNumber(this) + 1 : -1;
+        } catch (StreamCorruptedException e) {
+            throw new IllegalStateException(e);
+        } finally {
+            releaseStore();
+        }
+    }
+
     @NotNull
     @Override
     public TailerState state() {
@@ -1223,7 +1289,7 @@ class StoreTailer extends AbstractCloseable
         return moveToState.indexMoveCount;
     }
 
-    @Deprecated // Should not be providing accessors to reference-counted objects
+    @Deprecated(/* To be removed in 5.25 */) // Should not be providing accessors to reference-counted objects
     @NotNull
     WireStore store() {
         if (store == null)

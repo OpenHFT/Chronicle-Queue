@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.core.util.Time;
 import org.jetbrains.annotations.NotNull;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+
 @RequiredForClient
 public class LongRunTestMain {
     public static void main(String[] args) {
@@ -42,7 +44,7 @@ public class LongRunTestMain {
 
         final ChronicleQueue queue = ChronicleQueue.singleBuilder(
                 OS.getTarget() + "/test-" + Time.uniqueId())
-                .rollCycle(RollCycles.HOURLY)
+                .rollCycle(HOURLY)
                 .build();
         final ExcerptAppender appender = queue.acquireAppender();
         Jvm.setExceptionHandlers(Slf4jExceptionHandler.ERROR, Slf4jExceptionHandler.WARN, Slf4jExceptionHandler.WARN);

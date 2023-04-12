@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
 public class ReadmeTest extends QueueTestCommon {
@@ -31,7 +32,7 @@ public class ReadmeTest extends QueueTestCommon {
         final String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .build()) {
             // Obtain an ExcerptAppender
             ExcerptAppender appender = queue.acquireAppender();

@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.queue.RollCycles.SMALL_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class ChronicleQueueTwoThreadsTest extends ChronicleQueueTestBase {
+public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
     private static final int BYTES_LENGTH = 256;
     private static final long INTERVAL_US = 10;

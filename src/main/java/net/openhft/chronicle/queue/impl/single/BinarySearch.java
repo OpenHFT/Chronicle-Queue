@@ -1,6 +1,23 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -15,6 +32,13 @@ import java.util.NavigableSet;
 public enum BinarySearch {
     INSTANCE;
 
+    @Deprecated(/* Remove in x.26. Instead please use search(net.openhft.chronicle.queue.ExcerptTailer, net.openhft.chronicle.wire.Wire, java.util.Comparator<net.openhft.chronicle.wire.Wire>) */)
+    public static long search(@NotNull SingleChronicleQueue q,
+                              @NotNull Wire key,
+                              @NotNull Comparator<Wire> c) throws ParseException {
+        return search(q.createTailer(), key, c);
+    }
+
     /**
      * returns the index or -1 if not found or the index if an exact match is found, an approximation in the form of -approximateIndex
      * or -1 if there was no searching to be done.
@@ -25,27 +49,27 @@ public enum BinarySearch {
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
      * bit not being set ( in other words set to zero ).
      */
-    public static long search(@NotNull SingleChronicleQueue q,
+    public static long search(@NotNull ExcerptTailer tailer,
                               @NotNull Wire key,
                               @NotNull Comparator<Wire> c) throws ParseException {
         final long readPosition = key.bytes().readPosition();
-        try (final ExcerptTailer tailer = q.createTailer()) {
+        try {
             final long start = tailer.toStart().index();
             final long end = tailer.toEnd().index();
 
-            final RollCycle rollCycle = q.rollCycle();
+            final RollCycle rollCycle = tailer.queue().rollCycle();
             final int startCycle = rollCycle.toCycle(start);
             final int endCycle = rollCycle.toCycle(end);
 
             if (startCycle == endCycle)
-                return findWithinCycle(key, c, startCycle, tailer, q, rollCycle);
+                return findWithinCycle(key, c, startCycle, tailer, rollCycle);
 
-            final NavigableSet<Long> cycles = q.listCyclesBetween(startCycle, endCycle);
-            final int cycle = (int) findCycleLinearSearch(cycles, key, c, tailer, q);
+            final NavigableSet<Long> cycles = ((SingleChronicleQueue)tailer.queue()).listCyclesBetween(startCycle, endCycle);
+            final int cycle = (int) findCycleLinearSearch(cycles, key, c, tailer);
 
             if (cycle == -1)
                 return -1;
-            return findWithinCycle(key, c, cycle, tailer, q, rollCycle);
+            return findWithinCycle(key, c, cycle, tailer, rollCycle);
         } finally {
             key.bytes().readPosition(readPosition);
         }
@@ -53,14 +77,13 @@ public enum BinarySearch {
 
     private static long findCycleLinearSearch(@NotNull NavigableSet<Long> cycles, Wire key,
                                               @NotNull Comparator<Wire> c,
-                                              @NotNull ExcerptTailer tailer,
-                                              @NotNull final ChronicleQueue queue) {
+                                              @NotNull ExcerptTailer tailer) {
         long readPosition = key.bytes().readPosition();
 
         final Iterator<Long> iterator = cycles.iterator();
         if (!iterator.hasNext())
             return -1;
-        final RollCycle rollCycle = queue.rollCycle();
+        final RollCycle rollCycle = tailer.queue().rollCycle();
         long prevIndex = iterator.next();
 
         cycleLoop:
@@ -113,13 +136,12 @@ public enum BinarySearch {
                                        @NotNull Comparator<Wire> c,
                                        int cycle,
                                        @NotNull ExcerptTailer tailer,
-                                       @NotNull SingleChronicleQueue q,
                                        @NotNull final RollCycle rollCycle) {
         final long readPosition = key.bytes().readPosition();
         try {
             long lowSeqNum = 0;
 
-            long highSeqNum = q.approximateExcerptsInCycle(cycle) - 1;
+            long highSeqNum = tailer.approximateExcerptsInCycle(cycle) - 1;
 
             // nothing to search
             if (highSeqNum < lowSeqNum)

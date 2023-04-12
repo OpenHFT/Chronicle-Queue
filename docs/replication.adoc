@@ -5,7 +5,7 @@
 
 == Chronicle Queue Enterprise Replication
 
-Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle Queue from one host, to one or more other hosts using TCP/IP.
+Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle Queue from one host, to one or more other hosts using TCP/IP or optionally UDP.
 
 .Chronicle Queue Replication
 image::images/chronicle-queue.png[500,450]
@@ -73,11 +73,10 @@ Queues will use storage paths defined by `baseSourcePath` and `baseSinkPath` for
 To start replicating data, the user must create an instance of `ReplicatedQueue` for each host. This is done as follows:
 
 ```
-ReplicatedQueue repl = new ReplicatedQueue(config(), hostId);
-repl.startReplication();
-...
-// shutdown
-repl.shutdown();
+try (ReplicatedQueue repl = new ReplicatedQueue(config(), hostId)) {
+    repl.startReplication();
+    ...
+}
 ```
 
 ==== Example from a test case

@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 package net.openhft.chronicle.queue.impl.single.jira;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -32,7 +32,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-36
  */
-public class Queue36Test extends ChronicleQueueTestBase {
+public class Queue36Test extends QueueTestCommon {
     @Test
     public void testTail() {
         File basePath = getTmpDir();

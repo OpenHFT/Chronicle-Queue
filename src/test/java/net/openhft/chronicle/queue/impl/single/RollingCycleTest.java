@@ -26,10 +26,12 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -39,6 +41,7 @@ import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -57,11 +60,6 @@ public class RollingCycleTest extends QueueTestCommon {
         );
     }
 
-    @BeforeClass
-    public static void sync() {
-        System.setProperty("chronicle.queue.synchronousFileShrinking", "true");
-    }
-
     @Test
     public void testRollCycle() {
         SetTimeProvider stp = new SetTimeProvider();
@@ -72,7 +70,7 @@ public class RollingCycleTest extends QueueTestCommon {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .timeoutMS(5)
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(stp)
                 .build()) {
 
@@ -298,6 +296,9 @@ public class RollingCycleTest extends QueueTestCommon {
             // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
+            // was it truncated
+            if (dump.contains("\n4 bytes remaining"))
+                expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
             assertEquals(expected, dump);
 
             try {

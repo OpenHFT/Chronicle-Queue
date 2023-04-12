@@ -16,14 +16,10 @@ import org.junit.Test;
 import java.io.File;
 import java.io.StringWriter;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.Assert.assertEquals;
 
-public class StridingAQueueTest extends ChronicleQueueTestBase {
-    @Before
-    public void disableFileShrinking() {
-        System.setProperty("chronicle.queue.disableFileShrinking", "true");
-    }
-
+public class StridingAQueueTest extends QueueTestCommon {
     @Test
     public void testStriding() {
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -32,7 +28,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
                 .testBlockSize()
                 .timeProvider(timeProvider)
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .build()) {
             SAQMessage writer = queue.acquireAppender().methodWriter(SAQMessage.class);
             for (int j = 1; j <= 4; j++) {
@@ -46,7 +42,7 @@ public class StridingAQueueTest extends ChronicleQueueTestBase {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
                 .testBlockSize()
                 .timeProvider(timeProvider)
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .build()) {
 
             assertEquals(getExpected(), queue.dump().replaceAll("(?m)^#.+$\\n", ""));

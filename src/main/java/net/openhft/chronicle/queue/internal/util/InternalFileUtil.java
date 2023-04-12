@@ -1,15 +1,36 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.internal.util;
 
-import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.util.FileState;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.util.Comparator;
-import java.util.List;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static java.util.Comparator.comparing;
@@ -25,7 +46,8 @@ public final class InternalFileUtil {
 
     private static final Comparator<File> EARLIEST_FIRST = comparing(File::getName);
 
-    private InternalFileUtil() {}
+    private InternalFileUtil() {
+    }
 
     /**
      * Returns a Stream of roll Queue files that are likely removable
@@ -56,11 +78,11 @@ public final class InternalFileUtil {
      *
      * @param baseDir containing queue file removal candidates
      * @return a Stream of roll Queue files that are likely removable
-     *         from the given {@code baseDir} without affecting any Queue
-     *         process that is currently active in the given {@code baseDir}
-     *         reading data sequentially
+     * from the given {@code baseDir} without affecting any Queue
+     * process that is currently active in the given {@code baseDir}
+     * reading data sequentially
      * @throws UnsupportedOperationException if this operation is not
-     *         supported for the current platform (e.g. Windows).
+     *                                       supported for the current platform (e.g. Windows).
      */
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
@@ -70,26 +92,30 @@ public final class InternalFileUtil {
             return Stream.empty();
 
         final List<File> sortedInitialCandidates = Stream.of(files)
-            .sorted(EARLIEST_FIRST)
-            .collect(toList());
+                .sorted(EARLIEST_FIRST)
+                .collect(toList());
 
         final Stream.Builder<File> builder = Stream.builder();
-        for (File file : sortedInitialCandidates) {
-            // If one file is not closed, discard it and the rest in the sequence
-            if (state(file) != FileState.CLOSED) break;
-            builder.accept(file);
+        try {
+            final Set<String> allOpenFiles = getAllOpenFiles();
+            for (File file : sortedInitialCandidates) {
+                // If one file is not closed, discard it and the rest in the sequence
+                if (state(file, allOpenFiles) != FileState.CLOSED) break;
+                builder.accept(file);
+            }
+            return builder.build();
+        } catch (IOException e) {
+            Jvm.warn().on(InternalFileUtil.class, "Error getting removable candidates", e);
+            return Stream.empty();
         }
-
-        return builder.build();
     }
 
     /**
      * Returns if the provided {@code file} has the Chronicle Queue file
      * suffix. The current file suffix is ".cq4".
      *
-     * @param     file to check
-     * @return    if the provided {@code file} has the ChronicleQueue file
-     *            suffix
+     * @param file to check
+     * @return true if the provided {@code file} has the ChronicleQueue file suffix
      */
     public static boolean hasQueueSuffix(@NotNull File file) {
         return file.getName().endsWith(SingleChronicleQueue.SUFFIX);
@@ -102,26 +128,15 @@ public final class InternalFileUtil {
      * If the open state of the given {@code file} can not be determined, {@code true }
      * is returned.
      *
-     * @param    file to check
-     * @return   if the given {@code file } is used by any process
-     * @throws   UnsupportedOperationException if this operation is not
-     *           supported for the current platform (e.g. Windows).
+     * @param file to check
+     * @return true if the given {@code file } is used by any process
+     * @throws UnsupportedOperationException if this operation is not
+     *                                       supported for the current platform (e.g. Windows).
      */
     public static FileState state(@NotNull File file) {
-        assertOsSupported();
-        if (!file.exists()) return FileState.NON_EXISTENT;
-        final String absolutePath = file.getAbsolutePath();
         try {
-            final Process process = new ProcessBuilder("lsof", "|", "grep", absolutePath).start();
-            try  (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                return reader.lines()
-                    .anyMatch(l -> l.contains(absolutePath))
-                    ? FileState.OPEN
-                    : FileState.CLOSED;
-            } finally {
-                process.destroyForcibly();
-            }
-        } catch(IOException ignored) {
+            return state(file, getAllOpenFiles());
+        } catch (IOException e) {
             // Do nothing
         }
         return FileState.UNDETERMINED;
@@ -130,9 +145,31 @@ public final class InternalFileUtil {
     /**
      * Returns if the given {@code file } is used by any process (i.e.
      * has the file open for reading or writing).
+     * <p>
+     * If the open state of the given {@code file} can not be determined, {@code true }
+     * is returned.
      *
-     * @param    file to check
-     * @return   if the given {@code file } is used by any process
+     * @param file         to check
+     * @param allOpenFiles The set of all open files retrieve from {@link #getAllOpenFiles()}
+     * @return true if the given {@code file } is used by any process
+     * @throws UnsupportedOperationException if this operation is not
+     *                                       supported for the current platform (e.g. Windows).
+     */
+    public static FileState state(@NotNull File file, Set<String> allOpenFiles) {
+        assertOsSupported();
+        if (!file.exists()) return FileState.NON_EXISTENT;
+        final String absolutePath = file.getAbsolutePath();
+        return allOpenFiles.contains(absolutePath)
+                ? FileState.OPEN
+                : FileState.CLOSED;
+    }
+
+    /**
+     * Returns if the given {@code file } is used by any process (i.e.
+     * has the file open for reading or writing).
+     *
+     * @param file to check
+     * @return true if the given {@code file } is used by any process
      */
     // Todo: Here is a candidate for Windows. Verify that it works
     private static FileState stateWindows(@NotNull File file) {
@@ -153,8 +190,68 @@ public final class InternalFileUtil {
     }
 
     private static void assertOsSupported() {
-        if (OS.isWindows()) {
-            throw new UnsupportedOperationException("This operation is not supported under Windows.");
+        if (!getAllOpenFilesIsSupportedOnOS()) {
+            throw new UnsupportedOperationException("This operation is not supported on your operating system");
+        }
+    }
+
+    /**
+     * Will {@link #getAllOpenFiles()} work on the current OS?
+     *
+     * @return true if getting all open files is supported, false otherwise
+     */
+    public static boolean getAllOpenFilesIsSupportedOnOS() {
+        return Files.exists(Paths.get("/proc/self/fd"));
+    }
+
+    /**
+     * Get the distinct files currently open by any process
+     *
+     * @return a {@link Set} of the absolute paths to all the open files on the system
+     * @throws IOException if we can't get the open files
+     */
+    public static Set<String> getAllOpenFiles() throws IOException {
+        assertOsSupported();
+        final ProcFdWalker visitor = new ProcFdWalker();
+        Files.walkFileTree(Paths.get("/proc/"), Collections.emptySet(), 3, visitor);
+        return visitor.openFiles;
+    }
+
+    private static class ProcFdWalker extends SimpleFileVisitor<Path> {
+
+        private final Set<String> openFiles = new HashSet<>();
+
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+            if (file.toAbsolutePath().toString().matches("/proc/\\d+/fd/\\d+")) {
+                try {
+                    final String e = file.toRealPath().toAbsolutePath().toString();
+                    openFiles.add(e);
+                } catch (NoSuchFileException e) {
+                    // Ignore, sometimes they disappear
+                } catch (IOException e) {
+                    Jvm.warn().on(ProcFdWalker.class, "Error resolving " + file, e);
+                }
+            }
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFileFailed(Path file, IOException exc) {
+            // we definitely won't be able to access all the files, and it's common for a file to go missing mid-traversal
+            // so don't log when one of those things happens
+            if (!((exc instanceof AccessDeniedException) || (exc instanceof NoSuchFileException))) {
+                Jvm.warn().on(ProcFdWalker.class, "Error visiting file", exc);
+            }
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+            if (!dir.toAbsolutePath().toString().matches("/proc(/\\d+(/fd)?)?")) {
+                return FileVisitResult.SKIP_SUBTREE;
+            }
+            return FileVisitResult.CONTINUE;
         }
     }
 }

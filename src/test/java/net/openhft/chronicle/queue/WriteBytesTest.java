@@ -29,12 +29,12 @@ import org.junit.Test;
 
 import java.io.File;
 
-import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class WriteBytesTest extends ChronicleQueueTestBase {
+public class WriteBytesTest extends QueueTestCommon {
     final Bytes<?> outgoingBytes = Bytes.elasticByteBuffer();
     private final byte[] incomingMsgBytes = new byte[100];
     private final byte[] outgoingMsgBytes = new byte[100];

@@ -24,11 +24,11 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
@@ -103,7 +103,6 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    @Ignore("TODO FIX")
     public void testWithQueueHistory() throws Throwable {
         FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
@@ -187,7 +186,7 @@ public class OrderManagerTest extends QueueTestCommon {
 
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
-                    .rollCycle(RollCycles.TEST_DAILY)
+                    .rollCycle(TEST_DAILY)
                     .sourceId(1)
                     .build()) {
                 SidedMarketDataListener combiner = out.acquireAppender()
@@ -214,7 +213,7 @@ public class OrderManagerTest extends QueueTestCommon {
                      ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath2)
                              .testBlockSize()
                              .sourceId(1)
-                             .rollCycle(RollCycles.TEST_DAILY)
+                             .rollCycle(TEST_DAILY)
                              .build()) {
 
                     ExcerptAppender excerptAppender = out.acquireAppender();

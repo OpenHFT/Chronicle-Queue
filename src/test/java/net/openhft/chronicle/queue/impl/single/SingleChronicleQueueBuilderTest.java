@@ -1,15 +1,32 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -18,11 +35,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static net.openhft.chronicle.queue.RollCycles.HOURLY;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
+public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
 
     @Test
@@ -113,7 +130,6 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("https://github.com/OpenHFT/Chronicle-Wire/issues/165")
     public void testWriteMarshallableBinary() {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single("test").rollCycle(HOURLY);
 
@@ -122,9 +138,8 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
         wire.usePadding(true);
         wire.write().typedMarshallable(builder);
 
-        System.err.println(wire.bytes().toHexString());
-
         SingleChronicleQueueBuilder builder2 = wire.read().typedMarshallable();
+        assertEquals(builder, builder2);
         builder2.build().close();
     }
 
@@ -135,9 +150,8 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
         builder.build().close();
         String val = Marshallable.$toString(builder);
 
-        System.err.println(val);
-
         SingleChronicleQueueBuilder builder2 = Marshallable.fromString(val);
+        assertEquals(builder, builder2);
         builder2.build().close();
     }
 
@@ -166,7 +180,8 @@ public class SingleChronicleQueueBuilderTest extends ChronicleQueueTestBase {
 
         try (SingleChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir)
                 .createAppenderConditionCreator(q -> {
-                    throw new AssertionError("This should never be called");
+                    fail("This should never be called");
+                    return null;
                 })
                 .readOnly(true)
                 .build()) {

@@ -44,6 +44,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.RollCycle.MAX_INDEX_COUNT;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMarshallable, Closeable {
@@ -65,7 +66,9 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     private final WriteMarshallable index2IndexTemplate;
     @NotNull
     private final WriteMarshallable indexTemplate;
-    /** Extracted as field to prevent lambda creation on every method reference pass. */
+    /**
+     * Extracted as field to prevent lambda creation on every method reference pass.
+     */
     private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
 
     LongValue writePosition;
@@ -514,9 +517,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         @NotNull Wire wire = ec.wireForIndex();
         try {
             final LongArrayValues index2indexArr = getIndex2index(wire);
-
-            int used2 = Maths.toUInt31(index2indexArr.getUsed());
-            assert used2 > 0;
+            int used2 = getUsedAsInt(index2indexArr);
             Outer:
             for (int index2 = used2 - 1; index2 >= 0; index2--) {
                 long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
@@ -527,8 +528,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                 // TODO use a binary rather than linear search
 
                 // check the first one to see if any in the index is appropriate.
-                int used = Maths.toUInt31(indexValues.getUsed());
-                assert used >= 0;
+                int used = getUsedAsInt(indexValues);
                 if (used == 0)
                     continue;
 
@@ -563,17 +563,36 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         }
     }
 
+    static int getUsedAsInt(LongArrayValues index2indexArr) {
+        if (((Byteable) index2indexArr).bytesStore() == null)
+            return 0;
+
+        final long used = index2indexArr.getUsed();
+        if (used < 0 || used > MAX_INDEX_COUNT)
+            throw new IllegalStateException("Used: " + used);
+        return (int) used;
+    }
+
     void initIndex(@NotNull Wire wire) throws StreamCorruptedException {
         long index2Index = this.index2Index.getVolatileValue();
 
         if (index2Index != NOT_INITIALIZED)
             throw new IllegalStateException("Who wrote the index2index?");
 
+        // Ensure new header position is found despite first header not being finalized
+        long oldPos = wire.bytes().writePosition();
+        if (!writePosition.compareAndSwapValue(0, oldPos))
+            throw new IllegalStateException("Who updated the position?");
+
         long index = newIndex(wire, true);
         this.index2Index.compareAndSwapValue(NOT_INITIALIZED, index);
 
         LongArrayValues index2index = getIndex2index(wire);
         newIndex(wire, index2index, 0);
+
+        // Reset position as it were
+        if (!writePosition.compareAndSwapValue(oldPos, 0))
+            throw new IllegalStateException("Who reset the position?");
     }
 
     private LongArrayValues getIndex2index(@NotNull Wire wire) {
@@ -590,7 +609,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     }
 
     // May throw UnrecoverableTimeoutException
-    private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2) throws  StreamCorruptedException {
+    private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2) throws StreamCorruptedException {
         long secondaryAddress = index2indexArr.getVolatileValueAt(index2);
         if (secondaryAddress == 0) {
             secondaryAddress = newIndex(wire, index2indexArr, index2);
@@ -722,7 +741,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                     int len = Wires.lengthOf(header) + 4;
                     len += BytesUtil.padOffset(len);
 
-                    bytes.readSkip(len );
+                    bytes.readSkip(len);
                     endAddress += len;
 
                     if (Wires.isData(header))

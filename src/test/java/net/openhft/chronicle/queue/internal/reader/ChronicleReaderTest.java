@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
@@ -39,13 +57,15 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static net.openhft.chronicle.queue.impl.single.GcControls.waitForGcCycle;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static net.openhft.chronicle.testframework.GcControls.waitForGcCycle;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
-public class ChronicleReaderTest extends ChronicleQueueTestBase {
+public class ChronicleReaderTest extends QueueTestCommon {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
     private static final long TOTAL_EXCERPTS_IN_QUEUE = 24;
 
@@ -72,7 +92,9 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         if (OS.isWindows())
             if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") ||
                     testName.getMethodName().equals("shouldBeAbleToReadFromReadOnlyFile") ||
-                    testName.getMethodName().equals("shouldPrintTimestampsToLocalTime")))
+                    testName.getMethodName().equals("shouldPrintTimestampsToLocalTime") ||
+                    testName.getMethodName().equals("namedTailerRequiresReadWrite") ||
+                    testName.getMethodName().equals("matchLimitThenNamedTailer")))
                 expectException("Read-only mode is not supported on Windows");
 
         dataDir = getTmpDir().toPath();
@@ -176,7 +198,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
 //        expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
@@ -197,7 +219,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(RollCycles.MINUTELY).
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).
                 testBlockSize().sourceId(1).build()) {
             final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
@@ -461,6 +483,27 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void matchLimitThenNamedTailer() {
+        final long maxRecords = 5;
+        final String tailerId = "myTailer";
+        basicReader().withMatchLimit(maxRecords).withReadOnly(false).withTailerId(tailerId).execute();
+
+        assertEquals(maxRecords, capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count());
+
+        capturedOutput.clear();
+        basicReader().withReadOnly(false).withTailerId(tailerId).execute();
+        assertEquals(TOTAL_EXCERPTS_IN_QUEUE - maxRecords, capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void namedTailerRequiresReadWrite() {
+        assumeFalse(OS.isWindows());
+        basicReader().withTailerId("tailerId").withReadOnly(true).execute();
+    }
+
+    @Test
     public void shouldStopReadingWhenContentBasedLimitHasBeenReached() {
         AtomicInteger helloCount = new AtomicInteger();
         AtomicInteger goodbyeCount = new AtomicInteger();
@@ -508,16 +551,6 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
             int timestampIndex = output.indexOf(expectedTimestamp);
             assertTrue(String.format("%s contains %s", output, expectedTimestamp), timestampIndex > 0);
             output = output.substring(timestampIndex + expectedTimestamp.length());
-        }
-    }
-
-    private static class ChronicleReaderRunner {
-        public static void main(String[] args) {
-            ChronicleReader reader = new ChronicleReader()
-                    .asMethodReader(SayWhen.class.getName())
-                    .withBasePath(Paths.get(args[0]))
-                    .withMessageSink(System.out::println);
-            reader.execute();
         }
     }
 
@@ -815,7 +848,7 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir)
                 .timeProvider(timeProvider)
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .build()) {
 
             for (int i = 0; i < 5; i++) {
@@ -850,7 +883,19 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
                 execute();
 
         capturedOutput.poll();
-        assertEquals("\"say\":\"hello\"",
+        assertEquals("{\"say\":\"hello\"}",
+                capturedOutput.poll().trim());
+    }
+
+    @Test
+    public void shouldRespectWireType2() {
+        basicReader()
+                .asMethodReader(Say.class.getName())
+                .withWireType(WireType.JSON_ONLY)
+                .execute();
+
+        capturedOutput.poll();
+        assertEquals("{\"say\":\"hello\"}",
                 capturedOutput.poll().trim());
     }
 
@@ -904,6 +949,16 @@ public class ChronicleReaderTest extends ChronicleQueueTestBase {
     @After
     public void clearInterrupt() {
         Thread.interrupted();
+    }
+
+    private static class ChronicleReaderRunner {
+        public static void main(String[] args) {
+            ChronicleReader reader = new ChronicleReader()
+                    .asMethodReader(SayWhen.class.getName())
+                    .withBasePath(Paths.get(args[0]))
+                    .withMessageSink(System.out::println);
+            reader.execute();
+        }
     }
 
     private static final class RecordCounter implements Consumer<String> {

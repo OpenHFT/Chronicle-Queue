@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -39,7 +38,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.*;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.function.ToLongFunction;
 
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
     static {
@@ -69,7 +67,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @UsedViaReflection
     private SingleChronicleQueueStore(@NotNull WireIn wire) {
         boolean failed = true;
-        assert wire.startUse();
+
         try {
             writePosition = loadWritePosition(wire);
             this.mappedBytes = (MappedBytes) wire.bytes();
@@ -81,11 +79,12 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             this.indexing.sequence = sequence;
             final String fieldName = wire.readEvent(String.class);
             int version = 0;
-            if (fieldName != null)
-                if (MetaDataField.dataFormat.name().equals(fieldName))
-                    version = wire.getValueIn().int32();
-                else
-                    Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
+
+            // Should cover fieldless and normal binary
+            if (fieldName == null || MetaDataField.dataFormat.name().equals(fieldName))
+                version = wire.getValueIn().int32();
+            else
+                Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
             this.dataVersion = version > 1 ? 0 : version;
 
             singleThreadedCheckDisabled(true);
@@ -93,7 +92,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         } finally {
             if (failed)
                 close();
-            assert wire.endUse();
         }
     }
 
@@ -280,11 +278,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
 
-        mappedBytes.release(INIT);
-        try {
-            mappedFile.release(this);
-        } catch (IllegalStateException e) {
-            Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
+        // this can be null if we're partially initialised
+        if (mappedBytes != null) {
+            mappedBytes.release(INIT);
+            try {
+                mappedFile.release(this);
+            } catch (IllegalStateException e) {
+                Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
+            }
         }
     }
 
@@ -310,7 +311,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @Override
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
         return approximateLastSequenceNumber(ec);
     }
@@ -415,12 +416,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     boolean writeEOFAndShrink(@NotNull Wire wire, long timeoutMS) {
-        if (wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition())) {
-            // only if we just written EOF
-            QueueFileShrinkManager.scheduleShrinking(mappedFile.file(), wire.bytes().writePosition());
-            return true;
-        }
-        return false;
+        return wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
     }
 
     @Override

@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,20 +42,10 @@ public class WireStorePool extends SimpleCloseable {
         return new WireStorePool(supplier, storeFileListener);
     }
 
-    @Deprecated(/*"removal in x.24 - @param epoch was removed - use WireStorePool.acquire(int, long, boolean, SingleChronicleQueueStore)"*/)
     @Nullable
     public SingleChronicleQueueStore acquire(
             final int cycle,
-            final long epoch,
-            boolean createIfAbsent,
-            SingleChronicleQueueStore oldStore) {
-       return  acquire(cycle,createIfAbsent,oldStore);
-    }
-
-    @Nullable
-    public SingleChronicleQueueStore acquire(
-            final int cycle,
-            boolean createIfAbsent,
+            WireStoreSupplier.CreateStrategy createStrategy,
             SingleChronicleQueueStore oldStore) {
         throwExceptionIfClosed();
 
@@ -63,7 +53,7 @@ public class WireStorePool extends SimpleCloseable {
         if (oldStore != null && oldStore.cycle() == cycle && !oldStore.isClosed())
             return oldStore;
 
-        SingleChronicleQueueStore store = this.supplier.acquire(cycle, createIfAbsent);
+        SingleChronicleQueueStore store = this.supplier.acquire(cycle, createStrategy);
         if (store != null) {
             store.cycle(cycle);
             if (store != oldStore && storeFileListener.isActive())

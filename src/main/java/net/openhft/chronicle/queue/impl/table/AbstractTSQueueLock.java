@@ -1,13 +1,13 @@
 /*
  * Copyright 2014-2020 chronicle.software
  *
- * http://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,8 +65,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             Jvm.warn().on(getClass(), "queue.dont.recover.lock.timeout property is deprecated and will be removed in a future version. " +
                     "Use queue.force.unlock.mode=NEVER instead");
         } else {
-            // TODO: x.24 change default to UnlockMode.LOCKING_PROCESS_DEAD
-            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.ALWAYS.name()));
+            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.LOCKING_PROCESS_DEAD.name()));
         }
 
         singleThreadedCheckDisabled(true);

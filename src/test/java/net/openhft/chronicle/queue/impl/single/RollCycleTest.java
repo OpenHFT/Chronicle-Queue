@@ -1,8 +1,29 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -13,9 +34,10 @@ import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
-public class RollCycleTest extends ChronicleQueueTestBase {
+public class RollCycleTest extends QueueTestCommon {
     @Test
     public void newRollCycleIgnored() throws InterruptedException {
         File path = getTmpDir();
@@ -25,7 +47,7 @@ public class RollCycleTest extends ChronicleQueueTestBase {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(timeProvider)
                 .build()) {
             ExcerptAppender appender = queue.acquireAppender();
@@ -66,7 +88,7 @@ public class RollCycleTest extends ChronicleQueueTestBase {
             Thread thread = new Thread(observer);
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                     .testBlockSize()
-                    .rollCycle(RollCycles.TEST_DAILY)
+                    .rollCycle(TEST_DAILY)
                     .timeProvider(timeProvider)
                     .build()) {
                 ExcerptAppender appender = queue.acquireAppender();
@@ -283,7 +305,7 @@ public class RollCycleTest extends ChronicleQueueTestBase {
         public ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
             queue = SingleChronicleQueueBuilder.binary(path.toFile())
                     .testBlockSize()
-                    .rollCycle(RollCycles.TEST_DAILY)
+                    .rollCycle(TEST_DAILY)
                     .timeProvider(timeProvider)
                     .storeFileListener(this)
                     .build();

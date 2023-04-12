@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.Jvm;
@@ -5,18 +23,19 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -27,32 +46,23 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
+import static net.openhft.chronicle.queue.internal.util.InternalFileUtil.getAllOpenFilesIsSupportedOnOS;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-public class FileUtilTest extends ChronicleQueueTestBase {
+public class FileUtilTest extends QueueTestCommon {
 
-    @Test
-    public void assertLsofPresent() throws IOException {
-        assumeFalse(OS.isWindows());
-        final Process process = new ProcessBuilder("which", "lsof").start();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            assertTrue("make sure \"lsof\" is installed on your target machine", reader.lines().anyMatch(l -> l.contains("lsof")));
-        } finally {
-            process.destroyForcibly();
-        }
-    }
-
-    @Test
+    @Test(timeout = 30_000)
     public void stateNonExisting() {
-        assumeFalse(OS.isWindows());
+        assumeTrue(getAllOpenFilesIsSupportedOnOS());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void state() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
         dir.toFile().mkdir();
         try {
@@ -78,7 +88,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
     public void stateWindows() {
         assumeTrue(OS.isWindows());
 
@@ -88,22 +98,21 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         FileUtil.state(new File("foo"));
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void hasQueueSuffixFalse() {
         final File file = new File("foo");
         assertFalse(FileUtil.hasQueueSuffix(file));
     }
 
-    @Test
+    @Test(timeout = 30_000)
     public void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
         assertTrue(FileUtil.hasQueueSuffix(file));
     }
 
-    @Ignore("TODO FIX https://github.com/OpenHFT/Chronicle-Core/issues/121")
-    @Test
+    @Test(timeout = 30_000)
     public void removableQueueFileCandidates() {
-        assumeFalse(OS.isWindows());
+        assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;
         final int intermediateRolls = rolls / 2;
         final Comparator<File> earliestFirst = comparing(File::getName);
@@ -111,7 +120,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
 
-        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build()) {
+        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(TEST_SECONDLY).timeProvider(tp).build()) {
             final ExcerptAppender appender = queue.acquireAppender();
             final ExcerptTailer tailer = queue.createTailer();
             for (int i = 0; i < rolls; i++) {
@@ -163,7 +172,7 @@ public class FileUtilTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
     public void removableQueueFileCandidatesWindows() {
         assumeTrue(OS.isWindows());
         expectException("closable tracing disabled");
@@ -177,6 +186,6 @@ public class FileUtilTest extends ChronicleQueueTestBase {
 
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
-        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
+        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 }

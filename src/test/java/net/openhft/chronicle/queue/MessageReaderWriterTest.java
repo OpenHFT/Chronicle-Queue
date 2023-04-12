@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
-public class MessageReaderWriterTest extends ChronicleQueueTestBase {
+public class MessageReaderWriterTest extends QueueTestCommon {
 
     @Test
     public void testWriteWhileReading() {

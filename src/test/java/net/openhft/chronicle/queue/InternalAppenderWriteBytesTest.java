@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -9,6 +27,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -18,11 +37,14 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static net.openhft.chronicle.queue.RollCycles.*;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
-public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
+public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
     @Before
     public void before() {
@@ -63,7 +85,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             ExcerptAppender appender = q.acquireAppender();
             appender.writeBytes(test);
 
-            expectException("Trying to overwrite index 0 which is before the end of the queue");
             // try to overwrite - will not overwrite
             ((InternalAppender) appender).writeBytes(0, Bytes.from("HELLO WORLD"));
 
@@ -76,8 +97,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
     @Test
     public void dontOverwriteExistingDifferentQueueInstance() {
-        expectException("Trying to overwrite index 0 which is before the end of the queue");
-        expectException("Trying to overwrite index 1 which is before the end of the queue");
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -203,7 +222,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
             appender.writeBytes(test);
 
             ExcerptTailer tailer = q.createTailer();
-            expectException("Trying to overwrite index 0 which is before the end of the queue");
             ((InternalAppender) appender).writeBytes(0, test);
 
             try (DocumentContext documentContext = tailer.readingDocument()) {
@@ -254,7 +272,6 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
-        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build()) {
             ExcerptAppender appender = q.acquireAppender();
@@ -264,26 +281,10 @@ public class InternalAppenderWriteBytesTest extends ChronicleQueueTestBase {
 
             timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
             appender.writeBytes(test2);
-//            System.out.println(q.dump());
 
             Assert.assertTrue(hasEOF(q, firstCycle));
-            // here we try and write to previous cycle file. We will overwrite the EOF in doing so
-            ignoreException("Incomplete header found at pos: 33048: c0000000, overwriting");
-            ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
-            Assert.assertFalse(hasEOF(q, firstCycle));
-
-            // we have to manually fix. This is done by CQE at the end of backfilling
-            appender.normaliseEOFs();
-
-            ExcerptTailer tailer = q.createTailer();
-            tailer.readBytes(result);
-            assertEquals(test, result);
-            result.clear();
-            tailer.readBytes(result);
-            assertEquals(test1, result);
-            result.clear();
-            tailer.readBytes(result);
-            assertEquals(test2, result);
+            // here we try and write to previous cycle file
+            assertThrows(WriteAfterEOFException.class, () -> ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1));
         }
     }
 

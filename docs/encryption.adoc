@@ -8,7 +8,26 @@ Encrypted queues are replicated in their encrypted state. +
  +
 The same encryption key must be available when accessing these encrypted queue files.
 
-== AES encryption
+All standard AES key lengths (AES-128, AES-192, or AES-256 bits) are supported by default.
+To encrypt messages use `SingleChronicleQueueBuilder.aesEncryption()` method when creating a queue and pass a key with length 128 or 192 or 256 bits as the argument (`byte[] keyBytes`).
+The AES key length is determined based on the length of the `keyBytes` argument in the `aesEncryption()` method.
+The following example creates a queue encrypted with AES-128.
+
+.Creating encrypted queue
+[source,java]
+----
+// A 128-bit key for AES-128, use 192 or 256 bits key for AES-192 and AES-256 respectively.
+private static final byte[] SECURE_KEY = {(byte) 0x45, (byte) 0x83, (byte) 0x78, (byte) 0x33, (byte) 0x21, (byte) 0x95,        (byte) 0xA5, (byte) 0xCA, (byte) 0x12, (byte) 0x44, (byte) 0xFF, (byte) 0xD3, (byte) 0x04, (byte) 0x9A,                (byte) 0xB2, (byte) 0x77};
+
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+          .path("queueDirectory")
+          .aesEncryption(SECURE_KEY)
+          .build()) {
+                 ...
+        }
+----
+
+== AES 64-bit encryption
 
 AES 64-bit encryption can be used by specifying `aesEncryption` at queue build time, and supplying an 8-bit encryption key.
 

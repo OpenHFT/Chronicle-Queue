@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -342,7 +342,7 @@ public interface ChronicleQueue extends Closeable {
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull final Class<T> tClass) {
         VanillaMethodWriterBuilder<T> builder = new VanillaMethodWriterBuilder<>(tClass,
                 wireType(),
-                () -> new BinaryMethodWriterInvocationHandler(false, this::acquireAppender));
+                () -> new BinaryMethodWriterInvocationHandler(tClass, false, this::acquireAppender));
         builder.marshallableOutSupplier(this::acquireAppender);
         return builder;
     }

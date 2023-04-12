@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,7 +78,9 @@ public interface RollCycle {
      * @param epoch an EPOCH offset, to all the user to define their own epoch
      * @return the current cycle
      */
-    int current(TimeProvider time, long epoch);
+    default int current(@NotNull TimeProvider time, long epoch) {
+        return (int) ((time.currentTimeMillis() - epoch) / lengthInMillis());
+    }
 
     /**
      * Returns the index for the provided {@code cycle} and {@code sequenceNumber}.
@@ -121,4 +123,6 @@ public interface RollCycle {
      */
     long maxMessagesPerCycle();
 
+    // sanity checking of index maximums and counts
+    int MAX_INDEX_COUNT = 32 << 10;
 }

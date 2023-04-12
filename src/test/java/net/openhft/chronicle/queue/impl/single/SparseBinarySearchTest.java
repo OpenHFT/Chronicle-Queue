@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -17,11 +35,13 @@ import org.junit.runners.Parameterized;
 import java.text.ParseException;
 import java.util.*;
 
+import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
 @RunWith(Parameterized.class)
-public class SparseBinarySearchTest extends ChronicleQueueTestBase {
+public class SparseBinarySearchTest extends QueueTestCommon {
 
     private static final GapTolerantComparator GAP_TOLERANT_COMPARATOR = new GapTolerantComparator();
 
@@ -49,12 +69,12 @@ public class SparseBinarySearchTest extends ChronicleQueueTestBase {
 
     @Test
     public void testBinarySearchWithManyGapsAndManyRollCycles() throws ParseException {
-        runWithTimeParameters(RollCycles.TEST_SECONDLY, 300);
+        runWithTimeParameters(TEST_SECONDLY, 300);
     }
 
     @Test
     public void testBinarySearchWithManyGaps() throws ParseException {
-        runWithTimeParameters(RollCycles.DAILY, 1);
+        runWithTimeParameters(DAILY, 1);
     }
 
     public void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) throws ParseException {
@@ -83,11 +103,12 @@ public class SparseBinarySearchTest extends ChronicleQueueTestBase {
                 }
             }
 
-            try (final ExcerptTailer tailer = queue.createTailer()) {
+            try (final ExcerptTailer tailer = queue.createTailer();
+                final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
                         Wire key = toWire(j);
-                        long index = BinarySearch.search(queue, key, GAP_TOLERANT_COMPARATOR);
+                        long index = BinarySearch.search(binarySearchTailer, key, GAP_TOLERANT_COMPARATOR);
                         if (entriesWithValues.contains(j)) {
                             Assert.assertEquals(tailer.index(), index);
                         } else {
@@ -96,10 +117,10 @@ public class SparseBinarySearchTest extends ChronicleQueueTestBase {
                         key.bytes().releaseLast();
                     }
                 }
-            }
 
-            Wire key = toWire(numberOfMessages);
-            assertTrue("Should not find non-existent", BinarySearch.search(queue, key, GAP_TOLERANT_COMPARATOR) < 0);
+                Wire key = toWire(numberOfMessages);
+                assertTrue("Should not find non-existent", BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0);
+            }
         }
     }
 

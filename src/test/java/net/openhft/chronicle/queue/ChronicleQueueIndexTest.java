@@ -1,8 +1,24 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -10,14 +26,12 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -25,16 +39,11 @@ import java.util.stream.IntStream;
 
 import static net.openhft.chronicle.bytes.Bytes.from;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
-public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
-
-    @Test
-    public void checkTheEOFisWrittenToPreQueueFile() {
-        checkTheEOFisWrittenToPreQueueFileInner(appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(1, 0L), from("Hello World 1")),
-                (tp, rc) -> { /* not required as we are increasing cycle in next write */ },
-                appender -> appender.writeBytes(appender.queue().rollCycle().toIndex(3, 0L), from("Hello World 2")));
-    }
+public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test
     public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
@@ -98,67 +107,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test
-    public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
-        Assume.assumeTrue(!OS.isWindows());
-        SetTimeProvider tp = new SetTimeProvider(1);
-
-        File file1 = getTmpDir();
-        RollCycles rollCycle = RollCycles.DEFAULT;
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .testBlockSize()
-                .build()) {
-            ExcerptAppender appender = queue.acquireAppender();
-
-            appender.writeText("Hello World 1");
-
-            Assert.assertFalse(hasEOFAtEndOfFile(file1));
-        }
-
-        tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .testBlockSize()
-                .build()) {
-
-            queue.acquireAppender().pretouch();
-        }
-
-        tp.advanceMillis(rollCycle.lengthInMillis());
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
-                .path(file1)
-                .rollCycle(rollCycle)
-                .timeProvider(tp)
-                .build()) {
-
-            ExcerptAppender appender = queue.acquireAppender();
-
-            appender.writeText("Hello World 2");
-
-            // Simulate the end of the day i.e the queue closes the day rolls
-            // (note the change of index from 18264 to 18265)
-
-            assertTrue(hasEOFAtEndOfFile(file1));
-            try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
-                    .path(file1)
-                    .rollCycle(rollCycle)
-                    .timeProvider(tp)
-                    .build()) {
-                final ExcerptTailer tailer = queue123.createTailer();
-                assertEquals("Hello World 1", tailer.readText());
-                assertEquals("Hello World 2", tailer.readText());
-            }
-        }
-    }
-
-    private boolean hasEOFAtEndOfFile(final File file) {
+    protected boolean hasEOFAtEndOfFile(final File file) {
 
         try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                 .path(file).build()) {
@@ -228,7 +177,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
         stp.currentTimeMillis(CLOCK.currentTimeMillis());
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
 
@@ -284,7 +233,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     public void writeReadMetadata() {
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .testBlockSize()
                 .build()) {
 
@@ -307,7 +256,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(stp)
                 .testBlockSize()
                 .build()) {

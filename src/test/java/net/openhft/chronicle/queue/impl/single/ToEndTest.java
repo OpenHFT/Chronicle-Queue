@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,10 +37,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
-public class ToEndTest extends ChronicleQueueTestBase {
+public class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
     private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
@@ -59,7 +60,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build()) {
 
@@ -133,7 +134,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(time)
                 .build()) {
 
@@ -246,7 +247,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         try (ChronicleQueue wqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
             ExcerptAppender appender = wqueue.acquireAppender();
@@ -264,7 +265,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
         try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                 .binary(file)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
 
@@ -288,23 +289,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
     public void shouldReturnExpectedValuesForEmptyQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
-            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
-        }
-    }
-
-    @Test
-    public void shouldReturnExpectedValuesForEmptyPretouchedQueue() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            pretouchQueue(queue);
-
-            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
-            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
-
-            timeProvider.advanceMicros(FIVE_SECONDS);
-            pretouchQueue(queue);
-
             assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
             assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
         }
@@ -393,23 +377,6 @@ public class ToEndTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByPretouch() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        timeProvider.advanceMicros(FIVE_SECONDS);
-        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            writeExcerptToQueue(queue);
-            String lastWriteIndexBefore = lastWriteIndex(queue);
-            String tailerToEndIndexBefore = tailerToEndIndex(queue);
-
-            timeProvider.advanceMicros(FIVE_SECONDS);
-            pretouchQueue(queue);
-
-            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
-            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
-        }
-    }
-
-    @Test
     public void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
@@ -471,18 +438,12 @@ public class ToEndTest extends ChronicleQueueTestBase {
         }
     }
 
-    private void pretouchQueue(SingleChronicleQueue queue) {
-        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
-            excerptAppender.pretouch();
-        }
-    }
-
     private SingleChronicleQueue createQueue(SetTimeProvider timeProvider) {
         final File queueDir = getTmpDir();
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST4_SECONDLY)
+                .rollCycle(TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build();
     }

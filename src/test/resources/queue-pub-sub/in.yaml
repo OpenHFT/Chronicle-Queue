@@ -1,0 +1,12 @@
+---
+# subscribe
+subscribe: {
+  eventType: from,
+  name: queue-pub-sub
+}
+...
+---
+# publish to a queue
+to: queue-pub-sub
+say: Hello
+...

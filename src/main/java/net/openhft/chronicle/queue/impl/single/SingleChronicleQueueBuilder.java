@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     private Boolean useSparseFiles;
     private Long sparseCapacity;
     private File path;
@@ -269,7 +269,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return wireStore;
     }
 
-    static boolean isQueueReplicationAvailable() {
+    public static boolean areEnterpriseFeaturesAvailable() {
         return ENTERPRISE_QUEUE_CONSTRUCTOR != null;
     }
 
@@ -292,7 +292,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
-                            return (RollCycle) instance;
+                            return RollCycles.warnIfDeprecated((RollCycle) instance);
                         } else {
                             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                     "Configured default rollcycle is not a subclass of RollCycle");
@@ -322,7 +322,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     @NotNull
     public SingleChronicleQueue build() {
-        boolean needEnterprise = checkEnterpriseFeaturesRequested();
         preBuild();
         if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null &&
                 (rollCycle == null || rollCycle.lengthInMillis() > 60_000)) {
@@ -333,7 +332,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         }
 
         SingleChronicleQueue chronicleQueue;
-        if (needEnterprise)
+
+        // It is important to check enterprise features after preBuild()
+        // Enterprise-only config options can be loaded from the metadata
+        if (checkEnterpriseFeaturesRequested())
             chronicleQueue = buildEnterprise();
         else
             chronicleQueue = new SingleChronicleQueue(this);
@@ -374,9 +376,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return result;
     }
 
-    private boolean onlyAvailableInEnterprise(final String feature) {
+    public static boolean onlyAvailableInEnterprise(final String feature) {
         if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
-            Jvm.warn().on(getClass(), feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
+            Jvm.warn().on(SingleChronicleQueueBuilder.class, feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
         return true;
     }
 
@@ -483,7 +485,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
             if (list != null && list.length > 0) {
                 String filename = list[0];
-                for (RollCycles cycle : RollCycles.all()) {
+                for (RollCycle cycle : RollCycles.all()) {
                     try {
                         DateTimeFormatter.ofPattern(cycle.format())
                                 .parse(filename.substring(0, filename.length() - 4));
@@ -497,7 +499,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private void overrideRollCycleForFileName(String pattern) {
-        for (RollCycles cycle : RollCycles.all()) {
+        for (RollCycle cycle : RollCycles.all()) {
             if (cycle.format().equals(pattern)) {
                 overrideRollCycle(cycle);
                 return;
@@ -506,7 +508,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         throw new IllegalStateException("Can't find an appropriate RollCycles to override to of length " + pattern);
     }
 
-    private void overrideRollCycle(RollCycles cycle) {
+    private void overrideRollCycle(RollCycle cycle) {
         if (rollCycle != cycle && rollCycle != null)
             Jvm.warn().on(getClass(), "Overriding roll cycle from " + rollCycle + " to " + cycle);
         rollCycle = cycle;
@@ -676,7 +678,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
         if (useSparseFiles && OS.isLinux() && OS.is64Bit())
             this.useSparseFiles = useSparseFiles;
@@ -685,7 +687,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     public SingleChronicleQueueBuilder sparseCapacity(long sparseCapacity) {
         this.sparseCapacity = sparseCapacity;
         return this;
@@ -699,7 +701,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
-    @Deprecated
+    @Deprecated(/* To be removed in 5.25 */)
     public boolean useSparseFiles() {
         return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
     }
@@ -743,7 +745,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
         assert rollCycle != null;
-        this.rollCycle = rollCycle;
+        this.rollCycle = RollCycles.warnIfDeprecated(rollCycle);
         return this;
     }
 
@@ -1121,6 +1123,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
+    @Deprecated(/* to be removed in x.26*/)
     public SingleChronicleQueueBuilder clone() {
         try {
             return (SingleChronicleQueueBuilder) super.clone();

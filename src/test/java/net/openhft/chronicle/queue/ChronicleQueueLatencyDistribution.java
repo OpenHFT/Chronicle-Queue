@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ import java.util.Map;
  * I ran with
  * mvn -DenableAffinity=true exec:java -Dexec.classpathScope="test" -Dexec.mainClass=net.openhft.chronicle.queue.ChronicleQueueLatencyDistribution
  */
-public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
+public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
     private static final boolean PRETOUCH = !Jvm.getBoolean("no_pretouch");
     private static final boolean SAMPLING = Jvm.getBoolean("sampling");
     private static final long SAMPLE_THRESHOLD_NS = Long.getLong("sampling_ns", 1_000);
@@ -139,6 +139,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Histogram histogramIn = new Histogram();
         Histogram histogramWr = new Histogram();
         if (PRETOUCH) {
+            // Pretoucher will only work with Queue Enterprise in the path
             Thread pretoucher = new Thread(() -> {
                 ExcerptAppender appender = queue.acquireAppender();
                 while (!Thread.currentThread().isInterrupted()) {

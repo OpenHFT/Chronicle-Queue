@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.TestKey;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -37,7 +37,7 @@ import static net.openhft.chronicle.queue.impl.single.StoreTailer.INDEXING_LINEA
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
-public class IndexTest extends ChronicleQueueTestBase {
+public class IndexTest extends QueueTestCommon {
 
     @NotNull
     private final WireType wireType;

@@ -1,13 +1,13 @@
 /*
  * Copyright 2014 Higher Frequency Trading
  *
- * http://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -173,6 +173,9 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption("cblArg")) {
             chronicleReader.withLimiterArg(commandLine.getOptionValue("cblArg"));
         }
+        if (commandLine.hasOption("named")) {
+            chronicleReader.withTailerId(commandLine.getOptionValue("named"));
+        }
     }
 
     @NotNull
@@ -198,6 +201,7 @@ public class ChronicleReaderMain {
         addOption(options, "x", "max-results", true, "Limit the number of results to output", false);
         addOption(options, "cbl", "content-based-limiter", true, "Specify a content-based limiter", false);
         addOption(options, "cblArg", "content-based-limiter-argument", true, "Specify an argument for use by the content-based limiter", false);
+        addOption(options, "named", "named", true, "Named tailer ID", false);
         return options;
     }
 }

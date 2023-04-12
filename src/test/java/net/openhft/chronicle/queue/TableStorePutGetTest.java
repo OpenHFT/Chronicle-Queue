@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -5,6 +23,9 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import java.io.File;
+
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -13,7 +34,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     public void indexEntry() {
         SetTimeProvider stp = new SetTimeProvider("2020/10/15T01:01:01");
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("indexEntry"))
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(stp)
                 .testBlockSize()
                 .build()) {
@@ -97,12 +118,18 @@ public class TableStorePutGetTest extends QueueTestCommon {
 
     @Test
     public void manyEntries() {
-        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("manyEntries"))
-                .rollCycle(RollCycles.TEST_DAILY)
+        final File tempDir = DirectoryUtils.tempDir("manyEntries");
+        try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(tempDir)
+                .rollCycle(TEST_DAILY)
                 .blockSize(64 << 10)
                 .build()) {
-            for (int j = 0; j < 2280; j++) {
+            final int count = 2280;
+            for (int j = 0; j < count; j++) {
                 cq.tableStorePut("=hello" + j, j);
+            }
+            for (int j = 0; j < count; j++) {
+                final long l = cq.tableStoreGet("=hello" + j);
+                assertEquals(j, l);
             }
         }
     }
@@ -115,7 +142,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     @Test
     public void testCanGrowBeyondInitialSize() {
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("canGrow"))
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .testBlockSize()
                 .build()) {
             for (int j = 0; j < 4_000; j++) {

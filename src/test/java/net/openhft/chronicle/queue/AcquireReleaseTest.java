@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
@@ -17,10 +35,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
-public class AcquireReleaseTest extends ChronicleQueueTestBase {
+public class AcquireReleaseTest extends QueueTestCommon {
     @Test
     public void testAcquireAndRelease() {
         File dir = IOTools.createTempDirectory("testAcquireAndRelease").toFile();
@@ -44,7 +63,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         TimeProvider tp = () -> time.getAndAccumulate(1000, (x, y) -> x + y);
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .storeFileListener(sfl)
                 .timeProvider(tp)
                 .build()) {
@@ -75,7 +94,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         stp.currentTimeMillis(1000);
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
                 .build()) {
             queue.acquireAppender().writeText("Hello World");
@@ -110,7 +129,7 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .storeFileListener(storeFileListener)
                 .timeProvider(stp)
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(TEST_SECONDLY)
                 .build();) {
             // new appender created
             final ExcerptAppender appender = queue.acquireAppender();
@@ -122,13 +141,11 @@ public class AcquireReleaseTest extends ChronicleQueueTestBase {
 
             // other appender is created
             CompletableFuture.runAsync(queue::acquireAppender).get();  // Here store is Acquired twice (second time in cleanupStoreFilesWithNoData())
-
-            BackgroundResourceReleaser.releasePendingResources();
         }
+        BackgroundResourceReleaser.releasePendingResources();
 
-        // Once is called when creating first appender, and twice when creating second appender ( extra time in cleanupStoreFilesWithNoData())
-        assertEquals(3, acount.get());
+        assertEquals(2, acount.get());
 
-        assertEquals(3, qcount.get());
+        assertEquals(2, qcount.get());
     }
 }

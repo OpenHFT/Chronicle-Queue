@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2020 chronicle.software
  *
- * https://chronicle.software
+ *       https://chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.annotation.SingleThreaded;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableIn;
@@ -29,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing a Tailer between threads will lead to errors and unpredictable behaviour.</p>
  */
+@SingleThreaded
 public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
@@ -218,6 +220,35 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      */
     default boolean readAfterReplicaAcknowledged() {
         return false;
+    }
+
+    /**
+     * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
+     * which is updated last during append operation so may be possible that a single entry is available for reading
+     * but not acknowledged by this method yet.
+     * <p>
+     * Calling this method may move ExcerptTailer to the specified cycle and release its store.
+     *
+     * @return the approximate number of excerpts in a cycle.
+     */
+    default long approximateExcerptsInCycle(int cycle) {
+        try (ExcerptTailer tailer = queue().createTailer()) {
+            return tailer.approximateExcerptsInCycle(cycle);
+        }
+    }
+
+    /**
+     * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
+     * expensive operation.
+     * <p>
+     * Calling this method may move ExcerptTailer to the specified cycle and release its store.
+     *
+     * @return the exact number of excerpts in a cycle.
+     */
+    default long exactExcerptsInCycle(int cycle) {
+        try (ExcerptTailer tailer = queue().createTailer()) {
+            return tailer.exactExcerptsInCycle(cycle);
+        }
     }
 
     /**

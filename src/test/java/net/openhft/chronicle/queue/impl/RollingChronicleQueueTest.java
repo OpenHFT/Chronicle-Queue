@@ -1,31 +1,40 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
-import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.single.Pretoucher;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
-import static net.openhft.chronicle.queue.RollCycles.TEST2_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST2_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
+public class RollingChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void testCountExcerptsWhenTheCycleIsRolled() {
@@ -214,84 +223,8 @@ public class RollingChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test
-    public void testTailingWithEmptyCycles() {
-        testTailing(p -> {
-            try {
-                p.execute();
-            } catch (InvalidEventHandlerException e) {
-                e.printStackTrace();
-            }
-            return 1;
-        });
-    }
-
-    @Test
-    public void testTailingWithMissingCycles() {
-        testTailing(p -> 0);
-    }
-
-    private void testTailing(Function<Pretoucher, Integer> createGap) {
-        final SetTimeProvider tp = new SetTimeProvider(0);
-        final File tmpDir = getTmpDir();
-        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(RollCycles.TEST_SECONDLY).timeProvider(tp).build();
-             Pretoucher pretoucher = new Pretoucher(queue, null, c -> {
-             }, true, true)) {
-            int cyclesAdded = 0;
-            ExcerptAppender appender = queue.acquireAppender();
-
-            appender.writeText("0"); // to file ...000000
-            assertEquals(1, listCQ4Files(tmpDir).length);
-
-            tp.advanceMillis(1000);
-            appender.writeText("1"); // to file ...000001
-            final @Nullable File[] files = listCQ4Files(tmpDir);
-            assertEquals(2, files.length);
-
-            tp.advanceMillis(2000);
-            cyclesAdded += createGap.apply(pretoucher);
-            BackgroundResourceReleaser.releasePendingResources();
-            final @Nullable File[] files2 = listCQ4Files(tmpDir);
-            assertEquals(2 + cyclesAdded, files2.length);
-
-            tp.advanceMillis(1000);
-            appender.writeText("2"); // to file ...000004
-            assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
-
-            tp.advanceMillis(2000);
-            cyclesAdded += createGap.apply(pretoucher);
-            assertEquals(3 + cyclesAdded, listCQ4Files(tmpDir).length);
-
-            // now tail them all back
-            int count = 0;
-            ExcerptTailer tailer = queue.createTailer();
-            long[] indexes = new long[3];
-            while (true) {
-                String text = tailer.readText();
-                if (text == null)
-                    break;
-                indexes[count] = tailer.index() - 1;
-                assertEquals(count++, Integer.parseInt(text));
-            }
-            assertEquals(indexes.length, count);
-
-            // now make sure we can go direct to each index (like afterLastWritten)
-            tailer.toStart();
-            for (int i = 0; i < indexes.length; i++) {
-                assertTrue(tailer.moveToIndex(indexes[i]));
-                String text = tailer.readText();
-                assertEquals(i, Integer.parseInt(text));
-            }
-        }
-    }
-
-    @Nullable
-    private File[] listCQ4Files(File tmpDir) {
-        return tmpDir.listFiles(file -> file.getName().endsWith("cq4"));
-    }
-
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
-        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(RollCycles.TEST4_DAILY).testBlockSize();
+        return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 }

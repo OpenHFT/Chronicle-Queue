@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.core.Jvm;
@@ -31,6 +49,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.Thread.currentThread;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
@@ -65,7 +84,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
         NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
-        PRETOUCH = type == StressTestType.PRETOUCH;
+        PRETOUCH = (type == StressTestType.PRETOUCH || type == StressTestType.PRETOUCH_EA);
+        if (type == StressTestType.PRETOUCH_EA)
+            System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
         READERS_READ_ONLY = type == StressTestType.READONLY;
         DUMP_QUEUE = false;
         SHARED_WRITE_QUEUE = type == StressTestType.SHAREDWRITEQ;
@@ -151,6 +172,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         if (PRETOUCH) {
             pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);
+            ignoreException("touchPage failed");
         }
 
         for (int i = 0; i < numReaders; i++) {
@@ -247,6 +269,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         } finally {
 
+            System.clearProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle");
             Jvm.resetExceptionHandlers();
 
             shutdownAll(10, executorServicePretouch);
@@ -291,7 +314,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .doubleBuffer(DOUBLE_BUFFER)
-                .rollCycle(RollCycles.TEST_SECONDLY);
+                .rollCycle(TEST_SECONDLY);
     }
 
     @NotNull
@@ -310,7 +333,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     enum StressTestType {
-        VANILLA, READONLY, PRETOUCH, DOUBLEBUFFER, SHAREDWRITEQ;
+        VANILLA, READONLY, PRETOUCH, PRETOUCH_EA, DOUBLEBUFFER, SHAREDWRITEQ;
     }
 
     interface ReaderCheckingStrategy {

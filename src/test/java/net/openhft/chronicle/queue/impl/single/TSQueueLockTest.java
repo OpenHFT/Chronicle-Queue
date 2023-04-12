@@ -1,15 +1,32 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
-import net.openhft.chronicle.testframework.process.ProcessRunner;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.Threads;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -83,6 +100,7 @@ public class TSQueueLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void lockWillBeAcquiredAfterTimeoutWithAWarning() throws InterruptedException {
+        System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try (final TSQueueLock testLock = createTestLock(tableStore, 50)) {
             Thread t = new Thread(testLock::acquireLock);
             t.start();
@@ -90,6 +108,8 @@ public class TSQueueLockTest extends QueueTestCommon {
             testLock.acquireLock();
             expectException("Unlocking forcibly");
             expectException("Forced unlock");
+        } finally {
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 
@@ -247,9 +267,9 @@ public class TSQueueLockTest extends QueueTestCommon {
         return new TSQueueLock(tableStore, Pauser::balanced, timeoutMilliseconds);
     }
 
-    private Process runLockingProcess(boolean releaseAfterInterrupt) throws IOException {
-        return ProcessRunner.runClass(LockAndHoldUntilInterrupted.class,
-                tableStore.file().getAbsolutePath(), String.valueOf(releaseAfterInterrupt));
+    private Process runLockingProcess(boolean releaseAfterInterrupt) {
+        return JavaProcessBuilder.create(LockAndHoldUntilInterrupted.class)
+                .withProgramArguments(tableStore.file().getAbsolutePath(), String.valueOf(releaseAfterInterrupt)).start();
     }
 
     private static void lockAndHoldUntilInterrupted(String tableStorePath, boolean releaseWhenInterrupted) {
