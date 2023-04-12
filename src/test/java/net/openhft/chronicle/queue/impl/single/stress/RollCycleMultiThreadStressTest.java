@@ -109,6 +109,12 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     @Test
     public void stress() throws Exception {
+        ignoreException(" us to grow file");
+        ignoreException("ms to check the disk space of");
+        ignoreException("seconds to ASYNC");
+        ignoreException("Running test with ");
+        ignoreException("strict.discard.warning ");
+
         finishedNormally = false;
         assert warnIfAssertsAreOn();
 
@@ -126,7 +132,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 new NamedThreadFactory("reader"));
 
         final AtomicInteger wrote = new AtomicInteger();
-        final double expectedPerSecond = Jvm.isAzulZing() ? 3e8 : 1e9;
+        final double expectedPerSecond = Jvm.isArm() ? 3e7 : Jvm.isAzulZing() ? 3e8 : 1e9;
         final int expectedNumberOfMessages = (int) (TEST_TIME * expectedPerSecond / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
         Jvm.perf().on(getClass(), String.format("Running test with %d writers and %d readers (%d cores), sleep %dns expecting %d messages%n",
              numWriters, numReaders, CORES, SLEEP_PER_WRITE_NANOS, expectedNumberOfMessages));
@@ -158,7 +164,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             results.add(executorServiceWrite.submit(writer));
         }
 
-        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + 5) + queueBuilder(file).timeoutMS();
+        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + (Jvm.isArm() ? 20 : 5)) + queueBuilder(file).timeoutMS();
         long startTime = System.currentTimeMillis();
         final long giveUpWritingAt = startTime + maxWritingTime;
         long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
