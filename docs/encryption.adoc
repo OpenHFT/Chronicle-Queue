@@ -1,8 +1,8 @@
 = Encryption (Enterprise Edition Feature)
 
-Chronicle Queue Enterprise introduces the ability to encrypt your message queues and the constituent messages.
+Chronicle Queue Enterprise introduces the ability to encrypt the contents of your queues.
 
-IMPORTANT: Encrypted queues are written to disk in their encrypted state. +
+IMPORTANT: Encrypted queues are written to disk in their encrypted state i.e. the data is encrypted at rest. +
  +
 Encrypted queues are replicated in their encrypted state. +
  +
@@ -27,26 +27,19 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
         }
 ----
 
-== AES 64-bit encryption
+If you have Chronicle-Queue-Enterprise in your class path you can set a https://en.wikipedia.org/wiki/Salt_(cryptography)[salt] e.g.
 
-AES 64-bit encryption can be used by specifying `aesEncryption` at queue build time, and supplying an 8-bit encryption key.
+[source,java]
+----
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+          ...
+          .aesEncryption(SECURE_KEY)
+          .messageHeader(MessageHeader.SALT_TIMESTAMP, MessageHeader.SALT_TIMESTAMP)
+          ...
+----
 
-For example:
-[source, java]
-....
-public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
-        if (keyBytes == null) {
-            codingSuppliers(null, null);
-            return this;
-        }
-        SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-        Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier = () -> new VanillaCipher(Cipher.ENCRYPT_MODE, key);
-        Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier = () -> new VanillaCipher(Cipher.DECRYPT_MODE, key);
-        codingSuppliers(encodingSupplier, decodingSupplier);
-        messageHeader(MessageHeader.SALT_64, MessageHeader.SALT_64);
-        return this;
-    }
-....
+There are a number of salt functions available to you including `SALT_TIMESTAMP`, `SALT_64`, `SALT_128`
+or you can implement your own.
 
 == Customer specified encryption
 You can supply a bespoke encryption method to encrypt your messages using, perhaps, a more complex encryption method.
@@ -57,19 +50,6 @@ Another example could be to write simple custom code that will encrypt the more 
 
 To enable this form of queue encryption, specify `codingSuppliers` at queue build time and supply the bespoke encryption method.
 
-For example:
-
-[source, java]
-....
-public SingleChronicleQueueBuilder codingSuppliers(@Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
-                                                           @Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier) {
-        if ((encodingSupplier == null) != (decodingSupplier == null))
-            throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
-        this.encodingSupplier = encodingSupplier;
-        this.decodingSupplier = decodingSupplier;
-        return this;
-    }
-....
 
 '''
 
