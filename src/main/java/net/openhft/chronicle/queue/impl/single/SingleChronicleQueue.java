@@ -755,11 +755,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public final int cycle() {
-        return cycleCalculator.currentCycle(rollCycle, time, epoch);
+        return Math.max(cycleCalculator.currentCycle(rollCycle, time, epoch), directoryListing.getMaxCreatedCycle());
     }
 
     public final int cycle(TimeProvider timeProvider) {
-        return cycleCalculator.currentCycle(rollCycle, timeProvider, epoch);
+        return Math.max(cycleCalculator.currentCycle(rollCycle, timeProvider, epoch), directoryListing.getMaxCreatedCycle());
     }
 
     @Override
