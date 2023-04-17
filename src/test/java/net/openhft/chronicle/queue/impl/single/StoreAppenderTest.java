@@ -25,18 +25,23 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
-    public static final String TEST_TEXT = "Some text some text some text";
+    private static final String TEST_TEXT = "Some text some text some text";
+    private static final long ONE_DAY = TimeUnit.DAYS.toMillis(1);
 
     @Rule
     public final TemporaryFolder queueDirectory = new TemporaryFolder();
@@ -77,6 +82,38 @@ public class StoreAppenderTest extends QueueTestCommon {
             expectTestText(queue, 16);
         }
     }
+
+    @Test
+    public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build()) {
+
+            // Create an 'old' roll-cycle, then wait a day:
+            queue.acquireAppender().writingDocument().close();
+            clock.addAndGet(ONE_DAY);
+
+            // Write to a new cycle:
+            queue.acquireAppender().writingDocument().close();
+
+            // The code now throws WriteAfterEOFException for the old cycle:
+            clock.addAndGet(-1); // One millisecond earlier
+
+            assertThrows(WriteAfterEOFException.class, // is this a race?
+                    () -> queue.acquireAppender().writingDocument().close());
+
+            // advance back to the latest cycle and write
+            clock.addAndGet(2);
+            queue.acquireAppender().writingDocument().close();
+
+            assertEquals(3, queue.entryCount());
+        }
+    }
+
 
     private void expectTestText(ChronicleQueue chronicleQueue, int times) {
         try (final ExcerptTailer tailer = chronicleQueue.createTailer()) {

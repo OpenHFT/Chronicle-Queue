@@ -435,22 +435,28 @@ class StoreAppender extends AbstractCloseable
             context.metaData(false);
         } else {
             writeLock.lock();
-            int cycle = queue.cycle();
-            if (wire == null)
-                setWireIfNull(cycle);
 
-            if (this.cycle != cycle)
-                rollCycleTo(cycle);
+            try {
+                int cycle = queue.cycle();
+                if (wire == null)
+                    setWireIfNull(cycle);
 
-            long safeLength = queue.overlapSize();
-            resetPosition(false);
-            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+                if (this.cycle != cycle)
+                    rollCycleTo(cycle);
 
-            // sets the writeLimit based on the safeLength
-            openContext(metaData, safeLength);
+                long safeLength = queue.overlapSize();
+                resetPosition(false);
+                assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
-            // Move readPosition to the start of the context. i.e. readRemaining() == 0
-            wire.bytes().readPosition(wire.bytes().writePosition());
+                // sets the writeLimit based on the safeLength
+                openContext(metaData, safeLength);
+
+                // Move readPosition to the start of the context. i.e. readRemaining() == 0
+                wire.bytes().readPosition(wire.bytes().writePosition());
+            } catch (RuntimeException e) {
+                writeLock.unlock();
+                throw e;
+            }
         }
 
         return context;
