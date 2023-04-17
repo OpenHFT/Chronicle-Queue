@@ -31,12 +31,16 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
+import static javax.management.timer.Timer.ONE_DAY;
 import static org.junit.Assert.assertEquals;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
-    public static final String TEST_TEXT = "Some text some text some text";
+    private static final String TEST_TEXT = "Some text some text some text";
+    private static final long ONE_DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1);
 
     @Rule
     public final TemporaryFolder queueDirectory = new TemporaryFolder();
@@ -75,6 +79,72 @@ public class StoreAppenderTest extends QueueTestCommon {
             blockedWriter.makePostInterruptAttemptToWrite();
 
             expectTestText(queue, 16);
+        }
+    }
+
+    @Test
+    public void writesAreNotAllowedToOldExistingRollCycles() throws IOException {
+        final AtomicLong clock = new AtomicLong(1681707135520L);
+        clock.addAndGet(-clock.get() % ONE_DAY_IN_MILLIS);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build()) {
+
+            // Create an 'old' roll-cycle, then wait a day:
+            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                assertEquals(19464, queue.rollCycle().toCycle(documentContext.index()));
+            }
+            clock.addAndGet(ONE_DAY);
+
+            // Write to a new cycle:
+            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                assertEquals(19465, queue.rollCycle().toCycle(documentContext.index()));
+            }
+
+            // Now the clock will indicate to write to yesterday's cycle, write to the last cycle instead
+            clock.addAndGet(-1); // One millisecond earlier
+            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                assertEquals(19465, queue.rollCycle().toCycle(documentContext.index()));
+            }
+
+            // Now we go back to the clock indicating to write to the last cycle
+            clock.addAndGet(2);
+            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                assertEquals(19465, queue.rollCycle().toCycle(documentContext.index()));
+            }
+
+            assertEquals(queue.entryCount(), 4);
+        }
+    }
+
+    @Test
+    public void writesAreNotAllowedToOldNonExistingRollCycles() throws IOException {
+        final AtomicLong clock = new AtomicLong(1681707135520L);
+        clock.addAndGet(-clock.get() % ONE_DAY_IN_MILLIS);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build()) {
+
+            // Write to today's cycle
+            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                assertEquals(19464, queue.rollCycle().toCycle(documentContext.index()));
+            }
+
+            // Now the clock will indicate to write to two days (cycles) earlier, write to the last cycle instead
+            clock.addAndGet(-2 * ONE_DAY_IN_MILLIS);
+            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                assertEquals(19464, queue.rollCycle().toCycle(documentContext.index()));
+            }
+
+            // Now we go back to the clock indicating to write to the last cycle
+            clock.addAndGet(2 * ONE_DAY_IN_MILLIS);
+            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+                assertEquals(19464, queue.rollCycle().toCycle(documentContext.index()));
+            }
+
+            assertEquals(queue.entryCount(), 3);
         }
     }
 
