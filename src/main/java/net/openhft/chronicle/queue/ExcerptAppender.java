@@ -79,7 +79,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * Pre-touching involves accessing pages of files/memory that are likely accessed in a
      * near future and may also involve accessing/acquiring future cycle files.
      * <p>
-     * We suggest this code is called from a background thread [ not you main
+     * We suggest this code is called from a background thread [ not your main
      * business thread ], it must be called from the same thread that created it, as the call to
      * pretouch() is not thread safe. For example :
      * <p>
