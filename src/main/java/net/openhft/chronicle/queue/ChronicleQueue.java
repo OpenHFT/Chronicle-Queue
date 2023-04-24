@@ -291,7 +291,7 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Returns the source id. Source is is used to identify the queue in {@link net.openhft.chronicle.wire.MessageHistory}
+     * Returns the source id. Source is used to identify the queue in {@link net.openhft.chronicle.wire.MessageHistory}
      * <p>
      * The source id is non-negative.
      *

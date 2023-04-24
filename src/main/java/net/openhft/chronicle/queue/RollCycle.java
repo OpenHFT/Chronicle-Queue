@@ -99,7 +99,7 @@ public interface RollCycle {
     /**
      * Returns the sequence number for the provided {@code index}.
      * <p>
-     * An index is comprised of both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
+     * An index comprises both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
      * decomposes the provided {@code index} and extracts the sequence number.
      *
      * @param index to use to extract the sequence number
@@ -110,7 +110,7 @@ public interface RollCycle {
     /**
      * Returns the cycle for the given {@code index}.
      * <p>
-     * An index is comprised of both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
+     * An index comprises both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
      * decomposes the provided {@code index} and extracts the cycle.
      *
      * @param index to use when extracting the cycle

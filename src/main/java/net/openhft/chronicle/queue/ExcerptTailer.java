@@ -57,7 +57,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * <p>
      * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
      *
-     * @param includeMetaData if the DocumentContext shall be meta data aware.
+     * @param includeMetaData if the DocumentContext shall be metadata aware.
      * @return the document context
      */
     @NotNull
@@ -136,8 +136,8 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * current millisecond, toEnd() may not see it, This is because for performance reasons, the
      * queue.lastCycle() is cached, as finding the last cycle is expensive, it requires asking the
      * directory for the Files.list() so, this cache is only refreshed if the call toEnd() is in a
-     * new millisecond. Hence a whole milliseconds with of data could be added to the
-     * chronicle-queue that toEnd() won’t see. For appenders that that are using the same queue
+     * new millisecond. Hence, a whole milliseconds with of data could be added to the
+     * chronicle-queue that toEnd() won’t see. For appenders that are using the same queue
      * instance ( and with then same JVM ), they can be informed that the last cycle has
      * changed, this will yield better results, but atomicity can still not be guaranteed.
      *
@@ -171,7 +171,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *
      * @param direction which is either of NONE, FORWARD, BACKWARD
      * @return this ExcerptTailer
-     * @throws NullPointerException if the provide {@code direction} is {@code null}
+     * @throws NullPointerException if the provided {@code direction} is {@code null}
      */
     @NotNull
     ExcerptTailer direction(@NotNull TailerDirection direction);
