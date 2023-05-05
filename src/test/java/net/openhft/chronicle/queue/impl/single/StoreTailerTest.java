@@ -25,6 +25,8 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
@@ -142,6 +144,93 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    public void checkAfterWrittenMessageAtIndexMovesToTheCorrectIndex() {
+
+
+        try (ChronicleQueue firstInputQueue =
+                     createQueue(dataDirectory, TEST_DAILY, 1, "firstInputQueue");
+             // different RollCycle means that indicies are not identical to firstInputQueue
+             ChronicleQueue secondInputQueue =
+                     createQueue(dataDirectory, TEST_DAILY, 2, "secondInputQueue");
+             ChronicleQueue outputQueue =
+                     createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue")) {
+
+            final OnEvents firstWriter = firstInputQueue.acquireAppender()
+                    .methodWriterBuilder(OnEvents.class)
+                    .get();
+            final HelloWorld secondWriter = secondInputQueue.acquireAppender()
+                    .methodWriterBuilder(HelloWorld.class)
+                    .get();
+
+            // generate some data in the input queues
+            firstWriter.onEvent("one");
+            firstWriter.onEvent("two");
+
+            secondWriter.hello("thirteen");
+            secondWriter.hello("thirtyOne");
+
+
+            ExcerptAppender excerptAppender = outputQueue.acquireAppender();
+            final OnEvents eventSink = excerptAppender.
+                    methodWriterBuilder(OnEvents.class).get();
+
+            MessageHistory.get().reset();
+
+            final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
+
+            ExcerptTailer tailer1 = firstInputQueue.createTailer();
+            long index1 = tailer1.index();
+            final MethodReader firstMethodReader = tailer1.methodReader(outputWriter);
+
+            ExcerptTailer tailer2 = secondInputQueue.createTailer();
+            long index2 = tailer2.index();
+            final MethodReader secondMethodReader = tailer2.methodReader(outputWriter);
+
+            // replay events from the inputs into the output queue
+            assertTrue(firstMethodReader.readOne());
+            assertTrue(secondMethodReader.readOne());
+
+            VanillaMessageHistory mh = (VanillaMessageHistory) MessageHistory.get();
+            mh.addSource(1, index1);
+            mh.addTiming(System.nanoTime());
+
+            mh.addSource(2, index2);
+            mh.addTiming(System.nanoTime());
+
+            outputWriter.onEvent("out1");
+
+            long index = excerptAppender.lastIndexAppended();
+            index1 = tailer1.index();
+            index2 = tailer2.index();
+
+            assertTrue(firstMethodReader.readOne());
+            assertTrue(secondMethodReader.readOne());
+
+            mh.reset();
+            mh.addSource(1, index1);
+            mh.addTiming(System.nanoTime());
+
+            mh.addSource(2, index2);
+            mh.addTiming(System.nanoTime());
+
+            outputWriter.onEvent("out2");
+
+            mh.reset();
+
+            // ensures that tailer is not moved to index from the incorrect source
+            tailer1.afterWrittenMessageAtIndex(outputQueue, index);
+            Assert.assertEquals(index1, tailer1.index());
+
+            tailer2.afterWrittenMessageAtIndex(outputQueue, index);
+            Assert.assertEquals(index2, tailer2.index());
+
+        }
+
+
+    }
+
+
+    @Test
     public void shouldHandleCycleRoll() {
         File dir = getTmpDir();
         MutableTimeProvider timeProvider = new MutableTimeProvider();
@@ -165,6 +254,7 @@ public class StoreTailerTest extends QueueTestCommon {
                 // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");
             }
+
         }
     }
 

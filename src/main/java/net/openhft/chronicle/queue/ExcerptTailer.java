@@ -194,7 +194,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @throws NullPointerException if the provided {@code queue} is {@code null}
      */
     @NotNull
-    ExcerptTailer afterLastWritten(ChronicleQueue queue);
+    default ExcerptTailer afterLastWritten(ChronicleQueue queue) {
+        return afterWrittenMessageAtIndex(queue, Long.MIN_VALUE);
+    }
 
     /**
      * Sets the Read After Replica Acknowledged property of this Tailer to the
@@ -265,4 +267,16 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     default ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
         return this;
     }
+
+    /**
+     * Winds this ExcerptTailer to the  {@code index} of the  {@code queue} reads the history message then moves
+     * {@code this} tailer to the message index in the history message,
+     *
+     * @param queue which was written to, may contain a history message at  {@code  index}
+     * @param index the index to read the history messge in the {@code queue}
+     * @return this ExcerptTailer
+     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
+     * @throws NullPointerException if the provided {@code queue} is {@code null}
+     */
+    @NotNull ExcerptTailer afterWrittenMessageAtIndex(@NotNull ChronicleQueue queue, long index);
 }

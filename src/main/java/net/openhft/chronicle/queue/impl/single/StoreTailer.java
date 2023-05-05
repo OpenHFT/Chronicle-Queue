@@ -1220,16 +1220,28 @@ class StoreTailer extends AbstractCloseable
         return state;
     }
 
+
     @NotNull
     @Override
     public ExcerptTailer afterLastWritten(@NotNull final ChronicleQueue queue) {
+        return afterWrittenMessageAtIndex(queue, Long.MIN_VALUE);
+    }
+
+    @NotNull
+    @Override
+    public ExcerptTailer afterWrittenMessageAtIndex(@NotNull final ChronicleQueue queue, long index) {
+
         throwExceptionIfClosed();
 
         if (queue == this.queue)
             throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
         try (@NotNull final ExcerptTailer tailer = queue.createTailer()
-                .direction(BACKWARD)
-                .toEnd()) {
+                .direction(BACKWARD)) {
+
+            if (index == Long.MIN_VALUE)
+                tailer.toEnd();
+            else
+                tailer.moveToIndex(index);
 
             @NotNull final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
 

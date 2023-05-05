@@ -63,7 +63,8 @@ import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable;
 import static net.openhft.chronicle.wire.Wires.*;
 
-public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
+public class
+SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     public static final String DISCARD_FILE_SUFFIX = ".discard";
