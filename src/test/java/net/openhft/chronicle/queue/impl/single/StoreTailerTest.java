@@ -147,14 +147,16 @@ public class StoreTailerTest extends QueueTestCommon {
     public void checkAfterWrittenMessageAtIndexMovesToTheCorrectIndex() {
 
 
+        // Create three ChronicleQueues, one for input and two for output
         try (ChronicleQueue firstInputQueue =
                      createQueue(dataDirectory, TEST_DAILY, 1, "firstInputQueue");
-             // different RollCycle means that indicies are not identical to firstInputQueue
+             // different RollCycle means that indices are not identical to firstInputQueue
              ChronicleQueue secondInputQueue =
                      createQueue(dataDirectory, TEST_DAILY, 2, "secondInputQueue");
              ChronicleQueue outputQueue =
                      createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue")) {
 
+            // Create two MethodWriters for writing data to the input queues
             final OnEvents firstWriter = firstInputQueue.acquireAppender()
                     .methodWriterBuilder(OnEvents.class)
                     .get();
@@ -162,7 +164,7 @@ public class StoreTailerTest extends QueueTestCommon {
                     .methodWriterBuilder(HelloWorld.class)
                     .get();
 
-            // generate some data in the input queues
+            // Generate some data in the input queues
             firstWriter.onEvent("one");
             firstWriter.onEvent("two");
 
@@ -170,14 +172,17 @@ public class StoreTailerTest extends QueueTestCommon {
             secondWriter.hello("thirtyOne");
 
 
+            // Create an ExcerptAppender for writing data to the output queue
             ExcerptAppender excerptAppender = outputQueue.acquireAppender();
             final OnEvents eventSink = excerptAppender.
                     methodWriterBuilder(OnEvents.class).get();
 
+            // Reset the MessageHistory
             MessageHistory.get().reset();
 
             final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
 
+            // Create two ExcerptTailers for reading data from the input queues
             ExcerptTailer tailer1 = firstInputQueue.createTailer();
             long index1 = tailer1.index();
             final MethodReader firstMethodReader = tailer1.methodReader(outputWriter);
@@ -186,10 +191,11 @@ public class StoreTailerTest extends QueueTestCommon {
             long index2 = tailer2.index();
             final MethodReader secondMethodReader = tailer2.methodReader(outputWriter);
 
-            // replay events from the inputs into the output queue
+            // Replay events from the inputs into the output queue
             assertTrue(firstMethodReader.readOne());
             assertTrue(secondMethodReader.readOne());
 
+            // Add source and timing information to the MessageHistory for the first and second inputs
             VanillaMessageHistory mh = (VanillaMessageHistory) MessageHistory.get();
             mh.addSource(1, index1);
             mh.addTiming(System.nanoTime());
@@ -197,15 +203,20 @@ public class StoreTailerTest extends QueueTestCommon {
             mh.addSource(2, index2);
             mh.addTiming(System.nanoTime());
 
+            // Write an event to the output queue
             outputWriter.onEvent("out1");
 
+            // Get the index of the last message appended to the output queue
             long index = excerptAppender.lastIndexAppended();
+            // Get the current indices of the tailers for the input queues
             index1 = tailer1.index();
             index2 = tailer2.index();
 
+            // Read the next events from the input queues
             assertTrue(firstMethodReader.readOne());
             assertTrue(secondMethodReader.readOne());
 
+            // Reset the MessageHistory and add source and timing information for the next event
             mh.reset();
             mh.addSource(1, index1);
             mh.addTiming(System.nanoTime());
@@ -213,20 +224,21 @@ public class StoreTailerTest extends QueueTestCommon {
             mh.addSource(2, index2);
             mh.addTiming(System.nanoTime());
 
+            // Write another event to the output queue
             outputWriter.onEvent("out2");
 
+            // Reset the MessageHistory
             mh.reset();
 
             // ensures that tailer is not moved to index from the incorrect source
             tailer1.afterWrittenMessageAtIndex(outputQueue, index);
             Assert.assertEquals(index1, tailer1.index());
 
+            // ensures that tailer is not moved to index from the incorrect source
             tailer2.afterWrittenMessageAtIndex(outputQueue, index);
             Assert.assertEquals(index2, tailer2.index());
 
         }
-
-
     }
 
 
