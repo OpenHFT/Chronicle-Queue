@@ -269,14 +269,17 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
-     * Winds this ExcerptTailer to the  {@code index} of the  {@code queue} reads the history message then moves
-     * {@code this} tailer to the message index in the history message,
+     * Winds this ExcerptTailer to the specified {@code index} of the provided {@code queue} and reads the history message,
+     * then moves {@code this} tailer to the message index in the history message.
      *
-     * @param queue which was written to, may contain a history message at  {@code  index}
-     * @param index the index to read the history messge in the {@code queue}
-     * @return this ExcerptTailer
+     * @param queue The queue which was written to, and may contain a history message at the specified {@code index}.
+     *              Must not be null.
+     * @param index The index to read the history message in the {@code queue}.
+     * @return This ExcerptTailer instance.
      * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
-     * @throws NullPointerException if the provided {@code queue} is {@code null}
+     * @throws NullPointerException if the provided {@code queue} is null.
      */
-    @NotNull ExcerptTailer afterWrittenMessageAtIndex(@NotNull ChronicleQueue queue, long index);
+    default @NotNull ExcerptTailer afterWrittenMessageAtIndex(@NotNull ChronicleQueue queue, long index) {
+        throw new UnsupportedOperationException("todo");
+    }
 }
