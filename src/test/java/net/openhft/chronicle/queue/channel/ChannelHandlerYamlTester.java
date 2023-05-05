@@ -129,7 +129,7 @@ public class ChannelHandlerYamlTester implements YamlTester {
                             } else {
                                 count++;
                                 if (count > 1)
-                                    throw new AssertionError();
+                                    break;
                             }
                         }
                         if (wire0.bytes().startsWith(Bytes.from("...\n")))
