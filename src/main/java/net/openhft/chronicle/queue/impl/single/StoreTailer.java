@@ -1220,43 +1220,72 @@ class StoreTailer extends AbstractCloseable
         return state;
     }
 
+    /**
+     * Winds this ExcerptTailer to the specified {@code index} of the provided {@code queue} and reads the history message,
+     * then moves {@code this} tailer to the message index in the history message.
+     *
+     * @param queue The queue which was written to, and may contain a history message at the specified {@code index}.
+     *              Must not be null.
+     * @param index The index to read the history message in the {@code queue}.
+     * @return This ExcerptTailer instance.
+     * @throws IORuntimeException if the provided {@code queue} couldn't be wound to the last index.
+     * @throws NullPointerException if the provided {@code queue} is null.
+     */
     @NotNull
     @Override
-    public ExcerptTailer afterLastWritten(@NotNull final ChronicleQueue queue) {
+    public ExcerptTailer afterWrittenMessageAtIndex(@NotNull final ChronicleQueue queue, long index) {
+
+        // check if the tailer is closed
         throwExceptionIfClosed();
 
+        // check if the provided queue is the same as the queue being read by this tailer
         if (queue == this.queue)
             throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
-        try (@NotNull final ExcerptTailer tailer = queue.createTailer()
-                .direction(BACKWARD)
-                .toEnd()) {
 
+        // create a tailer for the specified queue, set it to read backward from the specified index
+        try (@NotNull final ExcerptTailer tailer = queue.createTailer().direction(BACKWARD)) {
+
+            // move the tailer to the specified index, or to the end if index is Long.MIN_VALUE
+            if (index == Long.MIN_VALUE)
+                tailer.toEnd();
+            else
+                tailer.moveToIndex(index);
+
+            // create a message history instance to read the history message
             @NotNull final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
 
+            // loop until a message from the expected source is found
             while (true) {
                 try (DocumentContext context = tailer.readingDocument()) {
                     if (!context.isPresent()) {
+                        // no matching message found, move this tailer back to the start of the queue
                         toStart();
                         return this;
                     }
 
+                    // read the message history from the document
                     final MessageHistory veh = SCQTools.readHistory(context, messageHistory);
                     if (veh == null)
                         continue;
 
+                    // check the source ID of the message history matches this tailer's source ID
                     int i = veh.sources() - 1;
                     if (i < 0)
                         continue;
                     if (veh.sourceId(i) != this.sourceId())
                         continue;
 
+                    // move this tailer to the specified index in the history message
                     final long sourceIndex = veh.sourceIndex(i);
                     if (!moveToIndexInternal(sourceIndex)) {
+                        // throw an exception if this tailer couldn't move to the specified index in the history message
                         final String errorMessage = String.format(
                                 "Unable to move to sourceIndex %s in queue %s",
                                 Long.toHexString(sourceIndex), this.queue.fileAbsolutePath());
                         throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                     }
+
+                    // check if a document is present at the expected index, if not, throw an exception
                     try (DocumentContext content = readingDocument()) {
                         if (!content.isPresent()) {
                             final String errorMessage = String.format(
@@ -1264,7 +1293,7 @@ class StoreTailer extends AbstractCloseable
                                     Long.toHexString(sourceIndex + 1), this.queue.fileAbsolutePath());
                             throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                         }
-                        // skip this message and go to the next.
+                        // skip this message and go to the next
                     }
                     return this;
                 }
