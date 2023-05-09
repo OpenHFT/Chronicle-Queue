@@ -45,6 +45,11 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
 
     @Override
     public void refresh(boolean force) {
+
+        if (!force) {
+            return;
+        }
+
         lastRefreshTimeMS = System.currentTimeMillis();
 
         final String[] fileNamesList = queueDir.list();
