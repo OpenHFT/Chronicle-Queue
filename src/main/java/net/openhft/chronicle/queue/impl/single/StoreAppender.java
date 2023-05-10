@@ -881,6 +881,11 @@ class StoreAppender extends AbstractCloseable
         private StackTrace closedHere;
         private boolean chainedElement;
 
+        public boolean isEmpty() {
+            Bytes<?> bytes = wire().bytes();
+            return bytes.readRemaining() == 0;
+        }
+
         @Override
         public void reset() {
             isClosed = true;
