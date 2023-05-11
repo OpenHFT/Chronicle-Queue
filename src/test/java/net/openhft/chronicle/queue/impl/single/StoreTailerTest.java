@@ -135,8 +135,10 @@ public class StoreTailerTest extends QueueTestCommon {
             // replay events from the inputs into the output queue
             assertTrue(firstMethodReader.readOne());
             assertTrue(firstMethodReader.readOne());
+            assertFalse(firstMethodReader.readOne());
             assertTrue(secondMethodReader.readOne());
             assertTrue(secondMethodReader.readOne());
+            assertFalse(secondMethodReader.readOne());
 
             // ensures that tailer is not moved to index from the incorrect source
             secondInputQueue.createTailer().afterLastWritten(outputQueue);
@@ -426,7 +428,7 @@ public class StoreTailerTest extends QueueTestCommon {
         void say(String message);
     }
 
-    private static final class CapturingStringEvents implements OnEvents {
+    private static final class CapturingStringEvents implements OnEvents, HelloWorld {
         private final OnEvents delegate;
 
         CapturingStringEvents(final OnEvents delegate) {
@@ -436,6 +438,11 @@ public class StoreTailerTest extends QueueTestCommon {
         @Override
         public void onEvent(final String event) {
             delegate.onEvent(event);
+        }
+
+        @Override
+        public void hello(String s) {
+            delegate.onEvent(s);
         }
     }
 
