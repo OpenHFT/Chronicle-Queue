@@ -11,6 +11,9 @@ import org.junit.Test;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
+/**
+ * test reading the queue backwards using readOne
+ */
 public class ReadOneBackwardsTest extends QueueTestCommon {
 
     static class MyDto extends SelfDescribingMarshallable {
