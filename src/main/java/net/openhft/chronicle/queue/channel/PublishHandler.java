@@ -21,6 +21,7 @@ public class PublishHandler extends AbstractHandler<PublishHandler> {
     static void copyFromChannelToQueue(ChronicleChannel channel, Pauser pauser, ChronicleQueue publishQueue, SyncMode syncMode) {
         try (ChronicleQueue publishQ = publishQueue;
              ExcerptAppender appender = publishQ.acquireAppender()) {
+            appender.singleThreadedCheckDisabled(true);  // assume we are thread safe
 
             boolean needsSync = false;
             while (!channel.isClosed()) {

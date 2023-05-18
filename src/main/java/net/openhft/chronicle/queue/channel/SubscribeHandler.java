@@ -23,6 +23,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
     static void queueTailer(Pauser pauser, ChronicleChannel channel, ChronicleQueue subscribeQueue) {
         try (ChronicleQueue subscribeQ = subscribeQueue; // leave here so it gets closed
              ExcerptTailer tailer = subscribeQ.createTailer()) {
+            tailer.singleThreadedCheckDisabled(true);  // assume we are thread safe
             while (!channel.isClosing()) {
                 if (copyOneMessage(channel, tailer))
                     pauser.reset();
