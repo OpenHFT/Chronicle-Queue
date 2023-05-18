@@ -13,22 +13,21 @@ NOTE: This feature is only relevant to daily rollovers where `RollCycle` is one 
 
 == Syntax
 
-[source, java]
-----
-public SingleChronicleQueueBuilder<E> rollTime(@NotNull final LocalTime rollTime, final ZoneId zoneId) {
-        this.cycleCalculator = new TimeZoneAwareCycleCalculator(zoneId);
-        this.epoch = TimeUnit.SECONDS.toMillis(rollTime.toSecondOfDay());
+`rollTime` and `rollTimeZone` can be set on the `SingleChronicleQueueBuilder` using the below setters:
+```
+    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime);
 
-        return this;
-}
-----
+    public SingleChronicleQueueBuilder rollTimeZone(@NotNull final ZoneId rollTimeZone);
+
+    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, @NotNull final ZoneId zoneId);
+```
 
 NOTE: `rollTime()` allows the rollover time of the cycle file to be controlled in both Chronicle Queue open-source and Chronicle QueueEnterprise Edition. +
 If this is used with in the open-source version, any `zoneId` other than `UTC` will be converted to `UTC`, and a warning message logged.
 
 == Examples
 
-The following code extract is an instruction to use `Europe/London` as time zone, and rolls over queues at midnight regardless of offset to UTC.
+The following code extract is an instruction to use `Europe/London` as time zone, and rolls over queues at midnight regardless of offset to UTC - periodic time zone changes e.g. in the transition from winter to/from summer will be respected.
 
 [source, java]
 ----
@@ -41,10 +40,6 @@ The following code extract is an instruction to use `America/New_York` as time z
 ----
 .rollTime(LocalTime.of(17, 0), ZoneId.of("America/New_York"))
 ----
-
-== System time provider
-
-To use this feature you must use the Chronicle distributed time provider, `net.openhft.chronicle.core.time.SystemTimeProvider`.
 
 '''
 
