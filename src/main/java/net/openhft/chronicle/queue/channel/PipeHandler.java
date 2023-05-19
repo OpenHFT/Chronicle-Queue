@@ -29,13 +29,16 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
 
     private Predicate<Wire> filter = null;
 
+    private int publishSourceId = 0;
+
     public PipeHandler() {
     }
 
-    static ChronicleQueue newQueue(ChronicleContext context, String subscribe, SyncMode syncMode) {
-        final File path = context.toFile(subscribe);
+    static ChronicleQueue newQueue(ChronicleContext context, String queueName, SyncMode syncMode, int sourceId) {
+        final File path = context.toFile(queueName);
         return ChronicleQueue.singleBuilder(path)
                 .blockSize(OS.isSparseFileSupported() ? 512L << 30 : 64L << 20)
+                .sourceId(sourceId)
                 .syncMode(syncMode)
                 .build();
     }
@@ -76,11 +79,20 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         return this;
     }
 
+    public int publishSourceId() {
+        return publishSourceId;
+    }
+
+    public PipeHandler publishSourceId(int publishSourceId) {
+        this.publishSourceId = publishSourceId;
+        return this;
+    }
+
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();
 
-        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode)) {
+        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode, publishSourceId)) {
             final ExcerptTailer tailer;
 
             if (channel instanceof BufferedChronicleChannel) {
@@ -104,7 +116,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
 
             Thread.currentThread().setName("pipe~reader");
             try (AffinityLock lock = context.affinityLock()) {
-                copyFromChannelToQueue(channel, pauser, newQueue(context, publish, syncMode), syncMode);
+                copyFromChannelToQueue(channel, pauser, newQueue(context, publish, syncMode, publishSourceId), syncMode);
             } finally {
                 if (tailerThread != null)
                     tailerThread.interrupt();
@@ -114,7 +126,11 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
 
     @Override
     public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
-        return new QueuesChannel(channelCfg, this, newQueue(context, publish, syncMode), newQueue(context, subscribe, syncMode));
+        return new QueuesChannel(
+                channelCfg,
+                this,
+                newQueue(context, publish, syncMode, publishSourceId),
+                newQueue(context, subscribe, syncMode, 0));
     }
 
     static class PHEventPoller extends SimpleCloseable implements EventPoller {
