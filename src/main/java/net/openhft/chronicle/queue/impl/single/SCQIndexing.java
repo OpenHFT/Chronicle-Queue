@@ -292,7 +292,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             secondaryAddress = index2index.getValueAt(primaryOffset);
             if (secondaryAddress != 0)
                 break;
-            startIndex -= indexCount * indexSpacing;
+            startIndex -= (long) indexCount * indexSpacing;
             primaryOffset--;
         }
 
@@ -544,7 +544,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                         continue;
                     }
                     lastKnownAddress = pos;
-                    indexOfNext = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
+                    indexOfNext = ((long) index2 << (indexCountBits + indexSpacingBits)) + ((long) index1 << indexSpacingBits);
 
                     if (lastKnownAddress == position)
                         return indexOfNext;

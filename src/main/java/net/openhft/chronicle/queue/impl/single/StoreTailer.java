@@ -127,7 +127,7 @@ class StoreTailer extends AbstractCloseable
         super.singleThreadedCheckReset();
         final Wire privateWire = privateWire();
         if (privateWire != null) {
-            ((MappedBytes) privateWire.bytes()).singleThreadedCheckReset();
+            privateWire.bytes().singleThreadedCheckReset();
         }
     }
 

@@ -137,8 +137,8 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private Condition createAppenderCondition = NoOpCondition.INSTANCE;
     protected final ThreadLocal<ExcerptAppender> strongExcerptAppenderThreadLocal = CleaningThreadLocal.withCloseQuietly(this::createNewAppenderOnceConditionIsMet);
     private final long forceDirectoryListingRefreshIntervalMs;
-    private long[] chunkCount = {0};
-    private SyncMode syncMode;
+    private final long[] chunkCount = {0};
+    private final SyncMode syncMode;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -954,7 +954,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private BytesStore asBytes(CharSequence key) {
         return key instanceof BytesStore
                 ? ((BytesStore) key)
-                : ((Bytes<?>) acquireAnotherBytes()).append(key);
+                : acquireAnotherBytes().append(key);
     }
 
     private static final class CachedCycleTree {
