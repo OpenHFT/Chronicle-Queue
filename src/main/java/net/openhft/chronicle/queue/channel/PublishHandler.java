@@ -17,6 +17,7 @@ import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
 public class PublishHandler extends AbstractHandler<PublishHandler> {
     private String publish;
     private SyncMode syncMode;
+    private int publishSourceId = 0;
 
     static void copyFromChannelToQueue(ChronicleChannel channel, Pauser pauser, ChronicleQueue publishQueue, SyncMode syncMode) {
         try (ChronicleQueue publishQ = publishQueue;
@@ -79,18 +80,27 @@ public class PublishHandler extends AbstractHandler<PublishHandler> {
         return this;
     }
 
+    public int publishSourceId() {
+        return publishSourceId;
+    }
+
+    public PublishHandler publishSourceId(int publishSourceId) {
+        this.publishSourceId = publishSourceId;
+        return this;
+    }
+
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();
 
         Thread.currentThread().setName("publish~reader");
         try (AffinityLock lock = context.affinityLock()) {
-            copyFromChannelToQueue(channel, pauser, newQueue(context, publish, syncMode), syncMode);
+            copyFromChannelToQueue(channel, pauser, newQueue(context, publish, syncMode, publishSourceId), syncMode);
         }
     }
 
     @Override
     public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
-        return new PublishQueueChannel(channelCfg, this, newQueue(context, publish, syncMode));
+        return new PublishQueueChannel(channelCfg, this, newQueue(context, publish, syncMode, publishSourceId));
     }
 }

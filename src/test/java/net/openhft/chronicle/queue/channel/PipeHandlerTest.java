@@ -141,10 +141,11 @@ public class PipeHandlerTest extends QueueTestCommon {
     public void filtered() {
         String url = "tcp://:0";
         IOTools.deleteDirWithFiles("target/filtered");
+
         try (ChronicleContext context = ChronicleContext.newContext(url).name("target/filtered").buffered(buffered);
-             ChronicleChannel channel1 = context.newChannelSupplier(new PipeHandler().subscribe("test-q").publish("test-q").filter(new SaysFilter(""))).get();
-             ChronicleChannel channel2 = context.newChannelSupplier(new PipeHandler().subscribe("test-q").publish("test-q").filter(new SaysFilter("2 "))).get();
-             ChronicleChannel channel3 = context.newChannelSupplier(new PipeHandler().subscribe("test-q").publish("test-q").filter(new SaysFilter("3 "))).get();
+             ChronicleChannel channel1 = context.newChannelSupplier(createPipeHandler().filter(new SaysFilter(""))).get();
+             ChronicleChannel channel2 = context.newChannelSupplier(createPipeHandler().filter(new SaysFilter("2 "))).get();
+             ChronicleChannel channel3 = context.newChannelSupplier(createPipeHandler().filter(new SaysFilter("3 "))).get();
         ) {
             Says says1 = channel1.methodWriter(Says.class);
             Says says2 = channel2.methodWriter(Says.class);
@@ -179,6 +180,10 @@ public class PipeHandlerTest extends QueueTestCommon {
         }
     }
 
+    private static PipeHandler createPipeHandler() {
+        return new PipeHandler().subscribe("test-q").publish("test-q").publishSourceId(1);
+    }
+
     private void readN(MethodReader reader, int n) {
         int count = 0;
         while (true) {
@@ -186,7 +191,8 @@ public class PipeHandlerTest extends QueueTestCommon {
                 count++;
             if (count >= n)
                 return;
-            System.out.println("." + n);
+            Jvm.pause(1);
+//            System.out.println("." + n);
         }
     }
 
@@ -203,7 +209,7 @@ public class PipeHandlerTest extends QueueTestCommon {
             if (said == null)
                 return false;
             boolean b = said.startsWith(start);
-            System.out.println("start: " + start + ", said: " + said + ", was: " + b);
+//            System.out.println("start: " + start + ", said: " + said + ", was: " + b);
             return b;
         }
     }

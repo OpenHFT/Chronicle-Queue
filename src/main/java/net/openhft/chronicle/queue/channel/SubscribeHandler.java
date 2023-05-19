@@ -106,7 +106,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
         final ExcerptTailer tailer;
 
-        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode)) {
+        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode, 0)) {
             InternalChronicleChannel icc = (InternalChronicleChannel) channel;
             if (icc.supportsEventPoller()) {
                 tailer = subscribeQ.createTailer();
@@ -114,7 +114,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
                 closeWhenRunEnds = false;
             } else {
                 try (AffinityLock lock = context.affinityLock()) {
-                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode), filter);
+                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode, 0), filter);
                 }
                 closeWhenRunEnds = true;
             }
@@ -128,7 +128,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
     @Override
     public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
-        return new SubscribeQueueChannel(channelCfg, this, newQueue(context, subscribe, syncMode));
+        return new SubscribeQueueChannel(channelCfg, this, newQueue(context, subscribe, syncMode, 0));
     }
 
     static class SHEventHandler extends SimpleCloseable implements EventPoller {
