@@ -10,7 +10,10 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.channel.impl.SubscribeQueueChannel;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.channel.*;
+
+import java.util.function.Predicate;
 
 import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
 
@@ -20,12 +23,14 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
     private SyncMode syncMode;
 
-    static void queueTailer(Pauser pauser, ChronicleChannel channel, ChronicleQueue subscribeQueue) {
+    private Predicate<Wire> filter;
+
+    static void queueTailer(Pauser pauser, ChronicleChannel channel, ChronicleQueue subscribeQueue, Predicate<Wire> filter) {
         try (ChronicleQueue subscribeQ = subscribeQueue; // leave here so it gets closed
              ExcerptTailer tailer = subscribeQ.createTailer()) {
             tailer.singleThreadedCheckDisabled(true);  // assume we are thread safe
             while (!channel.isClosing()) {
-                if (copyOneMessage(channel, tailer))
+                if (copyOneMessage(channel, tailer, filter))
                     pauser.reset();
                 else
                     pauser.pause();
@@ -38,23 +43,33 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
         }
     }
 
-    static boolean copyOneMessage(ChronicleChannel channel, ExcerptTailer tailer) {
+    static boolean copyOneMessage(ChronicleChannel channel, ExcerptTailer tailer, Predicate<Wire> filter) {
         try (DocumentContext dc = tailer.readingDocument()) {
             if (!dc.isPresent()) {
                 return false;
             }
             if (dc.isMetaData()) {
-                return false;
+                return true;
             }
 
-            final long dataBuffered;
+            Wire wire1 = dc.wire();
+            if (filter != null) {
+                long pos = wire1.bytes().readPosition();
+                if (!filter.test(wire1)) {
+                    wire1.bytes().readPosition(wire1.bytes().readLimit());
+                    return true;
+                }
+                wire1.bytes().readPosition(pos);
+            }
+
             try (DocumentContext dc2 = channel.writingDocument()) {
-                dc.wire().copyTo(dc2.wire());
+                Wire wire2 = dc2.wire();
+                wire1.copyTo(wire2);
 
-                dataBuffered = dc2.wire().bytes().writePosition();
+                final long dataBuffered = wire2.bytes().writePosition();
+                // wait for it to drain
+                return dataBuffered < 32 << 10;
             }
-            // wait for it to drain
-            return dataBuffered < 32 << 10;
         }
     }
 
@@ -76,6 +91,15 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
         return this;
     }
 
+    public Predicate<Wire> filter() {
+        return filter;
+    }
+
+    public SubscribeHandler filter(Predicate<Wire> filter) {
+        this.filter = filter;
+        return this;
+    }
+
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();
@@ -86,11 +110,11 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
             InternalChronicleChannel icc = (InternalChronicleChannel) channel;
             if (icc.supportsEventPoller()) {
                 tailer = subscribeQ.createTailer();
-                icc.eventPoller(new SHEventHandler(tailer));
+                icc.eventPoller(new SHEventHandler(tailer, filter));
                 closeWhenRunEnds = false;
             } else {
                 try (AffinityLock lock = context.affinityLock()) {
-                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode));
+                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode), filter);
                 }
                 closeWhenRunEnds = true;
             }
@@ -109,15 +133,17 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
     static class SHEventHandler extends SimpleCloseable implements EventPoller {
         private final ExcerptTailer tailer;
+        private final Predicate<Wire> filter;
 
-        SHEventHandler(ExcerptTailer tailer) {
+        SHEventHandler(ExcerptTailer tailer, Predicate<Wire> filter) {
             this.tailer = tailer;
+            this.filter = filter;
         }
 
         @Override
         public boolean onPoll(ChronicleChannel channel) {
             boolean wrote = false;
-            while (copyOneMessage(channel, tailer))
+            while (copyOneMessage(channel, tailer, filter))
                 wrote = true;
             return wrote;
         }
