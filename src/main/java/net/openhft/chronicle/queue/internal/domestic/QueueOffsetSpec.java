@@ -67,7 +67,7 @@ public final class QueueOffsetSpec {
     }
 
     public static String formatEpochOffset(final long epochOffset) {
-        return String.format("%s;%s", Type.EPOCH.name(), Long.toString(epochOffset));
+        return String.format("%s;%s", Type.EPOCH.name(), epochOffset);
     }
 
     public static String formatRollTime(final LocalTime time, final ZoneId zoneId) {

@@ -73,6 +73,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
             if (channel instanceof BufferedChronicleChannel) {
                 BufferedChronicleChannel bc = (BufferedChronicleChannel) channel;
                 tailer = subscribeQ.createTailer();
+                tailer.singleThreadedCheckDisabled(true);  // assume we are thread safe
                 bc.eventPoller(new PHEventPoller(tailer));
             } else {
                 tailerThread = new Thread(() -> {

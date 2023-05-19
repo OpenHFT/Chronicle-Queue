@@ -28,8 +28,8 @@ import java.util.Objects;
 
 public class SCQMeta implements Metadata {
     @NotNull
-    private SCQRoll roll;
-    private int deltaCheckpointInterval;
+    private final SCQRoll roll;
+    private final int deltaCheckpointInterval;
     private int sourceId;
 
     @SuppressWarnings("unused")

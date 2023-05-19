@@ -875,7 +875,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return if the ring buffer's monitoring capability is turned on. Not available in OSS
      */
     public boolean enableRingBufferMonitoring() {
-        return enableRingBufferMonitoring == null ? false : enableRingBufferMonitoring;
+        return enableRingBufferMonitoring != null && enableRingBufferMonitoring;
     }
 
     public SingleChronicleQueueBuilder enableRingBufferMonitoring(boolean enableRingBufferMonitoring) {
@@ -889,7 +889,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return if ring buffer reader processes can invoke the CQ drainer, otherwise only writer processes can
      */
     public boolean ringBufferReaderCanDrain() {
-        return ringBufferReaderCanDrain == null ? false : ringBufferReaderCanDrain;
+        return ringBufferReaderCanDrain != null && ringBufferReaderCanDrain;
     }
 
     public SingleChronicleQueueBuilder ringBufferReaderCanDrain(boolean ringBufferReaderCanDrain) {
@@ -901,7 +901,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return whether to force creating a reader (to recover from crash)
      */
     public boolean ringBufferForceCreateReader() {
-        return ringBufferForceCreateReader == null ? false : ringBufferForceCreateReader;
+        return ringBufferForceCreateReader != null && ringBufferForceCreateReader;
     }
 
     public SingleChronicleQueueBuilder ringBufferForceCreateReader(boolean ringBufferForceCreateReader) {
@@ -914,7 +914,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * at the same place. If true, your reader can block writers if the reader is not open
      */
     public boolean ringBufferReopenReader() {
-        return ringBufferReopenReader == null ? false : ringBufferReopenReader;
+        return ringBufferReopenReader != null && ringBufferReopenReader;
     }
 
     public SingleChronicleQueueBuilder ringBufferReopenReader(boolean ringBufferReopenReader) {
