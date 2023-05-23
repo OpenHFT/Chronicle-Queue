@@ -545,12 +545,6 @@
                         <version>3.1.0</version>
 
                         <configuration>
-                            <systemProperties>
-                                <systemProperty>
-                                    <key>jvm.resource.tracing</key>
-                                    <value>false</value>
-                                </systemProperty>
-                            </systemProperties>
                             <classpathScope>test</classpathScope>
                             <cleanupDaemonThreads>false</cleanupDaemonThreads>
                         </configuration>
@@ -559,60 +553,60 @@
                                 <id>ByteArrayJLBHBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
-                                    <goal>java</goal>
+                                    <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <mainClass>
-                                        net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark
-                                    </mainClass>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark
+                                    </commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>MethodReaderBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
-                                    <goal>java</goal>
+                                    <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <mainClass>
-                                        net.openhft.chronicle.queue.bench.MethodReaderBenchmark
-                                    </mainClass>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderBenchmark
+                                    </commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>QueueContendedWritesJLBHBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
-                                    <goal>java</goal>
+                                    <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <mainClass>
-                                        net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark
-                                    </mainClass>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark
+                                    </commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>QueueLargeMessageJLBHBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
-                                    <goal>java</goal>
+                                    <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <mainClass>
-                                        net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark
-                                    </mainClass>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark
+                                    </commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>QueueSingleThreadedJLBHBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
-                                    <goal>java</goal>
+                                    <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <mainClass>
-                                        net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
-                                    </mainClass>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
+                                    </commandlineArgs>
                                 </configuration>
                             </execution>
 
