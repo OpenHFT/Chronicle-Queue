@@ -46,15 +46,6 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
                 .build();
     }
 
-    static ChronicleQueue newQueue(ChronicleContext context, String queueName, SyncMode syncMode) {
-        final File path = context.toFile(queueName);
-        return ChronicleQueue.singleBuilder(path)
-                .blockSize(OS.isSparseFileSupported() ? 512L << 30 : 64L << 20)
-                .syncMode(syncMode)
-                .build();
-    }
-
-
     public String publish() {
         return publish;
     }
