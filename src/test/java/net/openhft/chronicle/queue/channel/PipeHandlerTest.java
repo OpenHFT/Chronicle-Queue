@@ -137,7 +137,7 @@ public class PipeHandlerTest extends QueueTestCommon {
         assertEquals(now, channel.lastTestMessage());
     }
 
-    @Test
+    @Test(timeout = 20000)
     public void filtered() {
         String url = "tcp://:0";
         IOTools.deleteDirWithFiles("target/filtered");
@@ -181,7 +181,7 @@ public class PipeHandlerTest extends QueueTestCommon {
     }
 
     private static PipeHandler createPipeHandler() {
-        return new PipeHandler().subscribe("test-q").publish("test-q").publishSourceId(1);
+        return new PipeHandler().subscribe("test-q").publish("test-q").publishSourceId(1).subscribeSourceId(1);
     }
 
     private void readN(MethodReader reader, int n) {

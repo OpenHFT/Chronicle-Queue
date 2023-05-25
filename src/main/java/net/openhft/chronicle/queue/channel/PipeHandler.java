@@ -31,6 +31,9 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
 
     private int publishSourceId = 0;
 
+    private int subscribeSourceId = 0;
+
+
     public PipeHandler() {
     }
 
@@ -88,11 +91,17 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         return this;
     }
 
+    public PipeHandler subscribeSourceId(int subscribeSourceId) {
+        this.subscribeSourceId = subscribeSourceId;
+        return this;
+    }
+
+
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();
 
-        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode, publishSourceId)) {
+        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode, subscribeSourceId)) {
             final ExcerptTailer tailer;
 
             if (channel instanceof BufferedChronicleChannel) {
