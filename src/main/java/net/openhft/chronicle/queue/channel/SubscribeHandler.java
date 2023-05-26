@@ -75,11 +75,11 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
         }
     }
 
-    public String subscribe() {
+    public String subscribeSourceId() {
         return subscribe;
     }
 
-    public SubscribeHandler subscribe(String subscribe) {
+    public SubscribeHandler subscribeSourceId(String subscribe) {
         this.subscribe = subscribe;
         return this;
     }
