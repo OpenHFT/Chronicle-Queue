@@ -24,6 +24,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
     private SyncMode syncMode;
 
     private Predicate<Wire> filter;
+    private int sourceId;
 
     static void queueTailer(Pauser pauser, ChronicleChannel channel, ChronicleQueue subscribeQueue, Predicate<Wire> filter) {
         try (ChronicleQueue subscribeQ = subscribeQueue; // leave here so it gets closed
@@ -51,6 +52,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
             if (dc.isMetaData()) {
                 return true;
             }
+
 
             Wire wire1 = dc.wire();
             if (filter != null) {
@@ -114,7 +116,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
                 closeWhenRunEnds = false;
             } else {
                 try (AffinityLock lock = context.affinityLock()) {
-                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode, 0), filter);
+                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode, sourceId), filter);
                 }
                 closeWhenRunEnds = true;
             }
@@ -153,5 +155,14 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
             super.performClose();
             Closeable.closeQuietly(tailer);
         }
+    }
+
+    /**
+     * @param sourceId the sourceId of the subscribe queue
+     * @return this
+     */
+    public SubscribeHandler sourceId(int sourceId) {
+        this.sourceId = sourceId;
+        return this;
     }
 }
