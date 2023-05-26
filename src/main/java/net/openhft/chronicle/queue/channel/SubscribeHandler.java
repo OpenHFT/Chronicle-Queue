@@ -75,11 +75,11 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
         }
     }
 
-    public String subscribeSourceId() {
+    public String subscribe() {
         return subscribe;
     }
 
-    public SubscribeHandler subscribeSourceId(String subscribe) {
+    public SubscribeHandler subscribe(String subscribe) {
         this.subscribe = subscribe;
         return this;
     }
@@ -161,7 +161,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
      * @param sourceId the sourceId of the subscribe queue
      * @return this
      */
-    public SubscribeHandler sourceId(int sourceId) {
+    public SubscribeHandler subscribeSourceId(int sourceId) {
         this.sourceId = sourceId;
         return this;
     }
