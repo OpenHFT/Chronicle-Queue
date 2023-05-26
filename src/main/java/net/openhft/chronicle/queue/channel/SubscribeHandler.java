@@ -108,7 +108,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
         final ExcerptTailer tailer;
 
-        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode, 0)) {
+        try (ChronicleQueue subscribeQ = newQueue(context, subscribe, syncMode, sourceId)) {
             InternalChronicleChannel icc = (InternalChronicleChannel) channel;
             if (icc.supportsEventPoller()) {
                 tailer = subscribeQ.createTailer();
