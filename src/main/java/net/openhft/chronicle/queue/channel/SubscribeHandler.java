@@ -130,7 +130,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
     @Override
     public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
-        return new SubscribeQueueChannel(channelCfg, this, newQueue(context, subscribe, syncMode, 0));
+        return new SubscribeQueueChannel(channelCfg, this, newQueue(context, subscribe, syncMode, sourceId));
     }
 
     static class SHEventHandler extends SimpleCloseable implements EventPoller {
