@@ -23,11 +23,11 @@ package net.openhft.chronicle.queue.impl.table;
  */
 public enum UnlockMode {
     /**
-     * throw exception
+     * force unlock and re-acquire
      */
     ALWAYS,
     /**
-     * force unlock and re-acquire
+     * throw exception
      */
     NEVER,
     /**
