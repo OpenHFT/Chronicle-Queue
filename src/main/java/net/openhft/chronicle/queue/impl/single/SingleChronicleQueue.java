@@ -991,7 +991,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             try {
                 File path = dateValue.path;
 
-                directoryListing.refresh(false);
                 if (createStrategy != CreateStrategy.CREATE &&
                         (cycle > directoryListing.getMaxCreatedCycle()
                                 || cycle < directoryListing.getMinCreatedCycle()
@@ -1199,7 +1198,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             NavigableMap<Long, File> tree = cycleTree(false);
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
-            directoryListing.refresh(false);
             if (currentCycle > directoryListing.getMaxCreatedCycle() ||
                     currentCycle < directoryListing.getMinCreatedCycle()) {
                 boolean fileFound = false;
