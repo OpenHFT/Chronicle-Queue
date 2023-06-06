@@ -78,8 +78,7 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
 
     @Override
     public void refresh(final boolean force) {
-
-        if (!force) {
+        if (!force && lastRefreshTimeMS != 0) {
             return;
         }
 

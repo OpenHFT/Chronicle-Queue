@@ -813,7 +813,10 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return path.list();
     }
 
+    @Deprecated
     private void setFirstAndLastCycle() {
+        // This is extemelly confusing logic where we either have an implicit refresh listing interval of ~0.5 ms avg,
+        // or some quite huge force refresh interval of 60 seconds, which was ignored in case of file system store
         long now = System.currentTimeMillis();
         if (now <= directoryListing.lastRefreshTimeMS()) {
             return;
@@ -825,7 +828,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
     @Override
     public int firstCycle() {
-        setFirstAndLastCycle();
+        directoryListing.refresh(false);
         return directoryListing.getMinCreatedCycle();
     }
 
@@ -840,7 +843,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
     @Override
     public int lastCycle() {
-        setFirstAndLastCycle();
+        directoryListing.refresh(true);
         return directoryListing.getMaxCreatedCycle();
     }
 
@@ -1202,7 +1205,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                     currentCycle < directoryListing.getMinCreatedCycle()) {
                 boolean fileFound = false;
                 for (int i = 0; i < 20; i++) {
-                    Jvm.pause(10);
                     directoryListing.refresh(i > 1);
                     fileFound = (
                             currentCycle <= directoryListing.getMaxCreatedCycle() &&
@@ -1210,6 +1212,8 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                     if (fileFound) {
                         break;
                     }
+
+                    Jvm.pause(i);
                 }
                 fileFound |= currentCycleFile.exists();
 

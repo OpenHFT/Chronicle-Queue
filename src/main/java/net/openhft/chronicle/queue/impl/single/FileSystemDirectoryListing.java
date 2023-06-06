@@ -30,7 +30,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     private final ToIntFunction<String> fileNameToCycleFunction;
     private int minCreatedCycle = Integer.MAX_VALUE;
     private int maxCreatedCycle = Integer.MIN_VALUE;
-    private long lastRefreshTimeMS;
+    private long lastRefreshTimeMS = 0;
 
     FileSystemDirectoryListing(final File queueDir,
                                final ToIntFunction<String> fileNameToCycleFunction) {
@@ -45,6 +45,9 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
 
     @Override
     public void refresh(boolean force) {
+        if (!force && lastRefreshTimeMS != 0)
+            return;
+
         lastRefreshTimeMS = System.currentTimeMillis();
 
         final String[] fileNamesList = queueDir.list();
