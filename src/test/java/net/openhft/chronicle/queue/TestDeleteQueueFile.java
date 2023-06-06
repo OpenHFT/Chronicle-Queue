@@ -181,7 +181,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void firstAndLastIndexAreRefreshedAfterForceRefreshInterval() throws IOException {
+    public void firstAndLastIndexAreRefreshed() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, builder -> builder.forceDirectoryListingRefreshIntervalMs(250))) {
@@ -200,15 +200,11 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             // delete the first store
             Files.delete(Paths.get(firstCycle.filename));
 
-            // using old cached value
-            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(queue.firstIndex()));
-            assertEquals(Long.toHexString(firstCycle.firstIndex), Long.toHexString(queue.firstIndex()));
-
-            // wait for cache to expire
-            Jvm.pause(260);
-
-            // using correct value
+            // using new value
             assertEquals(Long.toHexString(secondCycle.firstIndex), Long.toHexString(queue.firstIndex()));
+            assertEquals(Long.toHexString(thirdCycle.lastIndex), Long.toHexString(queue.lastIndex()));
+            assertEquals(Long.toHexString(secondCycle.firstIndex), Long.toHexString(queue.firstIndex()));
+            assertEquals(Long.toHexString(thirdCycle.lastIndex), Long.toHexString(queue.lastIndex()));
         }
     }
 

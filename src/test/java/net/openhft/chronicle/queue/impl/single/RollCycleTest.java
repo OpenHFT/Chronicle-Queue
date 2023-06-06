@@ -121,7 +121,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "listing.lowestCycle: 0\n" +
                                 "# position: 256, header: 2\n" +
                                 "--- !!data #binary\n" +
-                                "listing.modCount: 9\n" +
+                                "listing.modCount: 12\n" +
                                 "# position: 288, header: 3\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.write.lock: -9223372036854775808\n" +
