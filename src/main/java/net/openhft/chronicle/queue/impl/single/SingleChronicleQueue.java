@@ -767,6 +767,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public long firstIndex() {
         // TODO - as discussed, peter is going find another way to do this as this solution
         // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
+        refreshDirectoryListing();
 
         int cycle = firstCycle();
         if (cycle == Integer.MAX_VALUE)
