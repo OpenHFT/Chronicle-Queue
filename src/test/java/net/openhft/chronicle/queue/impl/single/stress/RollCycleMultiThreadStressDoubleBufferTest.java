@@ -51,7 +51,7 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
     }
 
     public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressDoubleBufferTest().stress();
+        new RollCycleMultiThreadStressDoubleBufferTest().run();
     }
 
     @Override

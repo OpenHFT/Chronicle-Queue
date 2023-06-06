@@ -24,6 +24,8 @@ import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.Histogram;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -67,7 +69,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     final boolean DUMP_QUEUE;
     final boolean SHARED_WRITE_QUEUE;
     final boolean DOUBLE_BUFFER;
+    final int WARMUP;
     final SetTimeProvider timeProvider = new SetTimeProvider();
+    final Histogram combinedHisto = new Histogram();
     PretoucherThread pretoucherThread = null;
     private ChronicleQueue sharedWriterQueue;
 
@@ -76,14 +80,14 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     protected RollCycleMultiThreadStressTest(StressTestType type) {
-        SLEEP_PER_WRITE_NANOS = Long.getLong("writeLatency", 30_000);
-        TEST_TIME = Integer.getInteger("testTime", 15);
-        ROLL_EVERY_MS = Integer.getInteger("rollEvery", 300);
-        DELAY_READER_RANDOM_MS = Integer.getInteger("delayReader", 1);
-        DELAY_WRITER_RANDOM_MS = Integer.getInteger("delayWriter", 1);
-        CORES = Integer.getInteger("cores", Runtime.getRuntime().availableProcessors());
+        SLEEP_PER_WRITE_NANOS = Jvm.getLong("writeLatency", 30_000L);
+        TEST_TIME = Jvm.getInteger("testTime", 15);
+        ROLL_EVERY_MS = Jvm.getInteger("rollEvery", 300);
+        DELAY_READER_RANDOM_MS = Jvm.getInteger("delayReader", 1);
+        DELAY_WRITER_RANDOM_MS = Jvm.getInteger("delayWriter", 1);
+        CORES = Jvm.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
-        NUMBER_OF_INTS = Integer.getInteger("numberInts", 18);//1060 / 4;
+        NUMBER_OF_INTS = Jvm.getInteger("numberInts", 18);//1060 / 4;
         PRETOUCH = (type == StressTestType.PRETOUCH || type == StressTestType.PRETOUCH_EA);
         if (type == StressTestType.PRETOUCH_EA)
             System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
@@ -91,6 +95,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         DUMP_QUEUE = false;
         SHARED_WRITE_QUEUE = type == StressTestType.SHAREDWRITEQ;
         DOUBLE_BUFFER = type == StressTestType.DOUBLEBUFFER;
+        WARMUP = Jvm.getInteger("warmup", 20_000);
 
         if (TEST_TIME > 15) {
             AbstractReferenceCounted.disableReferenceTracing();
@@ -103,9 +108,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
         boolean allReadersComplete = true;
 
-        int count = 0;
         for (Reader reader : readers) {
-            ++count;
             if (reader.lastRead < expectedNumberOfMessages - 1) {
                 allReadersComplete = false;
                 // System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
@@ -115,7 +118,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressTest().stress();
+        new RollCycleMultiThreadStressTest().run();
     }
 
     static void shutdownAll(int waitSecs, ExecutorService... ess) throws InterruptedException {
@@ -137,6 +140,19 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         ignoreException("strict.discard.warning ");
 
         finishedNormally = false;
+        stress0();
+
+        // System.out.println("Test complete");
+        finishedNormally = true;
+    }
+
+    protected void run() throws InterruptedException {
+        stress0();
+
+        TeamCityHelper.histo(getClass().getSimpleName() + ".end-to-end", combinedHisto, System.out);
+    }
+
+    private void stress0() throws InterruptedException {
         assert warnIfAssertsAreOn();
 
         File file = DirectoryUtils.tempDir("stress");
@@ -290,11 +306,10 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             });
         }
 
+        readers.forEach(reader -> combinedHisto.add(reader.endToEndHisto));
+
         // you have to use the file rather than a String, on the map it gets written to the tmp directory
         IOTools.deleteDirWithFiles(file);
-
-        // System.out.println("Test complete");
-        finishedNormally = true;
     }
 
     protected ReaderCheckingStrategy getReaderCheckingStrategy() {
@@ -389,6 +404,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     final class Reader implements Callable<Throwable> {
+        final Histogram endToEndHisto = new Histogram();
         final File path;
         final int expectedNumberOfMessages;
         final ReaderCheckingStrategy readerCheckingStrategy;
@@ -443,6 +459,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
                         final ValueIn valueIn = dc.wire().getValueIn();
                         final long documentAcquireTimestamp = valueIn.int64();
+                        if (lastRead > WARMUP)
+                            endToEndHisto.sampleNanos(System.nanoTime() - documentAcquireTimestamp);
                         if (documentAcquireTimestamp == 0L) {
                             throw new AssertionError("No timestamp");
                         }
@@ -530,8 +548,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                     return value;
                 }
                 ValueOut valueOut = writingDocument.wire().getValueOut();
-                // make the message longer
                 valueOut.int64(documentAcquireTimestamp);
+                // make the message longer
                 for (int i = 0; i < NUMBER_OF_INTS; i++) {
                     valueOut.int32(value);
                 }

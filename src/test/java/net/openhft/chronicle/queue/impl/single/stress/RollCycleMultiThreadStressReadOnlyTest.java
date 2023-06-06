@@ -35,6 +35,6 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
     }
 
     public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressReadOnlyTest().stress();
+        new RollCycleMultiThreadStressReadOnlyTest().run();
     }
 }

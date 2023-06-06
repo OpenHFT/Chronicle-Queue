@@ -35,6 +35,6 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
     }
 
     public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressPretouchTest().stress();
+        new RollCycleMultiThreadStressPretouchTest().run();
     }
 }

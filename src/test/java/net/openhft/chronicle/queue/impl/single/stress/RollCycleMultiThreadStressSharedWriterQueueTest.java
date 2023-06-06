@@ -32,6 +32,6 @@ public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMu
     }
 
     public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressSharedWriterQueueTest().stress();
+        new RollCycleMultiThreadStressSharedWriterQueueTest().run();
     }
 }
