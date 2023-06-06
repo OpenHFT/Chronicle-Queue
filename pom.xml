@@ -574,6 +574,18 @@
                                 </configuration>
                             </execution>
                             <execution>
+                                <id>MethodReaderSkipBenchmark</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderSkipBenchmark
+                                    </commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>QueueContendedWritesJLBHBenchmark</id>
                                 <phase>test</phase>
                                 <goals>
@@ -609,7 +621,31 @@
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
-
+                            <!-- QueueMultiThreadedJLBHBenchmark was moved to QE -->
+                            <execution>
+                                <id>RollCycleMultiThreadStressTest</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressTest
+                                    </commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>RollCycleMultiThreadStressReadOnlyTest</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressReadOnlyTest
+                                    </commandlineArgs>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>

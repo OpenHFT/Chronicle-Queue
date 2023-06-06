@@ -38,12 +38,12 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     public static final String PATH = System.getProperty("path", "replica");
     private static final int ITERATIONS = 1_000_000;
+    private final IFacade datum = Values.newNativeReference(IFacade.class);
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
     private JLBH jlbh;
-    private IFacade datum = Values.newNativeReference(IFacade.class);
     private BytesStore datumBytes;
     private Bytes<?> datumWrite;
 
@@ -61,7 +61,6 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         new JLBH(lth).start();
     }
 
-    //@SuppressWarnings("unchecked")
     @Override
     public void init(JLBH jlbh) {
         System.out.println("-Dpath=" + PATH);
@@ -109,6 +108,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
 
     //IFacade (at the bottom) is the façade we need tested
 
+    @SuppressWarnings("unused")
     interface IFacadeBase {
         short getValue0();
 
@@ -187,6 +187,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         void setValue18(short value);
     }
 
+    @SuppressWarnings("unused")
     interface IFacadeSon extends IFacadeBase {
         long getValue19();
 
@@ -245,6 +246,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         void setValue32(double value);
     }
 
+    @SuppressWarnings("unused")
     interface IFacadeDaughter extends IFacadeBase {
         long getValue33();
 
@@ -776,6 +778,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
 
     }
 
+    @SuppressWarnings("unused")
     interface IFacade extends IFacadeBase {
         @Array(length = 3)
         void setDaughterAt(int idx, IFacadeDaughter daughter);
