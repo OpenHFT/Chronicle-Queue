@@ -38,7 +38,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
             }
         } catch (Exception e) {
             Thread.yield();
-            if (channel.isClosing())
+            if (channel.isClosing() || subscribeQueue.isClosing())
                 return;
             throw e;
         }
