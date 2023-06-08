@@ -109,17 +109,21 @@ public final class MessageHistoryTest extends QueueTestCommon {
     public void chainedMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);
-             final ChronicleQueue outputQueue = createQueue(middleQueueDir, 2)) {
+             final ChronicleQueue outputQueue = createQueue(outputQueueDir, 3)) {
             generateTestData(inputQueue, middleQueue);
 
             ExcerptTailer tailerM1 = middleQueue.createTailer(named ? "named" : null);
             MethodReader reader = tailerM1.methodReader(outputQueue.methodWriter(First.class));
-            assertFalse(reader.readOne());
+            assertTrue(reader.readOne());
             tailerM1.toStart();
             MethodReader reader2nd = tailerM1.methodReader(outputQueue.methodWriter(Second.class));
             for (int i = 0; i < 3; i++)
                 assertTrue("i: " + i, reader2nd.readOne());
+            assertFalse(reader2nd.readOne());
+
             MethodReader reader2 = outputQueue.createTailer(named ? "named2" : null).methodReader((First) this::say3);
+            for (int i = 0; i < 3; i++)
+                assertTrue("i: " + i, reader2.readOne());
             assertFalse(reader2.readOne());
         }
     }
