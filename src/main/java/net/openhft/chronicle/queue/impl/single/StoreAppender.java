@@ -849,13 +849,13 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     public void sync() {
-        if (store == null)
+        if (store == null || wire == null)
             return;
 
-        final Bytes<?> bytes = context.wire().bytes();
+        final Bytes<?> bytes = wire.bytes();
         if (bytes.bytesStore() instanceof MappedBytesStore) {
             MappedBytesStore mbs = (MappedBytesStore) bytes.bytesStore();
-            mbs.syncUpTo(bytes.readPosition());
+            mbs.syncUpTo(bytes.writePosition());
             queue.lastIndexMSynced(lastIndex);
         }
     }
