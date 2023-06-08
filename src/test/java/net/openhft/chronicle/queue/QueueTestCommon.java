@@ -162,8 +162,7 @@ public class QueueTestCommon {
         CleaningThread.performCleanup(Thread.currentThread());
 
         // find any discarded resources.
-        System.gc();
-        AbstractCloseable.waitForCloseablesToClose(1000);
+        AbstractCloseable.gcAndWaitForCloseablesToClose();
 
         if (finishedNormally) {
             assertReferencesReleased();
