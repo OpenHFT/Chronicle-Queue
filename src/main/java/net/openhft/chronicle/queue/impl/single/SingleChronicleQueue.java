@@ -184,10 +184,10 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
 
-            if (readOnly) {
+            if (metaStore.readOnly()) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction());
             } else {
-                this.directoryListing = new TableDirectoryListing(metaStore, path.toPath(), fileNameToCycleFunction());
+                this.directoryListing = readOnly ? new TableDirectoryListingReadOnly(metaStore) : new TableDirectoryListing(metaStore, path.toPath(), fileNameToCycleFunction());
                 directoryListing.init();
             }
 

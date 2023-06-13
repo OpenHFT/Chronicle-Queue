@@ -28,11 +28,9 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class TableStoreTest extends QueueTestCommon {
     @Test
@@ -41,7 +39,7 @@ public class TableStoreTest extends QueueTestCommon {
         final File file = tempDir("table");
         file.mkdir();
 
-        final File tempFile = Files.createTempFile((Path) file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
+        final File tempFile = Files.createTempFile(file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
 
         try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue a = table.acquireValueFor("a");
@@ -86,7 +84,27 @@ public class TableStoreTest extends QueueTestCommon {
                     "c: 3\n" +
                     "...\n" +
                     "# 130956 bytes remaining\n", table.dump());
-           // System.out.println(table.dump());
+        }
+    }
+
+    @Test
+    public void acquireValueForReadOnly() throws IOException {
+
+        final File file = tempDir("table");
+        file.mkdir();
+
+        final File tempFile = Files.createTempFile(file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
+
+        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
+             LongValue b = table.acquireValueFor("b")) {
+            assertEquals(Long.MIN_VALUE, b.getVolatileValue());
+            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2));
+        }
+
+        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
+             LongValue b = table.acquireValueFor("b")) {
+            assertEquals(2, b.getVolatileValue());
+            assertThrows(IllegalStateException.class, () -> table.acquireValueFor("d"));
         }
     }
 }
