@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
@@ -33,8 +34,10 @@ import java.io.IOException;
 import static org.junit.Assert.assertEquals;
 
 public class TableDirectoryListingTest extends QueueTestCommon {
-    private TableDirectoryListing listing;
+    private DirectoryListing listing;
+    private DirectoryListing listingReadOnly;
     private TableStore<Metadata.NoMeta> tablestore;
+    private TableStore<Metadata.NoMeta> tablestoreReadOnly;
     private File testDirectory;
     private File tempFile;
 
@@ -50,18 +53,21 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         File tableFile = new File(testDirectory, "dir-list" + SingleTableStore.SUFFIX);
         tablestore = SingleTableBuilder.
                 binary(tableFile, Metadata.NoMeta.INSTANCE).build();
+        tablestoreReadOnly = SingleTableBuilder.
+                binary(tableFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
         listing = new TableDirectoryListing(tablestore,
                 testDirectory.toPath(),
                 f -> Integer.parseInt(f.split("\\.")[0]));
+        listingReadOnly = new TableDirectoryListingReadOnly(tablestore);
         listing.init();
+        listingReadOnly.init();
         tempFile = File.createTempFile("foo", "bar");
         tempFile.deleteOnExit();
     }
 
     @Override
     public void preAfter() {
-        tablestore.close();
-        listing.close();
+        Closeable.closeQuietly(tablestore, tablestoreReadOnly, listing, listingReadOnly);
     }
 
     @Test(expected = IllegalStateException.class)
@@ -78,11 +84,15 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
         assertEquals(7, listing.getMaxCreatedCycle());
         assertEquals(7, listing.getMinCreatedCycle());
+        assertEquals(7, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(7, listingReadOnly.getMinCreatedCycle());
 
         listing.onFileCreated(tempFile, 8);
 
         assertEquals(8, listing.getMaxCreatedCycle());
         assertEquals(7, listing.getMinCreatedCycle());
+        assertEquals(8, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(7, listingReadOnly.getMinCreatedCycle());
     }
 
     @Test
@@ -95,6 +105,8 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
         assertEquals(3, listing.getMaxCreatedCycle());
         assertEquals(1, listing.getMinCreatedCycle());
+        assertEquals(3, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(1, listingReadOnly.getMinCreatedCycle());
     }
 
     @Test
@@ -103,5 +115,6 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
         listing.onFileCreated(tempFile, 9);
         assertEquals(9, listing.getMaxCreatedCycle());
+        assertEquals(9, listingReadOnly.getMaxCreatedCycle());
     }
 }

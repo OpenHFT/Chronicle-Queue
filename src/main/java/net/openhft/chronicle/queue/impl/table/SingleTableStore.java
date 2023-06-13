@@ -261,6 +261,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 }
                 mappedBytes.readPosition(readPosition + length);
             }
+            if (mappedBytes.isBackingFileReadOnly())
+                throw new IllegalStateException("key " + key + " does not exist in readOnly TableStore and cannot be created");
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             long start = mappedBytes.readPosition();
             mappedBytes.writePosition(start);

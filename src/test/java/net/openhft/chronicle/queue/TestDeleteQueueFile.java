@@ -217,6 +217,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> qwcd.queue);
     }
 
+    @Ignore("we can no longer recover from the case where someone has deleted a file from underneath us, and not called refreshDirectoryListing, and we are readOnly")
     @Test
     public void tailingThroughDeletedCyclesWillRefreshThenRetry_ReadOnly() throws IOException {
         tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())

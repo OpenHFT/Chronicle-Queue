@@ -29,7 +29,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.function.ToIntFunction;
 
-final class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
+class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
 
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
@@ -54,10 +54,14 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         this.queuePath = queuePath;
         this.fileNameToCycleFunction = fileNameToCycleFunction;
 
+        checkReadOnly(tableStore);
+        singleThreadedCheckDisabled(true);
+    }
+
+    protected void checkReadOnly(@NotNull TableStore<?> tableStore) {
         if (tableStore.readOnly()) {
             throw new IllegalArgumentException(getClass().getSimpleName() + " should only be used for writable queues");
         }
-        singleThreadedCheckDisabled(true);
     }
 
     @Override
@@ -65,15 +69,19 @@ final class TableDirectoryListing extends AbstractCloseable implements Directory
         throwExceptionIfClosedInSetter();
 
         tableStore.doWithExclusiveLock(ts -> {
-            maxCycleValue = ts.acquireValueFor(HIGHEST_CREATED_CYCLE);
-            minCycleValue = ts.acquireValueFor(LOWEST_CREATED_CYCLE);
+            initLongValues();
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
-            modCount = ts.acquireValueFor(MOD_COUNT);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
             }
             return this;
         });
+    }
+
+    protected void initLongValues() {
+        maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
+        minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
+        modCount = tableStore.acquireValueFor(MOD_COUNT);
     }
 
     @Override
