@@ -18,10 +18,9 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Rule;
 import org.junit.Test;
@@ -141,6 +140,64 @@ public final class MoveToIndexTest extends QueueTestCommon {
                     throw new IllegalStateException("Illegal version bytes: " + dc.wire().bytes().readSkip(-1).toDebugString());
             }
 
+        }
+    }
+
+    @Test
+    public void testMovingToIndexAndChangingDirection() throws IOException {
+        File queuePath = tmpFolder.newFolder("cq");
+
+        SetTimeProvider timeProvider = new SetTimeProvider();
+
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(timeProvider)
+                .build();
+             final ExcerptTailer tailer = queue.createTailer()) {
+
+            // populate with 10 entries
+            ExcerptAppender appender = queue.acquireAppender();
+            for (int i = 1; i < 10; ++i) {
+                timeProvider.advanceMillis(5_000);
+                appender.writeText("id" + i);
+                Jvm.startup().on(MoveToIndexTest.class, "Wrote at index " + Long.toHexString(appender.lastIndexAppended()));
+            }
+
+            // move to just before the 7th entry
+            for (int i = 1; i < 7; ++i) {
+                assertEquals(tailer.readText(), "id" + i);
+            }
+
+            // store the index
+            long currIdx = tailer.index();
+            Jvm.startup().on(MoveToIndexTest.class, "currIdx is " + Long.toHexString(currIdx));
+
+            // A:
+            tailer.toEnd().direction(TailerDirection.BACKWARD);
+            readBackwardsUntilStart(tailer);
+            tailer.direction(TailerDirection.FORWARD);
+            tailer.moveToIndex(currIdx);
+            assertEquals(currIdx, tailer.index());
+            assertEquals("id7", tailer.readText());
+            assertEquals("id8", tailer.readText());
+
+            // B:
+            tailer.toEnd().direction(TailerDirection.BACKWARD);
+            readBackwardsUntilStart(tailer);
+            tailer.moveToIndex(currIdx);
+            tailer.direction(TailerDirection.FORWARD);
+            assertEquals(currIdx, tailer.index());
+            assertEquals("id7", tailer.readText());
+            assertEquals("id8", tailer.readText());
+        }
+    }
+
+    private static void readBackwardsUntilStart(ExcerptTailer tailer) {
+        while (true) {
+            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                if (!documentContext.isPresent())
+                    break;
+            }
         }
     }
 
