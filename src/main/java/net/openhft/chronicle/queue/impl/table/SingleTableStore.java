@@ -248,7 +248,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedBytes.reserve(this);
         try {
             mappedBytes.readPosition(0);
-            mappedBytes.readLimit(mappedBytes.realCapacity());
+            // if we set readLimit to realCapacity then we can run into DecoratedBufferUnderflowException: readLimit failed. Limit: xx > writeLimit: yy
+            // while reading from a TableStore which is being written to
+            mappedBytes.readLimit(Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity()));
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))

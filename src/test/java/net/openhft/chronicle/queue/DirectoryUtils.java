@@ -31,6 +31,7 @@ public class DirectoryUtils {
         String replacedName = name.replaceAll("[\\[\\]\\s]+", "_").replace(':', '_');
         final File tmpDir = new File(OS.getTarget(), replacedName + "-" + uniqueId());
         DeleteStatic.INSTANCE.add(tmpDir);
+        tmpDir.deleteOnExit();
 
         // Log the temporary directory in OSX as it is quite obscure
         if (OS.isMacOSX()) {

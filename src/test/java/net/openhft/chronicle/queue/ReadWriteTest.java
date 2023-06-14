@@ -20,8 +20,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
@@ -30,8 +28,8 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -44,7 +42,7 @@ public class ReadWriteTest extends QueueTestCommon {
 
     @Before
     public void setup() {
-        chroniclePath = new File(OS.getTarget(), "read_only_" + Time.uniqueId());
+        chroniclePath = getTmpDir();
         try (ChronicleQueue readWrite = ChronicleQueue.singleBuilder(chroniclePath)
                 .readOnly(false)
                 .testBlockSize()
@@ -54,18 +52,6 @@ public class ReadWriteTest extends QueueTestCommon {
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().bytes().writeUtf8(STR2);
             }
-        }
-    }
-
-    @Override
-    public void tearDown() {
-        try {
-            IOTools.shallowDeleteDirWithFiles(chroniclePath);
-        } catch (Exception e) {
-            if (e instanceof AccessDeniedException && OS.isWindows())
-                System.err.println(e);
-            else
-                throw e;
         }
     }
 
@@ -130,7 +116,9 @@ public class ReadWriteTest extends QueueTestCommon {
             raf.setLength(0);
         }
 
+        final AtomicLong startTimeMillis = new AtomicLong();
         new Thread(() -> {
+            startTimeMillis.set(System.currentTimeMillis());
             Jvm.pause(200);
             try (ChronicleQueue out = SingleChronicleQueueBuilder
                     .binary(chroniclePath)
@@ -140,12 +128,17 @@ public class ReadWriteTest extends QueueTestCommon {
             }
         }).start();
 
-        // This should succeed after 200ms
+        // the below can happen if the race mitigation code in TableDirectoryListingReadOnly.init is exercised
+        // as a LongValue gets created before it can be assigned to a reference and be available to be closed
+        ignoreException("Discarded without closing");
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(true)
                 .build()) {
+
+            assertTrue("Should have waited for more than 200ms. Actual wait: " + (System.currentTimeMillis() - startTimeMillis.get()) + " ms",
+                    System.currentTimeMillis() - startTimeMillis.get() >= 200);
 
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
