@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -130,7 +131,9 @@ public class ReadWriteTest extends QueueTestCommon {
             raf.setLength(0);
         }
 
+        final AtomicLong startTimeMillis = new AtomicLong();
         new Thread(() -> {
+            startTimeMillis.set(System.currentTimeMillis());
             Jvm.pause(200);
             try (ChronicleQueue out = SingleChronicleQueueBuilder
                     .binary(chroniclePath)
@@ -140,12 +143,17 @@ public class ReadWriteTest extends QueueTestCommon {
             }
         }).start();
 
-        // This should succeed after 200ms
+        // the below can happen if the race mitigation code in TableDirectoryListingReadOnly.init is exercised
+        // as a LongValue gets created before it can be assigned to a reference and be available to be closed
+        ignoreException("Discarded without closing");
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(true)
                 .build()) {
+
+            assertTrue("Should have waited for more than 200ms. Actual wait: " + (System.currentTimeMillis() - startTimeMillis.get()) + " ms",
+                    System.currentTimeMillis() - startTimeMillis.get() >= 200);
 
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
