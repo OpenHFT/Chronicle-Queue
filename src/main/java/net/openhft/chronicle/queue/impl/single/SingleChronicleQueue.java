@@ -532,7 +532,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
      * While we are doing this we lock the queue so that new appenders can not be created.
      * <p>
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
-     *
      * @deprecated this is being removed in x.25 with no replacement
      */
     @Deprecated(/* To be removed in x.25 */)
@@ -1222,42 +1221,32 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             NavigableMap<Long, File> tree = cycleTree(false);
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
+            // confirm the current cycle is in the min/max range, delay and refresh
+            // a few times if not as this suggests files have been deleted
             directoryListing.refresh(false);
             if (currentCycle > directoryListing.getMaxCreatedCycle() ||
                     currentCycle < directoryListing.getMinCreatedCycle()) {
-                boolean fileFound = false;
                 for (int i = 0; i < 20; i++) {
                     Jvm.pause(10);
                     directoryListing.refresh(i > 1);
-                    fileFound = (
-                            currentCycle <= directoryListing.getMaxCreatedCycle() &&
-                                    currentCycle >= directoryListing.getMinCreatedCycle());
-                    if (fileFound) {
+                    if (currentCycle <= directoryListing.getMaxCreatedCycle() &&
+                            currentCycle >= directoryListing.getMinCreatedCycle()) {
                         break;
                     }
                 }
-                fileFound |= currentCycleFile.exists();
-
-                if (!fileFound) {
-                    directoryListing.refresh(true);
-                    throw new MissingStoreFileException(
-                            String.format("Expected file to exist for cycle: %d, file: %s.%nminCycle: %d, maxCycle: %d%n" +
-                                            "Available files: %s",
-                                    currentCycle, currentCycleFile,
-                                    directoryListing.getMinCreatedCycle(), directoryListing.getMaxCreatedCycle(),
-                                    Arrays.toString(path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)))));
-                }
             }
 
+            // check that the current cycle is in the tree, do a hard refresh and retry if not
             Long key = dateCache.toLong(currentCycleFile);
             File file = tree.get(key);
-            // already checked that the file should be on-disk, so if it is null, call cycleTree again with force
             if (file == null) {
                 tree = cycleTree(true);
                 file = tree.get(key);
             }
+
+            // The current cycle is no longer on disk, log an error
             if (file == null) {
-                throw new MissingStoreFileException("missing currentCycle, file=" + currentCycleFile);
+                Jvm.error().on(SingleChronicleQueue.class, "The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle, currentCycle=" + currentCycleFile);
             }
 
             switch (direction) {
