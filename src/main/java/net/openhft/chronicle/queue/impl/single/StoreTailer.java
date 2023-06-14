@@ -536,11 +536,17 @@ class StoreTailer extends AbstractCloseable
             nextIndex = nextIndexWithinFoundCycle(nextCycle);
         else
             try {
-                final int nextCycle0 = queue.nextCycle(this.cycle, direction);
-                if (nextCycle0 == -1)
-                    return Long.MIN_VALUE;
+                int nextCycle0 = this.cycle;
+                while (true) {
+                    nextCycle0 = queue.nextCycle(nextCycle0, direction);
+                    if (nextCycle0 == -1)
+                        return Long.MIN_VALUE;
 
-                nextIndex = nextIndexWithinFoundCycle(nextCycle0);
+                    if (cycle(nextCycle0)) {
+                        nextIndex = nextIndexWithinFoundCycle(nextCycle0);
+                        break;
+                    }
+                }
 
             } catch (ParseException e) {
                 throw new IllegalStateException(e);
@@ -1112,9 +1118,12 @@ class StoreTailer extends AbstractCloseable
         if (count <= 0)
             return false;
         final RollCycle rollCycle = queue.rollCycle();
-        moveToIndexInternal(rollCycle.toIndex(cycle, count - 1));
-        this.state = FOUND_IN_CYCLE;
-        return true;
+        if (moveToIndexInternal(rollCycle.toIndex(cycle, count - 1))) {
+            this.state = FOUND_IN_CYCLE;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     void index0(final long index) {
