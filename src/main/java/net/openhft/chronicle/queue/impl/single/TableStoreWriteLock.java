@@ -39,7 +39,7 @@ import static net.openhft.chronicle.core.Jvm.warn;
  * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
  * for a timed-out lock to be overridden.
  */
-public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
+public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock, QueueLock {
     public static final String APPEND_LOCK_KEY = "chronicle.append.lock";
     private static final String LOCK_KEY = "chronicle.write.lock";
     private final long timeout;
@@ -139,6 +139,16 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     @Override
+    public void waitForLock() {
+        lock();
+    }
+
+    @Override
+    public void acquireLock() {
+        lock();
+    }
+
+    @Override
     public void unlock() {
         throwExceptionIfClosed();
         if (!lock.compareAndSwapValue(PID, UNLOCKED)) {
@@ -156,6 +166,16 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     @Override
+    public void quietUnlock() {
+        unlock();
+    }
+
+    @Override
+    public boolean isLocked() {
+        return locked();
+    }
+
+    @Override
     public boolean locked() {
         throwExceptionIfClosed();
         return lock.getVolatileValue(UNLOCKED) != UNLOCKED;
@@ -169,6 +189,18 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
         if (locked())
             forceUnlock(lockedBy());
+    }
+    /**
+     * Force unlock if the lock is held by the specified thread ID
+     */
+    public void forceUnlockOnBehalfOfThread(long threadId) {
+        throwExceptionIfClosed();
+        if (isLocked() && lockedByThread.getId() == threadId) {
+            forceUnlock(lockedBy());
+        } else {
+            warn().on(getClass(), "Queue lock was locked by another thread, provided-tid=" + threadId +
+                    ", lock-tid=" + lock.getVolatileValue() + " so this lock was not removed.");
+        }
     }
 
     /**
