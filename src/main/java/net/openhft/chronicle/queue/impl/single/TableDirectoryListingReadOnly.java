@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,7 +39,18 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
     public void init() {
         throwExceptionIfClosedInSetter();
 
-        initLongValues();
+        // it is possible if r/o queue created at same time as r/w queue for longValues to be only half-written
+        final long timeoutMillis = System.currentTimeMillis() + 500;
+        while (true) {
+            try {
+                initLongValues();
+                break;
+            } catch (Exception e) {
+                if (System.currentTimeMillis() > timeoutMillis)
+                    throw e;
+                Jvm.pause(1);
+            }
+        }
     }
 
     @Override
