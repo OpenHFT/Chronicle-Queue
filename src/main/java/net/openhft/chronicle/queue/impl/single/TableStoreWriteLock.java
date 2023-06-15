@@ -26,6 +26,7 @@ import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -42,17 +43,21 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     public static final String APPEND_LOCK_KEY = "chronicle.append.lock";
     private static final String LOCK_KEY = "chronicle.write.lock";
     private final long timeout;
+    private final boolean threadReentry;
     private Thread lockedByThread = null;
     private StackTrace lockedHere;
+    private static ThreadLocal<HashSet<String>> lockedQueues = ThreadLocal.withInitial(HashSet::new);
 
-    public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs, final String lockKey) {
+    public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs, final String lockKey, boolean threadReentry) {
         super(lockKey, tableStore, pauser);
         timeout = timeoutMs;
+        this.threadReentry = threadReentry;
     }
 
     public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
         super(LOCK_KEY, tableStore, pauser);
         timeout = timeoutMs;
+        threadReentry = false;
     }
 
     /**
@@ -64,12 +69,14 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         throwExceptionIfClosed();
 
         assert checkNotAlreadyLocked();
-
         long currentLockValue = 0;
         TimingPauser tlPauser = pauser.get();
         try {
             currentLockValue = lock.getVolatileValue();
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
+                if (threadReentry && isLockHeldByCurrentThread()) {
+                    return;
+                }
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedRuntimeException("Interrupted for the lock file:" + path);
                 tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
@@ -79,6 +86,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             //noinspection ConstantConditions,AssertWithSideEffects
             assert (lockedByThread = Thread.currentThread()) != null
                     && (lockedHere = new StackTrace()) != null;
+
+            lockedQueues.get().add(lockKey + tableStore.file().getAbsolutePath());
 
             // success
         } catch (TimeoutException e) {
@@ -104,6 +113,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         }
     }
 
+    private boolean isLockHeldByCurrentThread() {
+        return lockedQueues.get().contains(lockKey + tableStore.file().getAbsolutePath());
+    }
+
     @NotNull
     protected String getLockedBy(long value) {
         return value == Long.MIN_VALUE ? "unknown" :
@@ -116,7 +129,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             return true;
         if (lockedByThread == null)
             return true;
-        if (lockedByThread == Thread.currentThread())
+        if (lockedByThread == Thread.currentThread() || isLockHeldByCurrentThread())
             throw new AssertionError("Lock is already acquired by current thread and is not reentrant - nested document context?", lockedHere);
         return true;
     }
@@ -124,6 +137,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     @Override
     public void waitForLock() {
         lock();
+        unlock();
     }
 
     @Override
@@ -146,11 +160,16 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         }
         lockedByThread = null;
         lockedHere = null;
+        lockedQueues.get().remove(lockKey + tableStore.file().getAbsolutePath());
     }
 
     @Override
     public void quietUnlock() {
-        unlock();
+        throwExceptionIfClosed();
+        lock.compareAndSwapValue(PID, UNLOCKED);
+        lockedByThread = null;
+        lockedHere = null;
+        lockedQueues.get().remove(lockKey + tableStore.file().getAbsolutePath());
     }
 
     @Override

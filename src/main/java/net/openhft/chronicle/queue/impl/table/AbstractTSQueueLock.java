@@ -50,7 +50,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     protected final ThreadLocal<TimingPauser> pauser;
     protected final File path;
     protected final TableStore tableStore;
-    private final String lockKey;
+    protected final String lockKey;
 
     public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauserSupplier) {
         this.tableStore = tableStore;

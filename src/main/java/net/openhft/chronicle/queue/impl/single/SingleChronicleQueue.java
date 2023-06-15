@@ -193,7 +193,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
             this.directoryListing.refresh(true);
             this.queueLock = areEnterpriseFeaturesAvailable() && !builder.readOnly()
-                    ? new TableStoreWriteLock(metaStore, builder.pauserSupplier(), builder.timeoutMS() * 3 / 2)
+                    ? new TableStoreWriteLock(metaStore, builder.pauserSupplier(), builder.timeoutMS() * 3 / 2, TSQueueLock.LOCK_KEY, true)
                     : new NoopQueueLock();
             this.writeLock = builder.writeLock();
 

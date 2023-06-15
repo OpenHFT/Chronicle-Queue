@@ -38,7 +38,7 @@ import static net.openhft.chronicle.core.Jvm.warn;
  */
 public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
-    private static final String LOCK_KEY = "chronicle.queue.lock";
+    public static final String LOCK_KEY = "chronicle.queue.lock";
     private final long timeout;
 
     public TSQueueLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, long timeoutMs) {
