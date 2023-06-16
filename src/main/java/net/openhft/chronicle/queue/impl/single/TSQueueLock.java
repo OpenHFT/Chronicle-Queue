@@ -35,8 +35,10 @@ import static net.openhft.chronicle.core.Jvm.warn;
 
 /**
  * Implements queue lock via TableStore mechanism.
+ *
+ * @deprecated use {@link WriteLock} instead.
  */
-@Deprecated(/* To be removed in x.25 */)
+@Deprecated(/* To be removed in x.26 */)
 public class TSQueueLock extends AbstractTSQueueLock implements QueueLock {
 
     public static final String LOCK_KEY = "chronicle.queue.lock";

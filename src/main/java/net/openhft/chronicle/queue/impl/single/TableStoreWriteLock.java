@@ -55,6 +55,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         this.threadReentry = threadReentry;
     }
 
+    public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs, final String lockKey) {
+        this(tableStore, pauser, timeoutMs, lockKey, false);
+    }
+
     public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
         this(tableStore, pauser, timeoutMs, LOCK_KEY, false);
     }
@@ -189,6 +193,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     @Override
+    @Deprecated(/* To be removed in x.26 */)
     public boolean isLocked() {
         return locked();
     }

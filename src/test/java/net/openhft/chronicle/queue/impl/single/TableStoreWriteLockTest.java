@@ -282,7 +282,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @NotNull
     private static TableStoreWriteLock createTestLock(TableStore<Metadata.NoMeta> tableStore, long timeoutMilliseconds) {
-        return new TableStoreWriteLock(tableStore, Pauser::balanced, timeoutMilliseconds, TEST_LOCK_NAME, false);
+        return new TableStoreWriteLock(tableStore, Pauser::balanced, timeoutMilliseconds, TEST_LOCK_NAME);
     }
 
     private Process runLockingProcess(boolean releaseAfterInterrupt) {

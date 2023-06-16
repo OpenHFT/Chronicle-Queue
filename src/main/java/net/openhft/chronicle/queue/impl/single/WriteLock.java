@@ -20,16 +20,40 @@ package net.openhft.chronicle.queue.impl.single;
 import java.io.Closeable;
 import java.util.function.LongConsumer;
 
-public interface WriteLock extends Closeable {
+public interface WriteLock extends Closeable, QueueLock {
 
     WriteLock NO_OP = new WriteLock() {
+
+        @Override
+        public boolean isClosed() {
+            return false;
+        }
 
         @Override
         public void lock() {
         }
 
         @Override
+        public void waitForLock() {
+
+        }
+
+        @Override
+        public void acquireLock() {
+
+        }
+
+        @Override
         public void unlock() {
+        }
+
+        @Override
+        public void quietUnlock() {
+        }
+
+        @Override
+        public boolean isLocked() {
+            return false;
         }
 
         @Override
@@ -57,6 +81,11 @@ public interface WriteLock extends Closeable {
      * May not unlock. If it does not there will be a log.warn
      */
     void unlock();
+
+    /**
+     * only unlocks if locked
+     */
+    void quietUnlock();
 
     void close();
 

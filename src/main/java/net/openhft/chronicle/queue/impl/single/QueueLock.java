@@ -19,14 +19,26 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
 
-@Deprecated(/* To be removed in x.25 */)
+/**
+ * @deprecated use {@link WriteLock} instead.
+ */
+@Deprecated(/* To be removed in x.26 */)
 public interface QueueLock extends Closeable {
 
+    /**
+     * For internal use only
+     *
+     * @deprecated
+     */
+    @Deprecated(/* To be removed in x.26 */)
     void waitForLock();
 
     /**
      * Guaranteed to lock or throw
+     *
+     * @deprecated use {@link WriteLock#locked()} instead.
      */
+    @Deprecated(/* To be removed in x.26 */)
     void acquireLock();
 
     /**
@@ -41,9 +53,11 @@ public interface QueueLock extends Closeable {
 
     /**
      * Is this lock locked?
+     * @deprecated use {@link WriteLock#locked()} instead.
      *
      * @return true if the lock is locked
      */
+    @Deprecated(/* To be removed in x.26 */)
     boolean isLocked();
 
     default boolean forceUnlockIfProcessIsDead() {
