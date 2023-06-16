@@ -19,15 +19,35 @@ package net.openhft.chronicle.queue.impl.single;
 
 import java.util.function.LongConsumer;
 
-public class ReadOnlyWriteLock implements WriteLock {
+public class ReadOnlyWriteLock implements WriteLock, QueueLock {
     @Override
     public void lock() {
         throw new IllegalStateException("Queue is read-only");
     }
 
     @Override
+    public void waitForLock() {
+        throw new IllegalStateException("Queue is read-only");
+    }
+
+    @Override
+    public void acquireLock() {
+        throw new IllegalStateException("Queue is read-only");
+    }
+
+    @Override
     public void unlock() {
         throw new IllegalStateException("Queue is read-only");
+    }
+
+    @Override
+    public void quietUnlock() {
+        // No-op.
+    }
+
+    @Override
+    public boolean isLocked() {
+        return false;
     }
 
     @Override
@@ -42,6 +62,11 @@ public class ReadOnlyWriteLock implements WriteLock {
     @Override
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         notCurrentProcessConsumer.accept(Long.MAX_VALUE);
+        return false;
+    }
+
+    @Override
+    public boolean isClosed() {
         return false;
     }
 }

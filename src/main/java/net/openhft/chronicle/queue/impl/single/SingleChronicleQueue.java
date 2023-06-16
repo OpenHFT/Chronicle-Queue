@@ -116,7 +116,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     private final DirectoryListing directoryListing;
     @NotNull
-    private final QueueLock queueLock;
+    private final WriteLock queueLock;
     @NotNull
     private final WriteLock writeLock;
     private final boolean checkInterrupts;
@@ -194,7 +194,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             this.directoryListing.refresh(true);
             this.queueLock = areEnterpriseFeaturesAvailable() && !builder.readOnly()
                     ? new TableStoreWriteLock(metaStore, builder.pauserSupplier(), builder.timeoutMS() * 3 / 2, TSQueueLock.LOCK_KEY, true)
-                    : new NoopQueueLock();
+                    : WriteLock.NO_OP;
             this.writeLock = builder.writeLock();
 
             // release the write lock if the process is dead
@@ -512,11 +512,20 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
      * While we are doing this we lock the queue so that new appenders can not be created.
      * <p>
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
+     *
+     * @deprecated use {@link WriteLock} via {@link #replicationLock()}.
      */
     @NotNull
+    @Deprecated(/** To be removed in x.26 */)
     public QueueLock queueLock() {
+        return (QueueLock) queueLock;
+    }
+
+    @NotNull
+    public WriteLock replicationLock() {
         return queueLock;
     }
+
 
     /**
      * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to

@@ -38,12 +38,13 @@ public class QueueLockUnlockedCondition implements Condition {
 
     @Override
     public void await() throws InterruptedException {
-        singleChronicleQueue.queueLock().waitForLock();
+        awaitUninterruptibly();
     }
 
     @Override
     public void awaitUninterruptibly() {
-        singleChronicleQueue.queueLock().waitForLock();
+        singleChronicleQueue.replicationLock().lock();
+        singleChronicleQueue.replicationLock().unlock();
     }
 
     @Override

@@ -17,6 +17,10 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+/**
+ * Use {@link WriteLock#NO_OP} instead.
+ */
+@Deprecated(/** To be removed in x.26 */)
 public class NoopQueueLock implements QueueLock {
 
     @Override

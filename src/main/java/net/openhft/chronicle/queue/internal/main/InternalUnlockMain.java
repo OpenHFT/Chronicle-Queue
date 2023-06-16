@@ -55,7 +55,7 @@ public final class InternalUnlockMain {
         final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
 
         // appender lock
-        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, TableStoreWriteLock.APPEND_LOCK_KEY, false)).forceUnlock();
+        (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, TableStoreWriteLock.APPEND_LOCK_KEY)).forceUnlock();
 
         // write lock
         (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L)).forceUnlock();
