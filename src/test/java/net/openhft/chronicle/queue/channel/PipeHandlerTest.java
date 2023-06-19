@@ -209,7 +209,7 @@ public class PipeHandlerTest extends QueueTestCommon {
      * the last message in the queue. It effectively bootstraps only the last message for consumers.
      */
     @Test(timeout = 20000)
-    public void fromIndex() {
+    public void testsSubscriptionIndexController() {
         String url = "tcp://:0";
         IOTools.deleteDirWithFiles("target/fromIndex");
 
