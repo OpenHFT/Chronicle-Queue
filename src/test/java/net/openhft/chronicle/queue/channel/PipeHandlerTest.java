@@ -145,18 +145,13 @@ public class PipeHandlerTest extends QueueTestCommon {
 
         @Override
         public void accept(ExcerptTailer excerptTailer) {
-            excerptTailer.toEnd();
-            excerptTailer.direction(BACKWARD);
-
-            try (DocumentContext ignore = excerptTailer.readingDocument()) {
+            try (DocumentContext ignore = excerptTailer.toEnd().direction(BACKWARD).readingDocument()) {
                 // read one
             }
 
-            excerptTailer.direction(FORWARD);
-            try (DocumentContext ignore = excerptTailer.readingDocument()) {
+            try (DocumentContext ignore =   excerptTailer.direction(FORWARD).direction(FORWARD).readingDocument()) {
                 // read one
             }
-
         }
     }
 
