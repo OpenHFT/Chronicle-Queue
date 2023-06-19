@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -205,5 +206,52 @@ public class TailerDirectionTest extends QueueTestCommon {
             assertEquals("[Backward] Wrong message " + i, msg, readNextEntry(tailer));
         }
         queue.close();
+    }
+
+    @Test(timeout = 10_000)
+    public void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
+        File basePath = getTmpDir();
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
+                .testBlockSize()
+                .timeProvider(timeProvider)
+                .build();
+             ExcerptAppender appender = queue.acquireAppender()) {
+
+            //
+            // Prepare test messages in queue
+            //
+            for (int i = 0; i < 3; i++) {
+                appendEntry(appender, testMessage(i));
+            }
+            ExcerptTailer tailer = queue.createTailer()
+                    .direction(TailerDirection.BACKWARD)
+                    .toEnd();
+
+            while (true) {
+                try (final DocumentContext documentContext = tailer.readingDocument()) {
+                    if (!documentContext.isPresent()) {
+                        Jvm.startup().on(TailerDirection.class, "Reached the start");
+                        break;
+                    }
+                }
+            }
+
+            // Try one more time, should still not be present and should not advance the index
+            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                if (!documentContext.isPresent()) {
+                    Jvm.startup().on(TailerDirection.class, "Reached the start");
+                }
+            }
+            assertEquals(-1, tailer.index());
+            assertEquals(0, tailer.lastReadIndex());
+
+            // Check that we can change direction and read forward from there
+            tailer.direction(TailerDirection.FORWARD);
+            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                assertTrue(documentContext.isPresent());
+                assertEquals(0, documentContext.index());
+            }
+        }
     }
 }

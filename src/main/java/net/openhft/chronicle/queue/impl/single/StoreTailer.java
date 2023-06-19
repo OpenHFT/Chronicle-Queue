@@ -399,6 +399,10 @@ class StoreTailer extends AbstractCloseable
         // give the position of the last entry and
         // flag we want to count it even though we don't know if it will be meta data or not.
 
+        // The first index was zero, and we've run past it to -1
+        if (index < 0)
+            return false;
+
         final boolean foundCycle = cycle(queue.rollCycle().toCycle(index()));
 
         if (foundCycle && this.cycle >= 0) {
