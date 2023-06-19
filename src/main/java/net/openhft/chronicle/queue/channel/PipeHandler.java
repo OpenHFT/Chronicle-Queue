@@ -17,6 +17,7 @@ import net.openhft.chronicle.wire.channel.*;
 import net.openhft.chronicle.wire.channel.impl.BufferedChronicleChannel;
 
 import java.io.File;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static net.openhft.chronicle.queue.channel.PublishHandler.copyFromChannelToQueue;
@@ -32,6 +33,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
     private int publishSourceId = 0;
 
     private int subscribeSourceId = 0;
+    private Consumer<ExcerptTailer> subscriptionIndexController = SubscribeHandler.NO_OP;
 
 
     public PipeHandler() {
@@ -39,11 +41,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
 
     static ChronicleQueue newQueue(ChronicleContext context, String queueName, SyncMode syncMode, int sourceId) {
         final File path = context.toFile(queueName);
-        return ChronicleQueue.singleBuilder(path)
-                .blockSize(OS.isSparseFileSupported() ? 512L << 30 : 64L << 20)
-                .sourceId(sourceId)
-                .syncMode(syncMode)
-                .build();
+        return ChronicleQueue.singleBuilder(path).blockSize(OS.isSparseFileSupported() ? 512L << 30 : 64L << 20).sourceId(sourceId).syncMode(syncMode).build();
     }
 
     public String publish() {
@@ -108,11 +106,12 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
                 BufferedChronicleChannel bc = (BufferedChronicleChannel) channel;
                 tailer = subscribeQ.createTailer();
                 tailer.singleThreadedCheckDisabled(true);  // assume we are thread safe
+                subscriptionIndexController.accept(tailer);
                 bc.eventPoller(new PHEventPoller(tailer, filter));
             } else {
                 tailerThread = new Thread(() -> {
                     try (AffinityLock lock = context.affinityLock()) {
-                        SubscribeHandler.queueTailer(pauser, channel, subscribeQ, filter);
+                        SubscribeHandler.queueTailer(pauser, channel, subscribeQ, filter, subscriptionIndexController);
                     } catch (ClosedIORuntimeException e) {
                         Jvm.warn().on(PipeHandler.class, e.toString());
                     } catch (Throwable t) {
@@ -127,19 +126,14 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
             try (AffinityLock lock = context.affinityLock()) {
                 copyFromChannelToQueue(channel, pauser, newQueue(context, publish, syncMode, publishSourceId), syncMode);
             } finally {
-                if (tailerThread != null)
-                    tailerThread.interrupt();
+                if (tailerThread != null) tailerThread.interrupt();
             }
         }
     }
 
     @Override
     public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
-        return new QueuesChannel(
-                channelCfg,
-                this,
-                newQueue(context, publish, syncMode, publishSourceId),
-                newQueue(context, subscribe, syncMode, 0));
+        return new QueuesChannel(channelCfg, this, newQueue(context, publish, syncMode, publishSourceId), newQueue(context, subscribe, syncMode, 0));
     }
 
     static class PHEventPoller extends SimpleCloseable implements EventPoller {
@@ -154,8 +148,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         @Override
         public boolean onPoll(ChronicleChannel conn) {
             boolean wrote = false;
-            while (SubscribeHandler.copyOneMessage(conn, tailer, filter))
-                wrote = true;
+            while (SubscribeHandler.copyOneMessage(conn, tailer, filter)) wrote = true;
             return wrote;
         }
 
@@ -164,5 +157,14 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
             Closeable.closeQuietly(tailer, tailer.queue());
             super.performClose();
         }
+    }
+
+    /**
+     * @param subscriptionIndexController controls where the subscriptions will start to read from, by allowing the caller to
+     *                                    {@link net.openhft.chronicle.queue.ExcerptTailer#moveToIndex(long) to control the first read location
+     */
+    public PipeHandler subscriptionIndexController(Consumer<ExcerptTailer> subscriptionIndexController) {
+        this.subscriptionIndexController = subscriptionIndexController;
+        return this;
     }
 }
