@@ -155,7 +155,6 @@ public enum RollCycles implements RollCycle {
      *
      * @deprecated Use {@link net.openhft.chronicle.queue.rollcycles.TestRollCycles#TEST_SECONDLY} instead
      */
-    @Deprecated(/* For removal in x.26 */)
     TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, MAX_INDEX_COUNT, 4),
     /**
      * 0x1000 entries - Only good for testing
