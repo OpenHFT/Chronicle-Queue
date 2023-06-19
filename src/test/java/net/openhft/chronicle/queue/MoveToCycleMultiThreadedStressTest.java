@@ -34,7 +34,7 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY)
+                .rollCycle(net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY)
                 .build()) {
             this.queue = q;
             tailer = ThreadLocal.withInitial(q::createTailer);
