@@ -186,10 +186,11 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     @Override
     public void quietUnlock() {
         throwExceptionIfClosed();
-        lock.compareAndSwapValue(PID, UNLOCKED);
-        lockedByThread = null;
-        lockedHere = null;
-        lockedQueues.get().remove(lockKey + tableStore.file().getAbsolutePath());
+        if (lock.compareAndSwapValue(PID, UNLOCKED)) {
+            lockedByThread = null;
+            lockedHere = null;
+            lockedQueues.get().remove(lockKey + tableStore.file().getAbsolutePath());
+        }
     }
 
     @Override
