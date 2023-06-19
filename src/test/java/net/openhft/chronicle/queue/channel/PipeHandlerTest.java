@@ -205,15 +205,18 @@ public class PipeHandlerTest extends QueueTestCommon {
 
 
     /**
-     * tests setting the index upon subscription, move to the
-     * last message in the queue, effectively bootstrapping that last message  ( and only the last message ) for
-     * consumers.
+     * This test verifies the functionality of setting the index upon subscription, which moves to
+     * the last message in the queue. It effectively bootstraps only the last message for consumers.
      */
     @Test(timeout = 20000)
     public void fromIndex() {
         String url = "tcp://:0";
         IOTools.deleteDirWithFiles("target/fromIndex");
 
+        /**
+         * Creates a new {@link ChronicleContext} with the specified URL and names the context "target/fromIndex".
+         * The context is buffered if the 'buffered' flag is set.
+         */
         try (ChronicleContext context = ChronicleContext.newContext(url).name("target/fromIndex").buffered(buffered);
              ChronicleQueue cq =
                      ChronicleQueue.singleBuilder(context.toFile("test-q")).blockSize(OS.isSparseFileSupported() ?
@@ -224,6 +227,10 @@ public class PipeHandlerTest extends QueueTestCommon {
             says.say("2 Hi two");
             says.say("3 Hi three");
 
+            /**
+             * Creates a new {@link ChronicleChannel} using the provided channel supplier, which is
+             * configured with a {@link ToLastMessage} subscription index controller.
+             */
             try (ChronicleChannel channel1 =
                          context.newChannelSupplier(createPipeHandler().subscriptionIndexController(new ToLastMessage())).get()) {
                 BlockingQueue<String> q = new LinkedBlockingQueue<>();
@@ -233,7 +240,6 @@ public class PipeHandlerTest extends QueueTestCommon {
             }
         }
     }
-
 
     private static PipeHandler createPipeHandler() {
         return new PipeHandler().subscribe("test-q").publish("test-q").publishSourceId(1).subscribeSourceId(1);
