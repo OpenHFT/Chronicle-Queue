@@ -23,14 +23,14 @@ import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
 
 public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
-    public static class NoOp extends SelfDescribingMarshallable implements Consumer {
+    private static class NoOp extends SelfDescribingMarshallable implements Consumer {
         @Override
         public void accept(Object o) {
             return;
         }
     }
 
-    public static Consumer NO_OP = new NoOp();
+    public final static Consumer NO_OP = new NoOp();
 
     private String subscribe;
     private transient boolean closeWhenRunEnds = true;
