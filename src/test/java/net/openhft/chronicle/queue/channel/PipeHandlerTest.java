@@ -205,8 +205,9 @@ public class PipeHandlerTest extends QueueTestCommon {
 
 
     /**
-     * tests setting the index upon subscription, by in this case setting the subscriptionIndexController to the
-     * last message in the queue, effectively bootstrapping that last message for consumers.
+     * tests setting the index upon subscription, move to the
+     * last message in the queue, effectively bootstrapping that last message  ( and only the last message ) for
+     * consumers.
      */
     @Test(timeout = 20000)
     public void fromIndex() {
